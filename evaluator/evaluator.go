@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/ast"
+	"github.com/CalcMark/go-calcmark/constants"
 	"github.com/CalcMark/go-calcmark/parser"
 	"github.com/CalcMark/go-calcmark/types"
 	"github.com/shopspring/decimal"
@@ -116,6 +117,9 @@ func (e *Evaluator) EvalNode(node ast.Node) (types.Type, error) {
 	case *ast.Identifier:
 		return e.Context.Get(n.Name)
 
+	case *ast.UnaryOp:
+		return e.evalUnaryOp(n)
+
 	case *ast.BinaryOp:
 		return e.evalBinaryOp(n)
 
@@ -150,6 +154,47 @@ func getDecimalValue(t types.Type) (decimal.Decimal, error) {
 		return v.Value, nil
 	default:
 		return decimal.Zero, fmt.Errorf("cannot get decimal value from %s", t.TypeName())
+	}
+}
+
+// evalUnaryOp evaluates a unary operation
+func (e *Evaluator) evalUnaryOp(node *ast.UnaryOp) (types.Type, error) {
+	operand, err := e.EvalNode(node.Operand)
+	if err != nil {
+		return nil, err
+	}
+
+	operandVal, err := getDecimalValue(operand)
+	if err != nil {
+		return nil, &EvaluationError{
+			Message: err.Error(),
+			Range:   node.Range,
+		}
+	}
+
+	var result decimal.Decimal
+	switch node.Operator {
+	case "-":
+		result = operandVal.Neg()
+	case "+":
+		result = operandVal
+	default:
+		return nil, &EvaluationError{
+			Message: fmt.Sprintf("Unknown unary operator: %s", node.Operator),
+			Range:   node.Range,
+		}
+	}
+
+	// Preserve type (Number vs Currency)
+	switch operand.(type) {
+	case *types.Currency:
+		curr := operand.(*types.Currency)
+		return &types.Currency{
+			Value:  result,
+			Symbol: curr.Symbol,
+		}, nil
+	default:
+		return &types.Number{Value: result}, nil
 	}
 }
 
@@ -300,12 +345,26 @@ func (e *Evaluator) evalComparisonOp(node *ast.ComparisonOp) (types.Type, error)
 }
 
 // Evaluate is a convenience function to parse and evaluate text
+// It filters out markdown lines before parsing
 func Evaluate(text string, context *Context) ([]types.Type, error) {
 	if context == nil {
 		context = NewContext()
 	}
 
-	nodes, err := parser.Parse(text)
+	// Filter out markdown bullet lines (lines starting with "- " or "* ")
+	lines := strings.Split(text, constants.Newline)
+	var calcmarkLines []string
+	for _, line := range lines {
+		stripped := strings.TrimLeft(line, constants.Whitespace)
+		// Skip markdown bullets: "- " or "* " (first char is dash/asterisk followed by space)
+		if len(stripped) >= 2 && (stripped[0] == '-' || stripped[0] == '*') && stripped[1:2] == constants.Space {
+			continue
+		}
+		calcmarkLines = append(calcmarkLines, line)
+	}
+
+	filteredText := strings.Join(calcmarkLines, constants.Newline)
+	nodes, err := parser.Parse(filteredText)
 	if err != nil {
 		return nil, err
 	}

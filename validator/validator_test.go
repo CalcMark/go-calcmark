@@ -266,8 +266,16 @@ func TestValidDocument(t *testing.T) {
 y = 10
 z = x + y`
 	results := ValidateDocument(document, nil)
-	if len(results) != 0 {
-		t.Errorf("expected 0 errors, got %d", len(results))
+
+	// Check for errors (hints are OK)
+	errorCount := 0
+	for _, result := range results {
+		if result.HasErrors() {
+			errorCount++
+		}
+	}
+	if errorCount != 0 {
+		t.Errorf("expected 0 errors, got %d", errorCount)
 	}
 }
 
@@ -294,8 +302,16 @@ func TestContextFlowsBetweenLines(t *testing.T) {
 y = x + 2
 z = y * 2`
 	results := ValidateDocument(document, nil)
-	if len(results) != 0 {
-		t.Errorf("expected 0 errors, got %d", len(results))
+
+	// Check for errors (hints are OK)
+	errorCount := 0
+	for _, result := range results {
+		if result.HasErrors() {
+			errorCount++
+		}
+	}
+	if errorCount != 0 {
+		t.Errorf("expected 0 errors, got %d", errorCount)
 	}
 }
 
@@ -427,8 +443,16 @@ expenses = rent + food + utilities
 savings = salary + bonus - expenses`
 
 	results := ValidateDocument(document, nil)
-	if len(results) != 0 {
-		t.Errorf("expected 0 errors, got %d", len(results))
+
+	// Check for errors (hints are OK)
+	errorCount := 0
+	for _, result := range results {
+		if result.HasErrors() {
+			errorCount++
+		}
+	}
+	if errorCount != 0 {
+		t.Errorf("expected 0 errors, got %d", errorCount)
 	}
 }
 
@@ -456,6 +480,109 @@ future_var = 10`
 	}
 	if results[1].Errors()[0].VariableName != "future_var" {
 		t.Errorf("expected variable name 'future_var', got '%s'", results[1].Errors()[0].VariableName)
+	}
+}
+
+// TestBlankLineIsolationHints tests explicit hint generation for missing blank lines
+func TestBlankLineIsolationHints(t *testing.T) {
+	tests := []struct {
+		name           string
+		document       string
+		lineWithHints  int
+		expectBefore   bool
+		expectAfter    bool
+	}{
+		{
+			name: "calculation after text",
+			document: `Some text
+x = 5`,
+			lineWithHints: 2,
+			expectBefore:  true,
+			expectAfter:   false, // end of document
+		},
+		{
+			name: "calculation before text",
+			document: `x = 5
+Some text`,
+			lineWithHints: 1,
+			expectBefore:  false, // start of document
+			expectAfter:   true,
+		},
+		{
+			name: "calculation between text",
+			document: `Top text
+x = 5
+Bottom text`,
+			lineWithHints: 2,
+			expectBefore:  true,
+			expectAfter:   true,
+		},
+		{
+			name: "properly isolated",
+			document: `Text
+
+x = 5
+
+More text`,
+			lineWithHints: -1, // No hints expected
+			expectBefore:  false,
+			expectAfter:   false,
+		},
+		{
+			name: "multiple calculations no isolation",
+			document: `x = 5
+y = 10`,
+			lineWithHints: 1, // First line should have hint about line after
+			expectBefore:  false,
+			expectAfter:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results := ValidateDocument(tt.document, nil)
+
+			if tt.lineWithHints == -1 {
+				// Should have no hints anywhere
+				for lineNum, result := range results {
+					if result.HasHints() {
+						t.Errorf("line %d: expected no hints, got %d", lineNum, len(result.Hints()))
+					}
+				}
+				return
+			}
+
+			result, exists := results[tt.lineWithHints]
+			if !exists {
+				t.Fatalf("expected result for line %d", tt.lineWithHints)
+			}
+
+			hints := result.Hints()
+
+			if tt.expectBefore && tt.expectAfter {
+				if len(hints) != 2 {
+					t.Errorf("expected 2 hints (before and after), got %d", len(hints))
+				}
+			} else if tt.expectBefore || tt.expectAfter {
+				if len(hints) != 1 {
+					t.Errorf("expected 1 hint, got %d", len(hints))
+				}
+			} else {
+				if len(hints) != 0 {
+					t.Errorf("expected 0 hints, got %d", len(hints))
+				}
+			}
+
+			// Verify hints have correct code
+			for _, hint := range hints {
+				if hint.Code != BlankLineIsolation {
+					t.Errorf("expected BlankLineIsolation code, got %s", hint.Code)
+				}
+				if hint.Severity != Hint {
+					t.Errorf("expected Hint severity, got %s", hint.Severity)
+				}
+			}
+		})
 	}
 }
 

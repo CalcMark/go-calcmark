@@ -97,17 +97,35 @@ func (p *Parser) ParseStatement() (ast.Node, error) {
 	current := p.currentToken()
 	next := p.peek(1)
 
+	var result ast.Node
+	var err error
+
 	if (current.Type == lexer.IDENTIFIER || current.Type == lexer.BOOLEAN) &&
 		next.Type == lexer.ASSIGN {
-		return p.parseAssignment()
+		result, err = p.parseAssignment()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Otherwise, it's a standalone expression
+		expr, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+		result = &ast.Expression{Expr: expr}
 	}
 
-	// Otherwise, it's a standalone expression
-	expr, err := p.parseExpression()
-	if err != nil {
-		return nil, err
+	// After parsing a statement, verify no trailing tokens before newline/EOF
+	currentTok := p.currentToken()
+	if currentTok.Type != lexer.NEWLINE && currentTok.Type != lexer.EOF {
+		return nil, &ParseError{
+			Message: fmt.Sprintf("Unexpected token after statement: %s", currentTok.Type),
+			Line:    currentTok.Line,
+			Column:  currentTok.Column,
+		}
 	}
-	return &ast.Expression{Expr: expr}, nil
+
+	return result, nil
 }
 
 // parseAssignment parses an assignment statement
@@ -254,9 +272,23 @@ func (p *Parser) parseExponent() (ast.Node, error) {
 	return left, nil
 }
 
-// parsePrimary parses primary expressions (literals, identifiers)
+// parsePrimary parses primary expressions (literals, identifiers, unary ops)
 func (p *Parser) parsePrimary() (ast.Node, error) {
 	token := p.currentToken()
+
+	// Handle unary operators (- and +)
+	if token.Type == lexer.MINUS || token.Type == lexer.PLUS {
+		opToken := p.advance()
+		operand, err := p.parsePrimary()
+		if err != nil {
+			return nil, err
+		}
+		return &ast.UnaryOp{
+			Operator: opToken.Value,
+			Operand:  operand,
+			Range:    tokenToRange(opToken),
+		}, nil
+	}
 
 	if token.Type == lexer.NUMBER {
 		p.advance()
@@ -288,6 +320,26 @@ func (p *Parser) parsePrimary() (ast.Node, error) {
 			Name:  token.Value,
 			Range: tokenToRange(token),
 		}, nil
+	}
+
+	// Handle parenthesized expressions
+	if token.Type == lexer.LPAREN {
+		p.advance() // consume '('
+		expr, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+
+		// Expect closing ')'
+		if p.currentToken().Type != lexer.RPAREN {
+			return nil, &ParseError{
+				Message: fmt.Sprintf("Expected ')', got %s", p.currentToken().Type),
+				Line:    p.currentToken().Line,
+				Column:  p.currentToken().Column,
+			}
+		}
+		p.advance() // consume ')'
+		return expr, nil
 	}
 
 	return nil, &ParseError{

@@ -1,0 +1,389 @@
+{
+  "$comment": "IMPORTANT: This file is a first-class deliverable that MUST stay synchronized with the Go implementation. It is validated by tests in lexer/syntax_spec_test.go on every test run. This file can be served via HTTP endpoint (/syntax) or bundled in TypeScript clients for syntax highlighting.",
+  "version": "1.0.0",
+  "description": "CalcMark Language Syntax Specification for Syntax Highlighters",
+  "language": "calcmark",
+  "fileExtensions": [".cm", ".calcmark"],
+
+  "tokens": {
+    "keywords": {
+      "description": "Reserved keywords that cannot be used as identifiers",
+      "logicalOperators": {
+        "description": "Logical operators (Go spec compliant)",
+        "caseInsensitive": true,
+        "tokens": ["and", "or", "not"]
+      },
+      "controlFlow": {
+        "description": "Reserved for future control flow (not yet implemented)",
+        "caseInsensitive": true,
+        "tokens": ["if", "then", "else", "elif", "end", "for", "in", "while", "return", "break", "continue", "let", "const"]
+      },
+      "functions": {
+        "description": "Built-in function names (canonical forms)",
+        "caseInsensitive": true,
+        "canonical": {
+          "avg": {
+            "aliases": ["average of"],
+            "description": "Calculate average of numbers",
+            "syntax": ["avg(x, y, ...)", "average of x, y, ..."]
+          },
+          "sqrt": {
+            "aliases": ["square root of"],
+            "description": "Calculate square root",
+            "syntax": ["sqrt(x)", "square root of x"]
+          }
+        }
+      },
+      "multiTokenFunctions": {
+        "description": "Multi-word function names that are combined during tokenization",
+        "tokens": [
+          {
+            "pattern": "average of",
+            "canonical": "avg",
+            "requiresWhitespace": true,
+            "caseInsensitive": true
+          },
+          {
+            "pattern": "square root of",
+            "canonical": "sqrt",
+            "requiresWhitespace": true,
+            "caseInsensitive": true
+          }
+        ]
+      }
+    },
+
+    "operators": {
+      "arithmetic": {
+        "description": "Arithmetic operators",
+        "tokens": [
+          {
+            "symbol": "+",
+            "name": "plus",
+            "description": "Addition"
+          },
+          {
+            "symbol": "-",
+            "name": "minus",
+            "description": "Subtraction or unary negation"
+          },
+          {
+            "symbol": "*",
+            "name": "multiply",
+            "description": "Multiplication",
+            "aliases": ["×", "x", "X"]
+          },
+          {
+            "symbol": "/",
+            "name": "divide",
+            "description": "Division"
+          },
+          {
+            "symbol": "%",
+            "name": "modulus",
+            "description": "Modulus/remainder"
+          },
+          {
+            "symbol": "^",
+            "name": "exponent",
+            "description": "Exponentiation",
+            "aliases": ["**"]
+          }
+        ]
+      },
+      "comparison": {
+        "description": "Comparison operators",
+        "tokens": [
+          {
+            "symbol": ">",
+            "name": "greater_than",
+            "description": "Greater than"
+          },
+          {
+            "symbol": "<",
+            "name": "less_than",
+            "description": "Less than"
+          },
+          {
+            "symbol": ">=",
+            "name": "greater_equal",
+            "description": "Greater than or equal"
+          },
+          {
+            "symbol": "<=",
+            "name": "less_equal",
+            "description": "Less than or equal"
+          },
+          {
+            "symbol": "==",
+            "name": "equal",
+            "description": "Equal"
+          },
+          {
+            "symbol": "!=",
+            "name": "not_equal",
+            "description": "Not equal"
+          }
+        ]
+      },
+      "assignment": {
+        "description": "Assignment operator",
+        "tokens": [
+          {
+            "symbol": "=",
+            "name": "assign",
+            "description": "Variable assignment"
+          }
+        ]
+      }
+    },
+
+    "literals": {
+      "number": {
+        "description": "Numeric literals",
+        "pattern": "\\d+(\\.\\d+)?",
+        "thousandsSeparators": [",", "_"],
+        "examples": ["42", "3.14", "1,000", "1_000_000"],
+        "notes": "Commas and underscores are allowed as thousand separators and are stripped during tokenization"
+      },
+      "currency": {
+        "description": "Currency literals",
+        "pattern": "\\$\\d+(\\.\\d+)?",
+        "thousandsSeparators": [",", "_"],
+        "examples": ["$100", "$1,000.50", "$1_000"],
+        "notes": "Currently only $ symbol supported, commas/underscores allowed"
+      },
+      "boolean": {
+        "description": "Boolean literals",
+        "caseInsensitive": true,
+        "trueValues": ["true", "yes", "t", "y"],
+        "falseValues": ["false", "no", "f", "n"],
+        "examples": ["true", "false", "yes", "no", "t", "f", "y", "n"],
+        "notes": "Boolean keywords are normalized to lowercase 'true' or 'false' during tokenization"
+      }
+    },
+
+    "identifiers": {
+      "description": "Variable names",
+      "pattern": "[^\\s\\d\\+\\-\\*×\\/=$><! %^(),][^\\s\\+\\-\\*×\\/=$><! %^(),]*",
+      "unicodeSupport": true,
+      "allowedCharacters": "Any Unicode character except whitespace and reserved operators",
+      "notAllowed": ["Spaces", "Reserved keywords", "Reserved operators"],
+      "examples": ["salary", "my_budget", "weeks_in_year", "給料", "💰", "résumé"],
+      "notes": "BREAKING CHANGE: Spaces are NOT allowed in identifiers (use underscores instead). Unicode and emoji fully supported."
+    },
+
+    "punctuation": {
+      "description": "Punctuation and delimiters",
+      "tokens": [
+        {
+          "symbol": "(",
+          "name": "lparen",
+          "description": "Left parenthesis"
+        },
+        {
+          "symbol": ")",
+          "name": "rparen",
+          "description": "Right parenthesis"
+        },
+        {
+          "symbol": ",",
+          "name": "comma",
+          "description": "Comma (function argument separator)"
+        }
+      ]
+    },
+
+    "markdown": {
+      "description": "Markdown elements that CalcMark preserves",
+      "prefixes": [
+        {
+          "pattern": "^#+\\s",
+          "description": "Headers (#, ##, ###, etc.)"
+        },
+        {
+          "pattern": "^>\\s",
+          "description": "Blockquotes"
+        },
+        {
+          "pattern": "^[-*]\\s",
+          "description": "Unordered lists"
+        },
+        {
+          "pattern": "^\\d+\\.\\s",
+          "description": "Ordered lists"
+        }
+      ],
+      "notes": "Lines starting with markdown prefixes are classified as markdown, not calculations"
+    }
+  },
+
+  "classification": {
+    "description": "How lines are classified",
+    "lineTypes": {
+      "blank": {
+        "description": "Empty lines or whitespace-only",
+        "pattern": "^\\s*$"
+      },
+      "markdown": {
+        "description": "Lines that are pure markdown",
+        "criteria": [
+          "Starts with markdown prefix (# > - * digit.)",
+          "Contains trailing text after calculation",
+          "Contains unknown variables (context-aware)",
+          "Contains malformed expressions",
+          "Contains URLs or natural language"
+        ]
+      },
+      "calculation": {
+        "description": "Lines containing CalcMark calculations",
+        "criteria": [
+          "Literal values (number, currency, boolean)",
+          "Variable assignments (x = 5)",
+          "Arithmetic expressions (3 + 5)",
+          "Comparison expressions (x > 5)",
+          "Logical expressions (x > 5 and y < 10)",
+          "Function calls (avg(1, 2, 3) or average of 1, 2, 3)",
+          "Variable references (if variable is defined in context)"
+        ]
+      }
+    },
+    "contextAware": {
+      "description": "Classification depends on execution context",
+      "notes": "A line like 'unknown_var' is markdown if the variable is undefined, but a calculation if it's defined in the context"
+    }
+  },
+
+  "syntaxRules": {
+    "whitespace": {
+      "significance": "mostly insignificant",
+      "notes": [
+        "Spaces around operators are optional (3+5 or 3 + 5)",
+        "Spaces separate tokens in multi-token functions (average of)",
+        "Tabs and spaces are equivalent",
+        "Newlines separate statements"
+      ]
+    },
+    "caseInsensitivity": {
+      "keywords": true,
+      "booleans": true,
+      "functions": true,
+      "identifiers": false,
+      "notes": "Identifiers are case-sensitive, but keywords and functions are not"
+    },
+    "precedence": {
+      "description": "Operator precedence (not yet fully implemented in parser)",
+      "order": [
+        {
+          "level": 1,
+          "operators": ["^", "**"],
+          "description": "Exponentiation (highest)"
+        },
+        {
+          "level": 2,
+          "operators": ["*", "×", "x", "X", "/", "%"],
+          "description": "Multiplication, division, modulus"
+        },
+        {
+          "level": 3,
+          "operators": ["+", "-"],
+          "description": "Addition, subtraction"
+        },
+        {
+          "level": 4,
+          "operators": [">", "<", ">=", "<=", "==", "!="],
+          "description": "Comparison"
+        },
+        {
+          "level": 5,
+          "operators": ["not"],
+          "description": "Logical NOT"
+        },
+        {
+          "level": 6,
+          "operators": ["and"],
+          "description": "Logical AND"
+        },
+        {
+          "level": 7,
+          "operators": ["or"],
+          "description": "Logical OR (lowest)"
+        }
+      ],
+      "notes": "Precedence follows Go language specification for logical operators"
+    }
+  },
+
+  "breakingChanges": {
+    "v1.0.0": [
+      {
+        "change": "Spaces no longer allowed in identifiers",
+        "before": "my budget = 1000",
+        "after": "my_budget = 1000",
+        "rationale": "Required to support multi-token function names like 'average of' and 'square root of'",
+        "migration": "Replace spaces in identifier names with underscores"
+      }
+    ]
+  },
+
+  "implementationNotes": {
+    "tokenization": {
+      "multiTokenCombining": "After initial tokenization, sequences like 'IDENTIFIER(average) + IDENTIFIER(of)' are post-processed and combined into FUNC_AVERAGE_OF",
+      "thousandSeparators": "Commas and underscores within numbers are only consumed if followed by a digit, otherwise they become separate tokens",
+      "multiplyAliases": "The letter 'x' or 'X' is treated as multiply operator when preceded by a number and followed by whitespace or digit"
+    },
+    "validation": {
+      "diagnosticCodes": true,
+      "severityLevels": ["error", "warning", "info", "hint"],
+      "notes": "Validator runs in parallel with evaluator and provides detailed diagnostic codes"
+    }
+  },
+
+  "examples": {
+    "simple": [
+      "salary = $50000",
+      "bonus = $5000",
+      "total = salary + bonus"
+    ],
+    "functions": [
+      "avg(1, 2, 3, 4, 5)",
+      "average of 10, 20, 30",
+      "sqrt(16)",
+      "square root of 25"
+    ],
+    "logical": [
+      "x > 5 and y < 10",
+      "salary > $50000 or bonus > $10000",
+      "not (x == 0)"
+    ],
+    "mixed": [
+      "# Budget Calculator",
+      "",
+      "monthly_income = $5000",
+      "monthly_expenses = $3500",
+      "",
+      "Has surplus:",
+      "surplus = monthly_income > monthly_expenses"
+    ]
+  },
+
+  "futureFeatures": {
+    "description": "Reserved but not yet implemented",
+    "features": [
+      {
+        "name": "Conditionals",
+        "keywords": ["if", "then", "else", "elif", "end"],
+        "example": "if sales > $100000 then tax = 20% else tax = 15% end"
+      },
+      {
+        "name": "Loops",
+        "keywords": ["for", "in", "while"],
+        "example": "for month in months do total = total + month end"
+      },
+      {
+        "name": "Additional functions",
+        "examples": ["min()", "max()", "sum()", "round()"]
+      }
+    ]
+  }
+}

@@ -9,12 +9,16 @@ import (
 )
 
 // DiagnosticSeverity represents the severity of a diagnostic
+// See DIAGNOSTIC_LEVELS.md for detailed definitions
 type DiagnosticSeverity int
 
 const (
+	// Error indicates invalid syntax that prevents parsing
 	Error DiagnosticSeverity = iota
+	// Warning indicates valid syntax but evaluation failure (e.g., undefined variables)
 	Warning
-	Info
+	// Hint indicates style/readability suggestions (does not affect functionality)
+	Hint
 )
 
 func (s DiagnosticSeverity) String() string {
@@ -23,8 +27,8 @@ func (s DiagnosticSeverity) String() string {
 		return "error"
 	case Warning:
 		return "warning"
-	case Info:
-		return "info"
+	case Hint:
+		return "hint"
 	default:
 		return "unknown"
 	}
@@ -38,6 +42,7 @@ const (
 	DivisionByZero
 	TypeMismatch
 	SyntaxError
+	BlankLineIsolation // Hint: calculation should be isolated by blank lines
 )
 
 func (c DiagnosticCode) String() string {
@@ -50,6 +55,8 @@ func (c DiagnosticCode) String() string {
 		return "type_mismatch"
 	case SyntaxError:
 		return "syntax_error"
+	case BlankLineIsolation:
+		return "blank_line_isolation"
 	default:
 		return "unknown"
 	}
@@ -150,6 +157,27 @@ func (v *ValidationResult) Warnings() []*Diagnostic {
 		}
 	}
 	return warnings
+}
+
+// HasHints returns true if there are any hint-level diagnostics
+func (v *ValidationResult) HasHints() bool {
+	for _, d := range v.Diagnostics {
+		if d.Severity == Hint {
+			return true
+		}
+	}
+	return false
+}
+
+// Hints returns only hint diagnostics
+func (v *ValidationResult) Hints() []*Diagnostic {
+	var hints []*Diagnostic
+	for _, d := range v.Diagnostics {
+		if d.Severity == Hint {
+			hints = append(hints, d)
+		}
+	}
+	return hints
 }
 
 // String returns a human-readable summary

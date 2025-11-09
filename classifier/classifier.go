@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/ast"
+	"github.com/CalcMark/go-calcmark/constants"
 	"github.com/CalcMark/go-calcmark/evaluator"
 	"github.com/CalcMark/go-calcmark/lexer"
 	"github.com/CalcMark/go-calcmark/parser"
@@ -75,6 +76,9 @@ func allIdentifiersDefined(node ast.Node, context *evaluator.Context) bool {
 		// Check if identifier exists in context (which handles boolean keywords)
 		return context.Has(n.Name)
 
+	case *ast.UnaryOp:
+		return allIdentifiersDefined(n.Operand, context)
+
 	case *ast.BinaryOp:
 		return allIdentifiersDefined(n.Left, context) && allIdentifiersDefined(n.Right, context)
 
@@ -102,24 +106,30 @@ func ClassifyLine(line string, context *evaluator.Context) LineType {
 	}
 
 	// 2. Check markdown prefixes (optimization)
-	stripped := strings.TrimLeft(line, " \t")
+	stripped := strings.TrimLeft(line, constants.Whitespace)
 
 	// Check for markdown headers, quotes, and lists
 	if len(stripped) > 0 {
 		firstChar := stripped[0]
-		if firstChar == '#' || firstChar == '>' || firstChar == '-' || firstChar == '*' {
+		if firstChar == '#' || firstChar == '>' {
 			return Markdown
 		}
 
-		// Numbered list check: digit(s) followed by period and space
+		// Check for markdown bullet lists: "- " or "* " (dash/asterisk followed by space)
+		if (firstChar == '-' || firstChar == '*') && len(stripped) > 1 && stripped[1:2] == constants.Space {
+			return Markdown
+		}
+
+		// Numbered list check: digit(s) followed by period and space (e.g., "1. ", "12. ")
 		if unicode.IsDigit(rune(firstChar)) {
 			// Find the first non-digit
 			i := 0
 			for i < len(stripped) && unicode.IsDigit(rune(stripped[i])) {
 				i++
 			}
-			// Check if it's followed by ". "
-			if i < len(stripped)-1 && stripped[i:i+2] == ". " {
+			// Check if it's followed by ". " (period + space)
+			if i < len(stripped)-1 && len(stripped) >= i+2 &&
+				stripped[i] == '.' && stripped[i+1:i+2] == constants.Space {
 				return Markdown
 			}
 		}

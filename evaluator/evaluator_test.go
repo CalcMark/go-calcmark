@@ -417,3 +417,196 @@ func TestCurrencyPlusNumber(t *testing.T) {
 		t.Errorf("expected %s, got %s", expected, curr.Value)
 	}
 }
+
+func TestNegativeNumbers(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"negative number no space addition", "-50 + 100", "50"},
+		{"negative number no space multiplication", "-10 * 5", "-50"},
+		{"negative number no space subtraction", "-5 - 3", "-8"},
+		{"double negative no space", "-10 - -5", "-5"},
+		{"negative no space in expression", "100 + -50", "50"},
+		{"negative number literal", "-42", "-42"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results, err := Evaluate(tt.input, nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			num := results[0].(*types.Number)
+			expected, _ := decimal.NewFromString(tt.expected)
+			if !num.Value.Equal(expected) {
+				t.Errorf("expected %s, got %s", expected, num.Value)
+			}
+		})
+	}
+}
+
+func TestMarkdownBulletNotParsed(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"dash with space", "- 50"},
+		{"asterisk with space", "* 50"},
+		{"indented dash", "  - item"},
+		{"indented asterisk", "    * item"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results, err := Evaluate(tt.input, nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Should return no results since it's markdown content
+			if len(results) != 0 {
+				t.Errorf("expected 0 results for markdown bullet %q, got %d", tt.input, len(results))
+			}
+		})
+	}
+}
+
+func TestNegativeVsMarkdown(t *testing.T) {
+	// Verify that negative numbers work but markdown bullets don't
+	tests := []struct {
+		name           string
+		input          string
+		expectResults  int
+		isMarkdown     bool
+		expectedValue  string
+	}{
+		{"negative at start no space", "-50", 1, false, "-50"},
+		{"negative in expression", "100 + -50", 1, false, "50"},
+		{"markdown bullet dash", "- 50", 0, true, ""},
+		{"markdown bullet asterisk", "* 50", 0, true, ""},
+		{"indented markdown", "  - item", 0, true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results, err := Evaluate(tt.input, nil)
+			if err != nil {
+				if !tt.isMarkdown {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			if len(results) != tt.expectResults {
+				t.Errorf("expected %d results, got %d", tt.expectResults, len(results))
+			}
+
+			if tt.expectResults > 0 && tt.expectedValue != "" {
+				num := results[0].(*types.Number)
+				if num.Value.String() != tt.expectedValue {
+					t.Errorf("expected value %s, got %s", tt.expectedValue, num.Value.String())
+				}
+			}
+		})
+	}
+}
+
+// TestUndefinedVariableError tests that evaluating undefined variables returns errors
+func TestUndefinedVariableError(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"single undefined variable", "x"},
+		{"undefined in expression", "x + 2"},
+		{"undefined in assignment RHS", "y = x + 2"},
+		{"multiple undefined", "a + b + c"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := NewContext()
+			_, err := Evaluate(tt.input, ctx)
+			if err == nil {
+				t.Errorf("expected error for undefined variable in '%s', got none", tt.input)
+			}
+			// Check that error is EvaluationError
+			if _, ok := err.(*EvaluationError); !ok {
+				t.Errorf("expected EvaluationError, got %T", err)
+			}
+		})
+	}
+}
+
+// TestUnicodeCalculations tests end-to-end calculations with Unicode identifiers
+func TestUnicodeCalculations(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"Japanese variable", "給料 = 5000\n給料", "5000"},
+		{"Emoji variable", "💰 = 1000\n💰 * 2", "2000"},
+		{"Mixed Unicode", "時給 = 25\n時間 = 40\n週給 = 時給 * 時間", "1000"},
+		{"Emoji in expression", "💵 = 100\n💶 = 50\n💵 + 💶", "150"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := NewContext()
+			results, err := Evaluate(tt.input, ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("expected at least one result")
+			}
+
+			lastResult := results[len(results)-1]
+			if lastResult.String() != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, lastResult.String())
+			}
+		})
+	}
+}
+
+// TestUnaryPrecedence tests operator precedence with unary operators
+func TestUnaryPrecedence(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"unary before multiply", "-5 * 3", "-15"},
+		{"unary before divide", "-10 / 2", "-5"},
+		{"unary before exponent", "-2 ^ 3", "-8"},
+		{"multiply before unary RHS", "3 * -5", "-15"},
+		{"unary with parentheses", "-(5 + 3)", "-8"},
+		{"double unary", "--5", "5"},
+		{"unary plus before multiply", "+5 * 2", "10"},
+		{"parentheses precedence", "(2 + 3) * 4", "20"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := NewContext()
+			results, err := Evaluate(tt.input, ctx)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("expected 1 result, got %d", len(results))
+			}
+
+			num := results[0].(*types.Number)
+			if num.Value.String() != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, num.Value.String())
+			}
+		})
+	}
+}

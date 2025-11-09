@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/constants"
 	"github.com/CalcMark/go-calcmark/evaluator"
 	"github.com/CalcMark/go-calcmark/types"
 )
@@ -105,8 +106,9 @@ func TestUnicodeAssignment(t *testing.T) {
 	}
 }
 
-func TestAssignmentWithSpaces(t *testing.T) {
-	tests := []string{"my budget = 1000", "weeks in year = 52"}
+func TestAssignmentWithUnderscores(t *testing.T) {
+	// BREAKING CHANGE: Spaces no longer allowed in identifiers, use underscores
+	tests := []string{"my_budget = 1000", "weeks_in_year = 52"}
 	for _, test := range tests {
 		if ClassifyLine(test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
@@ -229,7 +231,9 @@ func TestTrailingText(t *testing.T) {
 }
 
 func TestIncompleteExpressions(t *testing.T) {
-	tests := []string{"x *", "+ 5", "5 +"}
+	// Note: "+ 5" and "- 5" are now valid (unary operators)
+	// Only truly incomplete expressions should be markdown
+	tests := []string{"x *", "5 +", "5 -"}
 	for _, test := range tests {
 		if ClassifyLine(test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
@@ -307,7 +311,7 @@ savings = salary + bonus - expenses`
 	}
 
 	ctx := evaluator.NewContext()
-	lines := strings.Split(document, "\n")
+	lines := strings.Split(document, constants.Newline)
 
 	for i, line := range lines {
 		result := ClassifyLine(line, ctx)

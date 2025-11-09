@@ -65,6 +65,21 @@ func (i *Identifier) GetRange() *Range {
 	return i.Range
 }
 
+// UnaryOp represents a unary operation (-, +)
+type UnaryOp struct {
+	Operator string
+	Operand  Node
+	Range    *Range
+}
+
+func (u *UnaryOp) String() string {
+	return fmt.Sprintf("UnaryOp(%q, %s)", u.Operator, u.Operand)
+}
+
+func (u *UnaryOp) GetRange() *Range {
+	return u.Range
+}
+
 // BinaryOp represents a binary operation (+, -, *, /, etc.)
 type BinaryOp struct {
 	Operator string

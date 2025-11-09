@@ -18,6 +18,34 @@ var booleanKeywords = map[string]bool{
 	"n":     true,
 }
 
+// Reserved keywords (Go spec compliant + future control flow)
+// See: https://go.dev/ref/spec#Keywords
+var reservedKeywords = map[string]TokenType{
+	// Logical operators (Go spec)
+	"and": AND,
+	"or":  OR,
+	"not": NOT,
+
+	// Future control flow keywords
+	"if":       IF,
+	"then":     THEN,
+	"else":     ELSE,
+	"elif":     ELIF,
+	"end":      END,
+	"for":      FOR,
+	"in":       IN,
+	"while":    WHILE,
+	"return":   RETURN,
+	"break":    BREAK,
+	"continue": CONTINUE,
+	"let":      LET,
+	"const":    CONST,
+
+	// Reserved function names (canonical)
+	"avg":  FUNC_AVG,
+	"sqrt": FUNC_SQRT,
+}
+
 // LexerError represents a lexer error
 type LexerError struct {
 	Message string
@@ -92,11 +120,12 @@ func (l *Lexer) readNumber() Token {
 
 	for l.currentChar() != 0 {
 		char := l.currentChar()
-		if unicode.IsDigit(char) || char == '.' || char == ',' || char == '_' {
-			if char != ',' && char != '_' { // Ignore thousands separators
-				numStr.WriteRune(char)
-			}
+		if unicode.IsDigit(char) || char == '.' {
+			numStr.WriteRune(char)
 			l.advance()
+		} else if (char == ',' || char == '_') && unicode.IsDigit(l.peek(1)) {
+			// Only consume comma/underscore if followed by a digit (thousand separator)
+			l.advance() // Skip the separator, don't add to numStr
 		} else {
 			break
 		}
@@ -123,11 +152,12 @@ func (l *Lexer) readCurrency() (Token, error) {
 	var numStr strings.Builder
 	for l.currentChar() != 0 {
 		char := l.currentChar()
-		if unicode.IsDigit(char) || char == '.' || char == ',' || char == '_' {
-			if char != ',' && char != '_' { // Ignore thousands separators
-				numStr.WriteRune(char)
-			}
+		if unicode.IsDigit(char) || char == '.' {
+			numStr.WriteRune(char)
 			l.advance()
+		} else if (char == ',' || char == '_') && unicode.IsDigit(l.peek(1)) {
+			// Only consume comma/underscore if followed by a digit (thousand separator)
+			l.advance() // Skip the separator, don't add to numStr
 		} else {
 			break
 		}
@@ -159,7 +189,7 @@ func (l *Lexer) isIdentifierChar(char rune, isFirst bool) bool {
 	}
 
 	// Reserved operators and special characters
-	if strings.ContainsRune("+-*×/=$><! %^", char) {
+	if strings.ContainsRune("+-*×/=$><! %^(),", char) {
 		return false
 	}
 
@@ -172,8 +202,8 @@ func (l *Lexer) isIdentifierChar(char rune, isFirst bool) bool {
 }
 
 // readIdentifier reads an identifier (variable name)
-// Identifiers support any Unicode characters including emoji,
-// spaces within the name, and international characters
+// Identifiers support any Unicode characters including emoji and international characters
+// NOTE: Spaces are NOT allowed in identifiers (this allows multi-token function names)
 func (l *Lexer) readIdentifier() Token {
 	startLine := l.line
 	startColumn := l.column
@@ -183,18 +213,9 @@ func (l *Lexer) readIdentifier() Token {
 	for l.currentChar() != 0 {
 		char := l.currentChar()
 
-		// Handle spaces specially - they're allowed within identifiers
-		if char == ' ' {
-			// Look ahead to see if there's more identifier content
-			nextChar := l.peek(1)
-			if nextChar != 0 && l.isIdentifierChar(nextChar, false) {
-				identifier.WriteRune(char)
-				l.advance()
-				continue
-			} else {
-				// Space at the end, stop reading
-				break
-			}
+		// Spaces terminate identifiers (no spaces within identifiers)
+		if char == ' ' || char == '\t' || char == '\r' || char == '\n' {
+			break
 		}
 
 		// Check if character is valid for identifier
@@ -207,14 +228,24 @@ func (l *Lexer) readIdentifier() Token {
 		isFirst = false
 	}
 
-	// Strip any trailing spaces
-	identStr := strings.TrimRight(identifier.String(), " ")
+	identStr := identifier.String()
+	lowerIdent := strings.ToLower(identStr)
+
+	// Check reserved keywords FIRST (including logical operators and function names)
+	if tokenType, isReserved := reservedKeywords[lowerIdent]; isReserved {
+		return Token{
+			Type:   tokenType,
+			Value:  lowerIdent,
+			Line:   startLine,
+			Column: startColumn,
+		}
+	}
 
 	// Check if identifier is a boolean keyword
-	if booleanKeywords[strings.ToLower(identStr)] {
+	if booleanKeywords[lowerIdent] {
 		return Token{
 			Type:   BOOLEAN,
-			Value:  strings.ToLower(identStr),
+			Value:  lowerIdent,
 			Line:   startLine,
 			Column: startColumn,
 		}
@@ -460,6 +491,41 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			// Otherwise '!' alone is not a valid token, will fall through to error
 		}
 
+		// Parentheses
+		if char == '(' {
+			tokens = append(tokens, Token{
+				Type:   LPAREN,
+				Value:  "(",
+				Line:   l.line,
+				Column: l.column,
+			})
+			l.advance()
+			continue
+		}
+
+		if char == ')' {
+			tokens = append(tokens, Token{
+				Type:   RPAREN,
+				Value:  ")",
+				Line:   l.line,
+				Column: l.column,
+			})
+			l.advance()
+			continue
+		}
+
+		// Comma (for function arguments)
+		if char == ',' {
+			tokens = append(tokens, Token{
+				Type:   COMMA,
+				Value:  ",",
+				Line:   l.line,
+				Column: l.column,
+			})
+			l.advance()
+			continue
+		}
+
 		// Unknown character
 		return nil, &LexerError{
 			Message: fmt.Sprintf("Unexpected character '%c'", char),
@@ -476,7 +542,69 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 		Column: l.column,
 	})
 
+	// Post-process tokens to combine multi-token function names
+	tokens = combineMultiTokenFunctions(tokens)
+
 	return tokens, nil
+}
+
+// combineMultiTokenFunctions combines multi-token sequences into single function tokens
+// Examples:
+//   "average" + "of" → FUNC_AVERAGE_OF
+//   "square" + "root" + "of" → FUNC_SQUARE_ROOT_OF
+func combineMultiTokenFunctions(tokens []Token) []Token {
+	result := make([]Token, 0, len(tokens))
+	i := 0
+
+	for i < len(tokens) {
+		token := tokens[i]
+
+		// Check for "average of" (case insensitive)
+		if token.Type == IDENTIFIER && strings.ToLower(token.Value) == "average" {
+			if i+1 < len(tokens) {
+				nextToken := tokens[i+1]
+				// Check for "of" after "average"
+				if nextToken.Type == IDENTIFIER && strings.ToLower(nextToken.Value) == "of" {
+					// Combine into FUNC_AVERAGE_OF
+					result = append(result, Token{
+						Type:   FUNC_AVERAGE_OF,
+						Value:  "average of",
+						Line:   token.Line,
+						Column: token.Column,
+					})
+					i += 2 // Skip both tokens
+					continue
+				}
+			}
+		}
+
+		// Check for "square root of" (case insensitive)
+		if token.Type == IDENTIFIER && strings.ToLower(token.Value) == "square" {
+			if i+2 < len(tokens) {
+				rootToken := tokens[i+1]
+				ofToken := tokens[i+2]
+				// Check for "root of" after "square"
+				if rootToken.Type == IDENTIFIER && strings.ToLower(rootToken.Value) == "root" &&
+					ofToken.Type == IDENTIFIER && strings.ToLower(ofToken.Value) == "of" {
+					// Combine into FUNC_SQUARE_ROOT_OF
+					result = append(result, Token{
+						Type:   FUNC_SQUARE_ROOT_OF,
+						Value:  "square root of",
+						Line:   token.Line,
+						Column: token.Column,
+					})
+					i += 3 // Skip all three tokens
+					continue
+				}
+			}
+		}
+
+		// No multi-token match, keep original token
+		result = append(result, token)
+		i++
+	}
+
+	return result
 }
 
 // Tokenize is a convenience function to tokenize text

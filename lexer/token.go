@@ -30,6 +30,42 @@ const (
 	EQUAL
 	NOT_EQUAL
 
+	// Logical operators (Go spec compliant)
+	// See: https://go.dev/ref/spec#Logical_operators
+	AND // "and"
+	OR  // "or"
+	NOT // "not"
+
+	// Grouping
+	LPAREN
+	RPAREN
+
+	// Punctuation
+	COMMA // ","
+
+	// Reserved keywords for future control flow
+	IF
+	THEN
+	ELSE
+	ELIF
+	END
+	FOR
+	IN
+	WHILE
+	RETURN
+	BREAK
+	CONTINUE
+	LET
+	CONST
+
+	// Reserved function names (cannot be used as variables)
+	FUNC_AVG  // "avg" - canonical name
+	FUNC_SQRT // "sqrt" - canonical name
+
+	// Multi-token function keywords (aliases)
+	FUNC_AVERAGE_OF     // "average of" → maps to "avg"
+	FUNC_SQUARE_ROOT_OF // "square root of" → maps to "sqrt"
+
 	// Special
 	NEWLINE
 	EOF
@@ -72,6 +108,52 @@ func (tt TokenType) String() string {
 		return "EQUAL"
 	case NOT_EQUAL:
 		return "NOT_EQUAL"
+	case AND:
+		return "AND"
+	case OR:
+		return "OR"
+	case NOT:
+		return "NOT"
+	case LPAREN:
+		return "LPAREN"
+	case RPAREN:
+		return "RPAREN"
+	case COMMA:
+		return "COMMA"
+	case IF:
+		return "IF"
+	case THEN:
+		return "THEN"
+	case ELSE:
+		return "ELSE"
+	case ELIF:
+		return "ELIF"
+	case END:
+		return "END"
+	case FOR:
+		return "FOR"
+	case IN:
+		return "IN"
+	case WHILE:
+		return "WHILE"
+	case RETURN:
+		return "RETURN"
+	case BREAK:
+		return "BREAK"
+	case CONTINUE:
+		return "CONTINUE"
+	case LET:
+		return "LET"
+	case CONST:
+		return "CONST"
+	case FUNC_AVG:
+		return "FUNC_AVG"
+	case FUNC_SQRT:
+		return "FUNC_SQRT"
+	case FUNC_AVERAGE_OF:
+		return "FUNC_AVERAGE_OF"
+	case FUNC_SQUARE_ROOT_OF:
+		return "FUNC_SQUARE_ROOT_OF"
 	case NEWLINE:
 		return "NEWLINE"
 	case EOF:

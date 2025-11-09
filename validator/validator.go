@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/ast"
+	"github.com/CalcMark/go-calcmark/constants"
 	"github.com/CalcMark/go-calcmark/evaluator"
 	"github.com/CalcMark/go-calcmark/parser"
 )
@@ -108,19 +109,63 @@ func ValidateDocument(document string, initialContext *evaluator.Context) map[in
 	}
 
 	results := make(map[int]*ValidationResult)
-	lines := strings.Split(document, "\n")
+	lines := strings.Split(document, constants.Newline)
+
+	// Helper to check if a line is blank
+	isBlank := func(s string) bool {
+		return strings.TrimSpace(s) == ""
+	}
+
+	// Helper to check if a line can parse as a calculation
+	canParseAsCalculation := func(s string) bool {
+		if isBlank(s) {
+			return false
+		}
+		_, err := parser.Parse(s)
+		return err == nil
+	}
 
 	for lineNum, line := range lines {
 		lineNumber := lineNum + 1 // 1-indexed
 
 		// Skip blank lines
-		if strings.TrimSpace(line) == "" {
+		if isBlank(line) {
 			continue
 		}
 
 		// For now, validate all non-blank lines as calculations
 		// (classifier integration will be added later)
 		result := ValidateCalculation(line, context)
+
+		// Check for blank line isolation hint
+		// Only for valid calculations (no errors)
+		if result.IsValid() && canParseAsCalculation(line) {
+			// Check if line before is non-blank and non-calculation
+			hasPrevBlank := lineNum == 0 || isBlank(lines[lineNum-1])
+
+			// Check if line after is non-blank and non-calculation
+			hasNextBlank := lineNum == len(lines)-1 || isBlank(lines[lineNum+1])
+
+			if !hasPrevBlank {
+				// There's content directly before this calculation
+				result.Diagnostics = append(result.Diagnostics, &Diagnostic{
+					Severity: Hint,
+					Code:     BlankLineIsolation,
+					Message:  "Consider adding a blank line before this calculation for better readability",
+					Range:    nil, // Line-level hint, no specific range
+				})
+			}
+
+			if !hasNextBlank {
+				// There's content directly after this calculation
+				result.Diagnostics = append(result.Diagnostics, &Diagnostic{
+					Severity: Hint,
+					Code:     BlankLineIsolation,
+					Message:  "Consider adding a blank line after this calculation for better readability",
+					Range:    nil, // Line-level hint, no specific range
+				})
+			}
+		}
 
 		// Store if there are any diagnostics
 		if len(result.Diagnostics) > 0 {

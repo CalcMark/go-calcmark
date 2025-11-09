@@ -105,9 +105,10 @@ func TestTokenizeIdentifiers(t *testing.T) {
 	}{
 		{"simple identifier", "salary", IDENTIFIER, "salary"},
 		{"identifier with underscores", "weeks_in_year", IDENTIFIER, "weeks_in_year"},
-		{"identifier with spaces", "weeks in year", IDENTIFIER, "weeks in year"},
+		// BREAKING CHANGE: Spaces no longer allowed in identifiers (needed for multi-token functions)
+		// {"identifier with spaces", "weeks in year", IDENTIFIER, "weeks in year"},
 		{"unicode identifier", "給料", IDENTIFIER, "給料"},
-		{"identifier with emoji", "my budget", IDENTIFIER, "my budget"},
+		{"identifier with emoji", "💰", IDENTIFIER, "💰"},
 		{"special character identifier", "@", IDENTIFIER, "@"},
 	}
 
@@ -255,12 +256,13 @@ func TestTokenizeExpressions(t *testing.T) {
 			tokenTypes:  []TokenType{CURRENCY, MULTIPLY, NUMBER, EOF},
 			tokenValues: []string{"$:1000", "*", "52", ""},
 		},
-		{
-			name:        "identifier with spaces",
-			input:       "weeks in year = 52",
-			tokenTypes:  []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
-			tokenValues: []string{"weeks in year", "=", "52", ""},
-		},
+		// BREAKING CHANGE: Spaces no longer allowed in identifiers
+		// {
+		// 	name:        "identifier with spaces",
+		// 	input:       "weeks in year = 52",
+		// 	tokenTypes:  []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
+		// 	tokenValues: []string{"weeks in year", "=", "52", ""},
+		// },
 	}
 
 	for _, tt := range tests {
@@ -360,14 +362,15 @@ func TestTokenizeXAsMultiply(t *testing.T) {
 }
 
 func TestTokenizeComplexExpression(t *testing.T) {
-	input := "total income = $5,000 + bonus"
+	// BREAKING CHANGE: Use underscores instead of spaces in identifiers
+	input := "total_income = $5,000 + bonus"
 	tokens, err := Tokenize(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	expectedTypes := []TokenType{
-		IDENTIFIER, // "total income"
+		IDENTIFIER, // "total_income"
 		ASSIGN,     // "="
 		CURRENCY,   // "$5,000"
 		PLUS,       // "+"

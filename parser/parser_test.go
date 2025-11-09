@@ -320,15 +320,16 @@ func TestParseWithBlankLines(t *testing.T) {
 	}
 }
 
-func TestParseIdentifierWithSpaces(t *testing.T) {
-	nodes, err := Parse("weeks in year = 52")
+func TestParseIdentifierWithUnderscores(t *testing.T) {
+	// BREAKING CHANGE: Spaces no longer allowed, use underscores
+	nodes, err := Parse("weeks_in_year = 52")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	assign := nodes[0].(*ast.Assignment)
-	if assign.Name != "weeks in year" {
-		t.Errorf("expected name 'weeks in year', got '%s'", assign.Name)
+	if assign.Name != "weeks_in_year" {
+		t.Errorf("expected name 'weeks_in_year', got '%s'", assign.Name)
 	}
 }
 
@@ -419,5 +420,125 @@ func TestParsePositions(t *testing.T) {
 
 	if assign.Range.Start.Line != 1 || assign.Range.Start.Column != 1 {
 		t.Errorf("expected position 1:1, got %s", assign.Range.Start)
+	}
+}
+
+// TestTrailingTokens tests that expressions with trailing text fail to parse
+func TestTrailingTokens(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"trailing word", "$100 budget"},
+		{"trailing phrase", "5 + 3 equals eight"},
+		{"trailing identifier", "x = 5 dollars"},
+		{"trailing number", "10 20"},
+		{"expression then text", "2 + 2 is four"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.input)
+			if err == nil {
+				t.Errorf("expected error for trailing tokens in '%s', got none", tt.input)
+			}
+		})
+	}
+}
+
+// TestUnaryOperators tests parsing of unary operators
+func TestUnaryOperators(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		operator string
+		operand  string
+	}{
+		{"negative number", "-5", "-", "5"},
+		{"positive number", "+5", "+", "5"},
+		{"double negative", "--5", "-", "-5"},
+		{"unary on variable", "-x", "-", "x"}, // Note: will fail evaluation if x undefined
+		{"negative expression", "-(10 + 5)", "-", "(10 + 5)"},
+		{"positive expression", "+(10 + 5)", "+", "(10 + 5)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(nodes) != 1 {
+				t.Fatalf("expected 1 node, got %d", len(nodes))
+			}
+
+			expr, ok := nodes[0].(*ast.Expression)
+			if !ok {
+				t.Fatalf("expected Expression, got %T", nodes[0])
+			}
+
+			unary, ok := expr.Expr.(*ast.UnaryOp)
+			if !ok {
+				t.Fatalf("expected UnaryOp, got %T", expr.Expr)
+			}
+
+			if unary.Operator != tt.operator {
+				t.Errorf("expected operator '%s', got '%s'", tt.operator, unary.Operator)
+			}
+		})
+	}
+}
+
+// TestParentheses tests parsing of parenthesized expressions
+func TestParentheses(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"simple grouping", "(2 + 3)"},
+		{"precedence override", "(2 + 3) * 4"},
+		{"nested parentheses", "((1 + 2) * 3)"},
+		{"multiple groups", "(1 + 2) * (3 + 4)"},
+		{"unary with parens", "-(5 + 3)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(nodes) != 1 {
+				t.Fatalf("expected 1 node, got %d", len(nodes))
+			}
+
+			_, ok := nodes[0].(*ast.Expression)
+			if !ok {
+				t.Fatalf("expected Expression, got %T", nodes[0])
+			}
+		})
+	}
+}
+
+// TestMismatchedParentheses tests that mismatched parentheses produce errors
+func TestMismatchedParentheses(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"missing closing", "(2 + 3"},
+		{"missing opening", "2 + 3)"},
+		{"unbalanced nested", "((1 + 2) * 3"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.input)
+			if err == nil {
+				t.Errorf("expected error for '%s', got none", tt.input)
+			}
+		})
 	}
 }

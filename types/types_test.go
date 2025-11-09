@@ -417,3 +417,104 @@ func TestTypeNames(t *testing.T) {
 		t.Errorf("expected 'Boolean', got '%s'", b.TypeName())
 	}
 }
+
+// TestCurrencyFormatting tests currency string formatting with symbols
+func TestCurrencyFormatting(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    float64
+		symbol   string
+		expected string
+	}{
+		{"USD whole", 100, "$", "$100.00"},
+		{"USD decimal", 100.50, "$", "$100.50"},
+		{"EUR", 50, "€", "€50.00"},
+		{"GBP", 25.99, "£", "£25.99"},
+		{"JPY", 1000, "¥", "¥1,000.00"},
+		{"large amount", 1000000, "$", "$1,000,000.00"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			curr, err := NewCurrency(tt.value, tt.symbol)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			result := curr.String()
+			if result != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, result)
+			}
+
+			// Verify symbol is preserved
+			if curr.Symbol != tt.symbol {
+				t.Errorf("expected symbol %s, got %s", tt.symbol, curr.Symbol)
+			}
+		})
+	}
+}
+
+// TestBooleanValues tests creation and string representation of boolean values
+func TestBooleanValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    bool
+		expected string
+	}{
+		{"true", true, "true"},
+		{"false", false, "false"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := NewBoolean(tt.value)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if b.Value != tt.value {
+				t.Errorf("expected value %v, got %v", tt.value, b.Value)
+			}
+
+			if b.String() != tt.expected {
+				t.Errorf("expected string %s, got %s", tt.expected, b.String())
+			}
+
+			if b.TypeName() != "Boolean" {
+				t.Errorf("expected type 'Boolean', got '%s'", b.TypeName())
+			}
+		})
+	}
+
+	// Test boolean keywords (Title case supported) via NewBoolean
+	keywords := []struct {
+		keyword  string
+		expected bool
+	}{
+		{"true", true},
+		{"True", true},
+		{"yes", true},
+		{"Yes", true},
+		{"y", true},
+		{"t", true},
+		{"false", false},
+		{"False", false},
+		{"no", false},
+		{"No", false},
+		{"n", false},
+		{"f", false},
+	}
+
+	for _, kw := range keywords {
+		t.Run("keyword_"+kw.keyword, func(t *testing.T) {
+			b, err := NewBoolean(kw.keyword)
+			if err != nil {
+				t.Fatalf("unexpected error for keyword '%s': %v", kw.keyword, err)
+			}
+
+			if b.Value != kw.expected {
+				t.Errorf("keyword '%s': expected %v, got %v", kw.keyword, kw.expected, b.Value)
+			}
+		})
+	}
+}
