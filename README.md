@@ -1,21 +1,48 @@
 # go-calcmark
 
-Go implementation of the CalcMark calculation language.
+**Go implementation of the CalcMark calculation language.**
+
+[![Go Version](https://img.shields.io/github/go-mod/go-version/CalcMark/go-calcmark)](https://github.com/CalcMark/go-calcmark)
+[![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen)](https://github.com/CalcMark/go-calcmark)
 
 ## Overview
 
-This is the core CalcMark language library that provides:
-- **Types** - Number, Currency, Boolean with arbitrary precision
-- **Lexer** - Unicode-aware tokenization
+CalcMark is a calculation language that blends seamlessly with markdown. This library provides the complete Go implementation with:
+
+- **Types** - Number, Currency, Boolean with arbitrary precision decimals
+- **Lexer** - Unicode-aware tokenization with reserved keywords
 - **Parser** - Recursive descent parser with operator precedence
 - **Evaluator** - Expression evaluation with context
 - **Validator** - Semantic validation with diagnostics
 - **Classifier** - Line classification (calculation vs markdown)
 
+**Version:** v0.1.1 (Phase 1 complete - Reserved keywords and multi-token functions)
+
 ## Installation
 
 ```bash
 go get github.com/CalcMark/go-calcmark
+```
+
+### Installing the CLI
+
+To install the `calcmark` command-line tool:
+
+```bash
+go install github.com/CalcMark/go-calcmark/cmd/calcmark@latest
+```
+
+Then you can use:
+
+```bash
+# Output the syntax highlighter spec
+calcmark spec
+
+# Save to a file
+calcmark spec > syntax.json
+
+# Show version
+calcmark version
 ```
 
 ## Usage
@@ -453,19 +480,23 @@ go-calcmark/
 ├── parser/      # Recursive descent parser
 ├── evaluator/   # Expression evaluation
 ├── validator/   # Semantic validation
-└── classifier/  # Line classification
+├── classifier/  # Line classification
+├── syntax/  # Embedded syntax highlighter spec
+├── cmd/calcmark/# CLI tool
+└── spec/        # Documentation (JSON spec, markdown guides)
 ```
 
 ## Test Coverage
 
-- **types**: 14 tests
-- **lexer**: 25 tests
+- **lexer**: 113 tests (including 88 reserved keyword tests)
 - **parser**: 23 tests
 - **evaluator**: 25 tests
 - **validator**: 32 tests
 - **classifier**: 27 tests
+- **types**: 14 tests
+- **spec validation**: 8 tests
 
-**Total: 146 tests** ✅
+**Total: 173 tests** ✅ All passing
 
 ## Dependencies
 
@@ -474,20 +505,44 @@ go-calcmark/
 
 ## Documentation
 
-### Language Specifications
+### Language Specification
 
-- **[SYNTAX_SPEC.md](SYNTAX_SPEC.md)** - Grammar, operators, precedence, parsing rules
-- **[LINE_CLASSIFICATION_SPEC.md](LINE_CLASSIFICATION_SPEC.md)** - Line classification rules (calculation vs markdown)
-- **[SEMANTIC_VALIDATION_GO.md](SEMANTIC_VALIDATION_GO.md)** - Semantic validation API and usage (Go-specific)
-- **[DIAGNOSTIC_LEVELS.md](DIAGNOSTIC_LEVELS.md)** - Diagnostic severity levels (ERROR/WARNING/HINT)
-- **[DOCUMENT_MODEL_SPEC.md](DOCUMENT_MODEL_SPEC.md)** - Document model and API specification
-- **[CLAUDE.md](CLAUDE.md)** - Technical decisions and test coverage tracking
+- **[spec/LANGUAGE_SPEC.md](spec/LANGUAGE_SPEC.md)** - Complete, authoritative CalcMark language specification
+- **[spec/SYNTAX_HIGHLIGHTER_SPEC.json](spec/SYNTAX_HIGHLIGHTER_SPEC.json)** - Machine-readable spec for editor integrations (embedded in library)
+- **[spec/SYNTAX_HIGHLIGHTER_README.md](spec/SYNTAX_HIGHLIGHTER_README.md)** - TypeScript/JavaScript integration guide
 
-### Legacy Documentation
+### Embedded Syntax Spec
 
-- **[SEMANTIC_VALIDATION.md](SEMANTIC_VALIDATION.md)** - Original Python-based semantic validation doc (use SEMANTIC_VALIDATION_GO.md instead)
+The `SYNTAX_HIGHLIGHTER_SPEC.json` is embedded in the library and can be accessed programmatically:
 
-These specifications define the CalcMark language behavior and implementation details.
+```go
+import "github.com/CalcMark/go-calcmark/syntax"
+
+// Get the JSON spec as a string
+jsonSpec := syntax.SyntaxHighlighterSpec
+
+// Or as bytes (useful for HTTP responses)
+jsonBytes := syntax.SyntaxHighlighterSpecBytes()
+
+// Example: Serve via HTTP endpoint
+http.HandleFunc("/syntax", func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(syntax.SyntaxHighlighterSpecBytes())
+})
+```
+
+To regenerate the spec from the Go implementation:
+
+```bash
+calcmark generate
+# Or: go generate ./syntax
+```
+
+### Development
+
+- **[CLAUDE.md](CLAUDE.md)** - Development guide for future Claude Code sessions
+
+The `spec/` directory contains the platform-independent language specification. The Go implementation in this repository is one implementation of that spec.
 
 ## License
 
