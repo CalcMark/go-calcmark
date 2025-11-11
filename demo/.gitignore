@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# SvelteKit
+.svelte-kit/
+build/
+
+# Build output
+dist/
+
+# WASM files (generated - must build locally)
+static/calcmark.wasm
+static/wasm_exec.js
+
+# Test files
+test-*.js
+*.png
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

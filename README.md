@@ -3,7 +3,7 @@
 **Go implementation of the CalcMark calculation language.**
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/CalcMark/go-calcmark)](https://github.com/CalcMark/go-calcmark)
-[![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen)](https://github.com/CalcMark/go-calcmark)
+[![Tests](https://img.shields.io/badge/tests-220%2B%20passing-brightgreen)](https://github.com/CalcMark/go-calcmark)
 
 ## Overview
 
@@ -24,22 +24,28 @@ CalcMark is a calculation language that blends seamlessly with markdown. This li
 go get github.com/CalcMark/go-calcmark
 ```
 
-### Installing the CLI
+### Building the CLI
 
-To install the `calcmark` command-line tool:
+To build and install the `calcmark` command-line tool:
 
 ```bash
-go install github.com/CalcMark/go-calcmark/cmd/calcmark@latest
+# From the project root
+go build -o calcmark ./impl/cmd/calcmark
+./calcmark version
+
+# Or install globally
+go install ./impl/cmd/calcmark
+calcmark version
 ```
 
-Then you can use:
+Commands available:
 
 ```bash
+# Build WASM module and copy to destination
+calcmark wasm [output-directory]
+
 # Output the syntax highlighter spec
 calcmark spec
-
-# Save to a file
-calcmark spec > syntax.json
 
 # Show version
 calcmark version
@@ -56,7 +62,13 @@ import (
 )
 
 func main() {
-    content := "salary = $5000\nrent = $1500\nsavings = salary - rent"
+    content := `salary = $5000
+rent = €1500
+tax_rate = 0.08
+monthly_tax = salary * tax_rate
+net_income = salary - rent - monthly_tax
+circle_area = PI * 5 ^ 2
+average_expense = avg($500, €400, £300)`
 
     context := evaluator.NewContext()
     results, err := evaluator.Evaluate(content, context)
@@ -67,6 +79,14 @@ func main() {
     for _, result := range results {
         fmt.Println(result.String())
     }
+    // Output:
+    // $5000.00
+    // €1500.00
+    // 0.08
+    // $400.00
+    // $3100.00
+    // 78.539816339744825
+    // 400 (Number - mixed currency units)
 }
 ```
 
@@ -295,7 +315,10 @@ Additional Component:
 
 **Key Features**:
 - Unicode-aware (supports international characters, emojis)
-- Recognizes numbers, currency ($€£¥), booleans, operators
+- Recognizes numbers with thousands separators (`,` or `_`)
+- Currency symbols: `$`, `€`, `£`, `¥`
+- Mathematical constants: `PI`, `E` (case-insensitive, read-only)
+- Booleans: `true`, `false`, `yes`, `no`, `t`, `f`, `y`, `n` (case-insensitive)
 - Tracks line/column positions for error reporting
 
 **Entry Point**: `lexer.Tokenize(string) ([]Token, error)`
@@ -368,7 +391,14 @@ Line 2: sales = 1000 * sales_tax
 **Key Rules**:
 - Variables must be defined before use (no forward references)
 - Context flows between lines
-- Type checking (can't add currency + number)
+- Mathematical constants (`PI`, `E`) are always available and read-only
+- Functions: `avg()`, `sqrt()` with natural language aliases
+  - `avg(1, 2, 3)` or `average of 1, 2, 3`
+  - `sqrt(16)` or `square root of 16`
+- Unit handling:
+  - Binary operations preserve units: `$200 + 0.1` → `$200.10`
+  - Functions drop units when mixed: `avg($100, €200)` → `150` (Number)
+  - Same units preserved: `avg($100, $200)` → `$150.00` (Currency)
 
 **Entry Point**: `evaluator.Evaluate(string, *Context) ([]types.Type, error)`
 
@@ -377,8 +407,10 @@ Line 2: sales = 1000 * sales_tax
 
 **Types**:
 - **Number**: Arbitrary precision decimals (using `shopspring/decimal`)
-- **Currency**: Number + symbol ($, €, £, ¥)
-- **Boolean**: true/false (keywords: true, false, yes, no, t, f, y, n)
+  - Supports thousands separators: `1,000` or `1_000_000`
+- **Currency**: Number + symbol (`$`, `€`, `£`, `¥`)
+  - Example: `$1,234.56`, `€500`, `£1,000,000`, `¥10000`
+- **Boolean**: true/false (keywords: `true`, `false`, `yes`, `no`, `t`, `f`, `y`, `n` - case-insensitive)
 
 **Example**:
 ```go
@@ -488,15 +520,16 @@ go-calcmark/
 
 ## Test Coverage
 
-- **lexer**: 113 tests (including 88 reserved keyword tests)
-- **parser**: 23 tests
-- **evaluator**: 25 tests
-- **validator**: 32 tests
-- **classifier**: 27 tests
-- **types**: 14 tests
-- **spec validation**: 8 tests
+Comprehensive test coverage across all packages:
+- **lexer**: Number parsing, thousands separators, currency symbols, reserved keywords
+- **parser**: Expression parsing, operator precedence, function calls
+- **evaluator**: Arithmetic, functions, constants, mixed units, type handling
+- **validator**: Undefined variables, semantic errors, diagnostics
+- **classifier**: Line classification, context-aware detection
+- **types**: Number, Currency, Boolean types
+- **spec validation**: Syntax highlighter spec generation
 
-**Total: 173 tests** ✅ All passing
+All tests passing ✅
 
 ## Dependencies
 

@@ -1,0 +1,114 @@
+package lexer
+
+import (
+	"testing"
+)
+
+// TestFunctionCallsWithThousandsSeparators tests that thousands separators work correctly in function arguments
+func TestFunctionCallsWithThousandsSeparators(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantTokens []TokenType
+		wantValues []string
+	}{
+		{
+			name:  "average of with thousands and decimals",
+			input: "average of 432, 32, 1,000.01",
+			wantTokens: []TokenType{
+				FUNC_AVERAGE_OF, // "average of"
+				NUMBER,          // 432
+				COMMA,
+				NUMBER, // 32
+				COMMA,
+				NUMBER, // 1000.01
+				EOF,
+			},
+			wantValues: []string{
+				"average of",
+				"432",
+				",",
+				"32",
+				",",
+				"1000.01", // Should be ONE number, not broken up
+				"",
+			},
+		},
+		{
+			name:  "avg with large numbers",
+			input: "avg(1,234,567.89, 9,876.54)",
+			wantTokens: []TokenType{
+				FUNC_AVG,
+				LPAREN,
+				NUMBER, // 1234567.89
+				COMMA,
+				NUMBER, // 9876.54
+				RPAREN,
+				EOF,
+			},
+			wantValues: []string{
+				"avg",
+				"(",
+				"1234567.89",
+				",",
+				"9876.54",
+				")",
+				"",
+			},
+		},
+		{
+			name:  "avg three args with thousands",
+			input: "avg(1,000, 2,000, 3,000.50)",
+			wantTokens: []TokenType{
+				FUNC_AVG,
+				LPAREN,
+				NUMBER, // 1000
+				COMMA,
+				NUMBER, // 2000
+				COMMA,
+				NUMBER, // 3000.50
+				RPAREN,
+				EOF,
+			},
+			wantValues: []string{
+				"avg",
+				"(",
+				"1000",
+				",",
+				"2000",
+				",",
+				"3000.50",
+				")",
+				"",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokens, err := Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("Tokenize(%q) returned error: %v", tt.input, err)
+			}
+
+			// Check token count
+			if len(tokens) != len(tt.wantTokens) {
+				t.Errorf("Tokenize(%q) returned %d tokens, want %d", tt.input, len(tokens), len(tt.wantTokens))
+				for i, tok := range tokens {
+					t.Logf("  [%d] %s = %q", i, tok.Type, tok.Value)
+				}
+				return
+			}
+
+			// Check each token type and value
+			for i := range tokens {
+				if tokens[i].Type != tt.wantTokens[i] {
+					t.Errorf("Token %d: got type %s, want %s", i, tokens[i].Type, tt.wantTokens[i])
+				}
+				if tokens[i].Value != tt.wantValues[i] {
+					t.Errorf("Token %d: got value %q, want %q", i, tokens[i].Value, tt.wantValues[i])
+				}
+			}
+		})
+	}
+}
