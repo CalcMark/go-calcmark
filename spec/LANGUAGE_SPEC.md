@@ -183,25 +183,33 @@ From **highest** to **lowest**:
 
 ### Type Compatibility
 
-**Allowed operations:**
+**Binary operations (preserve units):**
 
 ```
 Number + Number → Number
-Number * Number → Number
+Currency + Number → Currency  (unit preserved)
+Number + Currency → Currency  (unit preserved)
 Currency + Currency (same symbol) → Currency
-Currency * Number → Currency
-Number * Currency → Currency
-Boolean == Boolean → Boolean
-Number == Number → Boolean
-Currency == Currency (same symbol) → Boolean
+Currency + Currency (different symbols) → Number  (units dropped)
+
+$200 + 0.1 → $200.10
+$200 * 0.1 → $20.00  (like 10% discount)
+€500 + 25 → €525.00
+$100 + €50 → 150  (Number, mixed units)
+```
+
+**Functions (drop units when mixed):**
+
+```
+avg($100, $200) → $150.00  (same unit preserved)
+avg($100, €200) → 150  (Number, mixed units)
+avg($100, 200, €300) → 200  (Number, mixed units)
+sqrt($100) → $10.00  (single unit preserved)
 ```
 
 **Type errors:**
 
 ```
-Currency + Number → ERROR (type mismatch)
-Currency * Currency → ERROR (nonsensical)
-$100 + €50 → ERROR (currency mismatch)
 Boolean + Number → ERROR (no boolean arithmetic)
 ```
 
@@ -231,7 +239,13 @@ $1,000.50       ✓ With separators
 $ 100           ✗ No space between symbol and number
 ```
 
-**Note:** Currently only `$` is fully implemented and tested. Other symbols are tokenized but may not be fully supported.
+**Supported symbols:** `$`, `€`, `£`, `¥`
+
+**Thousands separators:**
+- Commas are valid thousands separators when followed by exactly 3 digits
+- `1,000` → valid thousands separator
+- `1,2,3` → three separate numbers (comma-separated list)
+- `avg(1,2,3)` and `avg(1, 2, 3)` both work correctly
 
 #### Booleans
 
@@ -251,7 +265,7 @@ True, FALSE     ✓ Any case
 - **BREAKING CHANGE (v1.0.0):** Spaces NOT allowed in identifiers
 - Must start with letter, underscore, or Unicode character (not digit)
 - Can contain letters, digits, underscores, Unicode, emoji
-- Cannot be reserved keywords
+- Cannot be reserved keywords or constants
 
 ```
 x               ✓
@@ -264,6 +278,24 @@ my_var_123      ✓ Mixed
 123abc          ✗ Cannot start with digit
 my budget       ✗ Spaces not allowed (use my_budget)
 avg             ✗ Reserved keyword
+PI              ✗ Reserved constant
+E               ✗ Reserved constant
+```
+
+### Mathematical Constants
+
+**Built-in constants** (read-only, case-insensitive):
+
+| Constant | Value | Example |
+|----------|-------|---------|
+| `PI`, `pi` | `3.141592653589793` | `2 * PI` → `6.283185307179586` |
+| `E`, `e` | `2.718281828459045` | `E * 2` → `5.43656365691809` |
+
+Constants cannot be assigned:
+```
+PI = 3          ✗ ERROR: Cannot assign to constant 'PI'
+radius = 5      ✓
+area = PI * radius ^ 2  ✓ → 78.53981633974483
 ```
 
 ---
@@ -365,20 +397,19 @@ square root of 16       → Same as sqrt (natural syntax)
 
 ## Functions
 
-**Status:** Function infrastructure not yet implemented (Phases 5-7).
-
-### Planned Functions
+### Implemented Functions
 
 | Function | Aliases | Signature | Description |
 |----------|---------|-----------|-------------|
-| `avg()` | `average of` | `avg(x, y, ...)` | Average of numbers |
-| `sqrt()` | `square root of` | `sqrt(x)` | Square root |
+| `avg()` | `average of` | `avg(x, y, ...)` | Average of numbers (variadic) |
+| `sqrt()` | `square root of` | `sqrt(x)` | Square root (single argument) |
 
 ### Function Syntax
 
 **Traditional (parentheses):**
 ```
 avg(1, 2, 3, 4, 5)
+avg(1,2,3)  // Works with or without spaces
 sqrt(16)
 ```
 
@@ -390,14 +421,25 @@ square root of 16
 
 Both forms produce the same AST node and behavior.
 
-### Unit Preservation
+### Unit Handling in Functions
 
-Functions preserve units:
+Functions handle units intelligently:
 
+**Same units → preserve:**
 ```
-sqrt($100) → $10 (not just 10)
-avg($100, $200, $300) → $200
+avg($100, $200, $300) → $200.00
+avg(€100, €200) → €150.00
+sqrt($100) → $10.00
 ```
+
+**Mixed units → drop to Number:**
+```
+avg($100, €200) → 150  (no units)
+avg($100, 200, €300) → 200  (no units)
+average of $50, €100, £150 → 100  (no units)
+```
+
+**Rationale:** Functions aggregate/transform values. When units are mixed, the result becomes dimensionless.
 
 ---
 
@@ -533,24 +575,54 @@ can_save = surplus >= savings_goal
 
 ## Implementation Status
 
-| Feature | Status | Phase |
+| Feature | Status | Notes |
 |---------|--------|-------|
-| Basic arithmetic | ✅ Complete | - |
-| Variables & assignment | ✅ Complete | - |
-| Comparison operators | ✅ Complete | - |
-| Unary operators | ✅ Complete | - |
-| Parentheses | ✅ Complete | - |
-| Currency type | ✅ Complete | - |
-| Boolean type | ✅ Complete | - |
-| Unicode identifiers | ✅ Complete | - |
-| Reserved keywords | ✅ Tokens only | Phase 1 ✅ |
-| Multi-token functions | ✅ Tokens only | Phase 1 ✅ |
+| Basic arithmetic | ✅ Complete | All operators working |
+| Variables & assignment | ✅ Complete | Context-aware |
+| Comparison operators | ✅ Complete | All comparison ops |
+| Unary operators | ✅ Complete | Negation and plus |
+| Parentheses | ✅ Complete | Full expression support |
+| Currency type | ✅ Complete | `$`, `€`, `£`, `¥` |
+| Boolean type | ✅ Complete | Case-insensitive keywords |
+| Unicode identifiers | ✅ Complete | Full Unicode support |
+| Mathematical constants | ✅ Complete | PI and E (read-only) |
+| Thousands separators | ✅ Complete | Smart comma detection |
+| Reserved keywords | ✅ Complete | Tokens and validation |
+| Multi-token functions | ✅ Complete | `average of`, `square root of` |
+| Function: avg() | ✅ Complete | Variadic, unit-aware |
+| Function: sqrt() | ✅ Complete | Single arg, unit-preserving |
+| Mixed unit handling | ✅ Complete | Binary ops vs functions |
 | Statement/Expression distinction | ⏳ Planned | Phase 2 |
 | Logical operators (and/or/not) | ⏳ Planned | Phase 3 |
-| Type system enhancements | ⏳ Planned | Phase 4 |
-| Function infrastructure | ⏳ Planned | Phase 5 |
-| sqrt() function | ⏳ Planned | Phase 6 |
-| avg() function | ⏳ Planned | Phase 7 |
+
+---
+
+## Future Features
+
+Features being considered for future versions:
+
+### Localized Number Formatting
+
+**Goal**: Support locale-specific thousands and decimal separators
+
+**Current behavior** (US-centric):
+- Thousands separator: `,` (comma)
+- Decimal separator: `.` (period)
+- Example: `1,234.56`
+
+**Future support** (locale-aware):
+- German (de-DE): `1.234,56` (period for thousands, comma for decimal)
+- French (fr-FR): `1 234,56` (space for thousands, comma for decimal)
+- Swiss (de-CH): `1'234.56` (apostrophe for thousands, period for decimal)
+
+**Implementation requirements**:
+- Add locale configuration/metadata to lexer context
+- Support period (`.`) as thousands separator in some locales
+- Support comma (`,`) as decimal separator in some locales
+- Handle ambiguity: distinguish thousands vs decimal based on locale
+- Comprehensive test coverage for multiple locales
+
+**Status**: Not yet implemented (non-trivial architectural change required)
 
 ---
 

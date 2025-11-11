@@ -316,26 +316,14 @@
         "description": "Boolean literals",
         "examples": [
           "true",
-          "false",
-          "yes",
-          "no",
-          "t",
-          "f",
-          "y",
-          "n"
+          "false"
         ],
         "falseValues": [
-          "false",
-          "no",
-          "f",
-          "n"
+          "false"
         ],
         "notes": "Boolean keywords are normalized to lowercase 'true' or 'false' during tokenization",
         "trueValues": [
-          "true",
-          "yes",
-          "t",
-          "y"
+          "true"
         ]
       },
       "currency": {
