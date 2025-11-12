@@ -30,3 +30,6 @@ go.work
 .DS_Store
 Thumbs.db
 .claude/
+calcmark.ebnf
+cmspec
+*.ebnf
