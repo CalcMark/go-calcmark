@@ -13,17 +13,20 @@ CalcMark is a calculation language that blends calculations with markdown. This 
 ### Running Tests
 
 ```bash
-# Run all tests
-go test ./...
+# Run all tests (excludes impl/wasm which requires GOOS=js GOARCH=wasm)
+go test $(go list ./... | grep -v '/impl/wasm$')
+
+# Run all tests with verbose output
+go test -v $(go list ./... | grep -v '/impl/wasm$')
 
 # Run tests with coverage
-go test -cover ./...
+go test -cover $(go list ./... | grep -v '/impl/wasm$')
 
 # Run spec tests only
 go test ./spec/...
 
-# Run impl tests only
-go test ./impl/...
+# Run impl tests only (excluding wasm)
+go test $(go list ./impl/... | grep -v '/impl/wasm$')
 
 # Run specific package tests
 go test ./impl/evaluator -v
@@ -35,6 +38,10 @@ go test ./impl/types -v
 
 # Run a single test function
 go test ./impl/evaluator -run TestSimpleAssignment -v
+
+# Note: impl/wasm tests cannot run with standard go test
+# They require GOOS=js GOARCH=wasm build constraints
+# The wasm package is tested indirectly through integration tests
 ```
 
 ### Building

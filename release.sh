@@ -4,6 +4,10 @@
 # Usage:
 #   ./release.sh          # Build and publish to GitHub (requires gh CLI)
 #   ./release.sh --local  # Build artifacts only (no GitHub publish)
+#
+# Environment Variables:
+#   CI                    # Set to 'true' in GitHub Actions for non-interactive mode
+#   GITHUB_TOKEN          # Required for gh CLI authentication in CI
 
 set -e  # Exit on error
 
@@ -63,13 +67,13 @@ fi
 echo -e "${GREEN}✓ Tag ${EXPECTED_TAG} matches version.go${NC}"
 echo
 
-# 3. Run tests
+# 3. Run tests (exclude WASM package which requires GOOS=js GOARCH=wasm)
 echo -e "${BLUE}[3/6]${NC} Running tests..."
-if ! go test ./... -v; then
+if ! go test $(go list ./... | grep -v '/impl/wasm$') -v; then
     echo -e "${RED}Error: Tests failed. Fix tests before releasing.${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ All tests passed${NC}"
+echo -e "${GREEN}✓ All tests passed (excluding impl/wasm)${NC}"
 echo
 
 # 4. Build CLI tools
@@ -133,23 +137,43 @@ else
         exit 1
     fi
 
+    # In CI, verify GITHUB_TOKEN is set
+    if [ "${CI}" = "true" ] && [ -z "${GITHUB_TOKEN}" ]; then
+        echo -e "${RED}Error: GITHUB_TOKEN not set in CI environment${NC}"
+        exit 1
+    fi
+
     # Check if already released
     if gh release view "$EXPECTED_TAG" &> /dev/null; then
         echo -e "${YELLOW}Warning: Release ${EXPECTED_TAG} already exists on GitHub${NC}"
-        read -p "Delete and recreate? (y/N) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+
+        # In CI or non-interactive mode, automatically delete and recreate
+        if [ "${CI}" = "true" ] || [ -n "${GITHUB_ACTIONS}" ]; then
+            echo "Running in CI - automatically deleting existing release..."
             gh release delete "$EXPECTED_TAG" --yes
         else
-            echo "Aborting."
-            exit 1
+            # Interactive mode - ask user
+            read -p "Delete and recreate? (y/N) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                gh release delete "$EXPECTED_TAG" --yes
+            else
+                echo "Aborting."
+                exit 1
+            fi
         fi
     fi
 
-    # Push tag if not already on remote
-    if ! git ls-remote --tags origin | grep -q "refs/tags/${EXPECTED_TAG}"; then
-        echo "Pushing tag ${EXPECTED_TAG} to origin..."
-        git push origin "$EXPECTED_TAG"
+    # Push tag if not already on remote (skip in CI - tag is already pushed)
+    if [ "${CI}" != "true" ]; then
+        if ! git ls-remote --tags origin | grep -q "refs/tags/${EXPECTED_TAG}"; then
+            echo "Pushing tag ${EXPECTED_TAG} to origin..."
+            git push origin "$EXPECTED_TAG"
+        else
+            echo "Tag ${EXPECTED_TAG} already exists on remote"
+        fi
+    else
+        echo "Running in CI - tag already pushed by workflow trigger"
     fi
 
     # Create release
