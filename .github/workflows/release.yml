@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify version matches version.go
+        run: |
+          VERSION_GO=$(grep 'const Version =' version.go | cut -d'"' -f2)
+          if [ "$VERSION_GO" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Error: Tag version (${{ steps.version.outputs.version }}) doesn't match version.go ($VERSION_GO)"
+            exit 1
+          fi
+          echo "✓ Version validated: $VERSION_GO"
+
+      - name: Run tests
+        run: go test -v ./...
+
+      - name: Build CLI tools
+        run: |
+          go build -o calcmark ./impl/cmd/calcmark
+          go build -o cmspec ./spec/cmd/cmspec
+
+          # Verify versions
+          CALCMARK_VERSION=$(./calcmark version | awk '{print $3}')
+          CMSPEC_VERSION=$(./cmspec version | awk '{print $3}')
+          echo "calcmark version: $CALCMARK_VERSION"
+          echo "cmspec version: $CMSPEC_VERSION"
+
+      - name: Build WASM artifacts
+        run: |
+          mkdir -p release-artifacts
+          ./calcmark wasm release-artifacts
+
+          # Verify artifacts exist
+          ls -lh release-artifacts/
+
+          if [ ! -f "release-artifacts/calcmark-${{ steps.version.outputs.version }}.wasm" ]; then
+            echo "Error: WASM file not created"
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            release-artifacts/calcmark-${{ steps.version.outputs.version }}.wasm
+            release-artifacts/wasm_exec.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## Release v${{ steps.version.outputs.version }} Published! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- \`calcmark-${{ steps.version.outputs.version }}.wasm\` ($(du -h release-artifacts/calcmark-${{ steps.version.outputs.version }}.wasm | cut -f1))" >> $GITHUB_STEP_SUMMARY
+          echo "- \`wasm_exec.js\` ($(du -h release-artifacts/wasm_exec.js | cut -f1))" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View release: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
