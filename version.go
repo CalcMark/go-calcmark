@@ -2,4 +2,4 @@
 package calcmark
 
 // Version is the current version of the CalcMark implementation.
-const Version = "0.1.2"
+const Version = "0.1.21"
