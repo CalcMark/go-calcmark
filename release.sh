@@ -96,7 +96,9 @@ echo
 
 # 5. Build WASM artifacts
 echo -e "${BLUE}[5/6]${NC} Building WASM artifacts..."
-RELEASE_DIR="./release-artifacts"
+
+# Use absolute path to avoid any working directory issues
+RELEASE_DIR="$(pwd)/release-artifacts"
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
@@ -106,8 +108,24 @@ mkdir -p "$RELEASE_DIR"
 WASM_FILE="$RELEASE_DIR/calcmark-${VERSION}.wasm"
 JS_FILE="$RELEASE_DIR/wasm_exec.js"
 
-if [ ! -f "$WASM_FILE" ] || [ ! -f "$JS_FILE" ]; then
-    echo -e "${RED}Error: WASM artifacts not created${NC}"
+# Debug: List what was actually created
+echo "Debug: Checking for artifacts..."
+echo "  Working directory: $(pwd)"
+echo "  RELEASE_DIR: $RELEASE_DIR"
+echo "  WASM_FILE: $WASM_FILE"
+echo "  JS_FILE: $JS_FILE"
+echo "  Contents of release directory:"
+ls -la "$RELEASE_DIR/" || echo "  Directory not found!"
+
+if [ ! -f "$WASM_FILE" ]; then
+    echo -e "${RED}Error: WASM file not found: $WASM_FILE${NC}"
+    echo "  File test result: $(test -f "$WASM_FILE" && echo exists || echo missing)"
+    exit 1
+fi
+
+if [ ! -f "$JS_FILE" ]; then
+    echo -e "${RED}Error: JS file not found: $JS_FILE${NC}"
+    echo "  File test result: $(test -f "$JS_FILE" && echo exists || echo missing)"
     exit 1
 fi
 
