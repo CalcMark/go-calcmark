@@ -12,7 +12,7 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "version":
-			fmt.Printf("cmspec version %s\n", calcmark.Version)
+			fmt.Println(calcmark.Version)
 			return
 		case "help", "-h", "--help":
 			printUsage()

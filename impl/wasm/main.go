@@ -23,7 +23,7 @@ import (
 // ==============================================================================
 
 // globalContext maintains variable bindings across evaluation calls.
-// This allows the demo to evaluate calculations line-by-line while preserving
+// This allows applications to evaluate calculations line-by-line while preserving
 // previous variable assignments. Use resetContext() to clear this state.
 var globalContext = evaluator.NewContext()
 

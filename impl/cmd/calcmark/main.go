@@ -27,7 +27,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "version":
-		fmt.Printf("calcmark version %s\n", calcmark.Version)
+		fmt.Println(calcmark.Version)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
 		printUsage()
@@ -67,15 +67,16 @@ func buildWasm() error {
 
 	wasmDir := filepath.Join(moduleRoot, "impl", "wasm")
 	wasmFilename := fmt.Sprintf("calcmark-%s.wasm", calcmark.Version)
+	buildWasmPath := filepath.Join(wasmDir, wasmFilename)
 	outputWasmPath := filepath.Join(outputDir, wasmFilename)
 
 	fmt.Printf("Building WASM module...\n")
 	fmt.Printf("  Version: %s\n", calcmark.Version)
 	fmt.Printf("  Source:  %s\n", wasmDir)
-	fmt.Printf("  Output:  %s\n", outputWasmPath)
+	fmt.Printf("  Build:   %s\n", buildWasmPath)
 
-	// Build the WASM module
-	cmd := exec.Command("go", "build", "-o", outputWasmPath)
+	// Build the WASM module in its source directory
+	cmd := exec.Command("go", "build", "-ldflags=-s -w", "-o", buildWasmPath)
 	cmd.Dir = wasmDir
 	cmd.Env = append(os.Environ(),
 		"GOOS=js",
@@ -89,6 +90,17 @@ func buildWasm() error {
 	}
 
 	fmt.Println("✓ WASM module built successfully")
+
+	// Copy WASM file to output directory
+	fmt.Printf("Copying WASM module...\n")
+	fmt.Printf("  From: %s\n", buildWasmPath)
+	fmt.Printf("  To:   %s\n", outputWasmPath)
+
+	if err := copyFile(buildWasmPath, outputWasmPath); err != nil {
+		return fmt.Errorf("failed to copy WASM: %w", err)
+	}
+
+	fmt.Println("✓ WASM module copied successfully")
 
 	// Copy wasm_exec.js from Go installation
 	goRoot, err := getGoRoot()
