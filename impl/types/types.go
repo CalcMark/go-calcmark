@@ -34,9 +34,20 @@ func NewNumber(value any) (*Number, error) {
 	case float64:
 		d = decimal.NewFromFloat(v)
 	case string:
-		d, err = decimal.NewFromString(v)
-		if err != nil {
-			return nil, fmt.Errorf("invalid number string: %w", err)
+		// Handle percentage literals (e.g., "20%" → 0.20)
+		if strings.HasSuffix(v, "%") {
+			percentStr := strings.TrimSuffix(v, "%")
+			percent, err := decimal.NewFromString(percentStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid percentage string: can't convert %s to decimal", v)
+			}
+			// Convert percentage to decimal (20% → 0.20)
+			d = percent.Div(decimal.NewFromInt(100))
+		} else {
+			d, err = decimal.NewFromString(v)
+			if err != nil {
+				return nil, fmt.Errorf("invalid number string: %w", err)
+			}
 		}
 	case decimal.Decimal:
 		d = v
