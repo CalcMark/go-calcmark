@@ -626,8 +626,22 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		return nil, err
 	}
 
+	// Validate argument counts based on function
+	funcNameStr := string(funcName.Value)
+	if funcNameStr == "avg" && len(args) == 0 {
+		return nil, p.error("avg() requires at least 1 argument")
+	}
+	if funcNameStr == "sqrt" {
+		if len(args) == 0 {
+			return nil, p.error("sqrt() requires exactly 1 argument")
+		}
+		if len(args) > 1 {
+			return nil, p.error("sqrt() takes only 1 argument")
+		}
+	}
+
 	return &ast.FunctionCall{
-		Name:      string(funcName.Value),
+		Name:      funcNameStr,
 		Arguments: args,
 	}, nil
 }
