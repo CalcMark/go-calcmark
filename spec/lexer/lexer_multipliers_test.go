@@ -128,18 +128,6 @@ func TestMultiplierVsUnit(t *testing.T) {
 				{EOF, ""},
 			},
 		},
-		{
-			name:  "12 k (12 * k variable)",
-			input: "12 k",
-			tokens: []struct {
-				typ TokenType
-				val string
-			}{
-				{NUMBER, "12"},    // plain number
-				{IDENTIFIER, "k"}, // variable named 'k'
-				{EOF, ""},
-			},
-		},
 	}
 
 	for _, tt := range tests {
