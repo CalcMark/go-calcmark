@@ -148,7 +148,6 @@ func TestPercentageInvalidCases(t *testing.T) {
 
 // TestPercentageEdgeCases tests edge cases for percentage parsing
 func TestPercentageEdgeCases(t *testing.T) {
-	t.Skip("Percentage auto-conversion not yet implemented")
 	tests := []struct {
 		name  string
 		input string
@@ -191,8 +190,8 @@ func TestPercentageEdgeCases(t *testing.T) {
 }
 
 // TestModulusOperatorVsPercentage tests distinguishing % as modulus vs percentage
-func TestModulusOperatorVsPercentage(t *testing.T) {
-	t.Skip("Percentage auto-conversion not yet implemented")
+func TestModulusVsPercentage(t *testing.T) {
+	// Test that % with spaces is modulus, without space is percentage
 	tests := []struct {
 		name     string
 		input    string
