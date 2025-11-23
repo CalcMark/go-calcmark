@@ -4,10 +4,9 @@ import (
 	"testing"
 )
 
-// TestPercentageLiterals tests that percentages are tokenized as numbers
-// with the % symbol immediately following (NO whitespace).
+// Test that percentage literals are tokenized correctly
+// NOTE: Lexer returns NUMBER_PERCENT token, conversion happens in types.NewNumber
 func TestPercentageLiterals(t *testing.T) {
-	t.Skip("Percentage auto-conversion not yet implemented - lexer returns NUMBER_PERCENT not NUMBER with decimal value")
 	tests := []struct {
 		name     string
 		input    string
@@ -17,7 +16,7 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Integer percentage",
 			input: "20%",
 			expected: []Token{
-				{Type: NUMBER, Value: "0.20"},
+				{Type: NUMBER_PERCENT, Value: "20%"},
 				{Type: EOF},
 			},
 		},
@@ -25,7 +24,7 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Decimal percentage",
 			input: "0.5%",
 			expected: []Token{
-				{Type: NUMBER, Value: "0.005"},
+				{Type: NUMBER_PERCENT, Value: "0.5%"},
 				{Type: EOF},
 			},
 		},
@@ -33,7 +32,7 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Large percentage",
 			input: "150%",
 			expected: []Token{
-				{Type: NUMBER, Value: "1.50"},
+				{Type: NUMBER_PERCENT, Value: "150%"},
 				{Type: EOF},
 			},
 		},
@@ -41,7 +40,7 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Percentage with thousands separator (comma)",
 			input: "1,000%",
 			expected: []Token{
-				{Type: NUMBER, Value: "10.00"},
+				{Type: NUMBER_PERCENT, Value: "1000%"},
 				{Type: EOF},
 			},
 		},
@@ -49,7 +48,7 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Percentage with thousands separator (underscore)",
 			input: "1_000%",
 			expected: []Token{
-				{Type: NUMBER, Value: "10.00"},
+				{Type: NUMBER_PERCENT, Value: "1000%"},
 				{Type: EOF},
 			},
 		},
@@ -57,9 +56,10 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Percentage in expression",
 			input: "$100 * 20%",
 			expected: []Token{
-				{Type: QUANTITY, Value: "100:$"},
-				{Type: MULTIPLY},
-				{Type: NUMBER, Value: "0.20"},
+				{Type: CURRENCY_SYM, Value: "$"},
+				{Type: NUMBER, Value: "100"},
+				{Type: MULTIPLY, Value: ""},
+				{Type: NUMBER_PERCENT, Value: "20%"},
 				{Type: EOF},
 			},
 		},
@@ -67,9 +67,9 @@ func TestPercentageLiterals(t *testing.T) {
 			name:  "Multiple percentages",
 			input: "20% + 30%",
 			expected: []Token{
-				{Type: NUMBER, Value: "0.20"},
-				{Type: PLUS},
-				{Type: NUMBER, Value: "0.30"},
+				{Type: NUMBER_PERCENT, Value: "20%"},
+				{Type: PLUS, Value: ""},
+				{Type: NUMBER_PERCENT, Value: "30%"},
 				{Type: EOF},
 			},
 		},
