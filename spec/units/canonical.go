@@ -25,7 +25,7 @@ var StandardUnits = map[string]UnitMapping{
 	"meter": {
 		Canonical:   "meter",
 		Symbol:      "m",
-		Aliases:     []string{"meters", "metre", "metres", "m"},
+		Aliases:     []string{"meter", "meters", "metre", "metres", "m"},
 		System:      "SI",
 		Quantity:    "Length",
 		Description: "SI base unit of length",
@@ -43,7 +43,7 @@ var StandardUnits = map[string]UnitMapping{
 	"mile": {
 		Canonical:   "mile",
 		Symbol:      "mi",
-		Aliases:     []string{"miles", "mi"},
+		Aliases:     []string{"mile", "miles", "mi"},
 		System:      "US_Customary",
 		Quantity:    "Length",
 		Description: "5280 feet, 1609.344 meters",
@@ -53,7 +53,7 @@ var StandardUnits = map[string]UnitMapping{
 	"kilogram": {
 		Canonical:   "kilogram",
 		Symbol:      "kg",
-		Aliases:     []string{"kilograms", "kg"},
+		Aliases:     []string{"kilogram", "kilograms", "kg"},
 		System:      "SI",
 		Quantity:    "Mass",
 		Description: "1000 grams",
@@ -63,7 +63,7 @@ var StandardUnits = map[string]UnitMapping{
 	"pound": {
 		Canonical:   "pound",
 		Symbol:      "lb",
-		Aliases:     []string{"pounds", "lb", "lbs"},
+		Aliases:     []string{"pound", "pounds", "lb", "lbs"},
 		System:      "US_Customary",
 		Quantity:    "Mass",
 		Description: "Avoirdupois pound, 453.59237 grams",
