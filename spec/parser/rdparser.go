@@ -586,8 +586,31 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 }
 
 // parseFunctionCall parses a function call.
-// Grammar: FUNC_NAME '(' [arguments] ')'
+// FunctionCall → FUNC_NAME '(' ArgumentList ')'
 func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
+	funcName := p.previous() // Already consumed by match()
+
+	if _, err := p.consume(lexer.LPAREN, "expected '(' after function name"); err != nil {
+		return nil, err
+	}
+
+	// Parse arguments
+	var args []ast.Node
+
+	// Empty argument list
+	if p.check(lexer.RPAREN) {
+		p.advance()
+		return &ast.FunctionCall{
+			Name:      string(funcName.Value),
+			Arguments: args,
+		}, nil
+	}
+
+	// Parse first argument
+	arg, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
 	args = append(args, arg)
 
 	// Parse remaining arguments
