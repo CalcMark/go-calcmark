@@ -392,6 +392,17 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 	if p.match(lexer.NUMBER, lexer.NUMBER_K, lexer.NUMBER_M, lexer.NUMBER_B, lexer.NUMBER_T,
 		lexer.NUMBER_PERCENT, lexer.NUMBER_SCI) {
 		tok := p.previous()
+
+		// Check if followed by an identifier (unit): "12k meters", "1e3 kg", etc.
+		if p.check(lexer.IDENTIFIER) {
+			unitTok := p.advance()
+			return &ast.QuantityLiteral{
+				Value:      string(tok.Value),
+				Unit:       string(unitTok.Value),
+				SourceText: string(tok.OriginalText) + " " + string(unitTok.Value),
+			}, nil
+		}
+
 		return &ast.NumberLiteral{
 			Value:      string(tok.Value),
 			SourceText: string(tok.OriginalText),
