@@ -124,9 +124,9 @@ func evaluateArgs(e *Evaluator, args []ast.Node, nodeRange *ast.Range) ([]types.
 
 // currencyInfo tracks currency type information across multiple values
 type currencyInfo struct {
-	hasCurrency   bool
+	hasCurrency    bool
 	currencySymbol string
-	hasMixedUnits bool
+	hasMixedUnits  bool
 }
 
 // trackCurrencyTypes analyzes a list of values and determines currency status

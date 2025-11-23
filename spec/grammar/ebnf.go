@@ -8,11 +8,11 @@
 //   - Used by XML, XQuery, and other W3C specifications
 //   - Compatible with https://www.bottlecaps.de/rr/ui (Railroad Diagram Generator)
 //   - Key syntax differences from ISO EBNF:
-//     * Uses ::= instead of = for productions
-//     * Uses /* */ comments instead of (* *)
-//     * No semicolons at end of production rules
-//     * Quantifiers: ? (optional), * (zero or more), + (one or more)
-//     * Character classes: [A-Z], [#xHHHH-#xHHHH]
+//   - Uses ::= instead of = for productions
+//   - Uses /* */ comments instead of (* *)
+//   - No semicolons at end of production rules
+//   - Quantifiers: ? (optional), * (zero or more), + (one or more)
+//   - Character classes: [A-Z], [#xHHHH-#xHHHH]
 package grammar
 
 import (
@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/validator"
 )
 
 // GenerateEBNF generates W3C EBNF grammar by introspecting the CalcMark specification.
@@ -38,7 +37,7 @@ import (
 //   - Boolean keywords from lexer.BooleanKeywords
 //   - Reserved keywords from lexer.ReservedKeywords
 //   - Emoji ranges from lexer.EmojiRanges
-//   - Diagnostic examples from validator.ExampleDiagnostics
+//   - Diagnostic examples (TODO: implement semantic.ExampleDiagnostics)
 func GenerateEBNF(version string) string {
 	var b strings.Builder
 
@@ -274,45 +273,45 @@ func GenerateEBNF(version string) string {
 	b.WriteString("     - Variables must be defined before use\n")
 	b.WriteString("*/\n\n")
 
-	// Common Editor Hints - introspected from validator diagnostics
-	b.WriteString("/* ============================================================================ */\n")
-	b.WriteString("/* Common Editor Hints */\n")
-	b.WriteString("/* ============================================================================ */\n")
-	b.WriteString("/* Introspected from validator.ExampleDiagnostics */\n")
-	b.WriteString("/*\n")
-	b.WriteString("  Editor implementations should provide helpful hints for common edge cases:\n\n")
+	// Common Editor Hints - TODO: implement diagnostic introspection
+	// b.WriteString("/* ============================================================================ */\n")
+	// b.WriteString("/* Common Editor Hints */\n")
+	// b.WriteString("/* ============================================================================ */\n")
+	// b.WriteString("/* TODO: Introspect from semantic.ExampleDiagnostics when implemented */\n")
+	// b.WriteString("/*\n")
+	// b.WriteString("  Editor implementations should provide helpful hints for common edge cases:\n\n")
 
 	// Group diagnostic examples by code
-	diagnosticsByCode := make(map[string][]validator.DiagnosticExample)
-	for _, example := range validator.ExampleDiagnostics {
-		code := example.Code.String()
-		diagnosticsByCode[code] = append(diagnosticsByCode[code], example)
-	}
+	// diagnosticsByCode := make(map[string][]semantic.DiagnosticExample)
+	// for _, example := range semantic.ExampleDiagnostics {
+	// 	code := example.Code.String()
+	// 	diagnosticsByCode[code] = append(diagnosticsByCode[code], example)
+	// }
 
 	// Generate sections for each diagnostic code
 	// Process in a consistent order
-	codes := []string{"unsupported_emoji_in_calc", "blank_line_isolation", "ambiguous_modulus"}
-	for _, code := range codes {
-		examples, exists := diagnosticsByCode[code]
-		if !exists || len(examples) == 0 {
-			continue
-		}
+	// codes := []string{"unsupported_emoji_in_calc", "blank_line_isolation", "ambiguous_modulus"}
+	// for _, code := range codes {
+	// 	examples, exists := diagnosticsByCode[code]
+	// 	if !exists || len(examples) == 0 {
+	// 		continue
+	// 	}
 
-		// Use the first example to get the title (convert snake_case to Title Case)
-		title := formatDiagnosticTitle(code)
-		b.WriteString("  " + title + ":\n")
+	// 	// Use the first example to get the title (convert snake_case to Title Case)
+	// 	title := formatDiagnosticTitle(code)
+	// 	b.WriteString("  " + title + ":\n")
 
-		// Write all examples for this code
-		for _, ex := range examples {
-			b.WriteString("  - " + ex.Description + "\n")
-			if ex.Example != "" {
-				b.WriteString("      Example: " + ex.Example + "\n")
-			}
-		}
-		b.WriteString("\n")
-	}
+	// 	// Write all examples for this code
+	// 	for _, ex := range examples {
+	// 		b.WriteString("  - " + ex.Description + "\n")
+	// 		if ex.Example != "" {
+	// 			b.WriteString("      Example: " + ex.Example + "\n")
+	// 		}
+	// 	}
+	// 	b.WriteString("\n")
+	// }
 
-	b.WriteString("*/\n")
+	// b.WriteString("*/\n")
 
 	return b.String()
 }

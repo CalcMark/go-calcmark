@@ -6,7 +6,8 @@ import (
 
 func TestTokenPositions4323(t *testing.T) {
 	input := "average of 3, 4,323, 1003"
-	tokens, err := Tokenize(input)
+	lex := NewLexer(input)
+	tokens, err := lex.Tokenize()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,7 +58,8 @@ func TestTokenPositions4323(t *testing.T) {
 
 func TestTokenPositionsSimple4323(t *testing.T) {
 	input := "4,323"
-	tokens, err := Tokenize(input)
+	lex := NewLexer(input)
+	tokens, err := lex.Tokenize()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,7 +83,8 @@ func TestTokenPositionsSimple4323(t *testing.T) {
 
 func TestRenderSimulation(t *testing.T) {
 	input := "average of 3, 4,323, 1003"
-	tokens, err := Tokenize(input)
+	lex := NewLexer(input)
+	tokens, err := lex.Tokenize()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -145,7 +148,8 @@ func TestRenderSimulation(t *testing.T) {
 
 func TestMultilinePositions(t *testing.T) {
 	input := "x = 5\ny = 10"
-	tokens, err := Tokenize(input)
+	lex := NewLexer(input)
+	tokens, err := lex.Tokenize()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -1,0 +1,280 @@
+# CalcMark Unit Parsing - Comprehensive Test Coverage
+
+This file extensively tests number + unit combinations (Quantity literals).
+
+---
+
+## Canonical Units - SI (Metric)
+
+### Length
+1 m
+1.5 m
+12k m
+1.2M m
+
+10 meter
+10 meters
+10 metre
+10 metres
+
+100 km
+100 kilometer
+100 kilometers
+100 kilometre
+100 kilometres
+
+50 cm
+50 centimeter
+50 centimeters
+
+25 mm
+25 millimeter
+25 millimeters
+
+### Mass
+500 g
+500 gram
+500 grams
+500 gramme
+500 grammes
+
+2 kg
+2.5 kg
+12k kg
+2 kilogram
+2 kilograms
+
+### Volume
+5 L
+5 l
+5 liter
+5 liters
+5 litre
+5 litres
+
+250 mL
+250 ml
+250 milliliter
+250 milliliters
+
+---
+
+## Canonical Units - US Customary
+
+### Length
+5 ft
+5.5 ft
+5 foot
+5 feet
+
+100 in
+100 inch
+100 inches
+
+25 yd
+25 yard
+25 yards
+
+10 mi
+10 mile
+10 miles
+
+### Mass
+10 lb
+10 lbs
+10.5 lb
+12k lb
+10 pound
+10 pounds
+
+16 oz
+16 ounce
+16 ounces
+
+### Volume
+1 gal
+1 gallon
+1 gallons
+
+4 qt
+4 quart
+4 quarts
+
+8 pt
+8 pint
+8 pints
+
+2 cup
+2 cups
+
+3 tbsp
+3 Tbsp
+3 tablespoon
+3 tablespoons
+
+6 tsp
+6 teaspoon
+6 teaspoons
+
+---
+
+## Number Multipliers + Units
+
+These test that multipliers (k, M, B) work WITH units.
+
+### Multiplier k (thousand)
+12k meters
+1.5k kg
+10k feet
+5k pounds
+
+### Multiplier M (million)
+1M meters
+2.5M kg
+1M miles
+
+### Multiplier B (billion)
+1B meters
+5B kg
+
+### Multiplier T (trillion)
+1T meters
+2T kg
+
+### Percentage + Unit (edge case - likely invalid semantically but syntactically OK)
+25% meters
+50% kg
+
+---
+
+## Arbitrary Units (Non-canonical)
+
+Any identifier can be a unit - these are all syntactically valid Quantities.
+Semantic validation would check if they're real units.
+
+### Common arbitrary units
+2 apples
+5 oranges
+100 items
+10 widgets
+25 pieces
+
+### Plural forms
+1 apple
+5 apples
+10 thing
+10 things
+
+### Mixed case
+2 Apples
+5 ORANGES
+10 WiDgEtS
+
+### Units with numbers in name (semantic check needed)
+5 item1
+10 widget2
+3 box5
+
+### Single letter units
+5 x
+10 y
+2 z
+
+### Multi-character identifiers
+100 foobar
+25 bazqux
+5 verylongunitname
+
+---
+
+## Decimal Numbers + Units
+
+1.5 meters
+2.75 kg
+3.14 feet
+0.5 gallons
+.5 liters
+
+---
+
+## Scientific Notation + Units
+
+1e3 meters
+1.5e6 kg
+2e-3 cm
+5.2e10 miles
+
+---
+
+## Edge Cases
+
+### Very small numbers
+0.001 meters
+0 kg
+0.0 feet
+
+### Very large numbers
+999999999 meters
+1000000000 kg
+
+### Negative numbers (syntax OK, semantics may validate)
+-5 meters
+-10 kg
+
+### Complex expressions with units
+x = 10 meters
+total = 5 kg + 3 kg
+distance = 100 miles - 25 miles
+
+---
+
+## Currency as Quantity (3-letter codes)
+
+These are quantities but recognized as currency by semantic checker.
+
+100 USD
+50 EUR
+25 GBP
+1000 JPY
+75.50 USD
+12k USD
+1M EUR
+
+---
+
+## Compound Units (if supported - future)
+
+# These might be invalid or require special parsing
+# 10 m/s
+# 5 km/h
+# 100 kg*m
+# 25 m^2
+
+---
+
+## Units in Expressions
+
+### Addition
+10 meters + 5 meters
+2 kg + 3 kg
+
+### Subtraction  
+100 feet - 25 feet
+10 pounds - 2 pounds
+
+### Multiplication (unit * number, not unit * unit)
+5 meters * 2
+10 kg * 3
+
+### Division
+100 meters / 4
+20 pounds / 2
+
+### Assignment
+distance = 100 meters
+weight = 5 kg
+price = 100 USD
+
+### Function calls with units
+avg(10 meters, 20 meters, 30 meters)
+sqrt(16 meters)

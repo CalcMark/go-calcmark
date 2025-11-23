@@ -1,6 +1,9 @@
 package ast
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Node is the interface that all AST nodes implement
 type Node interface {
@@ -23,11 +26,11 @@ func (n *NumberLiteral) GetRange() *Range {
 	return n.Range
 }
 
-// CurrencyLiteral represents a currency literal
+// CurrencyLiteral represents a currency value (e.g., "$100", "50 EUR").
 type CurrencyLiteral struct {
-	Value      string // Normalized value (e.g., "1000" for both "1000" and "1,000")
-	Symbol     string
-	SourceText string // Original text from source (e.g., "$1,000", "$1k", "$10000")
+	Symbol     string // Currency symbol or code
+	Value      string // Numeric value
+	SourceText string // Original text for debugging
 	Range      *Range
 }
 
@@ -37,6 +40,152 @@ func (c *CurrencyLiteral) String() string {
 
 func (c *CurrencyLiteral) GetRange() *Range {
 	return c.Range
+}
+
+// QuantityLiteral represents a number with a unit (e.g., "5 kg", "10 meters").
+type QuantityLiteral struct {
+	Value      string // The numeric value
+	Unit       string // The unit identifier
+	SourceText string // Original text
+	Range      *Range
+}
+
+func (q *QuantityLiteral) String() string {
+	return fmt.Sprintf("QuantityLiteral(%s %s)", q.Value, q.Unit)
+}
+
+func (q *QuantityLiteral) GetRange() *Range {
+	return q.Range
+}
+
+// UnitConversion represents explicit unit conversion (e.g., "10 meters in feet").
+type UnitConversion struct {
+	Quantity   Node   // The quantity expression to convert
+	TargetUnit string // The target unit to convert to
+	Range      *Range
+}
+
+func (u *UnitConversion) String() string {
+	return fmt.Sprintf("UnitConversion(%s in %s)", u.Quantity.String(), u.TargetUnit)
+}
+
+func (u *UnitConversion) GetRange() *Range {
+	return u.Range
+}
+
+// DateLiteral represents a date literal: "Dec 25" or "Dec 25 2024"
+type DateLiteral struct {
+	Month      string  // "Dec", "December"
+	Day        string  // "25"
+	Year       *string // nil if not provided, "2024" if provided
+	SourceText string
+	Range      *Range
+}
+
+func (d *DateLiteral) String() string {
+	if d.Year != nil {
+		return fmt.Sprintf("DateLiteral(%s %s %s)", d.Month, d.Day, *d.Year)
+	}
+	return fmt.Sprintf("DateLiteral(%s %s)", d.Month, d.Day)
+}
+
+func (d *DateLiteral) GetRange() *Range {
+	return d.Range
+}
+
+// TimeLiteral represents a time literal: "10:30AM", "14:30", "10:30:45PM", "10:30AM UTC-7"
+type TimeLiteral struct {
+	Hour       string     // "10", "14"
+	Minute     string     // "30"
+	Second     *string    // nil or "45"
+	Period     *string    // nil, "AM", or "PM"
+	UTCOffset  *UTCOffset // nil or offset spec
+	SourceText string
+	Range      *Range
+}
+
+func (t *TimeLiteral) String() string {
+	var parts []string
+
+	if t.Second != nil {
+		parts = append(parts, fmt.Sprintf("%s:%s:%s", t.Hour, t.Minute, *t.Second))
+	} else {
+		parts = append(parts, fmt.Sprintf("%s:%s", t.Hour, t.Minute))
+	}
+
+	if t.Period != nil {
+		parts = append(parts, *t.Period)
+	}
+
+	if t.UTCOffset != nil {
+		parts = append(parts, t.UTCOffset.String())
+	}
+
+	return fmt.Sprintf("TimeLiteral(%s)", strings.Join(parts, " "))
+}
+
+func (t *TimeLiteral) GetRange() *Range {
+	return t.Range
+}
+
+// UTCOffset represents a UTC timezone offset: UTC-7, UTC+5:30
+type UTCOffset struct {
+	Sign    string  // "+" or "-"
+	Hours   string  // "7", "5"
+	Minutes *string // nil or "30" (for UTC+5:30)
+}
+
+func (u *UTCOffset) String() string {
+	if u.Minutes != nil {
+		return fmt.Sprintf("UTC%s%s:%s", u.Sign, u.Hours, *u.Minutes)
+	}
+	return fmt.Sprintf("UTC%s%s", u.Sign, u.Hours)
+}
+
+// RelativeDateLiteral represents relative date keywords: today, tomorrow, yesterday, now
+type RelativeDateLiteral struct {
+	Keyword    string // "today", "tomorrow", "yesterday", "now"
+	SourceText string
+	Range      *Range
+}
+
+func (r *RelativeDateLiteral) String() string {
+	return fmt.Sprintf("RelativeDateLiteral(%s)", r.Keyword)
+}
+
+func (r *RelativeDateLiteral) GetRange() *Range {
+	return r.Range
+}
+
+// ConvertExpr represents a unit conversion expression: "convert 1 cup to ounces"
+type ConvertExpr struct {
+	Value      Node   // The expression to convert (e.g., QuantityLiteral)
+	TargetUnit string // The target unit (e.g., "ounces")
+	Range      *Range
+}
+
+func (c *ConvertExpr) String() string {
+	return fmt.Sprintf("ConvertExpr(%s to %s)", c.Value.String(), c.TargetUnit)
+}
+
+func (c *ConvertExpr) GetRange() *Range {
+	return c.Range
+}
+
+// DurationLiteral represents a duration literal: "5 days", "3 hours"
+type DurationLiteral struct {
+	Value      string // Numeric value ("5", "3.5", etc.)
+	Unit       string // Time unit ("days", "hours", "minutes", etc.)
+	SourceText string // Original text from source
+	Range      *Range
+}
+
+func (d *DurationLiteral) String() string {
+	return fmt.Sprintf("DurationLiteral(%s %s)", d.Value, d.Unit)
+}
+
+func (d *DurationLiteral) GetRange() *Range {
+	return d.Range
 }
 
 // BooleanLiteral represents a boolean literal

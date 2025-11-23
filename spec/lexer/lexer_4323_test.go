@@ -4,6 +4,8 @@ import (
 	"testing"
 )
 
+// TestFourDigitThousands verifies that 4-digit numbers with commas are correctly parsed
+// This is a regression test for issue #4323
 func TestFourDigitThousands(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -47,7 +49,8 @@ func TestFourDigitThousands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input) // Fixed: use tt.input
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/constants"
 	"github.com/CalcMark/go-calcmark/impl/evaluator"
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
@@ -62,10 +62,10 @@ func containsOperators(tokens []lexer.Token) bool {
 // containsFunctions checks if token list contains function calls
 func containsFunctions(tokens []lexer.Token) bool {
 	functionTypes := map[lexer.TokenType]bool{
-		lexer.FUNC_AVG:             true,
-		lexer.FUNC_SQRT:            true,
-		lexer.FUNC_AVERAGE_OF:      true,
-		lexer.FUNC_SQUARE_ROOT_OF:  true,
+		lexer.FUNC_AVG:            true,
+		lexer.FUNC_SQRT:           true,
+		lexer.FUNC_AVERAGE_OF:     true,
+		lexer.FUNC_SQUARE_ROOT_OF: true,
 	}
 
 	for _, token := range tokens {
@@ -155,7 +155,9 @@ func ClassifyLine(line string, context *evaluator.Context) LineType {
 	}
 
 	// 3. Try to tokenize
-	tokens, err := lexer.Tokenize(line)
+	// Try to tokenize the line
+	lex := lexer.NewLexer(line)
+	tokens, err := lex.Tokenize()
 	if err != nil {
 		return Markdown
 	}

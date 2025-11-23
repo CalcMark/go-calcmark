@@ -1,0 +1,14 @@
+# Natural Language Functions
+# Tests for user-friendly natural language syntax
+
+## average of
+average of 1, 2, 3
+average of 10, 20, 30, 40, 50
+average of 5.5, 10.5
+average of 1k, 2k, 3k
+
+## square root of
+square root of 25
+square root of 100
+square root of 2.25
+square root of 1M

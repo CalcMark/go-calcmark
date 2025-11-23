@@ -1,0 +1,9 @@
+# Quick test for TUI with pin commands
+
+x = 10
+
+
+y = x + 5
+
+
+z = y * 2

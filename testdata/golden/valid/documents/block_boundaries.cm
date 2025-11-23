@@ -1,0 +1,47 @@
+# Block Boundary Rules Test
+
+This tests the **two empty line rule** for creating hard block boundaries.
+
+## Same Type, One Empty Line
+
+x = 10
+
+y = 20
+
+These two calculations should be in the SAME CalcBlock.
+
+## Same Type, Two Empty Lines
+
+a = 1
+
+
+b = 2
+
+These should be in DIFFERENT CalcBlocks (two empty lines = hard boundary).
+
+## Different Types Always Split
+
+c = 3
+
+This is text.
+
+d = 4
+
+Even with one empty line, different types create boundaries.
+
+## Text Blocks with Two Empty Lines
+
+First text paragraph.
+
+
+Second text paragraph.
+
+These should be separate TextBlocks.
+
+## Text Blocks with One Empty Line
+
+First paragraph.
+
+Second paragraph.
+
+These should be in the SAME TextBlock.

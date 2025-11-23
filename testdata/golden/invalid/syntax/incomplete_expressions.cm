@@ -1,0 +1,25 @@
+# Incomplete Expressions
+
+These should fail to parse due to incomplete syntax.
+
+## Missing Right Operand
+
+1 +
+10 -
+5 *
+20 /
+
+## Missing Left Operand
+
++ 1
+* 5
+
+## Missing Operator
+
+1 2
+10 20
+
+## Unclosed Parentheses
+
+(1 + 2
+(10 * (5 + 3)

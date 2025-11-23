@@ -1,0 +1,26 @@
+# Arbitrary Units
+# Any identifier can be used as a unit
+
+## Simple additions
+5 apples + 3 apples
+100 widgets - 25 widgets
+10 items + 50 items
+
+## Multiplication and division
+10 dogs * 2
+20 cats / 4
+100 boxes * 1.5
+
+## With decimals
+5.5 apples + 2.5 apples
+10.25 widgets - 3.75 widgets
+
+## Single letter units
+10 x + 5 x
+100 y - 50 y
+20 z * 3
+
+## Mixed with numbers (number + quantity operations)
+1 + 1 dogs
+5 cats + 3
+10 * 5 items

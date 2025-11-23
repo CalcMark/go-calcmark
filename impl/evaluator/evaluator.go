@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/constants"
-	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/impl/types"
+	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/shopspring/decimal"
 )
 
@@ -371,17 +371,18 @@ type EvaluationResult struct {
 // making classification context-aware (e.g., "x" is CALCULATION if x is defined).
 //
 // Example:
-//   Input:
-//     # Title
-//     x = 5
-//     Some text
-//     y = x + 10
 //
-//   Output:
-//     [
-//       {Value: types.Number(5), OriginalLine: 2},
-//       {Value: types.Number(15), OriginalLine: 4}
-//     ]
+//	Input:
+//	  # Title
+//	  x = 5
+//	  Some text
+//	  y = x + 10
+//
+//	Output:
+//	  [
+//	    {Value: types.Number(5), OriginalLine: 2},
+//	    {Value: types.Number(15), OriginalLine: 4}
+//	  ]
 func EvaluateDocument(text string, context *Context) ([]EvaluationResult, error) {
 	// We avoid importing classifier to prevent circular dependencies
 	// (classifier depends on evaluator for context-aware classification)

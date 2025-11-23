@@ -76,7 +76,8 @@ func TestPercentageLiterals(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -125,7 +126,8 @@ func TestPercentageInvalidCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none. Tokens: %v", tokens)
@@ -169,7 +171,8 @@ func TestPercentageEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -281,7 +284,8 @@ func TestModulusOperatorVsPercentage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -336,7 +340,8 @@ func TestPercentageAfterReservedKeyword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none. Tokens: %v", tokens)

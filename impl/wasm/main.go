@@ -11,11 +11,12 @@ import (
 	"encoding/json"
 	"syscall/js"
 
-	"github.com/CalcMark/go-calcmark/spec/classifier"
+	calcmark "github.com/CalcMark/go-calcmark"
 	"github.com/CalcMark/go-calcmark/impl/evaluator"
+	"github.com/CalcMark/go-calcmark/spec/classifier"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/validator"
+	"github.com/CalcMark/go-calcmark/spec/semantic"
 )
 
 // ==============================================================================
@@ -199,21 +200,22 @@ func evaluate(this js.Value, args []js.Value) interface{} {
 // Returns: {diagnostics: string (JSON object), error: string|null}
 //
 // Response structure:
-// {
-//   "diagnostics": {
-//     "3": {  // Line number (1-indexed)
-//       "Diagnostics": [
-//         {
-//           "severity": "error",     // Not 0, 1, 2 - human readable!
-//           "code": "undefined_variable",
-//           "message": "Undefined variable: foo",
-//           "range": { "start": {...}, "end": {...} }
-//         }
-//       ]
-//     }
-//   },
-//   "error": null
-// }
+//
+//	{
+//	  "diagnostics": {
+//	    "3": {  // Line number (1-indexed)
+//	      "Diagnostics": [
+//	        {
+//	          "severity": "error",     // Not 0, 1, 2 - human readable!
+//	          "code": "undefined_variable",
+//	          "message": "Undefined variable: foo",
+//	          "range": { "start": {...}, "end": {...} }
+//	        }
+//	      ]
+//	    }
+//	  },
+//	  "error": null
+//	}
 func validate(this js.Value, args []js.Value) interface{} {
 	if len(args) != 1 {
 		return errorResponse("Expected 1 argument: sourceCode (string)", "diagnostics")
@@ -221,28 +223,35 @@ func validate(this js.Value, args []js.Value) interface{} {
 
 	source := args[0].String()
 
+	// Parse the source first
+	nodes, err := parser.Parse(source)
+	if err != nil {
+		return errorResponse(err.Error(), "diagnostics")
+	}
+
 	// CRITICAL: Use fresh context to detect undefined variables in THIS document.
 	// Using globalContext would incorrectly mark variables as "defined" if they
 	// were set in a previous, unrelated evaluation.
-	freshContext := evaluator.NewContext()
-	result := validator.ValidateDocument(source, freshContext)
+	checker := semantic.NewChecker()
+	diagnostics := checker.Check(nodes)
 
 	// Transform diagnostics to use string enums instead of integer constants.
 	// Why: Go's json.Marshal serializes enums as integers by default.
-	// Diagnostic.ToMap() calls .String() methods to get human-readable values.
-	resultMap := make(map[int]interface{})
-	for lineNum, lineResult := range result {
-		diagnosticsArray := make([]map[string]interface{}, 0, len(lineResult.Diagnostics))
-		for _, diag := range lineResult.Diagnostics {
-			// ToMap converts: Severity (int) -> "error"/"warning"/"hint" (string)
-			diagnosticsArray = append(diagnosticsArray, diag.ToMap())
+	diagnosticsArray := make([]map[string]interface{}, 0, len(diagnostics))
+	for _, diag := range diagnostics {
+		// Convert diagnostic to map for JSON serialization
+		diagMap := map[string]interface{}{
+			"severity": diag.Severity.String(),
+			"code":     diag.Code,
+			"message":  diag.Message,
 		}
-		resultMap[lineNum] = map[string]interface{}{
-			"Diagnostics": diagnosticsArray,
+		if diag.Range != nil {
+			diagMap["range"] = diag.Range
 		}
+		diagnosticsArray = append(diagnosticsArray, diagMap)
 	}
 
-	return successResponse("diagnostics", resultMap)
+	return successResponse("diagnostics", diagnosticsArray)
 }
 
 // ==============================================================================
@@ -281,9 +290,10 @@ func classifyLine(this js.Value, args []js.Value) interface{} {
 // context state. Each CALCULATION line updates the context for subsequent lines.
 //
 // Example:
-//   Line 1: "x = 5"        -> CALCULATION (x now defined)
-//   Line 2: "x"            -> CALCULATION (x is defined from line 1)
-//   Line 3: "y"            -> MARKDOWN (y is undefined)
+//
+//	Line 1: "x = 5"        -> CALCULATION (x now defined)
+//	Line 2: "x"            -> CALCULATION (x is defined from line 1)
+//	Line 3: "y"            -> MARKDOWN (y is undefined)
 //
 // Critical: Uses a FRESH context, not globalContext, so each document is
 // classified independently without pollution from previous calls.
@@ -353,17 +363,18 @@ type EvaluationResultWithLine struct {
 // Returns: {results: string (JSON array of EvaluationResultWithLine), error: string|null}
 //
 // Example:
-//   Input:
-//     # Title
-//     x = 5
-//     Some text
-//     y = x + 10
 //
-//   Output:
-//     [
-//       {Value: 5, OriginalLine: 2},
-//       {Value: 15, OriginalLine: 4}
-//     ]
+//	Input:
+//	  # Title
+//	  x = 5
+//	  Some text
+//	  y = x + 10
+//
+//	Output:
+//	  [
+//	    {Value: 5, OriginalLine: 2},
+//	    {Value: 15, OriginalLine: 4}
+//	  ]
 func evaluateDocument(this js.Value, args []js.Value) interface{} {
 	if len(args) < 1 {
 		return errorResponse("Expected at least 1 argument: sourceCode (string)", "results")
@@ -451,7 +462,7 @@ func resetContext(this js.Value, args []js.Value) interface{} {
 // Usage: calcmark.getVersion()
 // Returns: string (version number)
 func getVersion(this js.Value, args []js.Value) interface{} {
-	return "0.1.1"
+	return calcmark.Version
 }
 
 // ==============================================================================

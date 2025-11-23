@@ -52,7 +52,7 @@ func TestEmojiWithModifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none. Description: %s", tt.description)
@@ -105,7 +105,7 @@ func TestEmojiModifiersInCalculations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for i, line := range tt.lines {
-				tokens, err := Tokenize(line)
+				tokens, err := tokenizeHelper(line)
 				t.Logf("Line %d: %q", i+1, line)
 				if err != nil {
 					t.Logf("  Error: %v", err)
@@ -128,11 +128,11 @@ func TestEmojiModifiersInCalculations(t *testing.T) {
 // Editor implementations should provide HINT diagnostics suggesting text alternatives.
 func TestEmojiVariationSelectors(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		note         string
-		expectError  bool
-		editorHint   string
+		name        string
+		input       string
+		note        string
+		expectError bool
+		editorHint  string
 	}{
 		{
 			name:        "Star emoji presentation",
@@ -159,7 +159,7 @@ func TestEmojiVariationSelectors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			t.Logf("Input: %q", tt.input)
 			t.Logf("Note: %s", tt.note)
 

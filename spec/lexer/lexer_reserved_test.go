@@ -42,7 +42,8 @@ func TestReservedKeywords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -78,7 +79,8 @@ func TestReservedKeywordsNotIdentifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected tokenization error: %v", err)
 			}
@@ -109,7 +111,8 @@ func TestMultiTokenFunctions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -142,7 +145,8 @@ func TestMultiTokenFunctionsNotCombined(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -176,7 +180,8 @@ func TestCommaToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -203,8 +208,8 @@ func TestLogicalOperatorTokens(t *testing.T) {
 		types []TokenType
 	}{
 		{"and operator", "true and false", []TokenType{BOOLEAN, AND, BOOLEAN, EOF}},
-		{"or operator", "xx or yy", []TokenType{IDENTIFIER, OR, IDENTIFIER, EOF}}, // Changed x/y to xx/yy (y is boolean keyword)
-		{"not operator", "not xx", []TokenType{NOT, IDENTIFIER, EOF}}, // Changed x to xx
+		{"or operator", "xx or yy", []TokenType{IDENTIFIER, OR, IDENTIFIER, EOF}},                                                 // Changed x/y to xx/yy (y is boolean keyword)
+		{"not operator", "not xx", []TokenType{NOT, IDENTIFIER, EOF}},                                                             // Changed x to xx
 		{"complex", "xx > 5 and yy < 10", []TokenType{IDENTIFIER, GREATER_THAN, NUMBER, AND, IDENTIFIER, LESS_THAN, NUMBER, EOF}}, // Changed x/y to xx/yy
 		{"multiple and", "aa and bb and cc", []TokenType{IDENTIFIER, AND, IDENTIFIER, AND, IDENTIFIER, EOF}},
 		{"multiple or", "aa or bb or cc", []TokenType{IDENTIFIER, OR, IDENTIFIER, OR, IDENTIFIER, EOF}},
@@ -213,7 +218,8 @@ func TestLogicalOperatorTokens(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -251,7 +257,7 @@ func TestEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Tokenize(tt.input)
+			_, err := tokenizeHelper(tt.input)
 			if err != nil {
 				// Some inputs may fail tokenization, that's OK
 				t.Logf("input '%s' failed tokenization (expected for some): %v", tt.input, err)
@@ -276,7 +282,8 @@ func TestUTF8AndEmojis(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -345,7 +352,8 @@ func TestAmbiguousInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -373,13 +381,14 @@ func TestComplexExpressions(t *testing.T) {
 		{"function with logical", "avg(1, 2, 3) > 5 and sqrt(16) < 10"},
 		{"nested function names", "average of sqrt(4), sqrt(9), sqrt(16)"},
 		{"multi-token with logical", "square root of 25 == 5 or average of 1, 2 != 2"},
-		{"reserved in expression", "if > 0 and then < 10"},  // 'if' and 'then' as reserved, should fail parsing
+		{"reserved in expression", "if > 0 and then < 10"}, // 'if' and 'then' as reserved, should fail parsing
 		{"complex nesting", "not (average of 1, 2, 3 > 2 and sqrt(16) < 5)"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected tokenization error: %v", err)
 			}
@@ -399,7 +408,7 @@ func TestWhitespaceVariations(t *testing.T) {
 		expected TokenType
 	}{
 		{"average of with space", "average of 1", FUNC_AVERAGE_OF},
-		{"average of with tab", "average\tof 1", FUNC_AVERAGE_OF}, // Tabs OK (they're whitespace)
+		{"average of with tab", "average\tof 1", FUNC_AVERAGE_OF},                // Tabs OK (they're whitespace)
 		{"square root of with tabs", "square\troot\tof 16", FUNC_SQUARE_ROOT_OF}, // Tabs OK
 		{"and with spaces", " and ", AND},
 		{"or with tabs", "\tor\t", OR},
@@ -407,7 +416,8 @@ func TestWhitespaceVariations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
