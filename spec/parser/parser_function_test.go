@@ -29,14 +29,9 @@ func TestParseAvgFunction(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			expr, ok := nodes[0].(*ast.Expression)
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
 			if !ok {
-				t.Fatalf("Parse(%q) returned %T, want *ast.Expression", tt.input, nodes[0])
-			}
-
-			funcCall, ok := expr.Expr.(*ast.FunctionCall)
-			if !ok {
-				t.Fatalf("Parse(%q) expression is %T, want *ast.FunctionCall", tt.input, expr.Expr)
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
 			}
 
 			if funcCall.Name != "avg" {
@@ -72,14 +67,9 @@ func TestParseAverageOfFunction(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			expr, ok := nodes[0].(*ast.Expression)
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
 			if !ok {
-				t.Fatalf("Parse(%q) returned %T, want *ast.Expression", tt.input, nodes[0])
-			}
-
-			funcCall, ok := expr.Expr.(*ast.FunctionCall)
-			if !ok {
-				t.Fatalf("Parse(%q) expression is %T, want *ast.FunctionCall", tt.input, expr.Expr)
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
 			}
 
 			// "average of" should be normalized to "avg"
@@ -114,14 +104,9 @@ func TestParseSqrtFunction(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			expr, ok := nodes[0].(*ast.Expression)
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
 			if !ok {
-				t.Fatalf("Parse(%q) returned %T, want *ast.Expression", tt.input, nodes[0])
-			}
-
-			funcCall, ok := expr.Expr.(*ast.FunctionCall)
-			if !ok {
-				t.Fatalf("Parse(%q) expression is %T, want *ast.FunctionCall", tt.input, expr.Expr)
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
 			}
 
 			if funcCall.Name != "sqrt" {
@@ -155,14 +140,12 @@ func TestParseSquareRootOfFunction(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			expr, ok := nodes[0].(*ast.Expression)
+			// The original code had an `expr, ok := nodes[0].(*ast.Expression)` check here,
+			// but the `Code Edit` implies that `nodes[0]` should directly be a `*ast.FunctionCall`.
+			// This is a correction to align with the expected AST structure for a standalone function call.
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
 			if !ok {
-				t.Fatalf("Parse(%q) returned %T, want *ast.Expression", tt.input, nodes[0])
-			}
-
-			funcCall, ok := expr.Expr.(*ast.FunctionCall)
-			if !ok {
-				t.Fatalf("Parse(%q) expression is %T, want *ast.FunctionCall", tt.input, expr.Expr)
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
 			}
 
 			// "square root of" should be normalized to "sqrt"
