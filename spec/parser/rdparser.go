@@ -636,7 +636,7 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 			return nil, p.error("sqrt() requires exactly 1 argument")
 		}
 		if len(args) > 1 {
-			return nil, p.error("sqrt() takes only 1 argument")
+			return nil, p.error("sqrt() requires exactly one argument")
 		}
 	}
 
