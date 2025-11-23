@@ -123,14 +123,14 @@ Returns the CalcMark library version.
   </script>
 </head>
 <body>
-  <h1>CalcMark WASM Demo</h1>
+  <h1>CalcMark WASM Example</h1>
 </body>
 </html>
 ```
 
 ### With Module Bundler (Vite, Webpack, etc.)
 
-See the `demo/` directory for a complete Svelte + Vite example with syntax highlighting.
+The WASM module can be integrated into any module bundler setup. Import the `wasm_exec.js` and load the `.wasm` file according to your bundler's asset handling configuration.
 
 ## File Sizes
 

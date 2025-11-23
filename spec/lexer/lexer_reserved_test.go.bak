@@ -1,0 +1,429 @@
+package lexer
+
+import (
+	"testing"
+)
+
+// TestReservedKeywords tests that reserved keywords are correctly recognized
+func TestReservedKeywords(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected TokenType
+	}{
+		// Logical operators
+		{"and lowercase", "and", AND},
+		{"and uppercase", "AND", AND},
+		{"and mixed case", "And", AND},
+		{"or lowercase", "or", OR},
+		{"or uppercase", "OR", OR},
+		{"not lowercase", "not", NOT},
+		{"not uppercase", "NOT", NOT},
+
+		// Control flow keywords
+		{"if", "if", IF},
+		{"then", "then", THEN},
+		{"else", "else", ELSE},
+		{"elif", "elif", ELIF},
+		{"end", "end", END},
+		{"for", "for", FOR},
+		{"in", "in", IN},
+		{"while", "while", WHILE},
+		{"return", "return", RETURN},
+		{"break", "break", BREAK},
+		{"continue", "continue", CONTINUE},
+		{"let", "let", LET},
+		{"const", "const", CONST},
+
+		// Function names (canonical)
+		{"avg", "avg", FUNC_AVG},
+		{"sqrt", "sqrt", FUNC_SQRT},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(tokens) != 2 { // keyword + EOF
+				t.Fatalf("expected 2 tokens, got %d", len(tokens))
+			}
+
+			if tokens[0].Type != tt.expected {
+				t.Errorf("expected token type %s, got %s", tt.expected, tokens[0].Type)
+			}
+		})
+	}
+}
+
+// TestReservedKeywordsNotIdentifiers tests that reserved keywords cannot be used as identifiers
+func TestReservedKeywordsNotIdentifiers(t *testing.T) {
+	tests := []struct {
+		input    string
+		reserved string
+	}{
+		{"avg = 5", "avg"},
+		{"sqrt = 10", "sqrt"},
+		{"and = true", "and"},
+		{"or = false", "or"},
+		{"not = yes", "not"},
+		{"if = 1", "if"},
+		{"then = 2", "then"},
+		{"else = 3", "else"},
+		{"for = 4", "for"},
+		{"while = 5", "while"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected tokenization error: %v", err)
+			}
+
+			// First token should be the reserved keyword, not an IDENTIFIER
+			if tokens[0].Type == IDENTIFIER {
+				t.Errorf("'%s' should be reserved keyword, got IDENTIFIER", tt.reserved)
+			}
+		})
+	}
+}
+
+// TestMultiTokenFunctions tests multi-token function names
+func TestMultiTokenFunctions(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected TokenType
+		value    string
+	}{
+		{"average of", "average of 1, 2, 3", FUNC_AVERAGE_OF, "average of"},
+		{"AVERAGE OF uppercase", "AVERAGE OF 1, 2", FUNC_AVERAGE_OF, "average of"},
+		{"Average Of mixed", "Average Of 5", FUNC_AVERAGE_OF, "average of"},
+		{"square root of", "square root of 16", FUNC_SQUARE_ROOT_OF, "square root of"},
+		{"SQUARE ROOT OF", "SQUARE ROOT OF 25", FUNC_SQUARE_ROOT_OF, "square root of"},
+		{"Square Root Of", "Square Root Of 9", FUNC_SQUARE_ROOT_OF, "square root of"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tokens[0].Type != tt.expected {
+				t.Errorf("expected token type %s, got %s", tt.expected, tokens[0].Type)
+			}
+
+			if tokens[0].Value != tt.value {
+				t.Errorf("expected value '%s', got '%s'", tt.value, tokens[0].Value)
+			}
+		})
+	}
+}
+
+// TestMultiTokenFunctionsNotCombined tests that multi-token sequences are NOT combined in wrong contexts
+func TestMultiTokenFunctionsNotCombined(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		desc  string
+	}{
+		{"average alone", "average", "average without 'of' should be IDENTIFIER"},
+		{"of alone", "of", "'of' alone should be IDENTIFIER"},
+		{"average then newline", "average\nof", "average and of on different lines"},
+		{"square alone", "square", "square without 'root of' should be IDENTIFIER"},
+		{"square root", "square root", "square root without 'of' should be two IDENTIFIERs"},
+		{"root of", "root of", "root of without 'square' should be two IDENTIFIERs"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Check that no FUNC_* tokens were created
+			for i, token := range tokens {
+				if token.Type == FUNC_AVERAGE_OF || token.Type == FUNC_SQUARE_ROOT_OF {
+					t.Errorf("token %d should not be combined function token: %s (case: %s)", i, token.Type, tt.desc)
+				}
+			}
+		})
+	}
+}
+
+// TestCommaToken tests comma tokenization
+// Note: Commas within numbers (1,000) are handled by readNumber and ignored
+// Commas between tokens should become COMMA tokens
+func TestCommaToken(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected int // number of COMMA tokens
+	}{
+		{"single comma between numbers", "1 , 2", 1},
+		{"multiple commas", "1, 2, 3", 2},
+		{"commas with spaces", "1 , 2 , 3 , 4", 3},
+		{"comma in function args", "avg(1, 2, 3)", 2},
+		{"trailing comma", "1, 2,", 2},
+		{"comma in number is NOT token", "1,000", 0}, // Comma within number is ignored
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			commaCount := 0
+			for _, token := range tokens {
+				if token.Type == COMMA {
+					commaCount++
+				}
+			}
+
+			if commaCount != tt.expected {
+				t.Errorf("expected %d COMMA tokens, got %d", tt.expected, commaCount)
+			}
+		})
+	}
+}
+
+// TestLogicalOperatorTokens tests logical operator tokenization
+func TestLogicalOperatorTokens(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		types []TokenType
+	}{
+		{"and operator", "true and false", []TokenType{BOOLEAN, AND, BOOLEAN, EOF}},
+		{"or operator", "xx or yy", []TokenType{IDENTIFIER, OR, IDENTIFIER, EOF}}, // Changed x/y to xx/yy (y is boolean keyword)
+		{"not operator", "not xx", []TokenType{NOT, IDENTIFIER, EOF}}, // Changed x to xx
+		{"complex", "xx > 5 and yy < 10", []TokenType{IDENTIFIER, GREATER_THAN, NUMBER, AND, IDENTIFIER, LESS_THAN, NUMBER, EOF}}, // Changed x/y to xx/yy
+		{"multiple and", "aa and bb and cc", []TokenType{IDENTIFIER, AND, IDENTIFIER, AND, IDENTIFIER, EOF}},
+		{"multiple or", "aa or bb or cc", []TokenType{IDENTIFIER, OR, IDENTIFIER, OR, IDENTIFIER, EOF}},
+		{"not with parentheses", "not (xx > 5)", []TokenType{NOT, LPAREN, IDENTIFIER, GREATER_THAN, NUMBER, RPAREN, EOF}}, // Changed x to xx
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(tokens) != len(tt.types) {
+				t.Fatalf("expected %d tokens, got %d", len(tt.types), len(tokens))
+			}
+
+			for i, expectedType := range tt.types {
+				if tokens[i].Type != expectedType {
+					t.Errorf("token %d: expected type %s, got %s", i, expectedType, tokens[i].Type)
+				}
+			}
+		})
+	}
+}
+
+// TestEdgeCases tests edge cases with whitespace, UTF-8, and ambiguous input
+func TestEdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		desc  string
+	}{
+		{"average  of (extra space)", "average  of 1", "extra space between average and of"},
+		{"average\tof (tab)", "average\tof 1", "tab between average and of"},
+		{"averageof (no space)", "averageof", "averageof as single identifier"},
+		{"average_of (underscore)", "average_of", "average_of as single identifier"},
+		{"square  root  of (extra spaces)", "square  root  of 16", "extra spaces"},
+		{"squarerootof (no spaces)", "squarerootof", "squarerootof as single identifier"},
+		{"avg(", "avg(", "avg followed by parenthesis"},
+		{"sqrt(", "sqrt(", "sqrt followed by parenthesis"},
+		{"AVG(", "AVG(", "AVG uppercase with parenthesis"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Tokenize(tt.input)
+			if err != nil {
+				// Some inputs may fail tokenization, that's OK
+				t.Logf("input '%s' failed tokenization (expected for some): %v", tt.input, err)
+			}
+			// Just verify we don't panic
+		})
+	}
+}
+
+// TestUTF8AndEmojis tests Unicode and emoji handling with reserved keywords
+func TestUTF8AndEmojis(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"Japanese with and", "給料 and ボーナス"},
+		{"Emoji with or", "💰 or 💵"},
+		{"Mixed unicode", "résumé and café"},
+		{"Arabic", "مرحبا or مع السلامة"},
+		{"Chinese", "工资 and 奖金"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Should find AND or OR operators
+			foundLogical := false
+			for _, token := range tokens {
+				if token.Type == AND || token.Type == OR {
+					foundLogical = true
+					break
+				}
+			}
+
+			if !foundLogical {
+				t.Error("expected to find AND or OR operator")
+			}
+		})
+	}
+}
+
+// TestAmbiguousInput tests input that could be ambiguous
+func TestAmbiguousInput(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []TokenType
+		desc     string
+	}{
+		{
+			name:     "average as variable",
+			input:    "average = 10",
+			expected: []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
+			desc:     "'average' alone is identifier, not function",
+		},
+		{
+			name:     "of as variable",
+			input:    "of = 5",
+			expected: []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
+			desc:     "'of' alone is identifier",
+		},
+		{
+			name:     "square as variable",
+			input:    "square = 4",
+			expected: []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
+			desc:     "'square' alone is identifier",
+		},
+		{
+			name:     "root as variable",
+			input:    "root = 2",
+			expected: []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
+			desc:     "'root' alone is identifier",
+		},
+		{
+			name:     "avg cannot be variable",
+			input:    "avg = 5",
+			expected: []TokenType{FUNC_AVG, ASSIGN, NUMBER, EOF},
+			desc:     "'avg' is reserved function name",
+		},
+		{
+			name:     "sqrt cannot be variable",
+			input:    "sqrt = 9",
+			expected: []TokenType{FUNC_SQRT, ASSIGN, NUMBER, EOF},
+			desc:     "'sqrt' is reserved function name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(tokens) != len(tt.expected) {
+				t.Fatalf("expected %d tokens, got %d (case: %s)", len(tt.expected), len(tokens), tt.desc)
+			}
+
+			for i, expectedType := range tt.expected {
+				if tokens[i].Type != expectedType {
+					t.Errorf("token %d: expected %s, got %s (case: %s)",
+						i, expectedType, tokens[i].Type, tt.desc)
+				}
+			}
+		})
+	}
+}
+
+// TestComplexExpressions tests complex expressions with multiple features
+func TestComplexExpressions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"function with logical", "avg(1, 2, 3) > 5 and sqrt(16) < 10"},
+		{"nested function names", "average of sqrt(4), sqrt(9), sqrt(16)"},
+		{"multi-token with logical", "square root of 25 == 5 or average of 1, 2 != 2"},
+		{"reserved in expression", "if > 0 and then < 10"},  // 'if' and 'then' as reserved, should fail parsing
+		{"complex nesting", "not (average of 1, 2, 3 > 2 and sqrt(16) < 5)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected tokenization error: %v", err)
+			}
+
+			// Just verify tokenization doesn't panic
+			// Parser will handle semantic errors
+			t.Logf("tokenized %d tokens for: %s", len(tokens), tt.input)
+		})
+	}
+}
+
+// TestWhitespaceVariations tests various whitespace scenarios
+func TestWhitespaceVariations(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected TokenType
+	}{
+		{"average of with space", "average of 1", FUNC_AVERAGE_OF},
+		{"average of with tab", "average\tof 1", FUNC_AVERAGE_OF}, // Tabs OK (they're whitespace)
+		{"square root of with tabs", "square\troot\tof 16", FUNC_SQUARE_ROOT_OF}, // Tabs OK
+		{"and with spaces", " and ", AND},
+		{"or with tabs", "\tor\t", OR},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(input); tokens, err := lex.Tokenize(tt.input)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Find first non-whitespace, non-newline token
+			var firstToken Token
+			for _, token := range tokens {
+				if token.Type != NEWLINE && token.Type != EOF {
+					firstToken = token
+					break
+				}
+			}
+
+			if firstToken.Type != tt.expected {
+				t.Errorf("expected first token type %s, got %s (value: %q)", tt.expected, firstToken.Type, firstToken.Value)
+			}
+		})
+	}
+}

@@ -1,0 +1,99 @@
+# CalcMark Invalid Duration Syntax Tests
+
+This file contains duration expressions that should FAIL to parse.
+
+---
+
+## Invalid Time Units
+
+# Misspelled units
+2 dyas
+3 weekz
+1 mounth
+5 yeers
+
+# Singular when plural expected
+1 day
+1 week
+1 month
+1 year
+
+# Invalid abbreviations
+2 d
+3 w
+1 mo
+5 y
+
+---
+
+## Invalid Duration Formats
+
+# Missing value
+days
+weeks
+months
+years
+
+# Missing unit
+2
+3
+10
+100
+
+# Decimal without unit
+2.5
+3.14
+
+---
+
+## Invalid Compound Durations
+
+# Missing "and"
+2 weeks 3 days
+1 year 6 months 2 days
+3 months 1 week
+
+# Multiple "and" in sequence
+2 weeks and and 3 days
+1 year and and 6 months
+
+# "and" without second value
+2 weeks and
+3 days and 
+
+# Invalid connector
+2 weeks or 3 days
+1 month plus 5 days
+3 weeks with 2 days
+
+---
+
+## Invalid Duration Arithmetic
+
+# Negative durations (syntax level)
+-2 days
+-3 weeks
+
+# Duration operators that don't make sense
+2 days * 3
+3 weeks / 2
+1 month % 5
+
+# Duration with duration (instead of date)
+2 days + 3 weeks
+1 month - 2 weeks
+
+---
+
+## Edge Cases
+
+# Zero duration
+0 days
+0 weeks
+
+# Very large numbers (syntax OK, semantic may validate)
+# (These might actually be valid syntax)
+
+# Mixed types in compound
+2 days and 3
+1 week and

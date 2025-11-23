@@ -8,11 +8,23 @@ type TokenType int
 
 const (
 	// Literals
-	NUMBER TokenType = iota
-	CURRENCY // DEPRECATED: Use QUANTITY (kept for backward compatibility)
-	QUANTITY // Unified type for numbers with units (currency, measurements, etc.)
+	NUMBER   TokenType = iota
+	CURRENCY           // DEPRECATED: Use QUANTITY (kept for backward compatibility)
+	QUANTITY           // Unified type for numbers with units (currency, measurements, etc.)
 	BOOLEAN
 	IDENTIFIER
+
+	// Currency (split for parser)
+	CURRENCY_SYM  // $
+	CURRENCY_CODE // USD
+
+	// Multiplier Numbers (for gocc integration)
+	NUMBER_PERCENT // 5%
+	NUMBER_K       // 12k
+	NUMBER_M       // 1.2M
+	NUMBER_B       // 5B
+	NUMBER_T       // 2.5T
+	NUMBER_SCI     // 1.2e10, 4.5e-7
 
 	// Operators
 	PLUS
@@ -67,6 +79,26 @@ const (
 	FUNC_AVERAGE_OF     // "average of" → maps to "avg"
 	FUNC_SQUARE_ROOT_OF // "square root of" → maps to "sqrt"
 
+	// Date keywords
+	DATE_TODAY     // "today"
+	DATE_TOMORROW  // "tomorrow"
+	DATE_YESTERDAY // "yesterday"
+
+	// Relative date keywords
+	DATE_THIS_WEEK  // "this week"
+	DATE_THIS_MONTH // "this month"
+	DATE_THIS_YEAR  // "this year"
+	DATE_NEXT_WEEK  // "next week"
+	DATE_NEXT_MONTH // "next month"
+	DATE_NEXT_YEAR  // "next year"
+	DATE_LAST_WEEK  // "last week"
+	DATE_LAST_MONTH // "last month"
+	DATE_LAST_YEAR  // "last year"
+
+	// Date/Duration literals (combined by lexer)
+	DATE_LITERAL     // "Dec 12", "December 25 2025"
+	DURATION_LITERAL // "2 days", "3 weeks and 4 days"
+
 	// Special
 	NEWLINE
 	EOF
@@ -77,6 +109,22 @@ func (tt TokenType) String() string {
 	switch tt {
 	case NUMBER:
 		return "NUMBER"
+	case NUMBER_PERCENT:
+		return "NUMBER_PERCENT"
+	case NUMBER_K:
+		return "NUMBER_K"
+	case NUMBER_M:
+		return "NUMBER_M"
+	case NUMBER_B:
+		return "NUMBER_B"
+	case NUMBER_T:
+		return "NUMBER_T"
+	case NUMBER_SCI:
+		return "NUMBER_SCI"
+	case CURRENCY_SYM:
+		return "CURRENCY_SYM"
+	case CURRENCY_CODE:
+		return "CURRENCY_CODE"
 	case CURRENCY:
 		return "CURRENCY"
 	case QUANTITY:
@@ -157,6 +205,34 @@ func (tt TokenType) String() string {
 		return "FUNC_AVERAGE_OF"
 	case FUNC_SQUARE_ROOT_OF:
 		return "FUNC_SQUARE_ROOT_OF"
+	case DATE_TODAY:
+		return "DATE_TODAY"
+	case DATE_TOMORROW:
+		return "DATE_TOMORROW"
+	case DATE_YESTERDAY:
+		return "DATE_YESTERDAY"
+	case DATE_THIS_WEEK:
+		return "DATE_THIS_WEEK"
+	case DATE_THIS_MONTH:
+		return "DATE_THIS_MONTH"
+	case DATE_THIS_YEAR:
+		return "DATE_THIS_YEAR"
+	case DATE_NEXT_WEEK:
+		return "DATE_NEXT_WEEK"
+	case DATE_NEXT_MONTH:
+		return "DATE_NEXT_MONTH"
+	case DATE_NEXT_YEAR:
+		return "DATE_NEXT_YEAR"
+	case DATE_LAST_WEEK:
+		return "DATE_LAST_WEEK"
+	case DATE_LAST_MONTH:
+		return "DATE_LAST_MONTH"
+	case DATE_LAST_YEAR:
+		return "DATE_LAST_YEAR"
+	case DATE_LITERAL:
+		return "DATE_LITERAL"
+	case DURATION_LITERAL:
+		return "DURATION_LITERAL"
 	case NEWLINE:
 		return "NEWLINE"
 	case EOF:

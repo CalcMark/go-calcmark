@@ -142,4 +142,3 @@ func TestConstantsInContext(t *testing.T) {
 		t.Errorf("PI * radius * radius = %s, want %s", results[0].String(), expected)
 	}
 }
-

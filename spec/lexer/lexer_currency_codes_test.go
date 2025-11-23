@@ -65,7 +65,7 @@ func TestPrefixCurrencyCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -115,7 +115,7 @@ func TestLowercaseCurrencyCodesAreIdentifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -154,7 +154,7 @@ func TestInvalidCurrencyCodesAreIdentifiers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -193,7 +193,7 @@ func TestStandaloneCurrencyCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -244,7 +244,7 @@ func TestPostfixCurrencyCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -289,7 +289,7 @@ func TestCurrencyCodeAssignments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokens, err := Tokenize(tt.input)
+			tokens, err := tokenizeHelper(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}

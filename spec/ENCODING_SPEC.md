@@ -333,7 +333,50 @@ total = 200         # Different variable
 TRUE = true         # Keyword (case-insensitive), cannot assign
 ```
 
-## 11. WASM Implications
+## 11. Test Requirements
+
+### Required Test Coverage
+
+Implementations MUST include tests for:
+
+1. **UTF-8 Validation**
+   - Valid UTF-8 sequences
+   - Invalid UTF-8 byte sequences (MUST reject)
+   - BOM handling (MUST strip U+FEFF at start)
+
+2. **Identifier Support**
+   - ASCII baseline (`income`, `_private`, `total_2024`)
+   - Latin extended (`café`, `naïve`, `résumé`)
+   - Non-Latin scripts (Cyrillic `Москва`, CJK `給料`, Arabic `الدخل`, Hebrew)
+   - Emoji (`💰`, `🎯`, `📊`)
+   - Invalid identifiers (starting with digit, containing operators, spaces)
+
+3. **Unicode Normalization** (verify NO normalization)
+   - `café` (U+00E9) ≠ `café` (U+0065 U+0301) - MUST be different variables
+   - Same visual appearance, different code points = different identifiers
+
+4. **Case Sensitivity**
+   - Variables: `Total` ≠ `total` ≠ `TOTAL`
+   - Keywords: `TRUE` = `true` = `True`
+
+5. **Line Endings**
+   - LF only (Unix)
+   - CRLF (Windows)
+   - CR only (old Mac)
+   - Mixed line endings
+
+6. **Currency and Units**
+   - All supported currency symbols (`$`, `€`, `£`, `¥`)
+   - ISO 4217 codes (uppercase only, valid codes)
+   - Spacing rules (prefix: no space, postfix: required space)
+
+7. **Number Literals**
+   - ASCII digits only (reject other Unicode digits like Bengali `১২৩`)
+   - Decimal separator (period only)
+   - Thousands separators (comma, underscore)
+   - Percentage literals
+
+## 12. WASM Implications
 
 ### JavaScript String Encoding
 - JavaScript uses UTF-16 internally
@@ -349,7 +392,7 @@ const result = wasmEvaluate(utf8Bytes);
 const output = new TextDecoder().decode(result);
 ```
 
-## 12. References
+## 13. References
 
 - **Unicode Standard**: https://www.unicode.org/versions/latest/
 - **CommonMark Spec**: https://spec.commonmark.org/ (Appendix on Unicode)

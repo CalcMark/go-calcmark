@@ -1,0 +1,28 @@
+# Number Multipliers
+# Multipliers work standalone and with units
+
+## Standalone multipliers
+1k
+5k
+1M
+10M
+1B
+5B
+
+## Arithmetic with multipliers
+1k + 1
+5k + 2k
+1M + 500k
+1B - 100M
+
+## Multipliers with functions
+avg(1k, 2k, 3k)
+sqrt(1M)
+average of 100k, 200k, 300k
+square root of 1M
+
+## Edge cases
+0k
+1.5k
+2.75M
+0.001B

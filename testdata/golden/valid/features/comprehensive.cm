@@ -1,0 +1,24 @@
+# Comprehensive Feature Examples
+# Demonstrating all 4 implemented features working together
+
+## Natural language with multipliers
+average of 1k, 2k, 3k
+square root of 1M
+
+## Arbitrary units with multipliers
+1k apples + 500 apples
+2M widgets - 1M widgets
+
+## Mixed operations that work
+result = 1 + 1 dogs
+doubled = 10 cats * 2
+halved = 20 items * 0.5
+
+## Currency (postfix notation)
+total = 100 USD + 50 USD
+budget = 1000 EUR - 250 EUR
+
+## Complex expressions
+avg_items = average of 100 items, 200 items, 300 items
+sqrt_value = square root of 1M
+scaled = 5k widgets * 2

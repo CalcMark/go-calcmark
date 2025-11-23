@@ -1,0 +1,45 @@
+# Arithmetic Operations Test
+
+All arithmetic operators and precedence rules.
+
+## Basic Operations
+
+1 + 2
+10 - 5
+3 * 4
+20 / 5
+17 % 5
+2 ^ 3
+
+## Precedence (no parentheses)
+
+2 + 3 * 4
+10 - 2 * 3
+8 / 2 + 1
+2 ^ 3 + 1
+2 + 3 ^ 2
+
+## Parentheses Override Precedence
+
+(2 + 3) * 4
+(10 - 2) * 3
+(8 / 2) + 1
+(2 + 3) ^ 2
+
+## Nested Parentheses
+
+((1 + 2) * 3) + 4
+(1 + (2 * 3)) + 4
+
+## Unary Operators
+
++10
+-5
++(10 + 5)
+-(10 - 5)
+
+## Complex Expressions
+
+result = (100 + 20) * 0.08
+calculation = ((10 + 5) * 2) - (8 / 4)
+complex = 2 ^ 3 * 4 + 5 - 6 / 2

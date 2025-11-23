@@ -1,0 +1,36 @@
+# Invalid Function Syntax
+
+These function calls should FAIL to parse or evaluate.
+
+## Empty Arguments
+
+avg()
+
+This should fail: avg() requires at least one argument.
+
+## Wrong Argument Count
+
+sqrt()
+sqrt(1, 2)
+
+sqrt() expects exactly 1 argument, not 0 or 2.
+
+## Missing Parentheses
+
+avg 1, 2, 3
+
+Traditional syntax requires parentheses.
+
+## Incomplete Natural Language
+
+average 1, 2, 3
+average of
+square root
+square root 16
+
+Natural language requires complete phrase.
+
+## Invalid Function Names
+
+unknown(1, 2)
+calculate(10)

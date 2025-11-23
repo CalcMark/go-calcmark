@@ -1,0 +1,60 @@
+# Date and Unit Examples for Testing
+
+## Date Examples
+
+### Date Keywords
+today
+tomorrow
+yesterday
+this week
+next month
+last year
+
+### Date Literals
+Dec 25 2025
+December 25 2025
+Jan 1 2026
+February 29 2024
+
+### Date Arithmetic (when implemented)
+today + 7 days
+Dec 25 + 30 days
+next week - 2 days
+
+## Unit Examples
+
+### Length
+10 meters
+5 feet  
+100 kilometers
+
+### Mass
+5 kg
+10 pounds
+50 grams
+
+### Volume
+1 liter
+2 gallons
+500 milliliters
+
+### Unit Arithmetic
+x = 10 meters
+y = 5 feet
+x + y
+
+## Edge Cases to Test
+
+### Invalid Dates
+Feb 30 2025
+Feb 29 2025
+April 31 2025
+December 32 2025
+
+### Incompatible Units
+10 meters + 5 kg
+5 liters + 3 pounds
+
+### Unknown Currency
+100 XXX
+50 ZZZ + 25 USD

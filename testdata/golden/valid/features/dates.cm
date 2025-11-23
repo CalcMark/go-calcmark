@@ -1,0 +1,107 @@
+# CalcMark Date Keywords - Comprehensive Coverage
+
+This file tests all date keyword variations.
+
+## Basic Date Keywords
+today
+tomorrow
+yesterday
+
+## Relative Date Keywords
+
+### This (current period)
+this week
+this month
+this year
+
+### Next (upcoming period)
+next week
+next month
+next year
+
+### Last (previous period)
+last week
+last month
+last year
+
+---
+
+## Month + Day Formats
+
+### Short month names
+Jan 15
+Feb 28
+Mar 12
+Apr 1
+May 30
+Jun 15
+Jul 4
+Aug 25
+Sep 1
+Oct 31
+Nov 11
+Dec 25
+
+### Long month names
+January 15
+February 28
+March 12
+April 1
+May 30
+June 15
+July 4
+August 25
+September 1
+October 31
+November 11
+December 25
+
+---
+
+## Month + Day + Year Formats
+
+### Short month with year
+Dec 25 2025
+Jan 1 2026
+Jul 4 2024
+
+### Long month with year
+December 25 2025
+January 1 2026
+July 4 2024
+
+---
+
+## Month + Year Only (implies 1st of month)
+December 2025
+January 2026
+July 2024
+
+---
+
+## Date Arithmetic
+
+### Addition
+today + 2 days
+tomorrow + 1 week
+Dec 25 + 30 days
+December 12 2025 + 2 weeks
+
+### Subtraction
+today - 3 days
+yesterday - 1 week
+Dec 31 - 7 days
+
+### Natural language
+2 days from today
+3 weeks from tomorrow
+1 month from Dec 25
+2 years from December 2025
+
+---
+
+## Complex Examples
+x = today + 2 weeks
+deadline = Dec 31 2025 - 1 month
+start = next Monday
+end = this Friday + 2 weeks

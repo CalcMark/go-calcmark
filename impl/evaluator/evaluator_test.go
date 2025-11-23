@@ -3,8 +3,8 @@ package evaluator
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/impl/types"
+	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/shopspring/decimal"
 )
 
@@ -477,11 +477,11 @@ func TestMarkdownBulletNotParsed(t *testing.T) {
 func TestNegativeVsMarkdown(t *testing.T) {
 	// Verify that negative numbers work but markdown bullets don't
 	tests := []struct {
-		name           string
-		input          string
-		expectResults  int
-		isMarkdown     bool
-		expectedValue  string
+		name          string
+		input         string
+		expectResults int
+		isMarkdown    bool
+		expectedValue string
 	}{
 		{"negative at start no space", "-50", 1, false, "-50"},
 		{"negative in expression", "100 + -50", 1, false, "50"},

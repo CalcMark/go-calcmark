@@ -1,0 +1,40 @@
+# Mixed Content Test
+
+This document tests the **core CalcMark feature**: mixing markdown text with calculations.
+
+## Text Block
+
+This is plain markdown text. It should be detected as a TextBlock.
+
+## Calculation Block
+
+price = 100
+tax = price * 0.08
+total = price + tax
+
+## Another Text Block
+
+Now we're back to text. This should be a separate TextBlock.
+
+The empty line above keeps this paragraph in the same block.
+
+## More Calculations
+
+x = 10
+y = 20
+sum = x + y
+
+## Edge Case: Single Empty Line
+
+This text block is separated by only ONE empty line from the calculations above.
+It should still be a separate block (type changes always create boundaries).
+
+## Edge Case: Two Empty Lines
+
+
+This text is separated by TWO empty lines from above.
+It's definitely a new block.
+
+## Final Calculations
+
+result = sum * 2

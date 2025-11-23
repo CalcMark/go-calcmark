@@ -1,0 +1,33 @@
+# Test Seed File for REPL
+# Tests dependency tracking and incremental updates
+
+x = 10
+
+
+y = x + 5
+
+
+z = y * 2
+
+
+# Currency example
+price = 50 USD
+
+
+tax = price * 0.1
+
+
+total = price + tax
+
+
+# Multiple dependencies
+a = 100
+
+
+b = 200
+
+
+c = a + b
+
+
+d = c / 2
