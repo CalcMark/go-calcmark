@@ -1,6 +1,7 @@
 package interpreter_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
@@ -49,15 +50,27 @@ func TestInUnitSyntax(t *testing.T) {
 			}
 
 			actual := results[0].String()
-			// More flexible comparison - check first few characters only
-			// since decimal precision varies
-			minLen := len(tt.expected) - 6
-			if minLen < 0 {
-				minLen = 3
+			// Compare just the numeric part with tolerance for precision
+			// Expected format: "22.046 pounds", actual might be "22.046226218... pounds"
+			// Just check that actual starts with first few digits of expected
+			parts := strings.Fields(tt.expected)
+			if len(parts) < 2 {
+				t.Fatalf("Invalid test case format: %s", tt.expected)
 			}
-			if len(actual) < minLen {
-				t.Errorf("Result too short: %s, expected approximately %s", actual, tt.expected)
-			} else if actual[:minLen] != tt.expected[:minLen] {
+			expectedNum := parts[0]
+			expectedUnit := parts[1]
+
+			// Check actual contains the unit
+			if !strings.Contains(actual, expectedUnit) {
+				t.Errorf("Result = %s, expected unit %s", actual, expectedUnit)
+			}
+
+			// Check actual starts with expected number prefix (first 5-6 chars)
+			compareLen := len(expectedNum)
+			if compareLen > len(actual) {
+				compareLen = len(actual)
+			}
+			if !strings.HasPrefix(actual, expectedNum[:compareLen]) {
 				t.Errorf("Result = %s, expected approximately %s", actual, tt.expected)
 			}
 		})
