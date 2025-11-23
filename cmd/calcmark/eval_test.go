@@ -200,14 +200,20 @@ func TestLoadAndEvaluate(t *testing.T) {
 
 // TestValidateFilePath tests security validation
 func TestValidateFilePath(t *testing.T) {
+	// Create test fixture
+	os.MkdirAll("testdata", 0755)
+	testFile := "testdata/test.cm"
+	os.WriteFile(testFile, []byte("x = 1\n"), 0644)
+	defer os.RemoveAll("testdata")
+
 	tests := []struct {
 		name    string
 		path    string
 		wantErr bool
 	}{
-		{"valid file", "../../testdata/seed.cm", false},
+		{"valid file", testFile, false},
 		{"path traversal", "../../../etc/passwd", true},
-		{"wrong extension", "eval_test.go", true}, // exists but wrong ext
+		{"wrong extension", "eval_test.go", true},
 		{"non-existent", "nonexistent.cm", true},
 	}
 
