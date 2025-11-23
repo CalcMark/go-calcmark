@@ -78,8 +78,8 @@ echo
 
 # 4. Build CLI tools
 echo -e "${BLUE}[4/6]${NC} Building CLI tools..."
-go build -o calcmark ./impl/cmd/calcmark
-go build -o cmspec ./spec/cmd/cmspec
+go build -o calcmark ./cmd/calcmark
+go build -o cmspec ./cmd/cmspec
 
 # Verify version commands work
 CALCMARK_VERSION=$(./calcmark version)
@@ -102,11 +102,16 @@ RELEASE_DIR="$(pwd)/release-artifacts"
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
-./calcmark wasm "$RELEASE_DIR"
-
-# Verify artifacts were created
+# Build WASM directly (calcmark doesn't have a wasm subcommand)
 WASM_FILE="$RELEASE_DIR/calcmark-${VERSION}.wasm"
 JS_FILE="$RELEASE_DIR/wasm_exec.js"
+
+echo "Building WASM binary..."
+GOOS=js GOARCH=wasm go build -tags wasm -o "$WASM_FILE" ./cmd/calcmark
+echo "Copying wasm_exec.js..."
+cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" "$JS_FILE"
+
+# Verify artifacts were created
 
 if [ ! -f "$WASM_FILE" ] || [ ! -f "$JS_FILE" ]; then
     echo -e "${RED}Error: WASM artifacts not created${NC}"
