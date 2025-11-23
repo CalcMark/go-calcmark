@@ -205,9 +205,10 @@ func TestValidateFilePath(t *testing.T) {
 		path    string
 		wantErr bool
 	}{
-		{"valid file", "testdata/seed.cm", false},
+		{"valid file", "../../testdata/seed.cm", false},
 		{"path traversal", "../../../etc/passwd", true},
-		{"wrong extension", "../../go.mod", true},
+		{"wrong extension", "eval_test.go", true}, // exists but wrong ext
+		{"non-existent", "nonexistent.cm", true},
 	}
 
 	for _, tt := range tests {
