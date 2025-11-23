@@ -1,6 +1,7 @@
 package evaluator
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/impl/types"
@@ -101,11 +102,11 @@ func TestEvalDivisionByZero(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for division by zero")
 	}
-	if err != nil && err.Error() != "Division by zero at 1:4" {
-		// Check that error message contains "Division by zero"
+	// Just check that error message contains "Division by zero"
+	if err != nil {
 		errMsg := err.Error()
-		if len(errMsg) < 17 || errMsg[:17] != "Division by zero" {
-			t.Errorf("expected 'Division by zero' error, got '%s'", errMsg)
+		if !strings.Contains(errMsg, "Division by zero") {
+			t.Errorf("expected error containing 'Division by zero', got '%s'", errMsg)
 		}
 	}
 }

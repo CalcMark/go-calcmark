@@ -135,6 +135,9 @@ func (e *Evaluator) EvalNode(node ast.Node) (types.Type, error) {
 	case *ast.CurrencyLiteral:
 		return types.NewCurrencyWithFormat(n.Value, n.Symbol, n.SourceText)
 
+	case *ast.BooleanLiteral:
+		return types.NewBoolean(n.Value)
+
 	case *ast.Identifier:
 		return e.Context.Get(n.Name)
 
