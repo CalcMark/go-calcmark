@@ -77,10 +77,12 @@ func TestNumberLiteral(t *testing.T) {
 }
 
 func TestCurrencyLiteral(t *testing.T) {
+	// Standalone currency literals are not calculations - they're just data
+	// They need to be in expressions or assignments to be calculations
 	tests := []string{"$100", "$1,000.50"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
-			t.Errorf("expected CALCULATION for %q", test)
+		if ClassifyLine(test, nil) != Markdown {
+			t.Errorf("expected MARKDOWN for %q (standalone currency is not a calculation)", test)
 		}
 	}
 }
