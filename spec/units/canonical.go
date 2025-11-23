@@ -30,6 +30,14 @@ var StandardUnits = map[string]UnitMapping{
 		Quantity:    "Length",
 		Description: "SI base unit of length",
 	},
+	"kilometer": {
+		Canonical:   "kilometer",
+		Symbol:      "km",
+		Aliases:     []string{"kilometer", "kilometers", "km", "kilometre", "kilometres"},
+		System:      "SI",
+		Quantity:    "Length",
+		Description: "1000 meters",
+	},
 
 	// Length - US Customary
 	"foot": {
