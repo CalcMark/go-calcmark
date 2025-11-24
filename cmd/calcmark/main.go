@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -121,7 +122,8 @@ func loadAndEvaluate(path string) (*document.Document, error) {
 		return nil, fmt.Errorf("parse document: %w", err)
 	}
 
-	if err := doc.Evaluate(); err != nil {
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		return nil, fmt.Errorf("evaluate: %w", err)
 	}
 

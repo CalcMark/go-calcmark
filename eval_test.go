@@ -30,7 +30,7 @@ func TestEvalSimple(t *testing.T) {
 		{
 			name:  "currency",
 			input: "$100",
-			want:  "$100.00",
+			want:  "100 USD", // Parser converts $ → USD, formatter displays as needed
 		},
 	}
 

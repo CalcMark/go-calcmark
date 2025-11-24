@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -29,8 +30,9 @@ func (m model) openFile(path string) model {
 		return m
 	}
 
-	// Evaluate document
-	if err := doc.Evaluate(); err != nil {
+	// Evaluate
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		m.err = fmt.Errorf("evaluate document: %w", err)
 		return m
 	}

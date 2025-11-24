@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -526,7 +527,8 @@ func (m model) evaluateExpression(expr string) model {
 		}
 
 		// Evaluate the new block
-		err = m.doc.EvaluateBlock(result.ModifiedBlockID)
+		eval := implDoc.NewEvaluator()
+		err = eval.EvaluateBlock(m.doc, result.ModifiedBlockID)
 		if err != nil {
 			m.err = fmt.Errorf("evaluate: %w", err)
 			return m
@@ -552,7 +554,8 @@ func (m model) evaluateExpression(expr string) model {
 			return m
 		}
 
-		err = doc.Evaluate()
+		eval := implDoc.NewEvaluator()
+		err = eval.Evaluate(doc)
 		if err != nil {
 			m.err = fmt.Errorf("evaluate: %w", err)
 			return m

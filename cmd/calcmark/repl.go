@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -64,7 +65,8 @@ func (r *REPL) LoadFile(path string) error {
 	}
 
 	// Evaluate initial document
-	if err := doc.Evaluate(); err != nil {
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		return fmt.Errorf("evaluate document: %w", err)
 	}
 
@@ -149,7 +151,8 @@ func (r *REPL) evaluateExpression(expr string) error {
 		}
 
 		// Evaluate the new block
-		err = r.doc.EvaluateBlock(result.ModifiedBlockID)
+		eval := implDoc.NewEvaluator()
+		err = eval.EvaluateBlock(r.doc, result.ModifiedBlockID)
 		if err != nil {
 			return fmt.Errorf("evaluate: %w", err)
 		}
@@ -173,7 +176,8 @@ func (r *REPL) evaluateExpression(expr string) error {
 			return fmt.Errorf("parse: %w", err)
 		}
 
-		err = doc.Evaluate()
+		eval := implDoc.NewEvaluator()
+		err = eval.Evaluate(doc)
 		if err != nil {
 			return fmt.Errorf("evaluate: %w", err)
 		}

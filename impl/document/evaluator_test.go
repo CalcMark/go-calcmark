@@ -3,6 +3,8 @@ package document
 import (
 	"strings"
 	"testing"
+
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestDocumentEvaluation tests the full evaluation pipeline.
@@ -15,13 +17,14 @@ y = x + 5
 
 z = y * 2`
 
-	doc, err := NewDocument(source)
+	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
 	// Evaluate all blocks
-	err = doc.Evaluate()
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
 	if err != nil {
 		t.Fatalf("Evaluate failed: %v", err)
 	}
@@ -33,7 +36,7 @@ z = y * 2`
 
 	// Check each block was evaluated
 	for _, node := range blocks {
-		if calcBlock, ok := node.Block.(*CalcBlock); ok {
+		if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
 			if calcBlock.LastValue() == nil {
 				t.Errorf("Block %s has nil LastValue", node.ID[:8])
 			}
@@ -59,13 +62,14 @@ func TestIncrementalEvaluation(t *testing.T) {
 
 y = x + 5`
 
-	doc, err := NewDocument(source)
+	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
 	// Initial evaluation
-	err = doc.Evaluate()
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
 	if err != nil {
 		t.Fatalf("Initial Evaluate failed: %v", err)
 	}
@@ -73,7 +77,7 @@ y = x + 5`
 	blocks := doc.GetBlocks()
 	var xBlockID string
 	for _, node := range blocks {
-		if calcBlock, ok := node.Block.(*CalcBlock); ok {
+		if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
 			if strings.Contains(strings.Join(calcBlock.Source(), ""), "x = 10") {
 				xBlockID = node.ID
 				break
@@ -92,14 +96,14 @@ y = x + 5`
 	}
 
 	// Re-evaluate starting from changed block
-	err = doc.EvaluateBlock(xBlockID)
+	err = eval.EvaluateBlock(doc, xBlockID)
 	if err != nil {
 		t.Fatalf("EvaluateBlock failed: %v", err)
 	}
 
 	// Check that evaluation succeeded
 	node, _ := doc.GetBlock(xBlockID)
-	calcBlock := node.Block.(*CalcBlock)
+	calcBlock := node.Block.(*document.CalcBlock)
 
 	if calcBlock.Error() != nil {
 		t.Errorf("Block has error after re-evaluation: %v", calcBlock.Error())
@@ -114,13 +118,14 @@ func TestEvaluationError(t *testing.T) {
 	source := `result = undefined_var + 10
 `
 
-	doc, err := NewDocument(source)
+	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
 	// Evaluation should fail
-	err = doc.Evaluate()
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
 	if err == nil {
 		t.Fatal("Expected evaluation error for undefined variable, got nil")
 	}
@@ -130,7 +135,7 @@ func TestEvaluationError(t *testing.T) {
 	// Block should have the error stored
 	blocks := doc.GetBlocks()
 	if len(blocks) > 0 {
-		if calcBlock, ok := blocks[0].Block.(*CalcBlock); ok {
+		if calcBlock, ok := blocks[0].Block.(*document.CalcBlock); ok {
 			if calcBlock.Error() == nil {
 				t.Error("Expected block to have error stored")
 			}
@@ -148,12 +153,13 @@ func TestMixedBlocksEvaluation(t *testing.T) {
 
 y = x + 5`
 
-	doc, err := NewDocument(source)
+	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	err = doc.Evaluate()
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
 	if err != nil {
 		t.Fatalf("Evaluate failed: %v", err)
 	}
@@ -164,13 +170,13 @@ y = x + 5`
 
 	for _, node := range doc.GetBlocks() {
 		switch node.Block.Type() {
-		case BlockCalculation:
+		case document.BlockCalculation:
 			calcCount++
-			calcBlock := node.Block.(*CalcBlock)
+			calcBlock := node.Block.(*document.CalcBlock)
 			if calcBlock.LastValue() == nil {
 				t.Error("CalcBlock should have LastValue after evaluation")
 			}
-		case BlockText:
+		case document.BlockText:
 			textCount++
 			// TextBlocks don't get evaluated
 		}
