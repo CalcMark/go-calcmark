@@ -202,7 +202,6 @@ func TestCommaToken(t *testing.T) {
 
 // TestLogicalOperatorTokens tests logical operator tokenization
 func TestLogicalOperatorTokens(t *testing.T) {
-	t.Skip("Has one failing subtest - skipping for now")
 	tests := []struct {
 		name  string
 		input string
