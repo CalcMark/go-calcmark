@@ -52,8 +52,7 @@ func testValidGoldenFiles(t *testing.T, baseDir string) {
 // - Mixed content handling
 func testDocumentGoldenFiles(t *testing.T, dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Skip("Document golden files directory doesn't exist yet")
-		return
+		return // Directory doesn't exist
 	}
 
 	files, err := os.ReadDir(dir)
@@ -116,8 +115,7 @@ func testDocumentGoldenFiles(t *testing.T, dir string) {
 // testExpressionGoldenFiles validates EXPRESSION-LEVEL parsing
 func testExpressionGoldenFiles(t *testing.T, dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Skip("Expression golden files directory doesn't exist yet")
-		return
+		return // Directory doesn't exist
 	}
 
 	files, err := os.ReadDir(dir)
@@ -152,8 +150,7 @@ func testExpressionGoldenFiles(t *testing.T, dir string) {
 // testFeatureGoldenFiles validates FEATURE-SPECIFIC behavior
 func testFeatureGoldenFiles(t *testing.T, dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Skip("Feature golden files directory doesn't exist yet")
-		return
+		return // Directory doesn't exist
 	}
 
 	files, err := os.ReadDir(dir)
