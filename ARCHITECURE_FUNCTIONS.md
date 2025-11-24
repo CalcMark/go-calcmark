@@ -43,10 +43,14 @@ bandwidth = convert_rate(10 TB/month, second)   # → 3.86 MB/second
 hourly = convert_rate(1000 req/s, hour)         # → 3.6M/hour
 
 # Natural syntax
+
 qps = 5 million/day per second                  # → 57.87/second
 bandwidth = 10 TB/month per second              # → 3.86 MB/second
 hourly = 1000 req/s per hour                    # → 3.6M/hour
 ```
+
+The first `/` is part of the initial rate unit, e.g., 10TZB/month.
+The word `per` after a rate-style unit indicates the `convert_rate()` conversion.
 
 ### Behind the scenes
 ```

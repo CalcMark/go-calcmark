@@ -1,0 +1,71 @@
+# Extended Unit Tests - Valid Conversions
+
+## Length Conversions
+10 millimeters + 5 millimeters
+
+1 centimeter in millimeters
+
+100 meters in kilometers
+
+1 inch in centimeters
+
+10 feet in meters
+
+100 yards in meters
+
+1 mile in kilometers
+
+5 nautical miles in kilometers
+
+## Mass Conversions
+500 milligrams + 500 milligrams
+
+1 gram in milligrams
+
+1000 grams in kilograms
+
+1 metric ton in kilograms
+
+10 ounces in grams
+
+1 pound in kilograms
+
+## Volume Conversions
+500 milliliters + 500 milliliters
+
+1 liter in milliliters
+
+1 gallon in liters
+
+2 pints in liters
+
+4 quarts in liters
+
+1 cup in milliliters
+
+2 tablespoons in milliliters
+
+4 teaspoons in milliliters
+
+## Mixed Unit Arithmetic (First-Unit-Wins)
+10 meters + 5 feet
+
+100 kilometers + 50 miles
+
+5 kilograms + 10 pounds
+
+2 liters + 1 gallon
+
+## British Spellings
+10 metres + 5 meters
+
+2 litres in millilitres
+
+1 tonne in kilograms
+
+## Multi-Word Units
+1 nautical mile in kilometers
+
+5 metric tons in kilograms
+
+10 kilometers in nautical miles

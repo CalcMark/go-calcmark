@@ -222,6 +222,154 @@ var StandardUnits = map[string]UnitMapping{
 		Quantity:    "Volume",
 		Description: "US liquid gallon, 4 quarts, 3.785411784 liters",
 	},
+
+	// ========================================
+	// TEMPERATURE
+	// ========================================
+
+	"celsius": {
+		Canonical:   "celsius",
+		Symbol:      "C",
+		Aliases:     []string{"celsius", "c", "°c", "degc"},
+		System:      "SI",
+		Quantity:    "Temperature",
+		Description: "Celsius temperature scale, 0°C = freezing point of water",
+	},
+	"fahrenheit": {
+		Canonical:   "fahrenheit",
+		Symbol:      "F",
+		Aliases:     []string{"fahrenheit", "f", "°f", "degf"},
+		System:      "Imperial",
+		Quantity:    "Temperature",
+		Description: "Fahrenheit temperature scale, 32°F = freezing point of water",
+	},
+	"kelvin": {
+		Canonical:   "kelvin",
+		Symbol:      "K",
+		Aliases:     []string{"kelvin", "k"},
+		System:      "SI",
+		Quantity:    "Temperature",
+		Description: "Absolute temperature scale, 0 K = absolute zero",
+	},
+
+	// ========================================
+	// SPEED
+	// ========================================
+
+	"m/s": {
+		Canonical:   "m/s",
+		Symbol:      "m/s",
+		Aliases:     []string{"m/s", "mps", "meters per second"},
+		System:      "SI",
+		Quantity:    "Speed",
+		Description: "Meters per second, SI unit of speed",
+	},
+	"km/h": {
+		Canonical:   "km/h",
+		Symbol:      "km/h",
+		Aliases:     []string{"km/h", "kph", "kmh", "kilometers per hour"},
+		System:      "SI",
+		Quantity:    "Speed",
+		Description: "Kilometers per hour",
+	},
+	"mph": {
+		Canonical:   "mph",
+		Symbol:      "mph",
+		Aliases:     []string{"mph", "miles per hour"},
+		System:      "Imperial",
+		Quantity:    "Speed",
+		Description: "Miles per hour",
+	},
+	"knot": {
+		Canonical:   "knot",
+		Symbol:      "knot",
+		Aliases:     []string{"knot", "knots"},
+		System:      "Nautical",
+		Quantity:    "Speed",
+		Description: "Nautical mile per hour, 1 knot = 1.852 km/h",
+	},
+
+	// ========================================
+	// ENERGY
+	// ========================================
+
+	"joule": {
+		Canonical:   "joule",
+		Symbol:      "J",
+		Aliases:     []string{"joule", "joules", "j"},
+		System:      "SI",
+		Quantity:    "Energy",
+		Description: "SI unit of energy, 1 joule = 1 newton-meter",
+	},
+	"kilojoule": {
+		Canonical:   "kilojoule",
+		Symbol:      "kJ",
+		Aliases:     []string{"kilojoule", "kilojoules", "kj"},
+		System:      "SI",
+		Quantity:    "Energy",
+		Description: "1000 joules",
+	},
+	"calorie": {
+		Canonical:   "calorie",
+		Symbol:      "cal",
+		Aliases:     []string{"calorie", "calories", "cal"},
+		System:      "CGS",
+		Quantity:    "Energy",
+		Description: "Thermochemical calorie, 1 cal = 4.184 J",
+	},
+	"kilocalorie": {
+		Canonical:   "kilocalorie",
+		Symbol:      "kcal",
+		Aliases:     []string{"kilocalorie", "kilocalories", "kcal"},
+		System:      "CGS",
+		Quantity:    "Energy",
+		Description: "Food calorie (Calorie), 1 kcal = 4184 J",
+	},
+	"kwh": {
+		Canonical:   "kwh",
+		Symbol:      "kWh",
+		Aliases:     []string{"kwh", "kilowatt-hour", "kilowatt-hours"},
+		System:      "SI",
+		Quantity:    "Energy",
+		Description: "Kilowatt-hour, commonly used for electricity, 1 kWh = 3.6 MJ",
+	},
+
+	// ========================================
+	// POWER
+	// ========================================
+
+	"watt": {
+		Canonical:   "watt",
+		Symbol:      "W",
+		Aliases:     []string{"watt", "watts", "w"},
+		System:      "SI",
+		Quantity:    "Power",
+		Description: "SI unit of power, 1 watt = 1 joule/second",
+	},
+	"kilowatt": {
+		Canonical:   "kilowatt",
+		Symbol:      "kW",
+		Aliases:     []string{"kilowatt", "kilowatts", "kw"},
+		System:      "SI",
+		Quantity:    "Power",
+		Description: "1000 watts",
+	},
+	"megawatt": {
+		Canonical:   "megawatt",
+		Symbol:      "MW",
+		Aliases:     []string{"megawatt", "megawatts", "mw"},
+		System:      "SI",
+		Quantity:    "Power",
+		Description: "1 million watts",
+	},
+	"horsepower": {
+		Canonical:   "horsepower",
+		Symbol:      "hp",
+		Aliases:     []string{"horsepower", "hp"},
+		System:      "Imperial",
+		Quantity:    "Power",
+		Description: "Mechanical horsepower, 1 hp = 745.7 W",
+	},
 }
 
 // NormalizeUnitName converts any unit alias to its canonical form.

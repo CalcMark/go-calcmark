@@ -14,8 +14,10 @@ const (
 	CategoryMass        QuantityCategory = "mass"
 	CategoryVolume      QuantityCategory = "volume"
 	CategoryTemperature QuantityCategory = "temperature"
-	// Speed, Energy, Power deferred to Phase 2+ (rate-based units)
-	CategoryUnknown QuantityCategory = "unknown"
+	CategorySpeed       QuantityCategory = "speed"
+	CategoryEnergy      QuantityCategory = "energy"
+	CategoryPower       QuantityCategory = "power"
+	CategoryUnknown     QuantityCategory = "unknown"
 )
 
 // UnitInfo contains metadata about a known unit
@@ -42,8 +44,10 @@ func buildUnitRegistry() map[string]UnitInfo {
 	addLengthUnits(registry)
 	addMassUnits(registry)
 	addVolumeUnits(registry)
-	// Temperature handled separately (offset-based)
-	// Speed, Energy, Power deferred to Phase 2+ (rate-based units with accumulate functions)
+	addTemperatureUnits(registry)
+	addSpeedUnits(registry)
+	addEnergyUnits(registry)
+	addPowerUnits(registry)
 
 	return registry
 }
@@ -283,10 +287,181 @@ func addVolumeUnits(registry map[string]UnitInfo) {
 	registry["teaspoons"] = registry["tsp"]
 }
 
-// NOTE: Speed, Energy, and Power units are deferred to Phase 2+
-// These will be integrated with the "accumulate" and rate conversion functions
-// See ARCHITECURE_FUNCTIONS.md for the comprehensive design of rate-based units
-// Examples: 100 KB/hour, 5 GB/day, $0.10/hour, etc.
+// addTemperatureUnits adds temperature unit conversions
+// NOTE: Temperature uses OFFSET-BASED conversion (32°F = 0°C, not 0°F)
+// Base unit: celsius
+func addTemperatureUnits(registry map[string]UnitInfo) {
+	makeTemperatureUnit := func(toCelsius, fromCelsius func(float64) float64) UnitInfo {
+		return UnitInfo{
+			Category:     CategoryTemperature,
+			ToBaseUnit:   toCelsius,
+			FromBaseUnit: fromCelsius,
+		}
+	}
+
+	// Celsius (base)
+	registry["c"] = makeTemperatureUnit(
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	)
+	registry["celsius"] = registry["c"]
+	registry["°c"] = registry["c"]
+	registry["degc"] = registry["c"]
+
+	// Fahrenheit
+	registry["f"] = makeTemperatureUnit(
+		func(v float64) float64 { return units.FromFahrenheit(v).Celsius() },
+		func(v float64) float64 { return units.FromCelsius(v).Fahrenheit() },
+	)
+	registry["fahrenheit"] = registry["f"]
+	registry["°f"] = registry["f"]
+	registry["degf"] = registry["f"]
+
+	// Kelvin
+	registry["k"] = makeTemperatureUnit(
+		func(v float64) float64 { return units.FromKelvin(v).Celsius() },
+		func(v float64) float64 { return units.FromCelsius(v).Kelvin() },
+	)
+	registry["kelvin"] = registry["k"]
+}
+
+// addSpeedUnits adds speed unit conversions
+// Base unit: meters_per_second (m/s)
+func addSpeedUnits(registry map[string]UnitInfo) {
+	makeSpeedUnit := func(toMps, fromMps func(float64) float64) UnitInfo {
+		return UnitInfo{
+			Category:     CategorySpeed,
+			ToBaseUnit:   toMps,
+			FromBaseUnit: fromMps,
+		}
+	}
+
+	// Meters per second (base)
+	registry["m/s"] = makeSpeedUnit(
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	)
+	registry["mps"] = registry["m/s"]
+	registry["meters per second"] = registry["m/s"]
+
+	// Kilometers per hour - 1 km/h = 0.277778 m/s
+	registry["km/h"] = makeSpeedUnit(
+		func(v float64) float64 { return v * 0.277778 },
+		func(v float64) float64 { return v / 0.277778 },
+	)
+	registry["kph"] = registry["km/h"]
+	registry["kmh"] = registry["km/h"]
+	registry["kilometers per hour"] = registry["km/h"]
+
+	// Miles per hour - 1 mph = 0.44704 m/s
+	registry["mph"] = makeSpeedUnit(
+		func(v float64) float64 { return v * 0.44704 },
+		func(v float64) float64 { return v / 0.44704 },
+	)
+	registry["miles per hour"] = registry["mph"]
+
+	// Knots - 1 knot = 0.514444 m/s
+	registry["knot"] = makeSpeedUnit(
+		func(v float64) float64 { return v * 0.514444 },
+		func(v float64) float64 { return v / 0.514444 },
+	)
+	registry["knots"] = registry["knot"]
+}
+
+// addEnergyUnits adds energy unit conversions
+// Base unit: joule (J)
+func addEnergyUnits(registry map[string]UnitInfo) {
+	makeEnergyUnit := func(toJoules, fromJoules func(float64) float64) UnitInfo {
+		return UnitInfo{
+			Category:     CategoryEnergy,
+			ToBaseUnit:   toJoules,
+			FromBaseUnit: fromJoules,
+		}
+	}
+
+	// Joule (base)
+	registry["j"] = makeEnergyUnit(
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	)
+	registry["joule"] = registry["j"]
+	registry["joules"] = registry["j"]
+
+	// Kilojoule
+	registry["kj"] = makeEnergyUnit(
+		func(v float64) float64 { return (units.Energy(v) * units.Kilojoule).Joules() },
+		func(v float64) float64 { return (units.Energy(v) * units.Joule).Kilojoules() },
+	)
+	registry["kilojoule"] = registry["kj"]
+	registry["kilojoules"] = registry["kj"]
+
+	// Calorie (thermochemical) - 1 cal = 4.184 J
+	registry["cal"] = makeEnergyUnit(
+		func(v float64) float64 { return v * 4.184 },
+		func(v float64) float64 { return v / 4.184 },
+	)
+	registry["calorie"] = registry["cal"]
+	registry["calories"] = registry["cal"]
+
+	// Kilocalorie (food Calorie) - 1 kcal = 4184 J
+	registry["kcal"] = makeEnergyUnit(
+		func(v float64) float64 { return v * 4184 },
+		func(v float64) float64 { return v / 4184 },
+	)
+	registry["kilocalorie"] = registry["kcal"]
+	registry["kilocalories"] = registry["kcal"]
+
+	// Kilowatt-hour
+	registry["kwh"] = makeEnergyUnit(
+		func(v float64) float64 { return (units.Energy(v) * units.KilowattHour).Joules() },
+		func(v float64) float64 { return (units.Energy(v) * units.Joule).KilowattHours() },
+	)
+	registry["kilowatt-hour"] = registry["kwh"]
+	registry["kilowatt-hours"] = registry["kwh"]
+}
+
+// addPowerUnits adds power unit conversions
+// Base unit: watt (W)
+func addPowerUnits(registry map[string]UnitInfo) {
+	makePowerUnit := func(toWatts, fromWatts func(float64) float64) UnitInfo {
+		return UnitInfo{
+			Category:     CategoryPower,
+			ToBaseUnit:   toWatts,
+			FromBaseUnit: fromWatts,
+		}
+	}
+
+	// Watt (base)
+	registry["w"] = makePowerUnit(
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	)
+	registry["watt"] = registry["w"]
+	registry["watts"] = registry["w"]
+
+	// Kilowatt
+	registry["kw"] = makePowerUnit(
+		func(v float64) float64 { return (units.Power(v) * units.Kilowatt).Watts() },
+		func(v float64) float64 { return (units.Power(v) * units.Watt).Kilowatts() },
+	)
+	registry["kilowatt"] = registry["kw"]
+	registry["kilowatts"] = registry["kw"]
+
+	// Megawatt
+	registry["mw"] = makePowerUnit(
+		func(v float64) float64 { return (units.Power(v) * units.Megawatt).Watts() },
+		func(v float64) float64 { return (units.Power(v) * units.Watt).Megawatts() },
+	)
+	registry["megawatt"] = registry["mw"]
+	registry["megawatts"] = registry["mw"]
+
+	// Horsepower (mechanical) - 1 hp = 745.7 W
+	registry["hp"] = makePowerUnit(
+		func(v float64) float64 { return v * 745.7 },
+		func(v float64) float64 { return v / 745.7 },
+	)
+	registry["horsepower"] = registry["hp"]
+}
 
 // GetUnitInfo returns conversion info for a unit name (case-insensitive)
 func GetUnitInfo(unitName string) (UnitInfo, bool) {

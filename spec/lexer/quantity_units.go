@@ -41,6 +41,45 @@ func isQuantityUnit(unit string) bool {
 		"gal": true, "gallon": true, "gallons": true,
 	}
 
+	// Temperature units
+	temperatureUnits := map[string]bool{
+		"c": true, "celsius": true, "°c": true, "degc": true,
+		"f": true, "fahrenheit": true, "°f": true, "degf": true,
+		"k": true, "kelvin": true,
+	}
+
+	// Speed units (include '/' variants)
+	speedUnits := map[string]bool{
+		"m/s": true, "mps": true, "meters per second": true,
+		"km/h": true, "kph": true, "kmh": true, "kilometers per hour": true,
+		"mph": true, "miles per hour": true,
+		"knot": true, "knots": true,
+	}
+
+	// Energy units
+	energyUnits := map[string]bool{
+		"j": true, "joule": true, "joules": true,
+		"kj": true, "kilojoule": true, "kilojoules": true,
+		"cal": true, "calorie": true, "calories": true,
+		"kcal": true, "kilocalorie": true, "kilocalories": true,
+		"kwh": true, "kilowatt-hour": true, "kilowatt-hours": true,
+	}
+
+	// Power units
+	powerUnits := map[string]bool{
+		"w": true, "watt": true, "watts": true,
+		"kw": true, "kilowatt": true, "kilowatts": true,
+		"mw": true, "megawatt": true, "megawatts": true,
+		"hp": true, "horsepower": true,
+	}
+
+	// Check all unit categories
+	if lengthUnits[unit] || massUnits[unit] || volumeUnits[unit] ||
+		temperatureUnits[unit] || speedUnits[unit] ||
+		energyUnits[unit] || powerUnits[unit] {
+		return true
+	}
+
 	// Currency codes (ISO 4217) - 3 uppercase letters
 	if len(unit) == 3 {
 		allUpper := true

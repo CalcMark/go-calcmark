@@ -1,0 +1,25 @@
+# Extended Unit Tests - Invalid Operations
+
+## Cannot Mix Dimensions
+10 meters + 5 kilograms
+
+100 grams + 2 liters
+
+5 feet + 3 cups
+
+## Cannot Convert Arbitrary Units
+10 apples in meters
+
+5 widgets in kilograms
+
+100 items in liters
+
+## Cannot Mix Arbitrary with Known Units
+10 apples + 5 meters
+
+5 widgets + 3 kilograms
+
+## Different Arbitrary Units Cannot Add
+10 apples + 5 bananas
+
+100 widgets + 50 gadgets

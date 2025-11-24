@@ -15,7 +15,9 @@ const (
 	QuantityTime        QuantityType = "Time"
 	QuantityVolume      QuantityType = "Volume"
 	QuantityTemperature QuantityType = "Temperature"
+	QuantitySpeed       QuantityType = "Speed"
 	QuantityEnergy      QuantityType = "Energy"
+	QuantityPower       QuantityType = "Power"
 	QuantityUnknown     QuantityType = "Unknown"
 )
 
@@ -67,6 +69,38 @@ func GetQuantityType(unit string) QuantityType {
 		"gallon": true, "gallons": true, "gal": true,
 	}
 
+	// Temperature units
+	temperatureUnits := map[string]bool{
+		"celsius": true, "c": true, "°c": true, "degc": true,
+		"fahrenheit": true, "f": true, "°f": true, "degf": true,
+		"kelvin": true, "k": true,
+	}
+
+	// Speed units
+	speedUnits := map[string]bool{
+		"m/s": true, "mps": true, "meters per second": true,
+		"km/h": true, "kph": true, "kmh": true, "kilometers per hour": true,
+		"mph": true, "miles per hour": true,
+		"knot": true, "knots": true,
+	}
+
+	// Energy units
+	energyUnits := map[string]bool{
+		"joule": true, "joules": true, "j": true,
+		"kilojoule": true, "kilojoules": true, "kj": true,
+		"calorie": true, "calories": true, "cal": true,
+		"kilocalorie": true, "kilocalories": true, "kcal": true,
+		"kwh": true, "kilowatt-hour": true, "kilowatt-hours": true,
+	}
+
+	// Power units
+	powerUnits := map[string]bool{
+		"watt": true, "watts": true, "w": true,
+		"kilowatt": true, "kilowatts": true, "kw": true,
+		"megawatt": true, "megawatts": true, "mw": true,
+		"horsepower": true, "hp": true,
+	}
+
 	if lengthUnits[unit] {
 		return QuantityLength
 	}
@@ -78,6 +112,18 @@ func GetQuantityType(unit string) QuantityType {
 	}
 	if volumeUnits[unit] {
 		return QuantityVolume
+	}
+	if temperatureUnits[unit] {
+		return QuantityTemperature
+	}
+	if speedUnits[unit] {
+		return QuantitySpeed
+	}
+	if energyUnits[unit] {
+		return QuantityEnergy
+	}
+	if powerUnits[unit] {
+		return QuantityPower
 	}
 
 	return QuantityUnknown
