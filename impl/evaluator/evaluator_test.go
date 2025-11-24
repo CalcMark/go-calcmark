@@ -47,8 +47,8 @@ func TestEvalCurrency(t *testing.T) {
 		t.Fatalf("expected Currency, got %T", results[0])
 	}
 
-	if curr.Symbol != "$" {
-		t.Errorf("expected symbol '$', got '%s'", curr.Symbol)
+	if curr.Symbol != "USD" {
+		t.Errorf("expected symbol USD, got %s", curr.Symbol)
 	}
 
 	expected := decimal.NewFromInt(1000)

@@ -164,11 +164,11 @@ func TestCurrencyString(t *testing.T) {
 		symbol   string
 		expected string
 	}{
-		{"dollars 1000", 1000, "$", "$1000.00"},
-		{"dollars with cents", 1500.5, "$", "$1500.50"},
-		{"euros", 100, "€", "€100.00"},
-		{"large number", 1000000, "$", "$1000000.00"},
-		{"small number", 5, "$", "$5.00"},
+		{"dollars 1000", 1000, "$", "$ 1000.00"},
+		{"dollars with cents", 1500.5, "$", "$ 1500.50"},
+		{"euros", 100, "€", "€ 100.00"},
+		{"large number", 1000000, "$", "$ 1000000.00"},
+		{"small number", 5, "$", "$ 5.00"},
 	}
 
 	for _, tt := range tests {
@@ -426,12 +426,12 @@ func TestCurrencyFormatting(t *testing.T) {
 		symbol   string
 		expected string
 	}{
-		{"USD whole", 100, "$", "$100.00"},
-		{"USD decimal", 100.50, "$", "$100.50"},
-		{"EUR", 50, "€", "€50.00"},
-		{"GBP", 25.99, "£", "£25.99"},
-		{"JPY", 1000, "¥", "¥1000.00"},
-		{"large amount", 1000000, "$", "$1000000.00"},
+		{"USD whole", 100, "$", "$ 100.00"},
+		{"USD decimal", 100.50, "$", "$ 100.50"},
+		{"EUR", 50, "€", "€ 50.00"},
+		{"GBP", 25.99, "£", "£ 25.99"},
+		{"JPY", 1000, "¥", "¥ 1000.00"},
+		{"large amount", 1000000, "$", "$ 1000000.00"},
 	}
 
 	for _, tt := range tests {

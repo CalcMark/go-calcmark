@@ -260,8 +260,8 @@ func TestEvaluateFunctionWithCurrency(t *testing.T) {
 		want     string
 		wantType string
 	}{
-		{"avg with currency", "avg($100, $200, $300)", "$200.00", "Currency"},
-		{"sqrt with currency", "sqrt($16)", "$4.00", "Currency"},
+		{"avg with currency", "avg($100, $200, $300)", "USD 200.00", "Currency"},
+		{"sqrt with currency", "sqrt($16)", "USD 4.00", "Currency"},
 	}
 
 	for _, tt := range tests {

@@ -90,27 +90,12 @@ func TestFunctionArgumentVariations(t *testing.T) {
 		{
 			name:     "currency basic",
 			input:    "avg($100, $200, $300)",
-			want:     "$200.00",
+			want:     "USD 200.00",
 			wantType: "Currency",
 		},
-		{
-			name:     "currency with thousands",
-			input:    "avg($1,000, $2,000, $3,000)",
-			want:     "$2000.00",
-			wantType: "Currency",
-		},
-		{
-			name:     "currency no space",
-			input:    "avg($100,$200,$300)",
-			want:     "$200.00",
-			wantType: "Currency",
-		},
-		{
-			name:     "euro currency",
-			input:    "avg(€100, €200)",
-			want:     "€150.00",
-			wantType: "Currency",
-		},
+		{name: "currency with thousands", input: "avg($1,000, $2,000, $3,000)", want: "USD 2000.00", wantType: "Currency"},
+		{name: "currency no space", input: "avg($100,$200,$300)", want: "USD 200.00", wantType: "Currency"},
+		{name: "euro currency", input: "avg(€100, €200)", want: "EUR 150.00", wantType: "Currency"},
 
 		// Mixed currency and numbers (returns Number - no units)
 		{
@@ -202,12 +187,7 @@ func TestFunctionArgumentVariations(t *testing.T) {
 			want:     "5",
 			wantType: "Number",
 		},
-		{
-			name:     "sqrt currency",
-			input:    "sqrt($16)",
-			want:     "$4.00",
-			wantType: "Currency",
-		},
+		{name: "sqrt currency", input: "sqrt($16)", want: "USD 4.00", wantType: "Currency"},
 		{
 			name:     "square root of basic",
 			input:    "square root of 100",
@@ -291,33 +271,15 @@ func TestFunctionArgumentsIgnoreUnits(t *testing.T) {
 		wantSymbol  string
 		description string
 	}{
-		{
-			name:        "avg preserves first currency symbol",
-			input:       "avg($100, $200)",
-			wantValue:   "150",
-			wantSymbol:  "$",
-			description: "Average of $100 and $200 is $150, units preserved",
-		},
-		{
-			name:        "avg treats currency as numbers",
-			input:       "avg($10, $20, $30)",
-			wantValue:   "20",
-			wantSymbol:  "$",
-			description: "Function operates on numeric values 10, 20, 30",
-		},
-		{
-			name:        "sqrt preserves currency",
-			input:       "sqrt($100)",
-			wantValue:   "10",
-			wantSymbol:  "$",
-			description: "Square root of 100 (numeric value) with $ preserved",
-		},
+		{name: "avg preserves first currency symbol", input: "avg($100, $200)", wantValue: "150", wantSymbol: "USD", description: "Average of $100 and $200 is $150, units preserved"},
+		{name: "avg treats currency as numbers", input: "avg($10, $20, $30)", wantValue: "20", wantSymbol: "USD", description: "Function operates on numeric values 10, 20, 30"},
+		{name: "sqrt preserves currency", input: "sqrt($100)", wantValue: "10", wantSymbol: "USD", description: "Square root of 100 (numeric value) with $ preserved"},
 		{
 			name:        "avg with large currency amounts",
-			input:       "avg($1,000, $2,000, $3,000)",
-			wantValue:   "2000",
-			wantSymbol:  "$",
-			description: "Thousands separator correctly handled, $ preserved",
+			input:       "avg($1,000, $2,000)",
+			wantValue:   "1500",
+			wantSymbol:  "USD",
+			description: "Thousands separators correctly handled",
 		},
 	}
 

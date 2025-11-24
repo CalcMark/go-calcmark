@@ -44,14 +44,14 @@ func TestFunctionsMixedUnits(t *testing.T) {
 		{
 			name:        "avg same currency returns that currency",
 			input:       "avg($100, $200, $300)",
-			want:        "$200.00",
+			want:        "USD 200.00",
 			wantType:    "Currency",
 			description: "Same currency preserves the unit",
 		},
 		{
 			name:        "avg all euros returns euro",
 			input:       "avg(€100, €200)",
-			want:        "€150.00",
+			want:        "EUR 150.00",
 			wantType:    "Currency",
 			description: "All euros preserves euro unit",
 		},
@@ -136,12 +136,7 @@ func TestFunctionsMixedUnitsWithThousands(t *testing.T) {
 			want:     "2000",
 			wantType: "Number",
 		},
-		{
-			name:     "same currency with thousands",
-			input:    "avg($1,000, $2,000)",
-			want:     "$1500.00",
-			wantType: "Currency",
-		},
+		{name: "same currency with thousands", input: "avg($1,000, $2,000)", want: "USD 1500.00", wantType: "Currency"},
 	}
 
 	for _, tt := range tests {

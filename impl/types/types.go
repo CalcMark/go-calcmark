@@ -173,20 +173,11 @@ func (c *Currency) String() string {
 		return c.SourceFormat
 	}
 
-	// Otherwise, format with symbol and 2 decimal places (no thousands separators)
+	// ISO standard: currency code before number with space (e.g., "USD 100.00")
 	rounded := c.Value.Round(2)
 
-	// Format with symbol and 2 decimal places
-	intPart := rounded.IntPart()
-	fracPart := rounded.Sub(decimal.NewFromInt(intPart)).Abs().Mul(decimal.NewFromInt(100)).IntPart()
-
-	intStr := fmt.Sprintf("%d", intPart)
-	if intPart < 0 {
-		intStr = fmt.Sprintf("%d", -intPart)
-		return fmt.Sprintf("-%s%s.%02d", c.Symbol, intStr, fracPart)
-	}
-
-	return fmt.Sprintf("%s%s.%02d", c.Symbol, intStr, fracPart)
+	// Format: <Symbol> <value with 2 decimals>
+	return c.Symbol + " " + rounded.StringFixed(2)
 }
 
 // addThousandsSeparators adds commas to a numeric string
