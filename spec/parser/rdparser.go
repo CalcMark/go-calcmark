@@ -6,6 +6,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
 // RecursiveDescentParser implements a recursive descent parser for CalcMark.
@@ -318,16 +319,26 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 	}
 
-	// Check for unit conversion: "10 meters in feet"
+	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
 	if p.match(lexer.IN) {
 		if !p.match(lexer.IDENTIFIER) {
 			return nil, p.error("expected unit name after 'in'")
 		}
 		targetUnit := p.previous()
+		targetUnitName := string(targetUnit.Value)
+
+		// Check for multi-word target unit: "in nautical miles"
+		if p.check(lexer.IDENTIFIER) {
+			nextWord := string(p.peek().Value)
+			if multiWordUnit := units.IsMultiWordUnit(targetUnitName, nextWord); multiWordUnit != "" {
+				p.advance() // Consume the second word
+				targetUnitName = multiWordUnit
+			}
+		}
 
 		return &ast.UnitConversion{
 			Quantity:   left,
-			TargetUnit: string(targetUnit.Value),
+			TargetUnit: targetUnitName,
 			Range:      &ast.Range{},
 		}, nil
 	}
@@ -396,10 +407,23 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		// Check if followed by an identifier (unit): "12k meters", "1e3 kg", etc.
 		if p.check(lexer.IDENTIFIER) {
 			unitTok := p.advance()
+			unitName := string(unitTok.Value)
+
+			// Check for multi-word units: "1 nautical mile", "5 metric tons"
+			// Only consume second word if it forms a valid multi-word unit
+			if p.check(lexer.IDENTIFIER) {
+				nextWord := string(p.peek().Value)
+				// Import units package to check if this is a known multi-word unit
+				if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
+					p.advance() // Consume the second word
+					unitName = multiWordUnit
+				}
+			}
+
 			return &ast.QuantityLiteral{
 				Value:      string(tok.Value),
-				Unit:       string(unitTok.Value),
-				SourceText: string(tok.OriginalText) + " " + string(unitTok.Value),
+				Unit:       unitName,
+				SourceText: string(tok.OriginalText) + " " + unitName,
 			}, nil
 		}
 

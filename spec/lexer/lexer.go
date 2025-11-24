@@ -289,20 +289,77 @@ func (l *Lexer) readNumber() Token {
 			unit := l.readIdentifier()
 			unitStr := string(unit.Value)
 
-			// Accept ANY identifier as a unit (for arbitrary units like "apples", "widgets")
-			// This includes known units (kg, meters) and arbitrary units
-			// Semantic validation will determine if units are compatible
+			// Don't treat reserved keywords as units (e.g., "5 and" should not be a quantity)
+			if _, isReserved := ReservedKeywords[strings.ToLower(unitStr)]; isReserved {
+				// This is a reserved keyword, not a unit - backtrack
+				l.pos = savedPos
+			} else if BooleanKeywords[strings.ToLower(unitStr)] {
+				// Boolean keyword, not a unit - backtrack
+				l.pos = savedPos
+			} else {
+				// Check for multi-word units: "1 nautical mile", "5 metric tons"
+				// Look ahead for a second identifier that might form a multi-word unit
+				if l.currentChar() == ' ' {
+					savedPos2 := l.pos
+					l.advance() // Skip second space
 
-			// Create QUANTITY token with "value:unit" format
-			quantityValue := fmt.Sprintf("%s:%s", value, unitStr)
-			return Token{
-				Type:         QUANTITY,
-				Value:        quantityValue,
-				OriginalText: string(l.text[startPos:l.pos]),
-				Line:         startLine,
-				Column:       startColumn,
-				StartPos:     startPos,
-				EndPos:       l.pos,
+					if l.isIdentifierChar(l.currentChar(), true) {
+						secondUnit := l.readIdentifier()
+						secondWord := string(secondUnit.Value)
+
+						// Check if second word is also a reserved keyword
+						if _, isReserved := ReservedKeywords[strings.ToLower(secondWord)]; isReserved {
+							// Second word is reserved, backtrack
+							l.pos = savedPos2
+						} else if BooleanKeywords[strings.ToLower(secondWord)] {
+							// Second word is boolean, backtrack
+							l.pos = savedPos2
+						} else {
+							// Import units package is not available in lexer, so we need to check directly
+							// Check against known multi-word units explicitly
+							combinedLower := strings.ToLower(unitStr + " " + secondWord)
+							isMultiWord := false
+
+							// Known multi-word units (from canonical.go)
+							multiWordUnits := map[string]bool{
+								"nautical mile":  true,
+								"nautical miles": true,
+								"metric ton":     true,
+								"metric tons":    true,
+							}
+
+							if multiWordUnits[combinedLower] {
+								// This is a valid multi-word unit, keep both words
+								unitStr = unitStr + " " + secondWord
+								isMultiWord = true
+							}
+
+							if !isMultiWord {
+								// Not a multi-word unit, backtrack
+								l.pos = savedPos2
+							}
+						}
+					} else {
+						// No second identifier, backtrack
+						l.pos = savedPos2
+					}
+				}
+
+				// Accept ANY identifier as a unit (for arbitrary units like "apples", "widgets")
+				// This includes known units (kg, meters) and arbitrary units
+				// Semantic validation will determine if units are compatible
+
+				// Create QUANTITY token with "value:unit" format
+				quantityValue := fmt.Sprintf("%s:%s", value, unitStr)
+				return Token{
+					Type:         QUANTITY,
+					Value:        quantityValue,
+					OriginalText: string(l.text[startPos:l.pos]),
+					Line:         startLine,
+					Column:       startColumn,
+					StartPos:     startPos,
+					EndPos:       l.pos,
+				}
 			}
 		} else {
 			l.pos = savedPos

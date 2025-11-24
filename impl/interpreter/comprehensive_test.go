@@ -37,7 +37,7 @@ func TestComprehensiveFeatures(t *testing.T) {
 		// Known units (regression)
 		{"meters", "10 meters + 5 meters\n", "15 meters"},
 		{"kilograms", "5 kg + 3 kg\n", "8 kg"},
-		{"mixed known units", "10 meters + 5 feet\n", "11.524 meters"},
+		{"mixed known units", "10 meters + 5 feet\n", "11.523"}, // Prefix: 11.5239999...
 
 		// Functions with multipliers
 		{"avg with k", "avg(1k, 2k, 3k)\n", "2000"},

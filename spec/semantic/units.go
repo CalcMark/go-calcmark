@@ -23,22 +23,25 @@ const (
 func GetQuantityType(unit string) QuantityType {
 	// Length units
 	lengthUnits := map[string]bool{
-		"meter": true, "meters": true, "m": true,
-		"foot": true, "feet": true, "ft": true,
-		"mile": true, "miles": true, "mi": true,
-		"kilometer": true, "kilometers": true, "km": true,
-		"centimeter": true, "centimeters": true, "cm": true,
+		"millimeter": true, "millimeters": true, "millimetre": true, "millimetres": true, "mm": true,
+		"centimeter": true, "centimeters": true, "centimetre": true, "centimetres": true, "cm": true,
+		"meter": true, "meters": true, "metre": true, "metres": true, "m": true,
+		"kilometer": true, "kilometers": true, "kilometre": true, "kilometres": true, "km": true,
 		"inch": true, "inches": true, "in": true,
+		"foot": true, "feet": true, "ft": true,
 		"yard": true, "yards": true, "yd": true,
+		"mile": true, "miles": true, "mi": true,
+		"nautical mile": true, "nautical miles": true, "nmi": true,
 	}
 
 	// Mass units
 	massUnits := map[string]bool{
-		"kilogram": true, "kilograms": true, "kg": true,
-		"pound": true, "pounds": true, "lb": true, "lbs": true,
+		"milligram": true, "milligrams": true, "mg": true,
 		"gram": true, "grams": true, "g": true,
+		"kilogram": true, "kilograms": true, "kg": true,
+		"metric ton": true, "metric tons": true, "tonne": true, "tonnes": true, "t": true,
 		"ounce": true, "ounces": true, "oz": true,
-		"ton": true, "tons": true,
+		"pound": true, "pounds": true, "lb": true, "lbs": true,
 	}
 
 	// Time units (handled separately by duration literals)
@@ -54,14 +57,14 @@ func GetQuantityType(unit string) QuantityType {
 
 	// Volume units
 	volumeUnits := map[string]bool{
-		"liter": true, "liters": true, "l": true, "L": true,
-		"milliliter": true, "milliliters": true, "ml": true, "mL": true,
-		"gallon": true, "gallons": true, "gal": true,
-		"quart": true, "quarts": true, "qt": true,
-		"pint": true, "pints": true, "pt": true,
-		"cup": true, "cups": true,
-		"tablespoon": true, "tablespoons": true, "tbsp": true,
+		"milliliter": true, "milliliters": true, "millilitre": true, "millilitres": true, "ml": true, "mL": true,
+		"liter": true, "liters": true, "litre": true, "litres": true, "l": true, "L": true,
 		"teaspoon": true, "teaspoons": true, "tsp": true,
+		"tablespoon": true, "tablespoons": true, "tbsp": true,
+		"cup": true, "cups": true,
+		"pint": true, "pints": true, "pt": true,
+		"quart": true, "quarts": true, "qt": true,
+		"gallon": true, "gallons": true, "gal": true,
 	}
 
 	if lengthUnits[unit] {
