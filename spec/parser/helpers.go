@@ -11,6 +11,23 @@ func isAllUppercase(s string) bool {
 	return len(s) > 0
 }
 
+// mapCurrencySymbol maps currency symbols to ISO 4217 codes
+func mapCurrencySymbol(symbol string) string {
+	switch symbol {
+	case "$":
+		return "USD"
+	case "€":
+		return "EUR"
+	case "£":
+		return "GBP"
+	case "¥":
+		return "JPY"
+	default:
+		// Unknown symbol - return as-is for semantic validation
+		return symbol
+	}
+}
+
 // isCurrency checks if a unit string is a currency code or symbol
 func isCurrency(unit string) bool {
 	// Common currency symbols

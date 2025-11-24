@@ -417,6 +417,31 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
+	// Prefix currency symbols: $100, €50, £30, ¥1000
+	// These combine into QuantityLiteral with mapped unit
+	if p.match(lexer.CURRENCY_SYM) {
+		currencyTok := p.previous()
+
+		// Must be followed by a number
+		if !p.match(lexer.NUMBER, lexer.NUMBER_K, lexer.NUMBER_M, lexer.NUMBER_B, lexer.NUMBER_T,
+			lexer.NUMBER_PERCENT, lexer.NUMBER_SCI) {
+			return nil, p.error("expected number after currency symbol")
+		}
+
+		numberTok := p.previous()
+
+		// Map currency symbol to ISO code
+		currencyCode := mapCurrencySymbol(string(currencyTok.Value))
+
+		// Create QuantityLiteral with currency as unit
+		// SourceText preserves the original format: "$100"
+		return &ast.QuantityLiteral{
+			Value:      string(numberTok.Value),
+			Unit:       currencyCode,
+			SourceText: string(currencyTok.OriginalText) + string(numberTok.OriginalText),
+		}, nil
+	}
+
 	// Quantity literals: number with unit (5 kg, 10 meters, 100 USD, $50)
 	if p.match(lexer.QUANTITY) {
 		tok := p.previous()
