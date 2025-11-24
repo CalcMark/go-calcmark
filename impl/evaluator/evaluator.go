@@ -263,7 +263,7 @@ func (e *Evaluator) evalBinaryOp(node *ast.BinaryOp) (types.Type, error) {
 	}
 
 	// Determine and create the appropriate result type
-	resultTypeName, symbol := determineBinaryResultType(left, right)
+	resultTypeName, symbol := determineBinaryResultType(left, right, node.Operator)
 	return createResultType(resultTypeName, symbol, result), nil
 }
 

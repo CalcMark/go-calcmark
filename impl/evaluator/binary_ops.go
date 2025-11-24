@@ -116,12 +116,14 @@ func computeExponentiation(base, exponent decimal.Decimal) decimal.Decimal {
 // Implements CalcMark's type coercion rules:
 // - Same currency: preserve the currency
 // - Different currencies: drop to Number
-// - One currency: preserve it
+// - One currency: preserve it (except for number / currency = Number)
 // - No currency: return Number
+//
+// Special case: number / currency returns Number (inverse rate, unit drops)
 //
 // Returns (resultTypeName, currencySymbol) where symbol is empty for Number type.
 // Pure function - no side effects, just type analysis.
-func determineBinaryResultType(left, right types.Type) (string, string) {
+func determineBinaryResultType(left, right types.Type, operator string) (string, string) {
 	leftCurrency, leftIsCurrency := left.(*types.Currency)
 	rightCurrency, rightIsCurrency := right.(*types.Currency)
 
@@ -131,6 +133,11 @@ func determineBinaryResultType(left, right types.Type) (string, string) {
 			return "Currency", leftCurrency.Symbol
 		}
 		// Different currency units - return Number (no units)
+		return "Number", ""
+	}
+
+	// Special case: number / currency = Number (inverse rate, drop unit)
+	if !leftIsCurrency && rightIsCurrency && (operator == "/" || operator == "÷") {
 		return "Number", ""
 	}
 
