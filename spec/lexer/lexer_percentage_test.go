@@ -209,7 +209,7 @@ func TestModulusVsPercentage(t *testing.T) {
 			name:  "Modulus with no space before but space after",
 			input: "10% 3",
 			expected: []Token{
-				{Type: NUMBER, Value: "0.10"}, // This is 10% as percentage
+				{Type: NUMBER_PERCENT, Value: "10%"}, // 10% is a percentage literal
 				{Type: NUMBER, Value: "3"},
 				{Type: EOF},
 			},
@@ -232,7 +232,7 @@ func TestModulusVsPercentage(t *testing.T) {
 			expected: []Token{
 				{Type: IDENTIFIER, Value: "x"},
 				{Type: ASSIGN},
-				{Type: NUMBER, Value: "0.10"},
+				{Type: NUMBER_PERCENT, Value: "10%"}, // Percentage literal
 				{Type: EOF},
 			},
 		},
@@ -240,7 +240,7 @@ func TestModulusVsPercentage(t *testing.T) {
 			name:  "Mixed percentage and modulus",
 			input: "20% + 10 % 3",
 			expected: []Token{
-				{Type: NUMBER, Value: "0.20"}, // 20%
+				{Type: NUMBER_PERCENT, Value: "20%"}, // Percentage literal
 				{Type: PLUS},
 				{Type: NUMBER, Value: "10"},
 				{Type: MODULUS},
@@ -252,8 +252,9 @@ func TestModulusVsPercentage(t *testing.T) {
 			name:  "Currency followed by %",
 			input: "$100 % 10",
 			expected: []Token{
-				{Type: QUANTITY, Value: "100:$"},
-				{Type: MODULUS},
+				{Type: CURRENCY_SYM, Value: "$"}, // Lexer tokenizes currency symbol separately
+				{Type: NUMBER, Value: "100"},
+				{Type: MODULUS, Value: "%"},
 				{Type: NUMBER, Value: "10"},
 				{Type: EOF},
 			},
@@ -263,7 +264,7 @@ func TestModulusVsPercentage(t *testing.T) {
 			input: "(20%)",
 			expected: []Token{
 				{Type: LPAREN},
-				{Type: NUMBER, Value: "0.20"},
+				{Type: NUMBER_PERCENT, Value: "20%"}, // Percentage literal
 				{Type: RPAREN},
 				{Type: EOF},
 			},
