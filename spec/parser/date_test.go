@@ -12,43 +12,39 @@ func TestDateParsing(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
-		skip  bool // Skip until lexer implements date tokens
 	}{
 		// Date keywords
-		{"today", "today\n", false},
-		{"tomorrow", "tomorrow\n", false},
-		{"yesterday", "yesterday\n", false},
+		{"today", "today\n"},
+		{"tomorrow", "tomorrow\n"},
+		{"yesterday", "yesterday\n"},
 
 		// Relative keywords
-		{"this week", "this week\n", false},
-		{"this month", "this month\n", false},
-		{"this year", "this year\n", false},
-		{"next week", "next week\n", false},
-		{"next month", "next month\n", false},
-		{"next year", "next year\n", false},
-		{"last week", "last week\n", false},
-		{"last month", "last month\n", false},
-		{"last year", "last year\n", false},
+		{"this week", "this week\n"},
+		{"this month", "this month\n"},
+		{"this year", "this year\n"},
+		{"next week", "next week\n"},
+		{"next month", "next month\n"},
+		{"next year", "next year\n"},
+		{"last week", "last week\n"},
+		{"last month", "last month\n"},
+		{"last year", "last year\n"},
 
 		// Month + Day
-		{"dec 12", "Dec 12\n", false},
-		{"december 25", "December 25\n", false},
-		{"jan 1", "Jan 1\n", false},
+		{"dec 12", "Dec 12\n"},
+		{"december 25", "December 25\n"},
+		{"jan 1", "Jan 1\n"},
 
 		// Month + Day + Year
-		{"dec 12 2026", "Dec 12 2026\n", false},
-		{"december 25 2025", "December 25 2025\n", false},
+		{"dec 12 2026", "Dec 12 2026\n"},
+		{"december 25 2025", "December 25 2025\n"},
 
 		// Month + Year (implies 1st)
-		{"december 2025", "December 2025\n", false},
-		{"jan 2026", "Jan 2026\n", false},
+		{"december 2025", "December 2025\n"},
+		{"jan 2026", "Jan 2026\n"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.skip {
-				t.Skip("Date parsing not yet implemented in lexer")
-			}
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -69,21 +65,17 @@ func TestDateArithmetic(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
-		skip  bool
 	}{
-		{"today + 2 weeks", "today + 2 weeks\n", true},
-		{"tomorrow + 1 day", "tomorrow + 1 day\n", true},
-		{"Dec 25 + 30 days", "Dec 25 + 30 days\n", true},
-		{"today - 3 days", "today - 3 days\n", true},
-		{"2 weeks from today", "2 weeks from today\n", true},
-		{"1 month from Dec 25", "1 month from Dec 25\n", true},
+		{"today + 2 weeks", "today + 2 weeks\n"},
+		{"tomorrow + 1 day", "tomorrow + 1 day\n"},
+		{"Dec 25 + 30 days", "Dec 25 + 30 days\n"},
+		{"today - 3 days", "today - 3 days\n"},
+		{"2 weeks from today", "2 weeks from today\n"},
+		{"1 month from Dec 25", "1 month from Dec 25\n"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.skip {
-				t.Skip("Date arithmetic not yet implemented")
-			}
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -104,28 +96,24 @@ func TestDurationParsing(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
-		skip  bool
 	}{
 		// Simple durations
-		{"2 days", "2 days\n", false},
-		{"3 weeks", "3 weeks\n", false},
-		{"1 month", "1 month\n", false},
-		{"1 year", "1 year\n", false},
+		{"2 days", "2 days\n"},
+		{"3 weeks", "3 weeks\n"},
+		{"1 month", "1 month\n"},
+		{"1 year", "1 year\n"},
 
 		// Compound durations
-		{"2 weeks and 3 days", "2 weeks and 3 days\n", false},
-		{"1 year and 6 months", "1 year and 6 months\n", false},
-		{"3 weeks and 2 days", "3 weeks and 2 days\n", false},
+		{"2 weeks and 3 days", "2 weeks and 3 days\n"},
+		{"1 year and 6 months", "1 year and 6 months\n"},
+		{"3 weeks and 2 days", "3 weeks and 2 days\n"},
 
 		// Multi-term
-		{"1 year and 2 months and 3 days", "1 year and 2 months and 3 days\n", false},
+		{"1 year and 2 months and 3 days", "1 year and 2 months and 3 days\n"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.skip {
-				t.Skip("Duration parsing not yet implemented in lexer")
-			}
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -146,19 +134,15 @@ func TestInvalidDates(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
-		skip  bool
 	}{
-		{"month without day", "December\n", true},
-		{"invalid month", "Decembr 12\n", true},
-		{"day without month", "12\n", true}, // Ambiguous - could be number
-		{"invalid day", "December 32\n", true},
+		{"month without day", "December\n"},
+		{"invalid month", "Decembr 12\n"},
+		{"day without month", "12\n"}, // Ambiguous - could be number
+		{"invalid day", "December 32\n"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.skip {
-				t.Skip("Date validation not yet implemented")
-			}
 
 			_, err := parser.Parse(tt.input)
 			if err == nil {
