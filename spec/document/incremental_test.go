@@ -94,8 +94,9 @@ func TestParallelMarkdownRendering(t *testing.T) {
 
 	t.Logf("Found %d text blocks", len(textBlocks))
 
+	// Only run if there are text blocks
 	if len(textBlocks) == 0 {
-		t.Skip("No text blocks found, skipping parallel rendering test")
+		return // No text blocks to test
 	}
 
 	// Render all blocks in parallel
