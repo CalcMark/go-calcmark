@@ -132,6 +132,11 @@ func (e *Evaluator) EvalNode(node ast.Node) (types.Type, error) {
 	case *ast.NumberLiteral:
 		return types.NewNumberWithFormat(n.Value, n.SourceText)
 
+	case *ast.QuantityLiteral:
+		// Handle QuantityLiteral (includes currencies like $100 → USD)
+		// Use NewCurrencyWithFormat which handles value + unit + source format
+		return types.NewCurrencyWithFormat(n.Value, n.Unit, n.SourceText)
+
 	case *ast.CurrencyLiteral:
 		return types.NewCurrencyWithFormat(n.Value, n.Symbol, n.SourceText)
 
