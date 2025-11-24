@@ -190,7 +190,6 @@ func testInvalidGoldenFiles(t *testing.T, baseDir string) {
 	invalidDir := filepath.Join(baseDir, "invalid")
 
 	if _, err := os.Stat(invalidDir); os.IsNotExist(err) {
-		t.Skip("Invalid golden files directory doesn't exist yet")
 		return
 	}
 
