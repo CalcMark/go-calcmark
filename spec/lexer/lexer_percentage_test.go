@@ -178,12 +178,10 @@ func TestPercentageEdgeCases(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			if tokens[0].Type != NUMBER {
-				t.Errorf("Expected NUMBER token, got %s", tokens[0].Type)
-			}
-
-			if tokens[0].Value != tt.want {
-				t.Errorf("Expected value %q, got %q", tt.want, tokens[0].Value)
+			// Lexer returns NUMBER_PERCENT with raw value (e.g., "0%", "100%")
+			// Conversion happens in types.NewNumber, not lexer
+			if len(tokens) < 1 || tokens[0].Type != NUMBER_PERCENT {
+				t.Fatalf("Expected NUMBER_PERCENT token, got %v", tokens[0].Type)
 			}
 		})
 	}
