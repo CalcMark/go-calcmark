@@ -81,6 +81,8 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalRelativeDateLiteral(n)
 	case *ast.QuantityLiteral:
 		return interp.evalQuantityLiteral(n)
+	case *ast.RateLiteral:
+		return interp.evalRateLiteral(n)
 	case *ast.UnitConversion:
 		return interp.evalUnitConversion(n)
 	case *ast.FunctionCall:

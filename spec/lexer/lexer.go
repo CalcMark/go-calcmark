@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
 // BooleanKeywords defines the valid boolean keyword values (case-insensitive).
@@ -30,6 +32,7 @@ var ReservedKeywords = map[string]TokenType{
 	"end":      END,
 	"for":      FOR,
 	"in":       IN,
+	"per":      PER, // Rate expressions: "100 MB per second"
 	"while":    WHILE,
 	"return":   RETURN,
 	"break":    BREAK,
@@ -297,7 +300,7 @@ func (l *Lexer) readNumber() Token {
 				// Boolean keyword, not a unit - backtrack
 				l.pos = savedPos
 			} else {
-				// Check for multi-word units: "1 nautical mile", "5 metric tons"
+				// Check for multi-word units: "1 nautical mile", "5 metric tons", "10 square meters"
 				// Look ahead for a second identifier that might form a multi-word unit
 				if l.currentChar() == ' ' {
 					savedPos2 := l.pos
@@ -315,26 +318,45 @@ func (l *Lexer) readNumber() Token {
 							// Second word is boolean, backtrack
 							l.pos = savedPos2
 						} else {
-							// Import units package is not available in lexer, so we need to check directly
-							// Check against known multi-word units explicitly
-							combinedLower := strings.ToLower(unitStr + " " + secondWord)
-							isMultiWord := false
-
-							// Known multi-word units (from canonical.go)
-							multiWordUnits := map[string]bool{
-								"nautical mile":  true,
-								"nautical miles": true,
-								"metric ton":     true,
-								"metric tons":    true,
-							}
-
-							if multiWordUnits[combinedLower] {
+							// Use canonical unit registry to check for multi-word units
+							if combined := units.IsMultiWordUnit(unitStr, secondWord); combined != "" {
 								// This is a valid multi-word unit, keep both words
-								unitStr = unitStr + " " + secondWord
-								isMultiWord = true
-							}
+								unitStr = combined
+								isMultiWord := true
 
-							if !isMultiWord {
+								// Check for third word (e.g., "meters per second", "kilometers per hour")
+								if l.currentChar() == ' ' {
+									savedPos3 := l.pos
+									l.advance() // Skip third space
+
+									if l.isIdentifierChar(l.currentChar(), true) {
+										thirdUnit := l.readIdentifier()
+										thirdWord := string(thirdUnit.Value)
+
+										// Check if third word is also a reserved keyword
+										if _, isReserved := ReservedKeywords[strings.ToLower(thirdWord)]; isReserved {
+											// Third word is reserved, backtrack
+											l.pos = savedPos3
+										} else if BooleanKeywords[strings.ToLower(thirdWord)] {
+											// Third word is boolean, backtrack
+											l.pos = savedPos3
+										} else {
+											// Check if this forms a valid 3-word unit
+											if combined3 := units.IsMultiWordUnit(unitStr, thirdWord); combined3 != "" {
+												// Valid 3-word unit
+												unitStr = combined3
+											} else {
+												// Not a 3-word unit, backtrack third word
+												l.pos = savedPos3
+											}
+										}
+									} else {
+										l.pos = savedPos3
+									}
+								}
+
+								_ = isMultiWord // Mark as used
+							} else {
 								// Not a multi-word unit, backtrack
 								l.pos = savedPos2
 							}

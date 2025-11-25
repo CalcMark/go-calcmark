@@ -2,8 +2,9 @@ package lexer
 
 import "strings"
 
-// isQuantityUnit checks if a string is a known unit for quantities (mass, length, volume, currency)
-func isQuantityUnit(unit string) bool {
+// IsQuantityUnit checks if a string is a known unit for quantities (mass, length, volume, currency).
+// Exported for use by document detector.
+func IsQuantityUnit(unit string) bool {
 	normalized := strings.ToLower(unit)
 
 	// Length units

@@ -307,6 +307,29 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 
 	for p.match(lexer.MULTIPLY, lexer.DIVIDE, lexer.MODULUS) {
 		op := p.previous()
+
+		// Special case: Check if DIVIDE might be a rate (e.g., "100 MB/s")
+		// Rate syntax: quantity / timeunit (no spaces around /)
+		// Division: any expression / any expression
+		if op.Type == lexer.DIVIDE {
+			// Look ahead to see if next token is a time unit identifier
+			if p.check(lexer.IDENTIFIER) {
+				nextToken := p.peek()
+				timeUnit := string(nextToken.Value)
+
+				// Check if it's a valid time unit
+				if isTimeUnit(timeUnit) {
+					p.advance() // Consume the time unit
+					return &ast.RateLiteral{
+						Amount:     left,
+						PerUnit:    timeUnit,
+						SourceText: "",
+						Range:      &ast.Range{},
+					}, nil
+				}
+			}
+		}
+
 		right, err := p.parseExponent()
 		if err != nil {
 			return nil, err
@@ -317,6 +340,26 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			Left:     left,
 			Right:    right,
 		}
+	}
+
+	// Check for rate with "per" keyword: "5 GB per day"
+	if p.match(lexer.PER) {
+		if !p.match(lexer.IDENTIFIER) {
+			return nil, p.error("expected time unit after 'per'")
+		}
+		timeUnit := string(p.previous().Value)
+
+		// Validate it's a time unit
+		if !isTimeUnit(timeUnit) {
+			return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit", timeUnit))
+		}
+
+		return &ast.RateLiteral{
+			Amount:     left,
+			PerUnit:    timeUnit,
+			SourceText: "",
+			Range:      &ast.Range{},
+		}, nil
 	}
 
 	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
@@ -693,4 +736,32 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		Name:      funcNameStr,
 		Arguments: args,
 	}, nil
+}
+
+// isTimeUnit checks if a string is a valid time unit for rate expressions.
+// Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), year(s), and abbreviations
+func isTimeUnit(unit string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(unit))
+	
+	timeUnits := map[string]bool{
+		// Full names and plurals
+		"second": true, "seconds": true,
+		"minute": true, "minutes": true,
+		"hour":   true, "hours":   true,
+		"day":    true, "days":    true,
+		"week":   true, "weeks":   true,
+		"month":  true, "months":  true,
+		"year":   true, "years":   true,
+		
+		// Common abbreviations
+		"s":   true, "sec":  true,
+		"m":   true, "min":  true,
+		"h":   true, "hr":   true,
+		"d":   true,
+		"w":   true, "wk":   true,
+		"mo":  true,
+		"y":   true, "yr":   true,
+	}
+	
+	return timeUnits[normalized]
 }

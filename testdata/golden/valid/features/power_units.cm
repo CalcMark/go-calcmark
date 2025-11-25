@@ -1,0 +1,22 @@
+# Power Unit Tests
+
+## Watt Conversions
+1000 watts in kilowatts
+
+1 kilowatt in watts
+
+1000 kilowatts in megawatts
+
+## Horsepower Conversions
+1 horsepower in watts
+
+10 hp in kilowatts
+
+745 watts in horsepower
+
+## Power Arithmetic
+500 watts + 500 watts
+
+1 kw + 1000 watts
+
+5 hp + 5 hp

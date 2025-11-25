@@ -73,6 +73,23 @@ func (u *UnitConversion) GetRange() *Range {
 	return u.Range
 }
 
+// RateLiteral represents a rate expression (e.g., "100 MB/s", "5 GB per day", "$0.10 per hour").
+// Rates combine a quantity (amount) with a time period.
+type RateLiteral struct {
+	Amount     Node   // The quantity numerator (e.g., QuantityLiteral for "100 MB")
+	PerUnit    string // The time unit denominator (e.g., "second", "hour", "day")
+	SourceText string //Original text
+	Range      *Range
+}
+
+func (r *RateLiteral) String() string {
+	return fmt.Sprintf("RateLiteral(%s per %s)", r.Amount.String(), r.PerUnit)
+}
+
+func (r *RateLiteral) GetRange() *Range {
+	return r.Range
+}
+
 // DateLiteral represents a date literal: "Dec 25" or "Dec 25 2024"
 type DateLiteral struct {
 	Month      string  // "Dec", "December"

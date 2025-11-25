@@ -1,0 +1,27 @@
+# Temperature Unit Tests
+
+## Celsius to Fahrenheit
+100 celsius in fahrenheit
+
+0 celsius in fahrenheit
+
+-40 celsius in fahrenheit
+
+## Fahrenheit to Celsius
+212 fahrenheit in celsius
+
+32 fahrenheit in celsius
+
+98.6 fahrenheit in celsius
+
+## Kelvin Conversions
+273 kelvin in celsius
+
+0 kelvin in celsius
+
+373 kelvin in fahrenheit
+
+## Temperature Arithmetic
+20 celsius + 5 celsius
+
+100 fahrenheit - 32 fahrenheit

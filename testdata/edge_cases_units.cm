@@ -1,0 +1,53 @@
+// Edge case tests for new unit categories
+// Test: zero values, aliases, precision, boundary conditions
+
+# Temperature Edge Cases
+0 celsius
+0 fahrenheit
+0 kelvin
+-273.15 celsius in kelvin
+
+# Very large values
+1000000 watts in megawatts
+1000 horsepower in kilowatts
+
+# Very small values  
+0.001 kilowatts in watts
+0.1 calories in joules
+
+# Alias consistency - Temperature
+100 c in f
+100 celsius in fahrenheit  
+100 degc in degf
+
+# Alias consistency - Speed
+60 mps
+60 meters per second
+100 kph in mph
+100 kilometers per hour in miles per hour
+
+# Alias consistency - Energy
+1 kj in j
+1 kilojoule in joules
+100 cal in kcal
+100 calories in kilocalories
+
+# Alias consistency - Power
+1 kw in w
+1 kilowatt in watts
+5 hp in kw
+5 horsepower in kilowatts
+
+# Mixed arithmetic with same category
+(100 celsius + 50 celsius) in fahrenheit
+(50 mph + 20 mph) in kph
+(1000 joules + 1 kilojoule) in kilojoules
+(500 watts + 0.5 kilowatts) in kilowatts
+
+# Chained conversions
+100 celsius in fahrenheit in kelvin in celsius
+
+# Fractional quantities
+0.5 horsepower in watts
+1.5 kilowatts in watts
+2.5 kilojoules in calories

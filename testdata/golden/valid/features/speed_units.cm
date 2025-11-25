@@ -1,0 +1,17 @@
+# Speed Unit Tests (NO SLASH UNITS - Parser doesn't support / yet)
+
+## Using alias without slash
+60 mps in kph
+
+100 kph in mph
+
+50 mph in mps
+
+100 knots in kph
+
+## Speed Arithmetic
+50 mps + 50 mps
+
+100 kph + 50 kph
+
+30 mph + 30 mph

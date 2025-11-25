@@ -64,6 +64,7 @@ const (
 	END
 	FOR
 	IN
+	PER // "per" - for rate expressions (e.g., "100 MB per second")
 	WHILE
 	RETURN
 	BREAK
@@ -185,6 +186,8 @@ func (tt TokenType) String() string {
 		return "FOR"
 	case IN:
 		return "IN"
+	case PER:
+		return "PER"
 	case WHILE:
 		return "WHILE"
 	case RETURN:

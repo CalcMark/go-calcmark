@@ -1,0 +1,25 @@
+# Energy Unit Tests
+
+## Joule Conversions
+1000 joules in kilojoules
+
+1 kilojoule in joules
+
+## Calorie Conversions
+100 calories in joules
+
+1 kilocalorie in calories
+
+2000 kcal in kilojoules
+
+## kWh Conversions
+1 kwh in joules
+
+10 kwh in kilojoules
+
+## Energy Arithmetic
+500 joules + 500 joules
+
+1 kj + 1000 joules
+
+100 calories + 100 calories

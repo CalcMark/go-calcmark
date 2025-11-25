@@ -17,6 +17,7 @@ const (
 	CategorySpeed       QuantityCategory = "speed"
 	CategoryEnergy      QuantityCategory = "energy"
 	CategoryPower       QuantityCategory = "power"
+	CategoryArea        QuantityCategory = "area"
 	CategoryUnknown     QuantityCategory = "unknown"
 )
 
@@ -48,6 +49,7 @@ func buildUnitRegistry() map[string]UnitInfo {
 	addSpeedUnits(registry)
 	addEnergyUnits(registry)
 	addPowerUnits(registry)
+	addAreaUnits(registry)
 
 	return registry
 }
@@ -481,4 +483,97 @@ func GetCategory(unitName string) QuantityCategory {
 		return info.Category
 	}
 	return CategoryUnknown
+}
+
+// addAreaUnits adds area unit conversions
+// Base unit: square meter (m²)
+func addAreaUnits(registry map[string]UnitInfo) {
+	makeAreaUnit := func(toSqMeters, fromSqMeters func(float64) float64) UnitInfo {
+		return UnitInfo{
+			Category:     CategoryArea,
+			ToBaseUnit:   toSqMeters,
+			FromBaseUnit: fromSqMeters,
+		}
+	}
+
+	// Square meter (base)
+	registry["m²"] = makeAreaUnit(
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	)
+	registry["m2"] = registry["m²"]
+	registry["sq m"] = registry["m²"]
+	registry["square meter"] = registry["m²"]
+	registry["square meters"] = registry["m²"]
+	registry["square metre"] = registry["m²"]  // British
+	registry["square metres"] = registry["m²"] // British
+
+	// Square kilometer
+	registry["km²"] = makeAreaUnit(
+		func(v float64) float64 { return v * 1_000_000 }, // 1 km² = 1,000,000 m²
+		func(v float64) float64 { return v / 1_000_000 },
+	)
+	registry["km2"] = registry["km²"]
+	registry["sq km"] = registry["km²"]
+	registry["square kilometer"] = registry["km²"]
+	registry["square kilometers"] = registry["km²"]
+	registry["square kilometre"] = registry["km²"]  // British
+	registry["square kilometres"] = registry["km²"] // British
+
+	// Square centimeter
+	registry["cm²"] = makeAreaUnit(
+		func(v float64) float64 { return v * 0.0001 }, // 1 cm² = 0.0001 m²
+		func(v float64) float64 { return v / 0.0001 },
+	)
+	registry["cm2"] = registry["cm²"]
+	registry["sq cm"] = registry["cm²"]
+
+	// Square foot
+	registry["ft²"] = makeAreaUnit(
+		func(v float64) float64 { return v * 0.09290304 }, // 1 ft² = 0.09290304 m²
+		func(v float64) float64 { return v / 0.09290304 },
+	)
+	registry["ft2"] = registry["ft²"]
+	registry["sq ft"] = registry["ft²"]
+	registry["square foot"] = registry["ft²"]
+	registry["square feet"] = registry["ft²"]
+
+	// Square inch
+	registry["in²"] = makeAreaUnit(
+		func(v float64) float64 { return v * 0.00064516 }, // 1 in² = 0.00064516 m²
+		func(v float64) float64 { return v / 0.00064516 },
+	)
+	registry["in2"] = registry["in²"]
+	registry["sq in"] = registry["in²"]
+
+	// Square yard
+	registry["yd²"] = makeAreaUnit(
+		func(v float64) float64 { return v * 0.83612736 }, // 1 yd² = 0.83612736 m²
+		func(v float64) float64 { return v / 0.83612736 },
+	)
+	registry["yd2"] = registry["yd²"]
+	registry["sq yd"] = registry["yd²"]
+
+	// Square mile
+	registry["mi²"] = makeAreaUnit(
+		func(v float64) float64 { return v * 2_589_988.110336 }, // 1 mi² = 2,589,988.110336 m²
+		func(v float64) float64 { return v / 2_589_988.110336 },
+	)
+	registry["mi2"] = registry["mi²"]
+	registry["sq mi"] = registry["mi²"]
+
+	// Acre
+	registry["acre"] = makeAreaUnit(
+		func(v float64) float64 { return v * 4046.8564224 }, // 1 acre = 4,046.8564224 m²
+		func(v float64) float64 { return v / 4046.8564224 },
+	)
+	registry["acres"] = registry["acre"]
+
+	// Hectare
+	registry["ha"] = makeAreaUnit(
+		func(v float64) float64 { return v * 10000 }, // 1 ha = 10,000 m²
+		func(v float64) float64 { return v / 10000 },
+	)
+	registry["hectare"] = registry["ha"]
+	registry["hectares"] = registry["ha"]
 }

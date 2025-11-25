@@ -259,7 +259,15 @@ var StandardUnits = map[string]UnitMapping{
 	"m/s": {
 		Canonical:   "m/s",
 		Symbol:      "m/s",
-		Aliases:     []string{"m/s", "mps", "meters per second"},
+		Aliases:     []string{"m/s", "mps", "meters per second", "metres per second"},
+		System:      "SI",
+		Quantity:    "Speed",
+		Description: "Meters per second, SI unit of speed",
+	},
+	"meters per second": { // Alias key for multi-word lookup
+		Canonical:   "m/s",
+		Symbol:      "m/s",
+		Aliases:     []string{"m/s", "mps", "meters per second", "metres per second"},
 		System:      "SI",
 		Quantity:    "Speed",
 		Description: "Meters per second, SI unit of speed",
@@ -267,12 +275,28 @@ var StandardUnits = map[string]UnitMapping{
 	"km/h": {
 		Canonical:   "km/h",
 		Symbol:      "km/h",
-		Aliases:     []string{"km/h", "kph", "kmh", "kilometers per hour"},
+		Aliases:     []string{"km/h", "kph", "kmh", "kilometers per hour", "kilometres per hour"},
+		System:      "SI",
+		Quantity:    "Speed",
+		Description: "Kilometers per hour",
+	},
+	"kilometers per hour": { // Alias key for multi-word lookup
+		Canonical:   "km/h",
+		Symbol:      "km/h",
+		Aliases:     []string{"km/h", "kph", "kmh", "kilometers per hour", "kilometres per hour"},
 		System:      "SI",
 		Quantity:    "Speed",
 		Description: "Kilometers per hour",
 	},
 	"mph": {
+		Canonical:   "mph",
+		Symbol:      "mph",
+		Aliases:     []string{"mph", "miles per hour"},
+		System:      "Imperial",
+		Quantity:    "Speed",
+		Description: "Miles per hour",
+	},
+	"miles per hour": { // Alias key for multi-word lookup
 		Canonical:   "mph",
 		Symbol:      "mph",
 		Aliases:     []string{"mph", "miles per hour"},
@@ -370,6 +394,86 @@ var StandardUnits = map[string]UnitMapping{
 		Quantity:    "Power",
 		Description: "Mechanical horsepower, 1 hp = 745.7 W",
 	},
+
+	// ========== AREA UNITS ==========
+
+	// Area - SI
+	"square meter": {
+		Canonical:   "square meter",
+		Symbol:      "m²",
+		Aliases:     []string{"square meter", "square meters", "square metre", "square metres", "m²", "m2", "sq m"},
+		System:      "SI",
+		Quantity:    "Area",
+		Description: "SI unit of area",
+	},
+	"square kilometer": {
+		Canonical:   "square kilometer",
+		Symbol:      "km²",
+		Aliases:     []string{"square kilometer", "square kilometers", "square kilometre", "square kilometres", "km²", "km2", "sq km"},
+		System:      "SI",
+		Quantity:    "Area",
+		Description: "1 km² = 1,000,000 m²",
+	},
+	"square centimeter": {
+		Canonical:   "square centimeter",
+		Symbol:      "cm²",
+		Aliases:     []string{"square centimeter", "square centimeters", "square centimetre", "square centimetres", "cm²", "cm2", "sq cm"},
+		System:      "SI",
+		Quantity:    "Area",
+		Description: "1 cm² = 0.0001 m²",
+	},
+	"hectare": {
+		Canonical:   "hectare",
+		Symbol:      "ha",
+		Aliases:     []string{"hectare", "hectares", "ha"},
+		System:      "SI",
+		Quantity:    "Area",
+		Description: "1 ha = 10,000 m²",
+	},
+
+	// Area - Imperial/US
+	"square foot": {
+		Canonical:   "square foot",
+		Symbol:      "ft²",
+		Aliases:     []string{"square foot", "square feet", "ft²", "ft2", "sq ft"},
+		System:      "Imperial",
+		Quantity:    "Area",
+		Description: "1 ft² = 0.09290304 m²",
+	},
+	"square inch": {
+		Canonical:   "square inch",
+		Symbol:      "in²",
+		Aliases:     []string{"square inch", "square inches", "in²", "in2", "sq in"},
+		System:      "Imperial",
+		Quantity:    "Area",
+		Description: "1 in² = 0.00064516 m²",
+	},
+	"square yard": {
+		Canonical:   "square yard",
+		Symbol:      "yd²",
+		Aliases:     []string{"square yard", "square yards", "yd²", "yd2", "sq yd"},
+		System:      "Imperial",
+		Quantity:    "Area",
+		Description: "1 yd² = 0.83612736 m²",
+	},
+	"square mile": {
+		Canonical:   "square mile",
+		Symbol:      "mi²",
+		Aliases:     []string{"square mile", "square miles", "mi²", "mi2", "sq mi"},
+		System:      "Imperial",
+		Quantity:    "Area",
+		Description: "1 mi² = 2,589,988.110336 m²",
+	},
+	"acre": {
+		Canonical:   "acre",
+		Symbol:      "ac",
+		Aliases:     []string{"acre", "acres", "ac"},
+		System:      "US_Customary",
+		Quantity:    "Area",
+		Description: "1 acre = 4,046.8564224 m²",
+	},
+
+	// ========== END OF UNITS ==========
 }
 
 // NormalizeUnitName converts any unit alias to its canonical form.

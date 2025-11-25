@@ -1,0 +1,66 @@
+package interpreter_test
+
+import (
+	"testing"
+
+	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/parser"
+)
+
+// TestMultiWordUnits tests that multi-word units work properly
+func TestMultiWordUnits(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantPass bool
+	}{
+		// 3-word speed units
+		{"meters per second", "60 meters per second", true},
+		{"metres per second", "60 metres per second", true}, // British spelling
+		{"kilometers per hour", "100 kilometers per hour", true},
+		{"kilometres per hour", "100 kilometres per hour", true}, // British spelling
+		{"miles per hour", "50 miles per hour", true},
+
+		// Conversions with multi-word units
+		{"mps to kph", "60 meters per second in kph", true},
+		{"kph to mph conversion", "100 kilometers per hour in mph", true},
+		{"mph to mps conversion", "50 miles per hour in mps", true},
+
+		// Arithmetic with multi-word units
+		{"add mps", "30 meters per second + 30 meters per second", true},
+		{"sub kph", "150 kilometers per hour - 50 kilometers per hour", true},
+
+		// 2-word units (should still work)
+		{"nautical mile", "10 nautical miles", true},
+		{"metric ton", "5 metric tons", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input + "\n")
+			if err != nil {
+				if tt.wantPass {
+					t.Fatalf("Parse error: %v", err)
+				}
+				return
+			}
+
+			interp := interpreter.NewInterpreter()
+			results, err := interp.Eval(nodes)
+
+			if tt.wantPass {
+				if err != nil {
+					t.Fatalf("Eval error: %v", err)
+				}
+				if len(results) == 0 {
+					t.Fatal("No results")
+				}
+				t.Logf("✓ Result: %s", results[0].String())
+			} else {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+			}
+		})
+	}
+}
