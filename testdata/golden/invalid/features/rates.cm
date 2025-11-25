@@ -1,0 +1,15 @@
+# Invalid Rate Expressions
+# These are PARSE ERRORS - syntactically invalid
+# (Semantic validity is separate - arbitrary units like "apples" are semantically fine)
+
+# Invalid time units (not in isTimeUnit list - PARSE ERROR)
+100 MB/nanosecond
+100 MB per fortnight
+100 MB/century
+50 apples/millisecond
+
+# These would be parse errors due to incomplete syntax
+# Uncommented because they'd fail the file parse:
+# 100 MB per      # Missing time unit
+# /second         # Missing amount  
+# per day         # Missing amount
