@@ -1,0 +1,16 @@
+# Invalid Rate Function Examples
+# These should fail parsing or evaluation
+
+# Invalid: over without rate
+# 100 MB over 1 day   # Not a rate, just quantity
+
+# Invalid: over with non-time period
+# 100 MB/s over 50     # Missing time unit
+# 100 MB/s over meters # Not a time period
+
+# Invalid: per conversion with non-time unit  
+# 100 MB/s per meters  # Not a time unit
+
+# Invalid: missing arguments
+# over 1 day           # Missing rate
+# per second           # Missing rate

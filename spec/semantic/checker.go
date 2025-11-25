@@ -148,7 +148,18 @@ func (c *Checker) checkIdentifier(id *ast.Identifier) {
 
 // checkFunctionCall validates function calls.
 func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
-	// Check all arguments
+	// Special case: convert_rate's second argument is a time unit identifier,
+	// not a variable reference, so we shouldn't check it for existence
+	if f.Name == "convert_rate" {
+		// Only check first argument (the rate)
+		if len(f.Arguments) > 0 {
+			c.checkExpression(f.Arguments[0])
+		}
+		// Skip checking second argument (time unit identifier)
+		return
+	}
+
+	// Check all arguments for other functions
 	for _, arg := range f.Arguments {
 		c.checkExpression(arg)
 	}

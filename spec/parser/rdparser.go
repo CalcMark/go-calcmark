@@ -320,12 +320,14 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 				// Check if it's a valid time unit
 				if isTimeUnit(timeUnit) {
 					p.advance() // Consume the time unit
-					return &ast.RateLiteral{
+					left = &ast.RateLiteral{
 						Amount:     left,
 						PerUnit:    timeUnit,
 						SourceText: "",
 						Range:      &ast.Range{},
-					}, nil
+					}
+					// Break out of multiplication loop to check for OVER/PER conversion
+					break
 				}
 			}
 		}
@@ -343,23 +345,72 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	}
 
 	// Check for rate with "per" keyword: "5 GB per day"
-	if p.match(lexer.PER) {
-		if !p.match(lexer.IDENTIFIER) {
-			return nil, p.error("expected time unit after 'per'")
-		}
-		timeUnit := string(p.previous().Value)
+	// But skip if left is already a RateLiteral (from slash syntax)
+	if _, isRate := left.(*ast.RateLiteral); !isRate {
+		if p.match(lexer.PER) {
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected time unit after 'per'")
+			}
+			timeUnit := string(p.previous().Value)
 
-		// Validate it's a time unit
-		if !isTimeUnit(timeUnit) {
-			return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit", timeUnit))
+			// Validate it's a time unit
+			if !isTimeUnit(timeUnit) {
+				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit", timeUnit))
+			}
+
+			left = &ast.RateLiteral{
+				Amount:     left,
+				PerUnit:    timeUnit,
+				SourceText: "",
+				Range:      &ast.Range{},
+			}
+		}
+	}
+
+	// Check for "over" keyword: "100 MB/s over 1 day"
+	// Natural syntax for accumulate(rate, time_period)
+	if p.match(lexer.OVER) {
+		// Parse duration/time period
+		duration, err := p.parseExponent()
+		if err != nil {
+			return nil, err
 		}
 
-		return &ast.RateLiteral{
-			Amount:     left,
-			PerUnit:    timeUnit,
-			SourceText: "",
-			Range:      &ast.Range{},
+		// Create function call: accumulate(left, duration)
+		return &ast.FunctionCall{
+			Name:      "accumulate",
+			Arguments: []ast.Node{left, duration},
+			Range:     &ast.Range{},
 		}, nil
+	}
+
+	// Check for "per" after a rate (conversion context)
+	// Example: "(100 MB/day) per second" - converts existing rate
+	if _, isRate := left.(*ast.RateLiteral); isRate {
+		if p.match(lexer.PER) {
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected time unit after 'per' for rate conversion")
+			}
+			targetUnit := string(p.previous().Value)
+
+			// Validate it's a time unit
+			if !isTimeUnit(targetUnit) {
+				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit for conversion", targetUnit))
+			}
+
+			// Create function call: convert_rate(rate, target_unit)
+			// Pass target unit as an identifier node
+			targetNode := &ast.Identifier{
+				Name:  targetUnit,
+				Range: &ast.Range{},
+			}
+
+			return &ast.FunctionCall{
+				Name:      "convert_rate",
+				Arguments: []ast.Node{left, targetNode},
+				Range:     &ast.Range{},
+			}, nil
+		}
 	}
 
 	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
@@ -742,26 +793,26 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 // Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), year(s), and abbreviations
 func isTimeUnit(unit string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(unit))
-	
+
 	timeUnits := map[string]bool{
 		// Full names and plurals
 		"second": true, "seconds": true,
 		"minute": true, "minutes": true,
-		"hour":   true, "hours":   true,
-		"day":    true, "days":    true,
-		"week":   true, "weeks":   true,
-		"month":  true, "months":  true,
-		"year":   true, "years":   true,
-		
+		"hour": true, "hours": true,
+		"day": true, "days": true,
+		"week": true, "weeks": true,
+		"month": true, "months": true,
+		"year": true, "years": true,
+
 		// Common abbreviations
-		"s":   true, "sec":  true,
-		"m":   true, "min":  true,
-		"h":   true, "hr":   true,
-		"d":   true,
-		"w":   true, "wk":   true,
-		"mo":  true,
-		"y":   true, "yr":   true,
+		"s": true, "sec": true,
+		"m": true, "min": true,
+		"h": true, "hr": true,
+		"d": true,
+		"w": true, "wk": true,
+		"mo": true,
+		"y":  true, "yr": true,
 	}
-	
+
 	return timeUnits[normalized]
 }

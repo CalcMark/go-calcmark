@@ -32,7 +32,7 @@ type Rate struct {
 func NewRate(amount *Quantity, perUnit string) *Rate {
 	return &Rate{
 		Amount:  amount,
-		PerUnit: normalizeTimeUnit(perUnit),
+		PerUnit: NormalizeTimeUnit(perUnit),
 	}
 }
 
@@ -112,9 +112,9 @@ func (r *Rate) Multiply(scalar decimal.Decimal) *Rate {
 	}
 }
 
-// normalizeTimeUnit converts various time unit formats to canonical form.
+// NormalizeTimeUnit converts various time unit formats to canonical form.
 // Examples: "s" → "second", "seconds" → "second", "sec" → "second"
-func normalizeTimeUnit(unit string) string {
+func NormalizeTimeUnit(unit string) string {
 	lower := strings.ToLower(strings.TrimSpace(unit))
 
 	// Map of aliases to canonical forms
@@ -181,7 +181,7 @@ func abbreviateTimeUnit(unit string) string {
 // TimeUnitToSeconds returns the number of seconds in a time unit.
 // Used for accumulation and conversion calculations.
 func TimeUnitToSeconds(unit string) (decimal.Decimal, error) {
-	normalized := normalizeTimeUnit(unit)
+	normalized := NormalizeTimeUnit(unit)
 
 	conversions := map[string]int64{
 		"second": 1,

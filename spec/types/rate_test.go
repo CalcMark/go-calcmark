@@ -103,9 +103,9 @@ func TestTimeUnitNormalization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := normalizeTimeUnit(tt.input)
+			result := NormalizeTimeUnit(tt.input)
 			if result != tt.expected {
-				t.Errorf("normalizeTimeUnit(%q) = %q, expected %q", tt.input, result, tt.expected)
+				t.Errorf("NormalizeTimeUnit(%q) = %q, expected %q", tt.input, result, tt.expected)
 			}
 		})
 	}

@@ -1,0 +1,31 @@
+# Valid Rate Function Examples
+# Natural syntax for accumulate() and convert_rate()
+
+# Accumulate: rate over time_period
+# Calculate total from rate over time period
+
+100 MB/s over 1 day
+5 GB/day over 1 year  
+$0.10/hour over 30 days
+1000 req/s over 1 hour
+10 TB/month over 1 year
+
+# With different time units
+50 KB/s over 1 hour
+100 widgets/hour over 1 week
+$5/day over 365 days
+
+# Convert rate: rate per target_time_unit
+# Convert existing rate to different time unit
+
+5 million/day per second
+10 TB/month per second
+1000 req/s per minute
+100k/hour per second
+
+# Combined examples
+# bandwidth = 100 MB/s
+# daily_total = bandwidth over 1 day
+
+# monthly_rate = 5 GB/day
+# per_second = monthly_rate per second
