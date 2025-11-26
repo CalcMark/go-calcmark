@@ -20,9 +20,14 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		}
 
 		// Evaluate first argument (the rate)
-		rate, err := interp.evalNode(f.Arguments[0])
+		rateVal, err := interp.evalNode(f.Arguments[0])
 		if err != nil {
 			return nil, err
+		}
+
+		rate, ok := rateVal.(*types.Rate)
+		if !ok {
+			return nil, fmt.Errorf("convert_rate() first argument must be a rate, got %T", rateVal)
 		}
 
 		// Extract second argument as identifier (time unit) WITHOUT evaluating
