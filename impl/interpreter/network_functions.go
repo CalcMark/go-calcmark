@@ -105,11 +105,13 @@ func calculateTransferTime(size *types.Quantity, scope string, networkType strin
 		return nil, fmt.Errorf("transfer_time: %w", err)
 	}
 
-	// Convert size to megabytes for calculation
-	sizeInMB, err := convertQuantityToMegabytes(size)
+	// Convert size to megabytes for calculation using existing conversion library
+	sizeMB, err := convertQuantity(size, "megabyte")
 	if err != nil {
 		return nil, fmt.Errorf("transfer_time: %w", err)
 	}
+
+	sizeInMB := sizeMB.Value.InexactFloat64()
 
 	// Calculate transmission time: size / throughput (in seconds)
 	throughputMBPS := throughput.Amount.Value.InexactFloat64() // MB/s
@@ -134,42 +136,4 @@ func calculateTransferTime(size *types.Quantity, scope string, networkType strin
 	}
 
 	return duration.Convert("minute")
-}
-
-// convertQuantityToMegabytes converts a quantity to megabytes (float64).
-// Handles byte-based units: byte, kilobyte, megabyte, gigabyte, etc.
-// Time Complexity: O(1) - unit conversion
-func convertQuantityToMegabytes(q *types.Quantity) (float64, error) {
-	// Normalize unit name
-	unitLower := strings.ToLower(q.Unit)
-
-	// Conversion factors to bytes
-	bytesPerUnit := map[string]float64{
-		"byte":      1,
-		"bytes":     1,
-		"b":         1,
-		"kilobyte":  1024,
-		"kilobytes": 1024,
-		"kb":        1024,
-		"megabyte":  1024 * 1024,
-		"megabytes": 1024 * 1024,
-		"mb":        1024 * 1024,
-		"gigabyte":  1024 * 1024 * 1024,
-		"gigabytes": 1024 * 1024 * 1024,
-		"gb":        1024 * 1024 * 1024,
-		"terabyte":  1024 * 1024 * 1024 * 1024,
-		"terabytes": 1024 * 1024 * 1024 * 1024,
-		"tb":        1024 * 1024 * 1024 * 1024,
-	}
-
-	multiplier, ok := bytesPerUnit[unitLower]
-	if !ok {
-		return 0, fmt.Errorf("cannot convert '%s' to bytes (expected byte-based unit)", q.Unit)
-	}
-
-	// Convert to bytes, then to megabytes
-	bytes := q.Value.InexactFloat64() * multiplier
-	megabytes := bytes / (1024 * 1024)
-
-	return megabytes, nil
 }
