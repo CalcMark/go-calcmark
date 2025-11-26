@@ -1,6 +1,8 @@
 package parser
 
 import (
+"fmt"
+
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
