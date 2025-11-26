@@ -3,7 +3,7 @@ package classifier
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/evaluator"
+"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 )
 
