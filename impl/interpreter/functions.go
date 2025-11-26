@@ -156,6 +156,29 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		return calculateSeek(storageIdent.Name)
 	}
 
+	// Special case: compress's 2nd argument should NOT be evaluated
+	// It's an identifier representing compression type
+	if f.Name == "compress" {
+		if len(f.Arguments) != 2 {
+			return nil, fmt.Errorf("compress() requires exactly 2 arguments (size, compression_type)")
+		}
+		// Evaluate first argument (size)
+		size, err := interp.evalNode(f.Arguments[0])
+		if err != nil {
+			return nil, err
+		}
+		sizeQty, ok := size.(*types.Quantity)
+		if !ok {
+			return nil, fmt.Errorf("compress() size must be a quantity, got %T", size)
+		}
+		// Extract compression type as identifier
+		compressionIdent, ok := f.Arguments[1].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("compress() compression type must be an identifier")
+		}
+		return calculateCompression(sizeQty, compressionIdent.Name)
+	}
+
 	// Evaluate all arguments for other functions
 	args := make([]types.Type, len(f.Arguments))
 	for i, arg := range f.Arguments {
@@ -197,6 +220,9 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	case "seek":
 		// Already handled above
 		return nil, fmt.Errorf("seek should have been handled")
+	case "compress":
+		// Already handled above
+		return nil, fmt.Errorf("compress should have been handled")
 	default:
 		return nil, fmt.Errorf("unknown function: %s", f.Name)
 	}

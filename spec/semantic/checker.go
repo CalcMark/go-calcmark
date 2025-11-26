@@ -160,7 +160,7 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 			c.checkExpression(f.Arguments[0])
 		}
 		return
-	case "transfer_time", "read":
+	case "transfer_time", "read", "compress":
 		// First argument is an expression, rest are identifiers
 		if len(f.Arguments) > 0 {
 			c.checkExpression(f.Arguments[0])
