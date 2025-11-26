@@ -66,6 +66,7 @@ const (
 	IN
 	PER  // "per" - for rate expressions (e.g., "100 MB per second")
 	OVER // "over" - for rate accumulation (e.g., "100 MB/s over 1 day")
+	WITH // "with" - for capacity planning (e.g., "10000 req/s with 450 req/s capacity")
 	WHILE
 	RETURN
 	BREAK
@@ -191,6 +192,8 @@ func (tt TokenType) String() string {
 		return "PER"
 	case OVER:
 		return "OVER"
+	case WITH:
+		return "WITH"
 	case WHILE:
 		return "WHILE"
 	case RETURN:

@@ -1,0 +1,13 @@
+# Invalid Capacity Planning Examples
+
+# Invalid: zero capacity
+# 100 with 0
+
+# Invalid: negative capacity  
+# 100 with -10
+
+# Invalid: missing capacity
+# 100 with
+
+# Invalid: negative buffer
+# 100 with 50 and -5%

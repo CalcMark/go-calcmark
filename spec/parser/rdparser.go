@@ -413,6 +413,36 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 	}
 
+	// Check for "with" keyword: "10000 req/s with 450 req/s capacity"
+	// Natural syntax for requires(load, capacity, buffer?)
+	if p.match(lexer.WITH) {
+		// Parse capacity expression
+		capacity, err := p.parseExponent()
+		if err != nil {
+			return nil, err
+		}
+
+		// Check for optional "and N%" buffer
+		var args []ast.Node
+		if p.match(lexer.AND) {
+			// Parse buffer percentage
+			bufferExpr, err := p.parseExponent()
+			if err != nil {
+				return nil, err
+			}
+			args = []ast.Node{left, capacity, bufferExpr}
+		} else {
+			args = []ast.Node{left, capacity}
+		}
+
+		// Create function call: requires(load, capacity, buffer?)
+		return &ast.FunctionCall{
+			Name:      "requires",
+			Arguments: args,
+			Range:     &ast.Range{},
+		}, nil
+	}
+
 	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
 	if p.match(lexer.IN) {
 		if !p.match(lexer.IDENTIFIER) {
@@ -710,12 +740,17 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return expr, nil
 	}
 
-	// Identifiers (variables) - check for quantities: "x meters"
+	// Identifiers (variables or function calls)
 	if p.match(lexer.IDENTIFIER) {
 		name := p.previous()
 
-		// Check if followed by a unit (for quantities like "x meters")
-		// For now, just return identifier
+		// Check if it's a function call (identifier followed by '(')
+		if p.check(lexer.LPAREN) {
+			// This is a function call, parse it
+			return p.parseFunctionCall()
+		}
+
+		// Otherwise it's just a variable reference
 		return &ast.Identifier{Name: string(name.Value)}, nil
 	}
 
