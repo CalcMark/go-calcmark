@@ -369,6 +369,11 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 		timePeriod := p.previous()
 
+		// Validate it's a valid time unit
+		if !isTimeUnit(string(timePeriod.Value)) {
+			return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit", timePeriod.Value))
+		}
+
 		// Create function call: downtime(left, time_period_identifier)
 		return &ast.FunctionCall{
 			Name: "downtime",
@@ -571,19 +576,29 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		tok := p.previous()
 
 		// Check if followed by a unit identifier: "10 meters", "50% coverage", etc.
-		// IMPORTANT: Only consume the identifier if it's a KNOWN UNIT NAME.
-		// This prevents consuming non-unit identifiers like "downtime", "over", etc.
+		// IMPORTANT: Don't consume KEYWORDS like "downtime", "over" that have special meaning.
+		// But DO allow arbitrary units for rates ("cars per day", "requests per second").
 		if p.check(lexer.IDENTIFIER) {
 			identTok := p.peek() // Peek without consuming
 			unitName := string(identTok.Value)
 
-			// Parse as unit ONLY if it's a known unit
-			if normalizedUnit, isUnit := units.NormalizeUnitName(unitName); isUnit {
-				// Valid unit found - consume it
+			// Check if this identifier is a reserved keyword with special syntax
+			// These should NOT be consumed as units
+			if isNaturalSyntaxKeyword(unitName) {
+				// Don't consume keywords - let natural syntax parsers handle them
+				// Fall through to return plain NumberLiteral
+			} else {
+				// Either a known unit OR an arbitrary identifier (like "cars", "requests")
+				// Consume it as a unit - this allows both "10 meters" AND "5 cars per day"
 				p.advance()
 
+				// Normalize if it's a known unit, otherwise use as-is
+				normalizedUnit, isKnownUnit := units.NormalizeUnitName(unitName)
+				if isKnownUnit {
+					unitName = normalizedUnit
+				}
+
 				// Check for multi-word units: "1 nautical mile", "5 metric tons"
-				// Only consume second word if it forms a valid multi-word unit
 				if p.check(lexer.IDENTIFIER) {
 					nextWord := string(p.peek().Value)
 					if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
@@ -595,14 +610,13 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 
 				return &ast.QuantityLiteral{
 					Value:      string(tok.Value),
-					Unit:       normalizedUnit, // Use normalized unit from NormalizeUnitName
+					Unit:       unitName, // Use normalized if known, otherwise original
 					SourceText: string(tok.OriginalText) + " " + unitName,
 				}, nil
 			}
-			// Not a known unit - don't consume the identifier, fall through to return NumberLiteral
 		}
 
-		// Plain number without unit (or followed by non-unit identifier)
+		// Plain number without unit (or followed by keyword identifier)
 		return &ast.NumberLiteral{
 			Value:      string(tok.Value),
 			SourceText: string(tok.OriginalText),
@@ -895,6 +909,18 @@ func (p *RecursiveDescentParser) tryConsumeUnit() (string, bool) {
 
 	p.advance() // O(1) - only side effect, only if valid
 	return normalizedUnit, true
+}
+
+// isNaturalSyntaxKeyword checks if an identifier is a reserved keyword for natural syntax.
+// These should NOT be consumed as units after numbers.
+// Time Complexity: O(1) - hash map lookup
+func isNaturalSyntaxKeyword(ident string) bool {
+	keywords := map[string]bool{
+		"downtime": true,
+		"over":     true,
+		// Add other natural syntax keywords here as needed
+	}
+	return keywords[strings.ToLower(ident)]
 }
 
 // isTimeUnit checks if a string is a valid time unit for rate expressions.
