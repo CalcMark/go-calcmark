@@ -1,0 +1,13 @@
+# Compression Function - compress()
+
+# Compressed size estimates for different compression types
+gzip_compressed = compress(1 GB, gzip)      # → 0.333 GB (3:1 ratio)
+lz4_compressed = compress(100 MB, lz4)      # → 50 MB (2:1 ratio)
+zstd_compressed = compress(500 MB, zstd)    # → ~143 MB (3.5:1 ratio)
+bzip2_compressed = compress(1000 MB, bzip2) # → 250 MB (4:1 ratio)
+snappy_compressed = compress(300 MB, snappy) # → 120 MB (2.5:1 ratio)
+no_compression = compress(200 MB, none)     # → 200 MB (1:1 ratio)
+
+# Use in calculations
+storage_savings = 10 GB - compress(10 GB, gzip)
+compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)

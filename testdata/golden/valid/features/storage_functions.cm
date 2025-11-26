@@ -1,0 +1,23 @@
+# Storage Functions - read(), seek()
+
+# Read time for different storage types
+ssd_read_100mb = read(100 MB, ssd)          # → ~0.18 second
+nvme_read_1gb = read(1 GB, nvme)            # → ~0.29 second
+hdd_read_10mb = read(10 MB, hdd)            # → ~0.067 second
+pcie_read_500gb = read(500 GB, pcie_ssd)    # → ~1.22 minute
+sata_read = read(50 MB, sata_ssd)           # → ~0.091 second
+
+# Seek/access latency for different storage types
+hdd_seek = seek(hdd)                        # → 0.01 second (10 ms)
+ssd_seek = seek(ssd)                        # → 0.0001 second (0.1 ms)
+nvme_seek = seek(nvme)                      # → 0.00001 second (0.01 ms)
+pcie_seek = seek(pcie_ssd)                  # → 0.00001 second
+sata_seek = seek(sata_ssd)                  # → 0.0001 second
+
+# Combined operations
+db_query_hdd = seek(hdd) + read(5 MB, hdd)
+cache_hit_ssd = seek(ssd) + read(1 MB, ssd)
+sequential_scan = read(100 GB, nvme)
+
+# Use in calculations
+total_io_time = seek(hdd) * 100 + read(5 GB, hdd)

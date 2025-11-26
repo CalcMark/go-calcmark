@@ -1,0 +1,25 @@
+# Network Functions - rtt(), throughput(), transfer_time()
+
+# Round-trip time for different network scopes
+local_latency = rtt(local)              # → 0.0005 second (0.5 ms)
+regional_latency = rtt(regional)        # → 0.01 second (10 ms) 
+continental_latency = rtt(continental)  # → 0.05 second (50 ms)
+global_latency = rtt(global)            # → 0.15 second (150 ms)
+
+# Network throughout for different connection types  
+gigabit_speed = throughput(gigabit)     # → 125 MB/s
+ten_gig_speed = throughput(10g)         # → 1250 MB/s
+hundred_gig = throughput(100g)          # → 12500 MB/s
+wifi_speed = throughput(wifi)           # → 12.5 MB/s
+four_g_speed = throughput(4g)           # → 2.5 MB/s
+five_g_speed = throughput(5g)           # → 50 MB/s
+
+# Combined transfer time (RTT + transmission)
+api_call = transfer_time(1 KB, regional, gigabit)
+file_download = transfer_time(1 GB, global, gigabit)
+video_chunk = transfer_time(10 MB, regional, 10g)
+large_file = transfer_time(500 MB, continental, gigabit)
+
+# Use in calculations
+total_latency = rtt(regional) + 5 ms
+throughput_check = throughput(gigabit) * 0.9  #'90% utilization
