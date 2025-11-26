@@ -344,6 +344,34 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 	}
 
+	// CRITICAL: Check for "downtime" identifier BEFORE checking for PER
+	// This prevents "99.9% downtime per month" from being parsed as a rate
+	// Must check: percentage/number + "downtime" + "per" + timeunit
+	if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "downtime" {
+		p.advance() // Consume "downtime"
+
+		// Expect "per" keyword
+		if !p.match(lexer.PER) {
+			return nil, p.error("expected 'per' after 'downtime'")
+		}
+
+		// Parse time period (identifier like "month", "year", etc.)
+		if !p.match(lexer.IDENTIFIER) {
+			return nil, p.error("expected time period after 'downtime per'")
+		}
+		timePeriod := p.previous()
+
+		// Create function call: downtime(left, time_period_identifier)
+		return &ast.FunctionCall{
+			Name: "downtime",
+			Arguments: []ast.Node{
+				left,
+				&ast.Identifier{Name: string(timePeriod.Value)},
+			},
+			Range: &ast.Range{},
+		}, nil
+	}
+
 	// Check for rate with "per" keyword: "5 GB per day"
 	// But skip if left is already a RateLiteral (from slash syntax)
 	if _, isRate := left.(*ast.RateLiteral); !isRate {
@@ -441,33 +469,6 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			Name:      "requires",
 			Arguments: args,
 			Range:     &ast.Range{},
-		}, nil
-	}
-
-	// Check for "downtime" identifier (not a keyword): "99.9% downtime per month"
-	// Natural syntax for downtime(availability%, time_period)
-	if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "downtime" {
-		p.advance() // Consume "downtime"
-
-		// Expect "per" keyword
-		if !p.match(lexer.PER) {
-			return nil, p.error("expected 'per' after 'downtime'")
-		}
-
-		// Parse time period (identifier like "month", "year", etc.)
-		if !p.match(lexer.IDENTIFIER) {
-			return nil, p.error("expected time period after 'downtime per'")
-		}
-		timePeriod := p.previous()
-
-		// Create function call: downtime(left, time_period_identifier)
-		return &ast.FunctionCall{
-			Name: "downtime",
-			Arguments: []ast.Node{
-				left,
-				&ast.Identifier{Name: string(timePeriod.Value)},
-			},
-			Range: &ast.Range{},
 		}, nil
 	}
 
