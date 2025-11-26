@@ -85,6 +85,8 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalRateLiteral(n)
 	case *ast.UnitConversion:
 		return interp.evalUnitConversion(n)
+	case *ast.NapkinConversion:
+		return interp.evalNapkinConversion(n)
 	case *ast.FunctionCall:
 		return interp.evalFunctionCall(n)
 	default:

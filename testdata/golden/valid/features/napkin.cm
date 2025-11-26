@@ -1,0 +1,31 @@
+# Napkin Conversion - Human-readable number formatting
+
+# Basic numbers
+small_num = 47 as napkin                    # → ~47
+medium_num = 8734 as napkin                 # → ~8700
+
+# Thousands
+thousands = 347234 as napkin                # → ~350K
+twelve_k = 12500 as napkin                  # → ~13K
+
+# Millions  
+million = 1234567 as napkin                 # → ~1.2M
+two_million = 2347000 as napkin             # → ~2.3M
+
+# Billions
+billion = 1500000000 as napkin              # → ~1.5B
+five_b = 5000000000 as napkin               # → ~5B
+
+# Trillions
+trillion = 1234000000000 as napkin          # → ~1.2T
+
+# Negative numbers
+neg_million = -1234567 as napkin            # → ~-1.2M
+neg_thousand = -8734 as napkin              # → ~-8700
+
+# Use with quantities
+bandwidth = (100 MB/s * 3600) as napkin     # → ~360K MB
+storage = (10 TB + 5 TB) as napkin          # → ~15T (bytes in base unit)
+
+# Use in calculations
+servers_needed = (10000 req/s / 450 req/s) as napkin  # → ~22

@@ -509,6 +509,15 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}, nil
 	}
 
+	// Check for \"napkin\" keyword: \"1234567 as napkin\"
+	// Napkin formatting for human-readable numbers
+	if p.match(lexer.NAPKIN) {
+		return &ast.NapkinConversion{
+			Expression: left,
+			Range:      &ast.Range{},
+		}, nil
+	}
+
 	return left, nil
 }
 
