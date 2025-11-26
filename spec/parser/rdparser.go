@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -344,11 +343,9 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 	}
 
-	// DEBUG: Log what we're checking for downtime
 	if p.check(lexer.IDENTIFIER) {
 		nextIdent := string(p.peek().Value)
 		if nextIdent == "downtime" {
-			// DEBUG: We found downtime pattern
 			_ = nextIdent // Will add actual debug later
 		}
 	}
@@ -561,34 +558,49 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 // parsePrimary parses primary expressions (atomic values and higher precedence constructs).
 // Primary → NUMBER | BOOLEAN | IDENTIFIER | FUNCTION | CURRENCY | '(' Expression ')' | ...
 func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
-	// Numbers (with multipliers)
+	// Number literals (with optional unit)
+	// Examples: "42", "3.14", "50%", "10 meters", "1k kg"
+	//
+	// CRITICAL: Must check if identifier is a KNOWN UNIT before consuming it!
+	// Otherwise we incorrectly consume identifiers like "downtime" that come after
+	// percentages in expressions like "99.9% downtime per month".
 	if p.match(lexer.NUMBER, lexer.NUMBER_K, lexer.NUMBER_M, lexer.NUMBER_B, lexer.NUMBER_T,
 		lexer.NUMBER_PERCENT, lexer.NUMBER_SCI) {
 		tok := p.previous()
 
-		// Check if followed by an identifier (unit): "12k meters", "1e3 kg", etc.
+		// Check if followed by a unit identifier: "10 meters", "50% coverage", etc.
+		// IMPORTANT: Only consume the identifier if it's a KNOWN UNIT NAME.
+		// This prevents consuming non-unit identifiers like "downtime", "over", etc.
 		if p.check(lexer.IDENTIFIER) {
-			unitTok := p.advance()
-			unitName := string(unitTok.Value)
+			identTok := p.peek() // Peek without consuming
+			unitName := string(identTok.Value)
 
-			// Check for multi-word units: "1 nautical mile", "5 metric tons"
-			// Only consume second word if it forms a valid multi-word unit
-			if p.check(lexer.IDENTIFIER) {
-				nextWord := string(p.peek().Value)
-				// Import units package to check if this is a known multi-word unit
-				if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
-					p.advance() // Consume the second word
-					unitName = multiWordUnit
+			// Parse as unit ONLY if it's a known unit
+			if normalizedUnit, isUnit := units.NormalizeUnitName(unitName); isUnit {
+				// Valid unit found - consume it
+				p.advance()
+
+				// Check for multi-word units: "1 nautical mile", "5 metric tons"
+				// Only consume second word if it forms a valid multi-word unit
+				if p.check(lexer.IDENTIFIER) {
+					nextWord := string(p.peek().Value)
+					if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
+						p.advance() // Consume the second word
+						unitName = multiWordUnit
+						normalizedUnit, _ = units.NormalizeUnitName(multiWordUnit)
+					}
 				}
-			}
 
-			return &ast.QuantityLiteral{
-				Value:      string(tok.Value),
-				Unit:       unitName,
-				SourceText: string(tok.OriginalText) + " " + unitName,
-			}, nil
+				return &ast.QuantityLiteral{
+					Value:      string(tok.Value),
+					Unit:       normalizedUnit, // Use normalized unit from NormalizeUnitName
+					SourceText: string(tok.OriginalText) + " " + unitName,
+				}, nil
+			}
+			// Not a known unit - don't consume the identifier, fall through to return NumberLiteral
 		}
 
+		// Plain number without unit (or followed by non-unit identifier)
 		return &ast.NumberLiteral{
 			Value:      string(tok.Value),
 			SourceText: string(tok.OriginalText),
