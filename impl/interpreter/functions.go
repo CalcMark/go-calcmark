@@ -20,20 +20,47 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		}
 
 		// Evaluate first argument (the rate)
-		rateArg, err := interp.evalNode(f.Arguments[0])
+		rate, err := interp.evalNode(f.Arguments[0])
 		if err != nil {
 			return nil, err
 		}
 
-		rate, ok := rateArg.(*types.Rate)
+		// Extract second argument as identifier (time unit) WITHOUT evaluating
+		targetUnit, ok := f.Arguments[1].(*ast.Identifier)
 		if !ok {
-			return nil, fmt.Errorf("convert_rate() first argument must be a rate, got %T", rateArg)
+			return nil, fmt.Errorf("convert_rate() second argument must be a time unit identifier")
 		}
 
-			targetUnit = val.String()
+		return convertRateTimeUnit(rate, targetUnit.Name)
+	}
+
+	// Special case: downtime's second argument should NOT be evaluated
+	// It's an identifier representing a time period (month, year, etc), not a variable
+	if f.Name == "downtime" {
+		if len(f.Arguments) != 2 {
+			return nil, fmt.Errorf("downtime() requires exactly 2 arguments")
 		}
 
-		return convertRateTimeUnit(rate, targetUnit)
+		// Evaluate first argument (availability percentage)
+		availability, err := interp.evalNode(f.Arguments[0])
+		if err != nil {
+			return nil, err
+		}
+
+		// Second argument can be an Identifier (time unit) or evaluated duration
+		// Try to extract as identifier first
+		if identArg, ok := f.Arguments[1].(*ast.Identifier); ok {
+			// Pass the identifier directly without evaluation
+			return calculateDowntime(availability, identArg)
+		}
+
+		// Otherwise evaluate it (could be a Duration literal or expression)
+		timePeriod, err := interp.evalNode(f.Arguments[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return calculateDowntime(availability, timePeriod)
 	}
 
 	// Evaluate all arguments for other functions
@@ -60,7 +87,8 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	case "requires":
 		return evalRequires(args)
 	case "downtime":
-		return evalDowntime(args)
+		// Already handled above
+		return nil, fmt.Errorf("downtime should have been handled")
 	default:
 		return nil, fmt.Errorf("unknown function: %s", f.Name)
 	}
