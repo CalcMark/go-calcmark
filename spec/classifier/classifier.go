@@ -87,7 +87,7 @@ func containsAssignment(tokens []lexer.Token) bool {
 }
 
 // allIdentifiersDefined checks if all identifiers in an AST are defined in the context
-func allIdentifiersDefined(node ast.Node, context *evaluator.Context) bool {
+func allIdentifiersDefined(node ast.Node, context *interpreter.Context) bool {
 	switch n := node.(type) {
 	case *ast.Identifier:
 		// Check if identifier exists in context (which handles boolean keywords)
@@ -112,9 +112,9 @@ func allIdentifiersDefined(node ast.Node, context *evaluator.Context) bool {
 }
 
 // ClassifyLine classifies a line as CALCULATION, MARKDOWN, or BLANK
-func ClassifyLine(line string, context *evaluator.Context) LineType {
+func ClassifyLine(line string, context *interpreter.Context) LineType {
 	if context == nil {
-		context = evaluator.NewContext()
+		context = interpreter.NewContext()
 	}
 
 	// 1. Check empty/whitespace (per ENCODING_SPEC.md)

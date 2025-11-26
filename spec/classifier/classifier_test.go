@@ -181,7 +181,7 @@ func TestComparisons(t *testing.T) {
 
 // TestContextAwareness tests context-aware classification
 func TestKnownVariableReference(t *testing.T) {
-	ctx := interpreter.NewContext()
+	ctx := interpreter.NewEnvironment()
 	num, _ := types.NewNumber(5)
 	ctx.Set("x", num)
 
@@ -194,7 +194,7 @@ func TestKnownVariableReference(t *testing.T) {
 }
 
 func TestUnknownVariableReference(t *testing.T) {
-	ctx := interpreter.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	if ClassifyLine("unknown_var", ctx) != Markdown {
 		t.Error("expected MARKDOWN for 'unknown_var'")
@@ -205,7 +205,7 @@ func TestUnknownVariableReference(t *testing.T) {
 }
 
 func TestMixedKnownUnknown(t *testing.T) {
-	ctx := interpreter.NewContext()
+	ctx := interpreter.NewEnvironment()
 	num, _ := types.NewNumber(5)
 	ctx.Set("x", num)
 
@@ -218,7 +218,7 @@ func TestMixedKnownUnknown(t *testing.T) {
 }
 
 func TestBooleanKeywordsAlwaysKnown(t *testing.T) {
-	ctx := interpreter.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	// 'true' and 'false' are boolean keywords, so they're always available
 	if ClassifyLine("true", ctx) != Calculation {
@@ -319,7 +319,7 @@ savings = salary + bonus - expenses`
 		Calculation, // savings = salary + bonus - expenses
 	}
 
-	ctx := interpreter.NewContext()
+	ctx := interpreter.NewEnvironment()
 	lines := strings.Split(document, constants.Newline)
 
 	for i, line := range lines {
