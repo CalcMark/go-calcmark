@@ -3,7 +3,6 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -40,13 +39,9 @@ func TestEvalNapkinConversion(t *testing.T) {
 		{"Negative thousand", -8734, -8700, 1},
 	}
 
-	interp := NewInterpreter()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a Number value
-			inputNum := types.NewNumber(decimal.NewFromFloat(tt.inputValue))
-
 			// Mock AST node - in real usage this would come from parser
 			// For testing, we'll directly test the logic
 
@@ -116,9 +111,6 @@ func TestEvalNapkinConversion(t *testing.T) {
 			}
 
 			t.Logf("✓ %s: %v → %v (expected %v)", tt.name, tt.inputValue, result, tt.expectedValue)
-
-			// Verify it's a usable number
-			_ = inputNum // Use the input to avoid unused variable
 		})
 	}
 }
