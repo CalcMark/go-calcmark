@@ -104,32 +104,32 @@ func TestRequiresCapacityWithBuffer(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "20% buffer",
+			name:     "20% buffer (as decimal 0.20)",
 			load:     decimal.NewFromInt(10000),
 			capacity: decimal.NewFromInt(450),
-			buffer:   decimal.NewFromInt(20), // 20%
-			expected: "27",                   // ⌈(10000×1.2)÷450⌉ = ⌈26.67⌉ = 27
+			buffer:   decimal.NewFromFloat(0.20), // 0.20 = 20%
+			expected: "27",                       // ⌈(10000×1.2)÷450⌉ = ⌈26.67⌉ = 27
 		},
 		{
-			name:     "10% buffer",
+			name:     "10% buffer (as decimal 0.10)",
 			load:     decimal.NewFromInt(10),
 			capacity: decimal.NewFromInt(2),
-			buffer:   decimal.NewFromInt(10), // 10%
-			expected: "6",                    // ⌈(10×1.1)÷2⌉ = ⌈5.5⌉ = 6
+			buffer:   decimal.NewFromFloat(0.10), // 0.10 = 10%
+			expected: "6",                        // ⌈(10×1.1)÷2⌉ = ⌈5.5⌉ = 6
 		},
 		{
-			name:     "0.1% buffer",
+			name:     "0.1% buffer (as decimal 0.001)",
 			load:     decimal.NewFromInt(1000),
 			capacity: decimal.NewFromInt(100),
-			buffer:   decimal.NewFromFloat(0.1), // 0.1%
-			expected: "11",                      // ⌈(1000×1.001)÷100⌉ = ⌈10.01⌉ = 11
+			buffer:   decimal.NewFromFloat(0.001), // 0.001 = 0.1%
+			expected: "11",                        // ⌈(1000×1.001)÷100⌉ = ⌈10.01⌉ = 11
 		},
 		{
-			name:     "120% buffer",
+			name:     "120% buffer (as decimal 1.20)",
 			load:     decimal.NewFromInt(100),
 			capacity: decimal.NewFromInt(50),
-			buffer:   decimal.NewFromInt(120), // 120%
-			expected: "5",                     // ⌈(100×2.2)÷50⌉ = ⌈4.4⌉ = 5
+			buffer:   decimal.NewFromFloat(1.20), // 1.20 = 120%
+			expected: "5",                        // ⌈(100×2.2)÷50⌉ = ⌈4.4⌉ = 5
 		},
 	}
 

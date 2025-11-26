@@ -51,14 +51,14 @@ func requiresCapacity(load, capacity types.Type, bufferPercent decimal.Decimal) 
 		return nil, fmt.Errorf("requires() capacity must be positive")
 	}
 
-	// Validate buffer percentage (only negative is invalid, 0% means no buffer)
+	// Validate buffer percentage (only negative is invalid)
 	if bufferPercent.IsNegative() {
 		return nil, fmt.Errorf("requires() buffer percentage cannot be negative")
 	}
 
-	// Apply buffer: adjusted_load = load × (1 + buffer/100)
-	// If buffer is 0%, this multiplies by 1.0 (no change)
-	bufferMultiplier := decimal.NewFromInt(1).Add(bufferPercent.Div(decimal.NewFromInt(100)))
+	// Buffer is a decimal fraction (0.20 = 20%, 1.0 = 100%, 1.2 = 120%)
+	// Use percentage literal syntax (20%) or decimal (0.20), NOT plain integers
+	bufferMultiplier := decimal.NewFromInt(1).Add(bufferPercent)
 	adjustedLoad := loadValue.Mul(bufferMultiplier)
 
 	// Divide: raw_result = adjusted_load ÷ capacity
