@@ -1,7 +1,7 @@
 package parser
 
 import (
-"fmt"
+	"fmt"
 
 	"strings"
 
@@ -874,6 +874,27 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		Name:      funcNameStr,
 		Arguments: args,
 	}, nil
+}
+
+// tryConsumeUnit attempts to consume an identifier as a unit.
+// STATEFUL: Advances parser cursor only if identifier is a valid unit.
+// PURE VALIDATION: Uses units.NormalizeUnitName (O(1) hash lookup).
+// Time Complexity: O(1) - single token peek + map lookup + optional advance
+// Returns: (normalizedUnit string, consumed bool)
+func (p *RecursiveDescentParser) tryConsumeUnit() (string, bool) {
+	if !p.check(lexer.IDENTIFIER) {
+		return "", false // O(1) token type check
+	}
+
+	unitName := string(p.peek().Value)                           // O(1) peek without side effect
+	normalizedUnit, isValid := units.NormalizeUnitName(unitName) // O(1) map lookup
+
+	if !isValid {
+		return "", false // No consumption - pure until this point
+	}
+
+	p.advance() // O(1) - only side effect, only if valid
+	return normalizedUnit, true
 }
 
 // isTimeUnit checks if a string is a valid time unit for rate expressions.
