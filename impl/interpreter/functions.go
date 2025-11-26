@@ -70,9 +70,20 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		return nil, fmt.Errorf("convert_rate should have been handled")
 	case "requires":
 		return evalRequires(args)
+	case "downtime":
+		return evalDowntime(args)
 	default:
 		return nil, fmt.Errorf("unknown function: %s", f.Name)
 	}
+}
+
+// eval Downtime handles downtime(availability%, time_period) function calls.
+func evalDowntime(args []types.Type) (types.Type, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("downtime() requires 2 arguments (availability%%, time_period)")
+	}
+
+	return calculateDowntime(args[0], args[1])
 }
 
 // evalRequires handles requires(load, capacity, buffer?) function calls.

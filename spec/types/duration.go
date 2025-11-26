@@ -14,7 +14,7 @@ type Duration struct {
 }
 
 // Conversion factors to seconds (approximate for months/years)
-var durationToSeconds = map[string]int64{
+var DurationToSeconds = map[string]int64{
 	"second":  1,
 	"seconds": 1,
 	"minute":  60,
@@ -34,7 +34,7 @@ var durationToSeconds = map[string]int64{
 // NewDuration creates a new Duration with the given value and unit.
 func NewDuration(value decimal.Decimal, unit string) (*Duration, error) {
 	// Validate unit
-	if _, ok := durationToSeconds[unit]; !ok {
+	if _, ok := DurationToSeconds[unit]; !ok {
 		return nil, fmt.Errorf("invalid duration unit: %s", unit)
 	}
 
@@ -61,20 +61,20 @@ func (d *Duration) String() string {
 // ToSeconds converts the duration to seconds.
 // Note: Uses approximate conversions for months (30 days) and years (365 days).
 func (d *Duration) ToSeconds() decimal.Decimal {
-	factor := durationToSeconds[d.Unit]
+	factor := DurationToSeconds[d.Unit]
 	return d.Value.Mul(decimal.NewFromInt(factor))
 }
 
 // Convert converts the duration to a different unit.
 func (d *Duration) Convert(targetUnit string) (*Duration, error) {
 	// Validate target unit
-	if _, ok := durationToSeconds[targetUnit]; !ok {
+	if _, ok := DurationToSeconds[targetUnit]; !ok {
 		return nil, fmt.Errorf("invalid duration unit: %s", targetUnit)
 	}
 
 	// Convert to seconds, then to target unit
 	seconds := d.ToSeconds()
-	targetFactor := decimal.NewFromInt(durationToSeconds[targetUnit])
+	targetFactor := decimal.NewFromInt(DurationToSeconds[targetUnit])
 	newValue := seconds.Div(targetFactor)
 
 	return &Duration{
