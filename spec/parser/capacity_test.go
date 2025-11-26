@@ -14,8 +14,8 @@ func TestCapacityPlanningNaturalSyntax(t *testing.T) {
 		checkFunc   func(*testing.T, []ast.Node)
 	}{
 		{
-			name:        "with keyword - basic",
-			input:       "10000 req with 450 req\n",
+			name:        "slash-rate with slash-rate",
+			input:       "10000 req/s with 450 req/s\n",
 			expectError: false,
 			checkFunc: func(t *testing.T, nodes []ast.Node) {
 				if len(nodes) != 1 {
@@ -34,8 +34,8 @@ func TestCapacityPlanningNaturalSyntax(t *testing.T) {
 			},
 		},
 		{
-			name:        "with and buffer",
-			input:       "10000 req with 450 req and 20%\n",
+			name:        "slash-rate with slash-rate and buffer",
+			input:       "10000 req/s with 450 req/s and 20%\n",
 			expectError: false,
 			checkFunc: func(t *testing.T, nodes []ast.Node) {
 				fc, ok := nodes[0].(*ast.FunctionCall)
@@ -51,7 +51,7 @@ func TestCapacityPlanningNaturalSyntax(t *testing.T) {
 			},
 		},
 		{
-			name:        "with TB capacity and buffer",
+			name:        "TB quantities with buffer",
 			input:       "10 TB with 2 TB and 10%\n",
 			expectError: false,
 			checkFunc: func(t *testing.T, nodes []ast.Node) {

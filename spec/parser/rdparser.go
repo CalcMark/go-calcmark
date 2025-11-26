@@ -416,8 +416,9 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	// Check for "with" keyword: "10000 req/s with 450 req/s capacity"
 	// Natural syntax for requires(load, capacity, buffer?)
 	if p.match(lexer.WITH) {
-		// Parse capacity expression
-		capacity, err := p.parseExponent()
+		// Parse capacity expression - use parseMultiplicative() to handle rates
+		// (parseExponent() would miss the /s part of slash-rates)
+		capacity, err := p.parseMultiplicative()
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +426,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		// Check for optional "and N%" buffer
 		var args []ast.Node
 		if p.match(lexer.AND) {
-			// Parse buffer percentage
+			// Parse buffer percentage - parseExponent() is fine here
 			bufferExpr, err := p.parseExponent()
 			if err != nil {
 				return nil, err
