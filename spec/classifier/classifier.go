@@ -87,23 +87,23 @@ func containsAssignment(tokens []lexer.Token) bool {
 }
 
 // allIdentifiersDefined checks if all identifiers in an AST are defined in the context
-func allIdentifiersDefined(node ast.Node, context *interpreter.Context) bool {
+func allIdentifiersDefined(node ast.Node, env *interpreter.Context) bool {
 	switch n := node.(type) {
 	case *ast.Identifier:
 		// Check if identifier exists in context (which handles boolean keywords)
-		return context.Has(n.Name)
+		return env.Has(n.Name)
 
 	case *ast.UnaryOp:
-		return allIdentifiersDefined(n.Operand, context)
+		return allIdentifiersDefined(n.Operand, env)
 
 	case *ast.BinaryOp:
-		return allIdentifiersDefined(n.Left, context) && allIdentifiersDefined(n.Right, context)
+		return allIdentifiersDefined(n.Left, env) && allIdentifiersDefined(n.Right, env)
 
 	case *ast.ComparisonOp:
-		return allIdentifiersDefined(n.Left, context) && allIdentifiersDefined(n.Right, context)
+		return allIdentifiersDefined(n.Left, env) && allIdentifiersDefined(n.Right, env)
 
 	case *ast.Expression:
-		return allIdentifiersDefined(n.Expr, context)
+		return allIdentifiersDefined(n.Expr, env)
 
 	default:
 		// Literals and other nodes don't have identifiers
@@ -112,9 +112,9 @@ func allIdentifiersDefined(node ast.Node, context *interpreter.Context) bool {
 }
 
 // ClassifyLine classifies a line as CALCULATION, MARKDOWN, or BLANK
-func ClassifyLine(line string, context *interpreter.Context) LineType {
-	if context == nil {
-		context = interpreter.NewContext()
+func ClassifyLine(line string, env *interpreter.Context) LineType {
+	if env == nil {
+		env = interpreter.NewContext()
 	}
 
 	// 1. Check empty/whitespace (per ENCODING_SPEC.md)
@@ -217,7 +217,7 @@ func ClassifyLine(line string, context *interpreter.Context) LineType {
 		}
 
 		// Verify all identifiers are defined
-		if allIdentifiersDefined(nodes[0], context) {
+		if allIdentifiersDefined(nodes[0], env) {
 			return Calculation
 		}
 		return Markdown
@@ -243,7 +243,7 @@ func ClassifyLine(line string, context *interpreter.Context) LineType {
 
 		// Identifiers only if they exist in context or are boolean keywords
 		if token.Type == lexer.IDENTIFIER {
-			if context.Has(token.Value) {
+			if env.Has(token.Value) {
 				return Calculation
 			}
 			return Markdown

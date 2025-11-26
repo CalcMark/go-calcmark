@@ -344,6 +344,15 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 	}
 
+	// DEBUG: Log what we're checking for downtime
+	if p.check(lexer.IDENTIFIER) {
+		nextIdent := string(p.peek().Value)
+		if nextIdent == "downtime" {
+			// DEBUG: We found downtime pattern
+			_ = nextIdent // Will add actual debug later
+		}
+	}
+
 	// CRITICAL: Check for "downtime" identifier BEFORE checking for PER
 	// This prevents "99.9% downtime per month" from being parsed as a rate
 	// Must check: percentage/number + "downtime" + "per" + timeunit
