@@ -159,6 +159,17 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 		return
 	}
 
+	// Special case: downtime's second argument is a time unit identifier,
+	// not a variable reference (e.g., "month", "year")
+	if f.Name == "downtime" {
+		// Only check first argument (availability percentage)
+		if len(f.Arguments) > 0 {
+			c.checkExpression(f.Arguments[0])
+		}
+		// Skip checking second argument (time unit identifier)
+		return
+	}
+
 	// Check all arguments for other functions
 	for _, arg := range f.Arguments {
 		c.checkExpression(arg)

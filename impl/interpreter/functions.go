@@ -16,7 +16,7 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	// It's an identifier representing a time unit, not a variable
 	if f.Name == "convert_rate" {
 		if len(f.Arguments) != 2 {
-			return nil, fmt.Errorf("convert_rate() requires 2 arguments")
+			return nil, fmt.Errorf("convert_rate() requires exactly 2 arguments")
 		}
 
 		// Evaluate first argument (the rate)
@@ -30,17 +30,6 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 			return nil, fmt.Errorf("convert_rate() first argument must be a rate, got %T", rateArg)
 		}
 
-		// Extract time unit from second argument without evaluating
-		var targetUnit string
-		switch arg := f.Arguments[1].(type) {
-		case *ast.Identifier:
-			targetUnit = arg.Name
-		default:
-			// If it's not an identifier, evaluate it and use String()
-			val, err := interp.evalNode(f.Arguments[1])
-			if err != nil {
-				return nil, err
-			}
 			targetUnit = val.String()
 		}
 

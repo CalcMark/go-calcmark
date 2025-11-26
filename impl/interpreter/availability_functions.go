@@ -31,56 +31,52 @@ func calculateDowntime(availability, timePeriod types.Type) (*types.Duration, er
 	// Calculate downtime fraction (1 - availability)
 	downtimeFraction := decimal.NewFromInt(1).Sub(availabilityFraction)
 
-	// Get time period in seconds
-	var periodSeconds decimal.Decimal
+	// Convert time period to a Duration
+	var periodDuration *types.Duration
 
 	switch period := timePeriod.(type) {
 	case *types.Duration:
-		// Duration - convert to seconds using the map
-		secondsPerUnit, ok := types.DurationToSeconds[period.Unit]
-		if !ok {
-			return nil, fmt.Errorf("unknown duration unit: %s", period.Unit)
-		}
-		periodSeconds = period.Value.Mul(decimal.NewFromInt(secondsPerUnit))
+		periodDuration = period
 
 	case *types.Quantity:
-		// Time quantity (e.g., "1 month", "30 days")
-		secondsPerUnit, ok := types.DurationToSeconds[period.Unit]
-		if !ok {
-			return nil, fmt.Errorf("downtime() time period must be a time unit, got %s", period.Unit)
+		// Time quantity (e.g., "1 month", "30 days") - treat as duration
+		d, err := types.NewDuration(period.Value, period.Unit)
+		if err != nil {
+			return nil, fmt.Errorf("downtime() time period: %w", err)
 		}
-		periodSeconds = period.Value.Mul(decimal.NewFromInt(secondsPerUnit))
+		periodDuration = d
 
 	case *ast.Identifier:
-		// Bare identifier like "month", "year", etc.
-		secondsPerUnit, ok := types.DurationToSeconds[period.Name]
-		if !ok {
+		// Bare identifier like "month", "year" - treat as 1 unit
+		d, err := types.NewDuration(decimal.NewFromInt(1), period.Name)
+		if err != nil {
 			return nil, fmt.Errorf("downtime() time period must be a time unit, got %s", period.Name)
 		}
-		periodSeconds = decimal.NewFromInt(1).Mul(decimal.NewFromInt(secondsPerUnit))
+		periodDuration = d
 
 	default:
 		return nil, fmt.Errorf("downtime() time period must be a duration or time unit, got %T", timePeriod)
 	}
 
-	// Calculate downtime in seconds
+	// Calculate downtime in seconds using existing Duration.ToSeconds()
+	periodSeconds := periodDuration.ToSeconds()
 	downtimeSeconds := periodSeconds.Mul(downtimeFraction)
 
-	// Choose appropriate unit based on magnitude
-	// < 60s → seconds, < 3600s → minutes, >= 3600s → hours
-	unit := "second"
-	value := downtimeSeconds
-
-	seconds, _ := downtimeSeconds.Float64()
-	if seconds >= 3600 {
-		// Convert to hours
-		unit = "hour"
-		value = downtimeSeconds.Div(decimal.NewFromInt(3600))
-	} else if seconds >= 60 {
-		// Convert to minutes
-		unit = "minute"
-		value = downtimeSeconds.Div(decimal.NewFromInt(60))
+	// Create duration in seconds first
+	downtimeDuration, err := types.NewDuration(downtimeSeconds, "second")
+	if err != nil {
+		return nil, err
 	}
 
-	return types.NewDuration(value, unit)
+	// Choose appropriate unit and convert using existing Duration.Convert()
+	// < 60s → seconds, < 3600s → minutes, >= 3600s → hours
+	seconds, _ := downtimeSeconds.Float64()
+	targetUnit := "second"
+	if seconds >= 3600 {
+		targetUnit = "hour"
+	} else if seconds >= 60 {
+		targetUnit = "minute"
+	}
+
+	return downtimeDuration.Convert(targetUnit)
 }
