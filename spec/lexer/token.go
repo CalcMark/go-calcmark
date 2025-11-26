@@ -64,6 +64,7 @@ const (
 	END
 	FOR
 	IN
+	NAPKIN   // "napkin" - for human-readable number formatting (e.g., "1234567 as napkin")
 	PER      // "per" - for rate expressions (e.g., "100 MB per second")
 	OVER     // "over" - for rate accumulation (e.g., "100 MB/s over 1 day")
 	WITH     // "with" - for capacity planning (e.g., "10000 req/s with 450 req/s capacity")
@@ -189,6 +190,8 @@ func (tt TokenType) String() string {
 		return "FOR"
 	case IN:
 		return "IN"
+	case NAPKIN:
+		return "NAPKIN"
 	case PER:
 		return "PER"
 	case OVER:

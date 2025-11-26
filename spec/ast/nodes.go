@@ -73,6 +73,20 @@ func (u *UnitConversion) GetRange() *Range {
 	return u.Range
 }
 
+// NapkinConversion represents human-readable number formatting (e.g., "1234567 as napkin").
+type NapkinConversion struct {
+	Expression Node
+	Range      *Range
+}
+
+func (n *NapkinConversion) String() string {
+	return fmt.Sprintf("NapkinConversion(%s)", n.Expression.String())
+}
+
+func (n *NapkinConversion) GetRange() *Range {
+	return n.Range
+}
+
 // RateLiteral represents a rate expression (e.g., "100 MB/s", "5 GB per day", "$0.10 per hour").
 // Rates combine a quantity (amount) with a time period.
 type RateLiteral struct {

@@ -25,16 +25,17 @@ var ReservedKeywords = map[string]TokenType{
 	"not": NOT,
 
 	// Future control flow keywords
-	"if":   IF,
-	"then": THEN,
-	"else": ELSE,
-	"elif": ELIF,
-	"end":  END,
-	"for":  FOR,
-	"in":   IN,
-	"per":  PER,  // Rate expressions: "100 MB per second"
-	"over": OVER, // Rate accumulation: "100 MB/s over 1 day"
-	"with": WITH, // Capacity planning: "10000 req/s with 450 req/s capacity"
+	"if":     IF,
+	"then":   THEN,
+	"else":   ELSE,
+	"elif":   ELIF,
+	"end":    END,
+	"for":    FOR,
+	"in":     IN,
+	"napkin": NAPKIN, // Human-readable formatting: "1234567 as napkin"
+	"per":    PER,    // Rate expressions: "100 MB per second"
+	"over":   OVER,   // Rate accumulation: "100 MB/s over 1 day"
+	"with":   WITH,   // Capacity planning: "10000 req/s with 450 req/s capacity"
 	// NOTE: "downtime" is NOT a reserved keyword - checked contextually in parser
 	"while":    WHILE,
 	"return":   RETURN,
