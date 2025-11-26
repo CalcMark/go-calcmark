@@ -444,9 +444,11 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}, nil
 	}
 
-	// Check for "downtime" keyword: "99.9% downtime per month"
+	// Check for "downtime" identifier (not a keyword): "99.9% downtime per month"
 	// Natural syntax for downtime(availability%, time_period)
-	if p.match(lexer.DOWNTIME) {
+	if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "downtime" {
+		p.advance() // Consume "downtime"
+
 		// Expect "per" keyword
 		if !p.match(lexer.PER) {
 			return nil, p.error("expected 'per' after 'downtime'")
