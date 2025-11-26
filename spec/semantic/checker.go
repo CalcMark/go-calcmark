@@ -149,24 +149,23 @@ func (c *Checker) checkIdentifier(id *ast.Identifier) {
 // checkFunctionCall validates function calls.
 func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 	// Special case: convert_rate's second argument is a time unit identifier,
-	// not a variable reference, so we shouldn't check it for existence
-	if f.Name == "convert_rate" {
-		// Only check first argument (the rate)
+	switch f.Name {
+	case "convert_rate", "downtime", "rtt", "throughput":
+		// For these functions, the first argument is an expression,
+		// and subsequent arguments are identifiers (e.g., time units, network types)
+		// that should not be checked as variables.
 		if len(f.Arguments) > 0 {
 			c.checkExpression(f.Arguments[0])
 		}
-		// Skip checking second argument (time unit identifier)
+		// Skip checking other arguments
 		return
-	}
-
-	// Special case: downtime's second argument is a time unit identifier,
-	// not a variable reference (e.g., "month", "year")
-	if f.Name == "downtime" {
-		// Only check first argument (availability percentage)
+	case "transfer_time":
+		// First argument (size) should be validated as an expression.
+		// Second and third arguments (scope, network type) are identifiers - skip.
 		if len(f.Arguments) > 0 {
 			c.checkExpression(f.Arguments[0])
 		}
-		// Skip checking second argument (time unit identifier)
+		// Skip checking other arguments
 		return
 	}
 
