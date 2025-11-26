@@ -68,6 +68,58 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		return calculateDowntime(availability, timePeriod)
 	}
 
+	// Special case: rtt's argument should NOT be evaluated
+	// It's an identifier representing network scope
+	if f.Name == "rtt" {
+		if len(f.Arguments) != 1 {
+			return nil, fmt.Errorf("rtt() requires exactly 1 argument (scope)")
+		}
+		scopeIdent, ok := f.Arguments[0].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("rtt() scope must be an identifier (local, regional, continental, global)")
+		}
+		return calculateRTT(scopeIdent.Name)
+	}
+
+	// Special case: throughput's argument should NOT be evaluated
+	// It's an identifier representing network type
+	if f.Name == "throughput" {
+		if len(f.Arguments) != 1 {
+			return nil, fmt.Errorf("throughput() requires exactly 1 argument (network type)")
+		}
+		typeIdent, ok := f.Arguments[0].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("throughput() network type must be an identifier (gigabit, 10g, 100g, wifi, 4g, 5g)")
+		}
+		return calculateThroughput(typeIdent.Name)
+	}
+
+	// Special case: transfer_time's 2nd and 3rd arguments should NOT be evaluated
+	if f.Name == "transfer_time" {
+		if len(f.Arguments) != 3 {
+			return nil, fmt.Errorf("transfer_time() requires exactly 3 arguments (size, scope, network_type)")
+		}
+		// Evaluate first argument (size)
+		size, err := interp.evalNode(f.Arguments[0])
+		if err != nil {
+			return nil, err
+		}
+		sizeQty, ok := size.(*types.Quantity)
+		if !ok {
+			return nil, fmt.Errorf("transfer_time() size must be a quantity, got %T", size)
+		}
+		// Extract scope and network type as identifiers
+		scopeIdent, ok := f.Arguments[1].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("transfer_time() scope must be an identifier")
+		}
+		typeIdent, ok := f.Arguments[2].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("transfer_time() network type must be an identifier")
+		}
+		return calculateTransferTime(sizeQty, scopeIdent.Name, typeIdent.Name)
+	}
+
 	// Evaluate all arguments for other functions
 	args := make([]types.Type, len(f.Arguments))
 	for i, arg := range f.Arguments {
@@ -94,6 +146,15 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	case "downtime":
 		// Already handled above
 		return nil, fmt.Errorf("downtime should have been handled")
+	case "rtt":
+		// Already handled above
+		return nil, fmt.Errorf("rtt should have been handled")
+	case "throughput":
+		// Already handled above
+		return nil, fmt.Errorf("throughput should have been handled")
+	case "transfer_time":
+		// Already handled above
+		return nil, fmt.Errorf("transfer_time should have been handled")
 	default:
 		return nil, fmt.Errorf("unknown function: %s", f.Name)
 	}

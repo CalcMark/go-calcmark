@@ -105,13 +105,12 @@ func calculateTransferTime(size *types.Quantity, scope string, networkType strin
 		return nil, fmt.Errorf("transfer_time: %w", err)
 	}
 
-	// Convert size to megabytes for calculation using existing conversion library
-	sizeMB, err := convertQuantity(size, "megabyte")
+	// Convert size to megabytes for calculation
+	// Note: Using custom conversion since unit library doesn't include byte units
+	sizeInMB, err := convertToMegabytes(size)
 	if err != nil {
 		return nil, fmt.Errorf("transfer_time: %w", err)
 	}
-
-	sizeInMB := sizeMB.Value.InexactFloat64()
 
 	// Calculate transmission time: size / throughput (in seconds)
 	throughputMBPS := throughput.Amount.Value.InexactFloat64() // MB/s
@@ -136,4 +135,31 @@ func calculateTransferTime(size *types.Quantity, scope string, networkType strin
 	}
 
 	return duration.Convert("minute")
+}
+
+// convertToMegabytes converts byte-based quantities to megabytes.
+// The main unit library doesn't include byte units, so we handle them specially here.
+// Time Complexity: O(1) - direct conversion factors
+func convertToMegabytes(q *types.Quantity) (float64, error) {
+	unitLower := strings.ToLower(q.Unit)
+
+	// Conversion: unit → bytes → megabytes
+	var bytesPerUnit float64
+	switch unitLower {
+	case "byte", "bytes", "b":
+		bytesPerUnit = 1
+	case "kilobyte", "kilobytes", "kb":
+		bytesPerUnit = 1024
+	case "megabyte", "megabytes", "mb":
+		bytesPerUnit = 1024 * 1024
+	case "gigabyte", "gigabytes", "gb":
+		bytesPerUnit = 1024 * 1024 * 1024
+	case "terabyte", "terabytes", "tb":
+		bytesPerUnit = 1024 * 1024 * 1024 * 1024
+	default:
+		return 0, fmt.Errorf("not a byte-based unit: %s", q.Unit)
+	}
+
+	bytes := q.Value.InexactFloat64() * bytesPerUnit
+	return bytes / (1024 * 1024), nil
 }
