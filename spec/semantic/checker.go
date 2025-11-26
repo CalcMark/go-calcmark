@@ -150,13 +150,18 @@ func (c *Checker) checkIdentifier(id *ast.Identifier) {
 func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 	// Special case: convert_rate's second argument is a time unit identifier,
 	switch f.Name {
-	case "convert_rate", "downtime", "rtt", "throughput":
-		// These functions use identifier arguments (time units, network types, scopes)
-		// that are not variables, so skip all argument validation
+	case "rtt", "throughput", "seek":
+		// These functions take ONLY identifier arguments
+		// Skip all validation
 		return
-	case "transfer_time":
-		// First argument (size) is an expression - check it
-		// Second and third arguments (scope, network type) are identifiers - skip
+	case "convert_rate", "downtime":
+		// First argument is an expression, second is an identifier
+		if len(f.Arguments) > 0 {
+			c.checkExpression(f.Arguments[0])
+		}
+		return
+	case "transfer_time", "read":
+		// First argument is an expression, rest are identifiers
 		if len(f.Arguments) > 0 {
 			c.checkExpression(f.Arguments[0])
 		}

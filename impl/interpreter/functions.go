@@ -120,6 +120,42 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		return calculateTransferTime(sizeQty, scopeIdent.Name, typeIdent.Name)
 	}
 
+	// Special case: read's 2nd argument should NOT be evaluated
+	// It's an identifier representing storage type
+	if f.Name == "read" {
+		if len(f.Arguments) != 2 {
+			return nil, fmt.Errorf("read() requires exactly 2 arguments (size, storage_type)")
+		}
+		// Evaluate first argument (size)
+		size, err := interp.evalNode(f.Arguments[0])
+		if err != nil {
+			return nil, err
+		}
+		sizeQty, ok := size.(*types.Quantity)
+		if !ok {
+			return nil, fmt.Errorf("read() size must be a quantity, got %T", size)
+		}
+		// Extract storage type as identifier
+		storageIdent, ok := f.Arguments[1].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("read() storage type must be an identifier")
+		}
+		return calculateRead(sizeQty, storageIdent.Name)
+	}
+
+	// Special case: seek's argument should NOT be evaluated
+	// It's an identifier representing storage type
+	if f.Name == "seek" {
+		if len(f.Arguments) != 1 {
+			return nil, fmt.Errorf("seek() requires exactly 1 argument (storage_type)")
+		}
+		storageIdent, ok := f.Arguments[0].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("seek() storage type must be an identifier")
+		}
+		return calculateSeek(storageIdent.Name)
+	}
+
 	// Evaluate all arguments for other functions
 	args := make([]types.Type, len(f.Arguments))
 	for i, arg := range f.Arguments {
@@ -155,6 +191,12 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	case "transfer_time":
 		// Already handled above
 		return nil, fmt.Errorf("transfer_time should have been handled")
+	case "read":
+		// Already handled above
+		return nil, fmt.Errorf("read should have been handled")
+	case "seek":
+		// Already handled above
+		return nil, fmt.Errorf("seek should have been handled")
 	default:
 		return nil, fmt.Errorf("unknown function: %s", f.Name)
 	}
