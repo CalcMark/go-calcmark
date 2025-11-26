@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/impl/evaluator"
+	"github.com/CalcMark/go-calcmark/impl/interpreter"
 )
 
 // TestFunctionCalls tests that standalone function calls are classified as calculations
 func TestFunctionCallAvg(t *testing.T) {
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	tests := []struct {
 		name string
@@ -31,7 +32,7 @@ func TestFunctionCallAvg(t *testing.T) {
 }
 
 func TestFunctionCallAverageOf(t *testing.T) {
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	tests := []struct {
 		name string
@@ -54,7 +55,7 @@ func TestFunctionCallAverageOf(t *testing.T) {
 }
 
 func TestFunctionCallSqrt(t *testing.T) {
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	tests := []struct {
 		name string
@@ -76,7 +77,7 @@ func TestFunctionCallSqrt(t *testing.T) {
 }
 
 func TestFunctionCallSquareRootOf(t *testing.T) {
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	tests := []struct {
 		name string
@@ -98,7 +99,7 @@ func TestFunctionCallSquareRootOf(t *testing.T) {
 }
 
 func TestFunctionInAssignment(t *testing.T) {
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	tests := []struct {
 		name string
@@ -122,9 +123,9 @@ func TestFunctionInAssignment(t *testing.T) {
 }
 
 func TestFunctionWithVariables(t *testing.T) {
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 	// Set up some variables
-	evaluator.Evaluate("x = 5\ny = 10\nz = 15", ctx)
+	interpreter.Evaluate("x = 5\ny = 10\nz = 15", ctx)
 
 	tests := []struct {
 		name string

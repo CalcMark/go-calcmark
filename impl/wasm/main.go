@@ -12,7 +12,7 @@ import (
 	"syscall/js"
 
 	calcmark "github.com/CalcMark/go-calcmark"
-	"github.com/CalcMark/go-calcmark/impl/evaluator"
+	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/classifier"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/parser"

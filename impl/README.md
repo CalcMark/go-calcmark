@@ -7,8 +7,8 @@ This directory contains the **Go-specific implementation** of CalcMark. This is 
 **Implementation packages MAY depend on spec packages** (`/spec`) but never the reverse.
 
 ```
-/impl/evaluator  →  imports  →  /spec/parser, /spec/ast, /spec/lexer
-/spec/parser     →  NEVER imports  →  /impl/evaluator
+/impl/interpreter  →  imports  →  /spec/parser, /spec/ast, /spec/lexer
+/spec/parser     →  NEVER imports  →  /impl/interpreter
 ```
 
 This ensures the language specification remains implementation-agnostic.
@@ -54,7 +54,7 @@ calcmark wasm [output-dir]
 ## Import Paths
 
 ```go
-import "github.com/CalcMark/go-calcmark/impl/evaluator"
+import "github.com/CalcMark/go-calcmark/impl/interpreter"
 import "github.com/CalcMark/go-calcmark/impl/types"
 ```
 
@@ -64,7 +64,7 @@ import "github.com/CalcMark/go-calcmark/impl/types"
 
 ```go
 import (
-    "github.com/CalcMark/go-calcmark/impl/evaluator"
+    "github.com/CalcMark/go-calcmark/impl/interpreter"
     "github.com/CalcMark/go-calcmark/spec/parser"
 )
 
