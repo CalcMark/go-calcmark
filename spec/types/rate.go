@@ -180,20 +180,12 @@ func abbreviateTimeUnit(unit string) string {
 
 // TimeUnitToSeconds returns the number of seconds in a time unit.
 // Used for accumulation and conversion calculations.
+// Uses the shared DurationToSeconds map from duration.go
 func TimeUnitToSeconds(unit string) (decimal.Decimal, error) {
 	normalized := NormalizeTimeUnit(unit)
 
-	conversions := map[string]int64{
-		"second": 1,
-		"minute": 60,
-		"hour":   3600,
-		"day":    86400,
-		"week":   604800,
-		"month":  2592000,  // 30 days
-		"year":   31536000, // 365 days
-	}
-
-	if seconds, ok := conversions[normalized]; ok {
+	// Use the shared conversion map from duration.go
+	if seconds, ok := DurationToSeconds[normalized]; ok {
 		return decimal.NewFromInt(seconds), nil
 	}
 
