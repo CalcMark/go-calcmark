@@ -151,21 +151,15 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 	// Special case: convert_rate's second argument is a time unit identifier,
 	switch f.Name {
 	case "convert_rate", "downtime", "rtt", "throughput":
-		// For these functions, the first argument is an expression,
-		// and subsequent arguments are identifiers (e.g., time units, network types)
-		// that should not be checked as variables.
-		if len(f.Arguments) > 0 {
-			c.checkExpression(f.Arguments[0])
-		}
-		// Skip checking other arguments
+		// These functions use identifier arguments (time units, network types, scopes)
+		// that are not variables, so skip all argument validation
 		return
 	case "transfer_time":
-		// First argument (size) should be validated as an expression.
-		// Second and third arguments (scope, network type) are identifiers - skip.
+		// First argument (size) is an expression - check it
+		// Second and third arguments (scope, network type) are identifiers - skip
 		if len(f.Arguments) > 0 {
 			c.checkExpression(f.Arguments[0])
 		}
-		// Skip checking other arguments
 		return
 	}
 
