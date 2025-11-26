@@ -32,9 +32,10 @@ var ReservedKeywords = map[string]TokenType{
 	"end":      END,
 	"for":      FOR,
 	"in":       IN,
-	"per":      PER,  // Rate expressions: "100 MB per second"
-	"over":     OVER, // Rate accumulation: "100 MB/s over 1 day"
-	"with":     WITH, // Capacity planning: "10000 req/s with 450 req/s capacity"
+	"per":      PER,      // Rate expressions: "100 MB per second"
+	"over":     OVER,     // Rate accumulation: "100 MB/s over 1 day"
+	"with":     WITH,     // Capacity planning: "10000 req/s with 450 req/s capacity"
+	"downtime": DOWNTIME, // Availability: "99.9% downtime per month"
 	"while":    WHILE,
 	"return":   RETURN,
 	"break":    BREAK,

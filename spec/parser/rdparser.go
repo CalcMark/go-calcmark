@@ -444,6 +444,31 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}, nil
 	}
 
+	// Check for "downtime" keyword: "99.9% downtime per month"
+	// Natural syntax for downtime(availability%, time_period)
+	if p.match(lexer.DOWNTIME) {
+		// Expect "per" keyword
+		if !p.match(lexer.PER) {
+			return nil, p.error("expected 'per' after 'downtime'")
+		}
+
+		// Parse time period (identifier like "month", "year", etc.)
+		if !p.match(lexer.IDENTIFIER) {
+			return nil, p.error("expected time period after 'downtime per'")
+		}
+		timePeriod := p.previous()
+
+		// Create function call: downtime(left, time_period_identifier)
+		return &ast.FunctionCall{
+			Name: "downtime",
+			Arguments: []ast.Node{
+				left,
+				&ast.Identifier{Name: string(timePeriod.Value)},
+			},
+			Range: &ast.Range{},
+		}, nil
+	}
+
 	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
 	if p.match(lexer.IN) {
 		if !p.match(lexer.IDENTIFIER) {
