@@ -87,6 +87,21 @@ func (n *NapkinConversion) GetRange() *Range {
 	return n.Range
 }
 
+// PercentageOf represents percentage of a value (e.g., "10% of 200").
+type PercentageOf struct {
+	Percentage Node // The percentage value (e.g., NumberLiteral for "10%")
+	Value      Node // The value to take percentage of
+	Range      *Range
+}
+
+func (p *PercentageOf) String() string {
+	return fmt.Sprintf("PercentageOf(%s of %s)", p.Percentage.String(), p.Value.String())
+}
+
+func (p *PercentageOf) GetRange() *Range {
+	return p.Range
+}
+
 // RateLiteral represents a rate expression (e.g., "100 MB/s", "5 GB per day", "$0.10 per hour").
 // Rates combine a quantity (amount) with a time period.
 type RateLiteral struct {
@@ -186,21 +201,6 @@ func (r *RelativeDateLiteral) String() string {
 
 func (r *RelativeDateLiteral) GetRange() *Range {
 	return r.Range
-}
-
-// ConvertExpr represents a unit conversion expression: "convert 1 cup to ounces"
-type ConvertExpr struct {
-	Value      Node   // The expression to convert (e.g., QuantityLiteral)
-	TargetUnit string // The target unit (e.g., "ounces")
-	Range      *Range
-}
-
-func (c *ConvertExpr) String() string {
-	return fmt.Sprintf("ConvertExpr(%s to %s)", c.Value.String(), c.TargetUnit)
-}
-
-func (c *ConvertExpr) GetRange() *Range {
-	return c.Range
 }
 
 // DurationLiteral represents a duration literal: "5 days", "3 hours"

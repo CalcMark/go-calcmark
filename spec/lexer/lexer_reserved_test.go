@@ -136,11 +136,11 @@ func TestMultiTokenFunctionsNotCombined(t *testing.T) {
 		desc  string
 	}{
 		{"average alone", "average", "average without 'of' should be IDENTIFIER"},
-		{"of alone", "of", "'of' alone should be IDENTIFIER"},
+		{"of alone", "of", "'of' alone should be OF keyword (not combined into function)"},
 		{"average then newline", "average\nof", "average and of on different lines"},
 		{"square alone", "square", "square without 'root of' should be IDENTIFIER"},
 		{"square root", "square root", "square root without 'of' should be two IDENTIFIERs"},
-		{"root of", "root of", "root of without 'square' should be two IDENTIFIERs"},
+		{"root of", "root of", "root of without 'square' should be IDENTIFIER + OF"},
 	}
 
 	for _, tt := range tests {
@@ -319,10 +319,10 @@ func TestAmbiguousInput(t *testing.T) {
 			desc:     "'average' alone is identifier, not function",
 		},
 		{
-			name:     "of as variable",
+			name:     "of as keyword",
 			input:    "of = 5",
-			expected: []TokenType{IDENTIFIER, ASSIGN, NUMBER, EOF},
-			desc:     "'of' alone is identifier",
+			expected: []TokenType{OF, ASSIGN, NUMBER, EOF},
+			desc:     "'of' is a keyword (for percentage expressions)",
 		},
 		{
 			name:     "square as variable",

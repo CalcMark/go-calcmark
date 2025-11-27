@@ -6,7 +6,19 @@ import (
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/impl/types"
+	"github.com/CalcMark/go-calcmark/spec/parser"
+	spectypes "github.com/CalcMark/go-calcmark/spec/types"
 )
+
+// Helper function to evaluate source code and return results
+func evaluateSource(source string, env *interpreter.Environment) ([]spectypes.Type, error) {
+	nodes, err := parser.Parse(source)
+	if err != nil {
+		return nil, err
+	}
+	interp := interpreter.NewInterpreterWithEnv(env)
+	return interp.Eval(nodes)
+}
 
 // TestEvaluateJSONStructure tests what the JSON output looks like when we marshal evaluation results
 func TestEvaluateJSONStructure(t *testing.T) {
@@ -43,8 +55,8 @@ func TestEvaluateJSONStructure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := evaluator.NewContext()
-			results, err := evaluator.Evaluate(tt.input, ctx)
+			ctx := interpreter.NewEnvironment()
+			results, err := evaluateSource(tt.input, ctx)
 			if err != nil {
 				t.Fatalf("Evaluate failed: %v", err)
 			}
@@ -138,8 +150,8 @@ func TestWASMEvaluateOutput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := evaluator.NewContext()
-			results, err := evaluator.Evaluate(tt.input, ctx)
+			ctx := interpreter.NewEnvironment()
+			results, err := evaluateSource(tt.input, ctx)
 			if err != nil {
 				t.Fatalf("Evaluate failed: %v", err)
 			}

@@ -68,6 +68,7 @@ const (
 	AS       // "as" - for conversions like "as napkin"
 	IN       // "in" - for unit conversions: "10 meters in feet"
 	NAPKIN   // "napkin" - for human-readable number formatting (e.g., "1234567 as napkin")
+	OF       // "of" - for percentage expressions: "10% of 200"
 	PER      // "per" - rate expressions: "100 MB per second"
 	OVER     // "over" - rate accumulation: "100 MB/s over 1 day"
 	WITH     // "with" - capacity planning: "10000 req/s with 450 req/s capacity"
@@ -198,6 +199,8 @@ func (tt TokenType) String() string {
 		return "IN"
 	case NAPKIN:
 		return "NAPKIN"
+	case OF:
+		return "OF"
 	case PER:
 		return "PER"
 	case OVER:

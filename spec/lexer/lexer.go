@@ -34,6 +34,7 @@ var ReservedKeywords = map[string]TokenType{
 	"in":     IN,
 	"as":     AS,     // Conversion: "1234567 as napkin"
 	"napkin": NAPKIN, // Human-readable formatting: "1234567 as napkin"
+	"of":     OF,     // Percentage expressions: "10% of 200"
 	"per":    PER,    // Rate expressions: "100 MB per second"
 	"over":   OVER,   // Rate accumulation: "100 MB/s over 1 day"
 	"with":   WITH,   // Capacity planning: "10000 req/s with 450 req/s capacity"
@@ -969,11 +970,12 @@ func combineMultiTokenFunctions(tokens []Token) []Token {
 		token := tokens[i]
 
 		// Check for "average of" (case insensitive)
+		// Note: "of" is now tokenized as OF token, not IDENTIFIER
 		if token.Type == IDENTIFIER && strings.ToLower(token.Value) == "average" {
 			if i+1 < len(tokens) {
 				nextToken := tokens[i+1]
-				// Check for "of" after "average"
-				if nextToken.Type == IDENTIFIER && strings.ToLower(nextToken.Value) == "of" {
+				// Check for "of" after "average" - can be OF token or IDENTIFIER
+				if nextToken.Type == OF || (nextToken.Type == IDENTIFIER && strings.ToLower(nextToken.Value) == "of") {
 					// Combine into FUNC_AVERAGE_OF
 					// Reconstruct original text from source tokens
 					originalText := token.Value + " " + nextToken.Value
@@ -993,13 +995,14 @@ func combineMultiTokenFunctions(tokens []Token) []Token {
 		}
 
 		// Check for "square root of" (case insensitive)
+		// Note: "of" is now tokenized as OF token, not IDENTIFIER
 		if token.Type == IDENTIFIER && strings.ToLower(token.Value) == "square" {
 			if i+2 < len(tokens) {
 				rootToken := tokens[i+1]
 				ofToken := tokens[i+2]
-				// Check for "root of" after "square"
+				// Check for "root of" after "square" - "of" can be OF token or IDENTIFIER
 				if rootToken.Type == IDENTIFIER && strings.ToLower(rootToken.Value) == "root" &&
-					ofToken.Type == IDENTIFIER && strings.ToLower(ofToken.Value) == "of" {
+					(ofToken.Type == OF || (ofToken.Type == IDENTIFIER && strings.ToLower(ofToken.Value) == "of")) {
 					// Combine into FUNC_SQUARE_ROOT_OF
 					// Reconstruct original text from source tokens
 					originalText := token.Value + " " + rootToken.Value + " " + ofToken.Value

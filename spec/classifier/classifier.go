@@ -76,6 +76,25 @@ func containsFunctions(tokens []lexer.Token) bool {
 	return false
 }
 
+// containsSpecialKeywords checks if token list contains special expression keywords
+// like IN (unit conversion), PER (rates), AS/NAPKIN (formatting), or OF (percentage)
+func containsSpecialKeywords(tokens []lexer.Token) bool {
+	specialTypes := map[lexer.TokenType]bool{
+		lexer.IN:     true, // "10 meters in feet"
+		lexer.OF:     true, // "10% of 200"
+		lexer.PER:    true, // "50 dollars per hour"
+		lexer.AS:     true, // "1234567 as napkin"
+		lexer.NAPKIN: true, // napkin keyword
+	}
+
+	for _, token := range tokens {
+		if specialTypes[token.Type] {
+			return true
+		}
+	}
+	return false
+}
+
 // containsAssignment checks if token list contains an assignment operator
 func containsAssignment(tokens []lexer.Token) bool {
 	for _, token := range tokens {
@@ -202,6 +221,20 @@ func ClassifyLine(line string, env *interpreter.Environment) (LineType, error) {
 
 	// 5. Check for functions
 	if containsFunctions(contentTokens) {
+		nodes, err := parser.Parse(line)
+		if err != nil {
+			return Markdown, nil
+		}
+
+		// Must parse to exactly one statement
+		if len(nodes) == 1 {
+			return Calculation, nil
+		}
+	}
+
+	// 5b. Check for special keywords (IN, PER, AS, NAPKIN, OF)
+	// These indicate unit conversions, rates, napkin formatting, or percentage operations
+	if containsSpecialKeywords(contentTokens) {
 		nodes, err := parser.Parse(line)
 		if err != nil {
 			return Markdown, nil

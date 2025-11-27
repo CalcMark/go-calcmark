@@ -4,56 +4,6 @@ import (
 	"testing"
 )
 
-// TestConvertExpr tests the ConvertExpr AST node
-func TestConvertExpr(t *testing.T) {
-	tests := []struct {
-		name       string
-		value      Node
-		targetUnit string
-		want       string
-	}{
-		{
-			name: "convert quantity to unit",
-			value: &NumberLiteral{
-				Value:      "1",
-				SourceText: "1",
-				Range:      &Range{Start: Position{Line: 1, Column: 9}, End: Position{Line: 1, Column: 9 + 1}},
-			},
-			targetUnit: "ounces",
-			want:       "ConvertExpr(NumberLiteral(1) to ounces)",
-		},
-		{
-			name: "convert with currency",
-			value: &CurrencyLiteral{
-				Value:      "100",
-				Symbol:     "$",
-				SourceText: "$100",
-				Range:      &Range{Start: Position{Line: 1, Column: 9}, End: Position{Line: 1, Column: 9 + 1}},
-			},
-			targetUnit: "EUR",
-			want:       "ConvertExpr(CurrencyLiteral($100) to EUR)",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			node := &ConvertExpr{
-				Value:      tt.value,
-				TargetUnit: tt.targetUnit,
-				Range:      &Range{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 1 + 1}},
-			}
-
-			if got := node.String(); got != tt.want {
-				t.Errorf("ConvertExpr.String() = %v, want %v", got, tt.want)
-			}
-
-			if node.GetRange() == nil {
-				t.Error("ConvertExpr.GetRange() returned nil")
-			}
-		})
-	}
-}
-
 // TestDateLiteral tests the DateLiteral AST node
 func TestDateLiteral(t *testing.T) {
 	year2024 := "2024"
@@ -204,37 +154,8 @@ func TestDurationLiteral(t *testing.T) {
 
 // TestNewNodesImplementNodeInterface ensures new nodes implement Node interface
 func TestNewNodesImplementNodeInterface(t *testing.T) {
-	var _ Node = (*ConvertExpr)(nil)
 	var _ Node = (*DateLiteral)(nil)
 	var _ Node = (*DurationLiteral)(nil)
-}
-
-// TestConvertExprWithComplexValue tests ConvertExpr with complex expressions
-func TestConvertExprWithComplexValue(t *testing.T) {
-	// convert (a + b) to meters
-	binaryOp := &BinaryOp{
-		Operator: "+",
-		Left: &Identifier{
-			Name:  "a",
-			Range: &Range{Start: Position{Line: 1, Column: 10}, End: Position{Line: 1, Column: 10 + 1}},
-		},
-		Right: &Identifier{
-			Name:  "b",
-			Range: &Range{Start: Position{Line: 1, Column: 14}, End: Position{Line: 1, Column: 14 + 1}},
-		},
-		Range: &Range{Start: Position{Line: 1, Column: 10}, End: Position{Line: 1, Column: 10 + 1}},
-	}
-
-	node := &ConvertExpr{
-		Value:      binaryOp,
-		TargetUnit: "meters",
-		Range:      &Range{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 1 + 1}},
-	}
-
-	want := "ConvertExpr(BinaryOp(\"+\", Identifier(\"a\"), Identifier(\"b\")) to meters)"
-	if got := node.String(); got != want {
-		t.Errorf("ConvertExpr.String() = %v, want %v", got, want)
-	}
 }
 
 // TestDateLiteralEdgeCases tests edge cases for DateLiteral

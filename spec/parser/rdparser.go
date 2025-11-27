@@ -604,6 +604,22 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		lexer.NUMBER_PERCENT, lexer.NUMBER_SCI) {
 		tok := p.previous()
 
+		// Check for "PERCENTAGE OF expression" pattern (e.g., "10% of 200")
+		if tok.Type == lexer.NUMBER_PERCENT && p.check(lexer.OF) {
+			p.advance() // consume "of"
+			value, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			return &ast.PercentageOf{
+				Percentage: &ast.NumberLiteral{
+					Value:      string(tok.Value),
+					SourceText: string(tok.OriginalText),
+				},
+				Value: value,
+			}, nil
+		}
+
 		// Check if followed by a unit identifier: "10 meters", "50% coverage", etc.
 		// IMPORTANT: Don't consume KEYWORDS like "downtime", "over" that have special meaning.
 		// But DO allow arbitrary units for rates ("cars per day", "requests per second").

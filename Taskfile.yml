@@ -17,9 +17,14 @@ tasks:
 
   # Testing tasks
   test:
-    desc: Run all tests
+    desc: Run all tests (excludes WASM - use test:wasm for those)
     cmds:
-      - go test ./... -v
+      - go test $(go list ./... | grep -v '/impl/wasm') -v
+
+  test:wasm:
+    desc: Run WASM tests (requires wasm build environment)
+    cmds:
+      - GOOS=js GOARCH=wasm go test ./impl/wasm/... -v
 
   test:short:
     desc: Run tests in short mode

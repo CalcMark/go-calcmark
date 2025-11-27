@@ -34,6 +34,13 @@ func TestPercentageCalculations(t *testing.T) {
 
 		// With multipliers
 		{"1k + 10%", "1k + 10%\n", "1000.1"},
+
+		// Percentage of expressions (natural syntax)
+		{"10% of 200", "10% of 200\n", "20"},
+		{"50% of 100", "50% of 100\n", "50"},
+		{"25% of 80", "25% of 80\n", "20"},
+		{"100% of 50", "100% of 50\n", "50"},
+		{"1% of 1000", "1% of 1000\n", "10"},
 	}
 
 	for _, tt := range tests {

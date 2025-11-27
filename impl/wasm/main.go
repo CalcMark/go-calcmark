@@ -26,7 +26,7 @@ import (
 // globalContext maintains variable bindings across evaluation calls.
 // This allows applications to evaluate calculations line-by-line while preserving
 // previous variable assignments. Use resetContext() to clear this state.
-var globalContext = evaluator.NewContext()
+var globalContext = interpreter.NewEnvironment()
 
 // ==============================================================================
 // Type Definitions for JavaScript Interop
@@ -95,7 +95,8 @@ func tokenize(this js.Value, args []js.Value) interface{} {
 	}
 
 	source := args[0].String()
-	tokens, err := lexer.Tokenize(source)
+	lex := lexer.NewLexer(source)
+	tokens, err := lex.Tokenize()
 	if err != nil {
 		return errorResponse(err.Error(), "tokens")
 	}
@@ -147,7 +148,7 @@ func parse(this js.Value, args []js.Value) interface{} {
 // WASM Function: evaluate
 // ==============================================================================
 
-// evaluate exposes evaluator.Evaluate to JavaScript.
+// evaluate exposes calculation evaluation to JavaScript.
 //
 // Why context management matters: CalcMark evaluates line-by-line. To preserve
 // variable definitions across calls (e.g., line 1: "x = 5", line 2: "y = x + 1"),
@@ -169,12 +170,20 @@ func evaluate(this js.Value, args []js.Value) interface{} {
 	}
 
 	// Choose context: global for persistent state, fresh for isolation
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 	if useGlobalCtx {
 		ctx = globalContext
 	}
 
-	results, err := evaluator.Evaluate(source, ctx)
+	// Parse the source
+	nodes, err := parser.Parse(source)
+	if err != nil {
+		return errorResponse(err.Error(), "results")
+	}
+
+	// Evaluate with the interpreter
+	interp := interpreter.NewInterpreterWithEnv(ctx)
+	results, err := interp.Eval(nodes)
 	if err != nil {
 		return errorResponse(err.Error(), "results")
 	}
@@ -310,7 +319,7 @@ func classifyLines(this js.Value, args []js.Value) interface{} {
 	results := make([]ClassificationResult, 0, length)
 
 	// Use fresh context: each document classification is independent
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 
 	for i := 0; i < length; i++ {
 		line := jsArray.Index(i).String()
@@ -325,7 +334,7 @@ func classifyLines(this js.Value, args []js.Value) interface{} {
 		// Update context if calculation: makes subsequent line classification context-aware
 		if lineType == classifier.Calculation {
 			// Evaluate to update context (ignore errors - classification shouldn't fail)
-			_, _ = evaluator.Evaluate(line, ctx)
+			_ = interpreter.Evaluate(line, ctx)
 		}
 	}
 
@@ -345,15 +354,11 @@ type EvaluationResultWithLine struct {
 	OriginalLine int         `json:"OriginalLine"` // 1-indexed line number in source document
 }
 
-// evaluateDocument exposes evaluator.EvaluateDocument to JavaScript.
+// evaluateDocument evaluates a mixed document containing markdown and calculations.
 //
 // Why this exists: The evaluate() function expects pure calculation input and fails
 // on markdown content (# headers, text, etc.). This function properly handles mixed
-// documents by using the evaluator.EvaluateDocument function which classifies lines
-// first, then evaluates only CALCULATION lines.
-//
-// This is a thin wrapper around evaluator.EvaluateDocument - see that function for
-// implementation details.
+// documents by classifying lines first, then evaluating only CALCULATION lines.
 //
 // Context behavior:
 //   - If useGlobalContext=true, uses globalContext (persistent across calls)
@@ -389,49 +394,93 @@ func evaluateDocument(this js.Value, args []js.Value) interface{} {
 	}
 
 	// Choose context: global for persistent state, fresh for isolation
-	ctx := evaluator.NewContext()
+	ctx := interpreter.NewEnvironment()
 	if useGlobalCtx {
 		ctx = globalContext
 	}
 
-	// Call the evaluator package function
-	evalResults, err := evaluator.EvaluateDocument(source, ctx)
-	if err != nil {
-		return errorResponse(err.Error(), "results")
-	}
+	// Split source into lines and process each
+	lines := splitLines(source)
+	results := make([]EvaluationResultWithLine, 0)
 
-	// Convert evaluator.EvaluationResult to EvaluationResultWithLine for JavaScript
-	results := make([]EvaluationResultWithLine, 0, len(evalResults))
+	for lineNum, line := range lines {
+		// Classify the line
+		lineType, _ := classifier.ClassifyLine(line, ctx)
 
-	for _, evalResult := range evalResults {
-		resultWithLine := EvaluationResultWithLine{
-			OriginalLine: evalResult.OriginalLine,
+		// Only evaluate calculation lines
+		if lineType != classifier.Calculation {
+			continue
 		}
 
-		// Extract fields from types.Type interface
-		// The evaluator returns types.Number, types.Currency, or types.Boolean
-		switch v := evalResult.Value.(type) {
-		case interface{ GetValue() interface{} }:
-			resultWithLine.Value = v.GetValue()
-		default:
-			// Fallback for types that don't implement GetValue
-			resultWithLine.Value = v
+		// Parse and evaluate the line
+		nodes, err := parser.Parse(line)
+		if err != nil {
+			continue // Skip lines that fail to parse
 		}
 
-		// Check for Symbol (currency types)
-		if symbolType, ok := evalResult.Value.(interface{ GetSymbol() string }); ok {
-			resultWithLine.Symbol = symbolType.GetSymbol()
+		interp := interpreter.NewInterpreterWithEnv(ctx)
+		evalResults, err := interp.Eval(nodes)
+		if err != nil {
+			continue // Skip lines that fail to evaluate
 		}
 
-		// Check for SourceFormat
-		if sourceType, ok := evalResult.Value.(interface{ GetSourceFormat() string }); ok {
-			resultWithLine.SourceFormat = sourceType.GetSourceFormat()
-		}
+		// Add results with line numbers (1-indexed)
+		for _, evalResult := range evalResults {
+			resultWithLine := EvaluationResultWithLine{
+				OriginalLine: lineNum + 1,
+			}
 
-		results = append(results, resultWithLine)
+			// Extract fields from types.Type interface
+			switch v := evalResult.(type) {
+			case interface{ GetValue() interface{} }:
+				resultWithLine.Value = v.GetValue()
+			default:
+				resultWithLine.Value = v
+			}
+
+			// Check for Symbol (currency types)
+			if symbolType, ok := evalResult.(interface{ GetSymbol() string }); ok {
+				resultWithLine.Symbol = symbolType.GetSymbol()
+			}
+
+			// Check for SourceFormat
+			if sourceType, ok := evalResult.(interface{ GetSourceFormat() string }); ok {
+				resultWithLine.SourceFormat = sourceType.GetSourceFormat()
+			}
+
+			results = append(results, resultWithLine)
+		}
 	}
 
 	return successResponse("results", results)
+}
+
+// splitLines splits a string into lines, handling different line ending styles
+func splitLines(s string) []string {
+	var lines []string
+	var current []rune
+	runes := []rune(s)
+
+	for i := 0; i < len(runes); i++ {
+		if runes[i] == '\r' {
+			lines = append(lines, string(current))
+			current = nil
+			// Handle \r\n
+			if i+1 < len(runes) && runes[i+1] == '\n' {
+				i++
+			}
+		} else if runes[i] == '\n' {
+			lines = append(lines, string(current))
+			current = nil
+		} else {
+			current = append(current, runes[i])
+		}
+	}
+	// Don't forget the last line if there's no trailing newline
+	if len(current) > 0 || len(s) > 0 && (s[len(s)-1] == '\n' || s[len(s)-1] == '\r') {
+		lines = append(lines, string(current))
+	}
+	return lines
 }
 
 // ==============================================================================
@@ -446,7 +495,7 @@ func evaluateDocument(this js.Value, args []js.Value) interface{} {
 // Usage: calcmark.resetContext()
 // Returns: void
 func resetContext(this js.Value, args []js.Value) interface{} {
-	globalContext = evaluator.NewContext()
+	globalContext = interpreter.NewEnvironment()
 	return nil
 }
 
