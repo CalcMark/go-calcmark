@@ -20,12 +20,16 @@ var networkLatencies = map[string]float64{
 // Network throughput constants
 // All values in MB/s (megabytes per second)
 var networkThroughput = map[string]float64{
-	"gigabit": 125.0,   // 1 Gbps = 125 MB/s
-	"10g":     1250.0,  // 10 Gbps = 1.25 GB/s
-	"100g":    12500.0, // 100 Gbps = 12.5 GB/s
-	"wifi":    12.5,    // ~100 Mbps typical WiFi
-	"4g":      2.5,     // ~20 Mbps typical 4G
-	"5g":      50.0,    // ~400 Mbps typical 5G
+	"gigabit":     125.0,   // 1 Gbps = 125 MB/s
+	"10g":         1250.0,  // 10 Gbps = 1.25 GB/s
+	"ten_gig":     1250.0,  // Alias for 10g (avoids multiplier conflict)
+	"100g":        12500.0, // 100 Gbps = 12.5 GB/s
+	"hundred_gig": 12500.0, // Alias for 100g (avoids multiplier conflict)
+	"wifi":        12.5,    // ~100 Mbps typical WiFi
+	"4g":          2.5,     // ~20 Mbps typical 4G
+	"four_g":      2.5,     // Alias for 4g (avoids multiplier conflict)
+	"5g":          50.0,    // ~400 Mbps typical 5G
+	"five_g":      50.0,    // Alias for 5g (avoids multiplier conflict)
 }
 
 // calculateRTT returns network round-trip time as a Duration.
@@ -70,7 +74,7 @@ func calculateThroughput(networkType string) (*types.Rate, error) {
 	mbps, exists := networkThroughput[typeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown network type '%s' (valid types: gigabit, 10g, 100g, wifi, 4g, 5g)",
+			"unknown network type '%s' (valid types: gigabit, 10g/ten_gig, 100g/hundred_gig, wifi, 4g/four_g, 5g/five_g)",
 			networkType,
 		)
 	}

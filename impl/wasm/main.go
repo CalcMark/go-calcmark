@@ -272,7 +272,7 @@ func classifyLine(this js.Value, args []js.Value) interface{} {
 	}
 
 	line := args[0].String()
-	lineType := classifier.ClassifyLine(line, globalContext)
+	lineType, _ := classifier.ClassifyLine(line, globalContext)
 
 	return map[string]interface{}{
 		"lineType": lineType.String(),
@@ -314,7 +314,7 @@ func classifyLines(this js.Value, args []js.Value) interface{} {
 
 	for i := 0; i < length; i++ {
 		line := jsArray.Index(i).String()
-		lineType := classifier.ClassifyLine(line, ctx)
+		lineType, _ := classifier.ClassifyLine(line, ctx)
 
 		results = append(results, ClassificationResult{
 			LineType: lineType.String(),

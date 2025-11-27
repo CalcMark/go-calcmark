@@ -133,7 +133,8 @@ func (e *Evaluator) evaluateCalcBlock(blockID string, block *document.CalcBlock)
 		return fmt.Errorf("eval error: %w", err)
 	}
 
-	// 4. Store last result
+	// 4. Store all results (for inline display) and last result
+	block.SetResults(results)
 	if len(results) > 0 {
 		block.SetLastValue(results[len(results)-1])
 	}

@@ -63,12 +63,16 @@ const (
 	ELIF
 	END
 	FOR
-	IN
+
+	// Keywords for natural language constructs
+	AS       // "as" - for conversions like "as napkin"
+	IN       // "in" - for unit conversions: "10 meters in feet"
 	NAPKIN   // "napkin" - for human-readable number formatting (e.g., "1234567 as napkin")
-	PER      // "per" - for rate expressions (e.g., "100 MB per second")
-	OVER     // "over" - for rate accumulation (e.g., "100 MB/s over 1 day")
-	WITH     // "with" - for capacity planning (e.g., "10000 req/s with 450 req/s capacity")
+	PER      // "per" - rate expressions: "100 MB per second"
+	OVER     // "over" - rate accumulation: "100 MB/s over 1 day"
+	WITH     // "with" - capacity planning: "10000 req/s with 450 req/s capacity"
 	DOWNTIME // "downtime" - for availability (e.g., "99.9% downtime per month")
+
 	WHILE
 	RETURN
 	BREAK
@@ -188,6 +192,8 @@ func (tt TokenType) String() string {
 		return "END"
 	case FOR:
 		return "FOR"
+	case AS:
+		return "AS"
 	case IN:
 		return "IN"
 	case NAPKIN:

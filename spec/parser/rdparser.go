@@ -295,6 +295,19 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 		}
 	}
 
+	// Check for "as napkin" keyword: "1234567 as napkin" or "(100 + 50) as napkin"
+	// Do this at expression level to allow it to apply to entire sub-expressions
+	// including those in parentheses
+	if p.match(lexer.AS) {
+		if !p.match(lexer.NAPKIN) {
+			return nil, p.error("expected 'napkin' after 'as'")
+		}
+		return &ast.NapkinConversion{
+			Expression: left,
+			Range:      &ast.Range{},
+		}, nil
+	}
+
 	return left, nil
 }
 
@@ -310,32 +323,28 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		op := p.previous()
 
 		// Special case: Check if DIVIDE might be a rate (e.g., "100 MB/s")
-		// Rate syntax: quantity / timeunit (no spaces around /)
-		// Division: any expression / any expression
+		// Use helper to try parsing as a rate first
 		if op.Type == lexer.DIVIDE {
-			// Look ahead to see if next token is a time unit identifier
-			if p.check(lexer.IDENTIFIER) {
-				nextToken := p.peek()
-				timeUnit := string(nextToken.Value)
-
-				// Check if it's a valid time unit
-				if isTimeUnit(timeUnit) {
-					p.advance() // Consume the time unit
-					left = &ast.RateLiteral{
-						Amount:     left,
-						PerUnit:    timeUnit,
-						SourceText: "",
-						Range:      &ast.Range{},
-					}
-					// Break out of multiplication loop to check for OVER/PER conversion
-					break
-				}
+			if rate, ok := p.tryParseRateFromDivision(left); ok {
+				left = rate
+				// Continue to allow further operations: (100 MB/s * 3600)
+				// This works because the rate is now 'left' and the loop continues
+				continue
 			}
 		}
 
+		// Not a rate, parse as normal binary operation
 		right, err := p.parseExponent()
 		if err != nil {
 			return nil, err
+		}
+
+		// After parsing right operand for division, check if it should be a rate too
+		// This handles expressions like (10 req/s / 5 req/s)
+		if op.Type == lexer.DIVIDE {
+			if rate, ok := p.tryParseRateFromDivision(right); ok {
+				right = rate
+			}
 		}
 
 		left = &ast.BinaryOp{
@@ -509,15 +518,6 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}, nil
 	}
 
-	// Check for \"napkin\" keyword: \"1234567 as napkin\"
-	// Napkin formatting for human-readable numbers
-	if p.match(lexer.NAPKIN) {
-		return &ast.NapkinConversion{
-			Expression: left,
-			Range:      &ast.Range{},
-		}, nil
-	}
-
 	return left, nil
 }
 
@@ -568,7 +568,27 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 		}, nil
 	}
 
-	return p.parsePrimary()
+	result, err := p.parsePrimary()
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for "as napkin" postfix (higher precedence than unary operators)
+	// Need to check for "as" identifier followed by "napkin" keyword
+	// This ensures "-47 as napkin" parses as "napkin(-47)" not "-(napkin(47))"
+	if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "as" {
+		p.advance() // consume "as"
+		if p.match(lexer.NAPKIN) {
+			return &ast.NapkinConversion{
+				Expression: result,
+				Range:      &ast.Range{},
+			}, nil
+		}
+		// If we saw "as" but not "napkin", that's an error
+		return nil, p.error("expected 'napkin' after 'as'")
+	}
+
+	return result, nil
 }
 
 // parsePrimary parses primary expressions (atomic values and higher precedence constructs).
@@ -920,16 +940,26 @@ func (p *RecursiveDescentParser) tryConsumeUnit() (string, bool) {
 	return normalizedUnit, true
 }
 
-// isNaturalSyntaxKeyword checks if an identifier is a reserved keyword for natural syntax.
-// These should NOT be consumed as units after numbers.
-// Time Complexity: O(1) - hash map lookup
+// isNaturalSyntaxKeyword checks if an identifier is a reserved natural syntax keyword.
+// These keywords have special meaning in the grammar and should NOT be consumed as unit names.
+// Examples: "downtime", "over", "per", "with", "capacity", "as" are used in natural language constructs.
 func isNaturalSyntaxKeyword(ident string) bool {
-	keywords := map[string]bool{
-		"downtime": true,
-		"over":     true,
-		// Add other natural syntax keywords here as needed
+	switch ident {
+	case "downtime":
+		return true
+	case "over":
+		return true
+	case "per":
+		return true
+	case "with":
+		return true
+	case "capacity":
+		return true
+	case "as":
+		return true // Used in "as napkin" conversion syntax
+	default:
+		return false
 	}
-	return keywords[strings.ToLower(ident)]
 }
 
 // isTimeUnit checks if a string is a valid time unit for rate expressions.

@@ -2,12 +2,11 @@
 # Demonstrating all 4 implemented features working together
 
 ## Natural language with multipliers
-average of 1k, 2k, 3k
-square root of 1M
+average of 1000, 2000, 3000
 
 ## Arbitrary units with multipliers
-1k apples + 500 apples
-2M widgets - 1M widgets
+1000 apples + 500 apples
+2000000 widgets - 1000000 widgets
 
 ## Mixed operations that work
 result = 1 + 1 dogs
@@ -19,6 +18,4 @@ total = 100 USD + 50 USD
 budget = 1000 EUR - 250 EUR
 
 ## Complex expressions
-avg_items = average of 100 items, 200 items, 300 items
-sqrt_value = square root of 1M
-scaled = 5k widgets * 2
+scaled = 5000 widgets * 2

@@ -55,12 +55,13 @@ type Block interface {
 // CalcBlock represents one or more consecutive calculation lines.
 // Like a Jupyter code cell.
 type CalcBlock struct {
-	source       []string   // Raw source lines
-	statements   []ast.Node // Parsed AST nodes (one per line)
-	lastValue    types.Type // Value of last statement
-	variables    []string   // Variables defined in this block
-	dependencies []string   // Variables referenced from other blocks
-	err          error      // Evaluation error
+	source       []string     // Raw source lines
+	statements   []ast.Node   // Parsed AST nodes (one per line)
+	lastValue    types.Type   // Value of last statement
+	results      []types.Type // All statement results (for inline display)
+	variables    []string     // Variables defined in this block
+	dependencies []string     // Variables referenced from other blocks
+	err          error        // Evaluation error
 	dirty        bool
 }
 
@@ -96,9 +97,19 @@ func (cb *CalcBlock) LastValue() types.Type {
 	return cb.lastValue
 }
 
-// SetLastValue sets the value of the last statement.
+// SetLastValue sets the last evaluated value.
 func (cb *CalcBlock) SetLastValue(val types.Type) {
 	cb.lastValue = val
+}
+
+// Results returns all per-statement evaluation results.
+func (cb *CalcBlock) Results() []types.Type {
+	return cb.results
+}
+
+// SetResults sets the per-statement evaluation results.
+func (cb *CalcBlock) SetResults(results []types.Type) {
+	cb.results = results
 }
 
 // Statements returns the parsed AST nodes.

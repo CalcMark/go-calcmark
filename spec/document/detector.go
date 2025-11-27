@@ -3,6 +3,7 @@ package document
 import (
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
@@ -57,7 +58,11 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 			emptyLineCount = 0
 
 			// Determine if this line is a calculation
-			isCalc := d.isCalculation(line)
+			isCalc, err := d.isCalculation(line)
+			if err != nil {
+				// Lexer error on calc-like line - propagate immediately
+				return nil, err
+			}
 
 			// If first line of new block, set type
 			if len(currentBlockLines) == 0 {
@@ -104,22 +109,38 @@ func allEmpty(lines []string) bool {
 }
 
 // isCalculation checks if a line is a calculation.
-// Uses heuristics since the parser is currently too permissive.
-// Default: when ambiguous, treat as text (markdown).
-func (d *Detector) isCalculation(line string) bool {
+// Uses lexer for validation to catch syntax errors (like inline octothorpe).
+// Returns (true, nil) for valid calculations
+// Returns (false, nil) for valid markdown/text
+// Returns (false, error) for calc-like lines with syntax errors
+func (d *Detector) isCalculation(line string) (bool, error) {
 	trimmed := strings.TrimSpace(line)
 
 	if trimmed == "" {
-		return false
+		return false, nil
 	}
 
 	// First, check for markdown patterns (explicit text indicators)
 	if isMarkdownPattern(trimmed) {
-		return false
+		return false, nil
 	}
 
-	// Then, check for calculation patterns
-	return isCalculationPattern(trimmed)
+	// Then, check for calculation patterns using heuristics
+	if !isCalculationPattern(trimmed) {
+		return false, nil
+	}
+
+	// CRITICAL: If line looks like a calculation, validate with lexer
+	// This catches syntax errors like inline octothorpe early
+	lex := lexer.NewLexer(trimmed)
+	_, err := lex.Tokenize()
+	if err != nil {
+		// This line looks like a calculation but has lexer errors
+		// Propagate the error instead of silently treating as text
+		return false, err
+	}
+
+	return true, nil
 }
 
 // isMarkdownPattern checks if a line matches common markdown patterns.

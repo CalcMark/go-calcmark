@@ -119,6 +119,37 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
+	// Rate operations
+	if leftRate, ok := left.(*types.Rate); ok {
+		// Rate * Number → Rate (scale the rate)
+		// Rate / Number → Rate (divide the rate)
+		if rightNum, ok := right.(*types.Number); ok {
+			switch operator {
+			case "*":
+				return &types.Rate{
+					Amount:  &types.Quantity{Value: leftRate.Amount.Value.Mul(rightNum.Value), Unit: leftRate.Amount.Unit},
+					PerUnit: leftRate.PerUnit,
+				}, nil
+			case "/":
+				if rightNum.Value.IsZero() {
+					return nil, fmt.Errorf("division by zero")
+				}
+				return &types.Rate{
+					Amount:  &types.Quantity{Value: leftRate.Amount.Value.Div(rightNum.Value), Unit: leftRate.Amount.Unit},
+					PerUnit: leftRate.PerUnit,
+				}, nil
+			}
+		}
+		// Rate / Rate → Number (if same per-units, dimensionless ratio)
+		if rightRate, ok := right.(*types.Rate); ok {
+			if operator == "/" && leftRate.PerUnit == rightRate.PerUnit {
+				// Same time units, divide amounts and return dimensionless number
+				result := leftRate.Amount.Value.Div(rightRate.Amount.Value)
+				return types.NewNumber(result), nil
+			}
+		}
+	}
+
 	// Quantity operations (with unit conversion - USER REQUIREMENT: first-unit-wins)
 	if leftQty, ok := left.(*types.Quantity); ok {
 		if rightQty, ok := right.(*types.Quantity); ok {
@@ -322,6 +353,28 @@ func evalUnaryOperation(operand types.Type, operator string) (types.Type, error)
 			return types.NewCurrency(cur.Value.Neg(), cur.Symbol), nil
 		case "+":
 			return cur, nil
+		default:
+			return nil, fmt.Errorf("unknown unary operator: %s", operator)
+		}
+	}
+
+	if qty, ok := operand.(*types.Quantity); ok {
+		switch operator {
+		case "-":
+			return &types.Quantity{Value: qty.Value.Neg(), Unit: qty.Unit}, nil
+		case "+":
+			return qty, nil
+		default:
+			return nil, fmt.Errorf("unknown unary operator: %s", operator)
+		}
+	}
+
+	if dur, ok := operand.(*types.Duration); ok {
+		switch operator {
+		case "-":
+			return &types.Duration{Value: dur.Value.Neg(), Unit: dur.Unit}, nil
+		case "+":
+			return dur, nil
 		default:
 			return nil, fmt.Errorf("unknown unary operator: %s", operator)
 		}

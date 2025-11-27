@@ -111,15 +111,16 @@ func allIdentifiersDefined(node ast.Node, env *interpreter.Environment) bool {
 	}
 }
 
-// ClassifyLine classifies a line as CALCULATION, MARKDOWN, or BLANK
-func ClassifyLine(line string, env *interpreter.Environment) LineType {
+// ClassifyLine classifies a line as CALCULATION, MARKDOWN, or BLANK.
+// Returns an error for critical syntax errors (like inline octothorpe).
+func ClassifyLine(line string, env *interpreter.Environment) (LineType, error) {
 	if env == nil {
 		env = interpreter.NewEnvironment()
 	}
 
 	// 1. Check empty/whitespace (per ENCODING_SPEC.md)
 	if constants.IsBlankLine(line) {
-		return Blank
+		return Blank, nil
 	}
 
 	// 2. Check markdown prefixes (optimization)
@@ -132,12 +133,12 @@ func ClassifyLine(line string, env *interpreter.Environment) LineType {
 		firstChar := runes[0]
 
 		if firstChar == '#' || firstChar == '>' {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Check for markdown bullet lists: "- " or "* " (dash/asterisk followed by space)
 		if (firstChar == '-' || firstChar == '*') && len(runes) > 1 && runes[1] == ' ' {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Numbered list check: digit(s) followed by period and space (e.g., "1. ", "12. ")
@@ -149,17 +150,25 @@ func ClassifyLine(line string, env *interpreter.Environment) LineType {
 			}
 			// Check if it's followed by ". " (period + space)
 			if i < len(runes)-1 && runes[i] == '.' && runes[i+1] == ' ' {
-				return Markdown
+				return Markdown, nil
 			}
 		}
 	}
 
 	// 3. Try to tokenize
-	// Try to tokenize the line
 	lex := lexer.NewLexer(line)
 	tokens, err := lex.Tokenize()
 	if err != nil {
-		return Markdown
+		// Check if this is a critical lexer error that should be propagated
+		// (like octothorpe) rather than treated as Markdown
+		if lexErr, ok := err.(*lexer.LexerError); ok {
+			// Octothorpe errors are critical syntax errors, not ambiguous Markdown
+			if strings.Contains(lexErr.Message, "octothorpe") || strings.Contains(lexErr.Message, "#") {
+				return Markdown, err // Propagate the error
+			}
+		}
+		// Other tokenization errors likely mean it's valid Markdown prose
+		return Markdown, nil
 	}
 
 	// Filter out NEWLINE and EOF tokens for analysis
@@ -172,21 +181,21 @@ func ClassifyLine(line string, env *interpreter.Environment) LineType {
 
 	// Empty content after tokenization
 	if len(contentTokens) == 0 {
-		return Blank
+		return Blank, nil
 	}
 
 	// 4. Check for assignment
 	if containsAssignment(contentTokens) {
 		nodes, err := parser.Parse(line)
 		if err != nil {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Must parse to exactly one statement for a single line
 		if len(nodes) == 1 {
 			if _, ok := nodes[0].(*ast.Assignment); ok {
 				// Assignment statements are always calculations
-				return Calculation
+				return Calculation, nil
 			}
 		}
 	}
@@ -195,12 +204,12 @@ func ClassifyLine(line string, env *interpreter.Environment) LineType {
 	if containsFunctions(contentTokens) {
 		nodes, err := parser.Parse(line)
 		if err != nil {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Must parse to exactly one statement
 		if len(nodes) == 1 {
-			return Calculation
+			return Calculation, nil
 		}
 	}
 
@@ -208,19 +217,19 @@ func ClassifyLine(line string, env *interpreter.Environment) LineType {
 	if containsOperators(contentTokens) {
 		nodes, err := parser.Parse(line)
 		if err != nil {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Must parse to exactly one statement
 		if len(nodes) != 1 {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Verify all identifiers are defined
 		if allIdentifiersDefined(nodes[0], env) {
-			return Calculation
+			return Calculation, nil
 		}
-		return Markdown
+		return Markdown, nil
 	}
 
 	// 7. Single token cases
@@ -230,26 +239,26 @@ func ClassifyLine(line string, env *interpreter.Environment) LineType {
 		// Try to parse - should result in exactly one statement
 		nodes, err := parser.Parse(line)
 		if err != nil {
-			return Markdown
+			return Markdown, nil
 		}
 		if len(nodes) != 1 {
-			return Markdown
+			return Markdown, nil
 		}
 
 		// Literals are always calculations
 		if token.Type == lexer.NUMBER || token.Type == lexer.CURRENCY || token.Type == lexer.QUANTITY || token.Type == lexer.BOOLEAN {
-			return Calculation
+			return Calculation, nil
 		}
 
 		// Identifiers only if they exist in context or are boolean keywords
 		if token.Type == lexer.IDENTIFIER {
 			if env.Has(token.Value) {
-				return Calculation
+				return Calculation, nil
 			}
-			return Markdown
+			return Markdown, nil
 		}
 	}
 
 	// 8. Default: markdown
-	return Markdown
+	return Markdown, nil
 }

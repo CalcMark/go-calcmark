@@ -32,6 +32,7 @@ var ReservedKeywords = map[string]TokenType{
 	"end":    END,
 	"for":    FOR,
 	"in":     IN,
+	"as":     AS,     // Conversion: "1234567 as napkin"
 	"napkin": NAPKIN, // Human-readable formatting: "1234567 as napkin"
 	"per":    PER,    // Rate expressions: "100 MB per second"
 	"over":   OVER,   // Rate accumulation: "100 MB/s over 1 day"
@@ -922,6 +923,15 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			tokens = append(tokens, l.makeToken(COMMA, ",", 1))
 			l.advance()
 			continue
+		}
+
+		// Octothorpe - not allowed mid-line in calculations
+		if char == '#' {
+			return nil, &LexerError{
+				Message: "Inline octothorpe (#) is not supported in a calculation but is supported at the start of a line as a Markdown heading",
+				Line:    l.line,
+				Column:  l.column,
+			}
 		}
 
 		// Unknown character

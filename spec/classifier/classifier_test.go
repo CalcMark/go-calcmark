@@ -9,9 +9,19 @@ import (
 	"github.com/CalcMark/go-calcmark/impl/types"
 )
 
+// Helper function to wrap ClassifyLine calls in tests
+func classifyLineTest(t *testing.T, line string, env *interpreter.Environment) LineType {
+	t.Helper()
+	lineType, err := ClassifyLine(line, env)
+	if err != nil {
+		t.Fatalf("ClassifyLine(%q) error: %v", line, err)
+	}
+	return lineType
+}
+
 // TestBlankLines tests blank line classification
 func TestEmptyString(t *testing.T) {
-	if ClassifyLine("", nil) != Blank {
+	if classifyLineTest(t, "", nil) != Blank {
 		t.Error("expected BLANK")
 	}
 }
@@ -19,7 +29,7 @@ func TestEmptyString(t *testing.T) {
 func TestWhitespaceOnly(t *testing.T) {
 	tests := []string{"   ", "\t\t", "  \t  "}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Blank {
+		if classifyLineTest(t, test, nil) != Blank {
 			t.Errorf("expected BLANK for %q", test)
 		}
 	}
@@ -29,7 +39,7 @@ func TestWhitespaceOnly(t *testing.T) {
 func TestHeader(t *testing.T) {
 	tests := []string{"# Header", "## Subheader"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -42,7 +52,7 @@ func TestQuote(t *testing.T) {
 		">Blockquote",
 	}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -51,7 +61,7 @@ func TestQuote(t *testing.T) {
 func TestList(t *testing.T) {
 	tests := []string{"- List item", "* Bullet"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -60,7 +70,7 @@ func TestList(t *testing.T) {
 func TestNumberedList(t *testing.T) {
 	tests := []string{"1. First", "2. Second"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -70,7 +80,7 @@ func TestNumberedList(t *testing.T) {
 func TestNumberLiteral(t *testing.T) {
 	tests := []string{"42", "3.14", "1,000"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -81,7 +91,7 @@ func TestCurrencyLiteral(t *testing.T) {
 	// They need to be in expressions or assignments to be calculations
 	tests := []string{"$100", "$1,000.50"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q (standalone currency is not a calculation)", test)
 		}
 	}
@@ -90,7 +100,7 @@ func TestCurrencyLiteral(t *testing.T) {
 func TestBooleanLiteral(t *testing.T) {
 	tests := []string{"true", "false"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -100,7 +110,7 @@ func TestBooleanLiteral(t *testing.T) {
 func TestSimpleAssignment(t *testing.T) {
 	tests := []string{"x = 5", "salary = $50000"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -109,7 +119,7 @@ func TestSimpleAssignment(t *testing.T) {
 func TestUnicodeAssignment(t *testing.T) {
 	tests := []string{"💰 = $1000", "給料 = $5000"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -119,7 +129,7 @@ func TestAssignmentWithUnderscores(t *testing.T) {
 	// BREAKING CHANGE: Spaces no longer allowed in identifiers, use underscores
 	tests := []string{"my_budget = 1000", "weeks_in_year = 52"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -128,7 +138,7 @@ func TestAssignmentWithUnderscores(t *testing.T) {
 func TestMalformedAssignment(t *testing.T) {
 	tests := []string{"x =", "= 5"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -138,7 +148,7 @@ func TestMalformedAssignment(t *testing.T) {
 func TestSimpleArithmetic(t *testing.T) {
 	tests := []string{"3 + 5", "10 - 3", "4 * 5", "20 / 4"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -147,7 +157,7 @@ func TestSimpleArithmetic(t *testing.T) {
 func TestNewOperators(t *testing.T) {
 	tests := []string{"2 ^ 3", "2 ** 3", "10 % 3"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -156,7 +166,7 @@ func TestNewOperators(t *testing.T) {
 func TestCurrencyArithmetic(t *testing.T) {
 	tests := []string{"$100 * 52", "$1000 + $500"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -173,7 +183,7 @@ func TestComparisons(t *testing.T) {
 		"5 != 3",
 	}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Calculation {
+		if classifyLineTest(t, test, nil) != Calculation {
 			t.Errorf("expected CALCULATION for %q", test)
 		}
 	}
@@ -185,10 +195,10 @@ func TestKnownVariableReference(t *testing.T) {
 	num, _ := types.NewNumber(5)
 	ctx.Set("x", num)
 
-	if ClassifyLine("x", ctx) != Calculation {
+	if classifyLineTest(t, "x", ctx) != Calculation {
 		t.Error("expected CALCULATION for 'x'")
 	}
-	if ClassifyLine("x * 2", ctx) != Calculation {
+	if classifyLineTest(t, "x * 2", ctx) != Calculation {
 		t.Error("expected CALCULATION for 'x * 2'")
 	}
 }
@@ -196,10 +206,10 @@ func TestKnownVariableReference(t *testing.T) {
 func TestUnknownVariableReference(t *testing.T) {
 	ctx := interpreter.NewEnvironment()
 
-	if ClassifyLine("unknown_var", ctx) != Markdown {
+	if classifyLineTest(t, "unknown_var", ctx) != Markdown {
 		t.Error("expected MARKDOWN for 'unknown_var'")
 	}
-	if ClassifyLine("emoji * 2", ctx) != Markdown {
+	if classifyLineTest(t, "emoji * 2", ctx) != Markdown {
 		t.Error("expected MARKDOWN for 'emoji * 2'")
 	}
 }
@@ -209,10 +219,10 @@ func TestMixedKnownUnknown(t *testing.T) {
 	num, _ := types.NewNumber(5)
 	ctx.Set("x", num)
 
-	if ClassifyLine("x + unknown", ctx) != Markdown {
+	if classifyLineTest(t, "x + unknown", ctx) != Markdown {
 		t.Error("expected MARKDOWN for 'x + unknown'")
 	}
-	if ClassifyLine("unknown + x", ctx) != Markdown {
+	if classifyLineTest(t, "unknown + x", ctx) != Markdown {
 		t.Error("expected MARKDOWN for 'unknown + x'")
 	}
 }
@@ -221,10 +231,10 @@ func TestBooleanKeywordsAlwaysKnown(t *testing.T) {
 	ctx := interpreter.NewEnvironment()
 
 	// 'true' and 'false' are boolean keywords, so they're always available
-	if ClassifyLine("true", ctx) != Calculation {
+	if classifyLineTest(t, "true", ctx) != Calculation {
 		t.Error("expected CALCULATION for 'true'")
 	}
-	if ClassifyLine("false", ctx) != Calculation {
+	if classifyLineTest(t, "false", ctx) != Calculation {
 		t.Error("expected CALCULATION for 'false'")
 	}
 }
@@ -233,7 +243,7 @@ func TestBooleanKeywordsAlwaysKnown(t *testing.T) {
 func TestTrailingText(t *testing.T) {
 	tests := []string{"$100 budget", "5 + 3 equals eight"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -244,7 +254,7 @@ func TestIncompleteExpressions(t *testing.T) {
 	// Only truly incomplete expressions should be markdown
 	tests := []string{"x *", "5 +", "5 -"}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -257,7 +267,7 @@ func TestNaturalLanguage(t *testing.T) {
 		"The answer is 42",
 	}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
@@ -269,14 +279,14 @@ func TestURLs(t *testing.T) {
 		"http://test.org?foo=bar",
 	}
 	for _, test := range tests {
-		if ClassifyLine(test, nil) != Markdown {
+		if classifyLineTest(t, test, nil) != Markdown {
 			t.Errorf("expected MARKDOWN for %q", test)
 		}
 	}
 }
 
 func TestSpecialCharacters(t *testing.T) {
-	if ClassifyLine("@#$%^&*()", nil) != Markdown {
+	if classifyLineTest(t, "@#$%^&*()", nil) != Markdown {
 		t.Error("expected MARKDOWN")
 	}
 }
@@ -323,7 +333,7 @@ savings = salary + bonus - expenses`
 	lines := strings.Split(document, constants.Newline)
 
 	for i, line := range lines {
-		result := ClassifyLine(line, ctx)
+		result := classifyLineTest(t, line, ctx)
 		if result != expected[i] {
 			t.Errorf("Line %d (%q): expected %s, got %s", i+1, line, expected[i], result)
 		}
