@@ -6,12 +6,15 @@ import (
 	"strings"
 	"testing"
 
+	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
 
 // TestEvalFilesEvaluate tests that eval/success files not only parse but also evaluate successfully.
 // This ensures the eval files represent valid CalcMark that works end-to-end.
+// Uses the document evaluator to properly handle CalcMark files with markdown blocks.
 func TestEvalFilesEvaluate(t *testing.T) {
 	evalDir := "../../testdata/eval/success/features"
 
@@ -32,15 +35,15 @@ func TestEvalFilesEvaluate(t *testing.T) {
 				t.Fatalf("failed to read file: %v", err)
 			}
 
-			// Parse
-			nodes, parseErr := parser.Parse(string(content))
-			if parseErr != nil {
-				t.Fatalf("Parse failed: %v", parseErr)
+			// Create document (handles CalcMark with markdown blocks)
+			doc, docErr := document.NewDocument(string(content))
+			if docErr != nil {
+				t.Fatalf("Document parse failed: %v", docErr)
 			}
 
-			// Evaluate
-			interp := interpreter.NewInterpreter()
-			_, evalErr := interp.Eval(nodes)
+			// Evaluate using document evaluator
+			eval := implDoc.NewEvaluator()
+			evalErr := eval.Evaluate(doc)
 			if evalErr != nil {
 				t.Errorf("Eval failed: %v", evalErr)
 			}

@@ -204,6 +204,164 @@ func TestQuantityType(t *testing.T) {
 	}
 }
 
+// TestDataSizeBaseMixing tests that mixing binary and decimal data units produces hints
+func TestDataSizeBaseMixing(t *testing.T) {
+	tests := []struct {
+		name      string
+		unit1     string
+		unit2     string
+		wantHint  bool
+		hintParts []string // Parts expected in the detailed message
+	}{
+		{
+			name:      "GB + Mbps (binary + decimal)",
+			unit1:     "GB",
+			unit2:     "Mbps",
+			wantHint:  true,
+			hintParts: []string{"binary", "decimal", "1024", "1000"},
+		},
+		{
+			name:      "MB + Gbps",
+			unit1:     "MB",
+			unit2:     "Gbps",
+			wantHint:  true,
+			hintParts: []string{"binary", "decimal"},
+		},
+		{
+			name:      "GiB + Kbps",
+			unit1:     "GiB",
+			unit2:     "Kbps",
+			wantHint:  true,
+			hintParts: []string{"binary", "decimal"},
+		},
+		{
+			name:     "GB + MB (both binary)",
+			unit1:    "GB",
+			unit2:    "MB",
+			wantHint: false,
+		},
+		{
+			name:     "GiB + MiB (both binary)",
+			unit1:    "GiB",
+			unit2:    "MiB",
+			wantHint: false,
+		},
+		{
+			name:     "Mbps + Gbps (both decimal)",
+			unit1:    "Mbps",
+			unit2:    "Gbps",
+			wantHint: false,
+		},
+		{
+			name:     "meters + feet (not data units)",
+			unit1:    "meters",
+			unit2:    "feet",
+			wantHint: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checker := semantic.NewChecker()
+
+			binOp := &ast.BinaryOp{
+				Operator: "+",
+				Left: &ast.QuantityLiteral{
+					Value: "10",
+					Unit:  tt.unit1,
+					Range: &ast.Range{},
+				},
+				Right: &ast.QuantityLiteral{
+					Value: "5",
+					Unit:  tt.unit2,
+					Range: &ast.Range{},
+				},
+				Range: &ast.Range{},
+			}
+
+			diagnostics := checker.Check([]ast.Node{binOp})
+
+			// Find the mixed base hint
+			var mixedBaseHint *semantic.Diagnostic
+			for i := range diagnostics {
+				if diagnostics[i].Code == semantic.DiagMixedBaseUnits {
+					mixedBaseHint = &diagnostics[i]
+					break
+				}
+			}
+
+			if tt.wantHint {
+				if mixedBaseHint == nil {
+					t.Errorf("Expected hint for mixing %s + %s, got none", tt.unit1, tt.unit2)
+					return
+				}
+
+				// Check severity is Hint
+				if mixedBaseHint.Severity != semantic.Hint {
+					t.Errorf("Expected HINT severity, got %s", mixedBaseHint.Severity)
+				}
+
+				// Check detailed message contains expected parts
+				for _, part := range tt.hintParts {
+					if !contains(mixedBaseHint.Detailed, part) {
+						t.Errorf("Expected detailed message to contain %q, got: %s", part, mixedBaseHint.Detailed)
+					}
+				}
+
+				t.Logf("✓ %s → HINT: %s", tt.name, mixedBaseHint.Message)
+			} else {
+				if mixedBaseHint != nil {
+					t.Errorf("Expected no hint for %s + %s, got: %s", tt.unit1, tt.unit2, mixedBaseHint.Message)
+				}
+			}
+		})
+	}
+}
+
+// TestDataSizeBaseClassification tests the GetDataSizeBase function
+func TestDataSizeBaseClassification(t *testing.T) {
+	tests := []struct {
+		unit     string
+		expected semantic.DataSizeBase
+	}{
+		// Binary (IEC) units
+		{"KiB", semantic.DataSizeBaseBinary},
+		{"MiB", semantic.DataSizeBaseBinary},
+		{"GiB", semantic.DataSizeBaseBinary},
+		{"TiB", semantic.DataSizeBaseBinary},
+
+		// Ambiguous units treated as binary
+		{"KB", semantic.DataSizeBaseBinary},
+		{"MB", semantic.DataSizeBaseBinary},
+		{"GB", semantic.DataSizeBaseBinary},
+		{"TB", semantic.DataSizeBaseBinary},
+
+		// Decimal/network units
+		{"Kbps", semantic.DataSizeBaseDecimal},
+		{"Mbps", semantic.DataSizeBaseDecimal},
+		{"Gbps", semantic.DataSizeBaseDecimal},
+		{"Kbit", semantic.DataSizeBaseDecimal},
+		{"Mbit", semantic.DataSizeBaseDecimal},
+
+		// Base units (no base distinction)
+		{"bit", semantic.DataSizeBaseNone},
+		{"byte", semantic.DataSizeBaseNone},
+
+		// Non-data units
+		{"meters", semantic.DataSizeBaseNone},
+		{"kg", semantic.DataSizeBaseNone},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.unit, func(t *testing.T) {
+			got := semantic.GetDataSizeBase(tt.unit)
+			if got != tt.expected {
+				t.Errorf("GetDataSizeBase(%q) = %v, want %v", tt.unit, got, tt.expected)
+			}
+		})
+	}
+}
+
 // Helper function
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&

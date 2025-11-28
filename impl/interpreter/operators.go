@@ -282,7 +282,7 @@ func evalDurationOperation(left, right *types.Duration, operator string) (types.
 	}
 
 	// Return in left's unit
-	targetFactor := decimal.NewFromInt(getDurationFactor(left.Unit))
+	targetFactor := getDurationFactorDecimal(left.Unit)
 	resultValue := resultSec.Div(targetFactor)
 
 	return &types.Duration{Value: resultValue, Unit: left.Unit}, nil
@@ -425,23 +425,29 @@ func compareNumbers(left, right decimal.Decimal, operator string) *types.Boolean
 // Helper functions
 
 func durationToDays(dur *types.Duration) int {
-	factor := getDurationFactor(dur.Unit)
-	seconds := dur.Value.Mul(decimal.NewFromInt(factor))
+	factor := getDurationFactorDecimal(dur.Unit)
+	seconds := dur.Value.Mul(factor)
 	days := seconds.Div(decimal.NewFromInt(86400)) // seconds per day
 	return int(days.IntPart())
 }
 
-func getDurationFactor(unit string) int64 {
-	factors := map[string]int64{
-		"second": 1, "seconds": 1,
-		"minute": 60, "minutes": 60,
-		"hour": 3600, "hours": 3600,
-		"day": 86400, "days": 86400,
-		"week": 604800, "weeks": 604800,
-		"month": 2592000, "months": 2592000, // 30 days
-		"year": 31536000, "years": 31536000, // 365 days
+// getDurationFactorDecimal returns the conversion factor to seconds for a duration unit.
+// Uses decimal to support sub-second units like milliseconds.
+func getDurationFactorDecimal(unit string) decimal.Decimal {
+	factors := map[string]decimal.Decimal{
+		"millisecond": decimal.NewFromFloat(0.001), "milliseconds": decimal.NewFromFloat(0.001),
+		"second": decimal.NewFromInt(1), "seconds": decimal.NewFromInt(1),
+		"minute": decimal.NewFromInt(60), "minutes": decimal.NewFromInt(60),
+		"hour": decimal.NewFromInt(3600), "hours": decimal.NewFromInt(3600),
+		"day": decimal.NewFromInt(86400), "days": decimal.NewFromInt(86400),
+		"week": decimal.NewFromInt(604800), "weeks": decimal.NewFromInt(604800),
+		"month": decimal.NewFromInt(2592000), "months": decimal.NewFromInt(2592000), // 30 days
+		"year": decimal.NewFromInt(31536000), "years": decimal.NewFromInt(31536000), // 365 days
 	}
-	return factors[unit]
+	if f, ok := factors[unit]; ok {
+		return f
+	}
+	return decimal.NewFromInt(1) // fallback to seconds
 }
 
 // unsupportedOperationError provides helpful error messages for common type mismatches.

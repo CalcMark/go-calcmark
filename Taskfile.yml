@@ -63,6 +63,11 @@ tasks:
     cmds:
       - go test ./spec/document/... -v
 
+  test:e2e:
+    desc: Run golden file e2e tests (validates testdata/*.cm files)
+    cmds:
+      - go test ./cmd/calcmark/... -run "Golden" -v
+
   # Build tasks
   build:
     desc: Build CLI for current platform

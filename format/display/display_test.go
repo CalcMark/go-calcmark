@@ -66,10 +66,13 @@ func TestFormatQuantity(t *testing.T) {
 		unit     string
 		expected string
 	}{
-		{"100K users", "100000", "users", "100K users"},
-		{"1.5M bytes", "1500000", "bytes", "1.5M bytes"},
-		{"small quantity", "42", "items", "42 items"},
-		{"decimal quantity", "3.14", "meters", "3.14 meters"},
+		{"100K users", "100000", "users", "100K users"},             // arbitrary unit: uses K/M/B/T
+		{"1.5M bytes normalized", "1500000", "bytes", "1.43 MB"},    // known unit: uses unit normalization
+		{"small quantity", "42", "items", "42 items"},               // arbitrary unit: stays as-is
+		{"decimal quantity normalized", "3.14", "meters", "3.14 m"}, // known unit: uses canonical symbol
+		{"large GB normalized", "23400000", "GB", "22.3 PB"},        // the original problem case!
+		{"1000 meters to km", "1000", "m", "1 km"},                  // meters → kilometers
+		{"5280 feet to miles", "5280", "feet", "1 mi"},              // feet → miles
 	}
 
 	for _, tt := range tests {
@@ -92,9 +95,10 @@ func TestFormatRate(t *testing.T) {
 		perUnit  string
 		expected string
 	}{
-		{"100K users/day", "100000", "users", "day", "100K users/day"},
-		{"1.5M bytes/s", "1500000", "bytes", "second", "1.5M bytes/s"},
-		{"small rate", "100", "requests", "minute", "100 requests/min"},
+		{"100K users/day", "100000", "users", "day", "100K users/day"},         // arbitrary unit
+		{"1.5M bytes/s normalized", "1500000", "bytes", "second", "1.43 MB/s"}, // known unit: normalized
+		{"small rate", "100", "requests", "minute", "100 requests/min"},        // arbitrary unit
+		{"1000 meters/hour", "1000", "m", "hour", "1 km/h"},                    // meters → km
 	}
 
 	for _, tt := range tests {

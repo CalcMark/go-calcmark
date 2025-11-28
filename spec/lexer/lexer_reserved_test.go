@@ -400,6 +400,163 @@ func TestComplexExpressions(t *testing.T) {
 	}
 }
 
+// TestCapacityPlanningKeywords tests keywords used in capacity planning syntax
+// Grammar: demand "at" capacity "per" unit ["with" percentage "buffer"]
+func TestCapacityPlanningKeywords(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected TokenType
+	}{
+		// AT keyword
+		{"at lowercase", "at", AT},
+		{"at uppercase", "AT", AT},
+		{"at mixed case", "At", AT},
+
+		// WITH keyword
+		{"with lowercase", "with", WITH},
+		{"with uppercase", "WITH", WITH},
+		{"with mixed case", "With", WITH},
+
+		// PER keyword
+		{"per lowercase", "per", PER},
+		{"per uppercase", "PER", PER},
+		{"per mixed case", "Per", PER},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(tokens) != 2 { // keyword + EOF
+				t.Fatalf("expected 2 tokens, got %d", len(tokens))
+			}
+
+			if tokens[0].Type != tt.expected {
+				t.Errorf("expected token type %s, got %s", tt.expected, tokens[0].Type)
+			}
+		})
+	}
+}
+
+// TestCapacityPlanningFullExpression tests full capacity planning expressions
+func TestCapacityPlanningFullExpression(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []TokenType
+	}{
+		{
+			name:  "basic quantity capacity",
+			input: "10 TB at 2 TB per disk",
+			expected: []TokenType{
+				QUANTITY,   // 10 TB
+				AT,         // at
+				QUANTITY,   // 2 TB
+				PER,        // per
+				IDENTIFIER, // disk
+				EOF,
+			},
+		},
+		{
+			name:  "rate capacity",
+			input: "10000 req/s at 450 req/s per server",
+			expected: []TokenType{
+				QUANTITY,   // 10000 req
+				DIVIDE,     // /
+				IDENTIFIER, // s
+				AT,         // at
+				QUANTITY,   // 450 req
+				DIVIDE,     // /
+				IDENTIFIER, // s
+				PER,        // per
+				IDENTIFIER, // server
+				EOF,
+			},
+		},
+		{
+			name:  "capacity with buffer",
+			input: "10 TB at 2 TB per disk with 10% buffer",
+			expected: []TokenType{
+				QUANTITY,       // 10 TB
+				AT,             // at
+				QUANTITY,       // 2 TB
+				PER,            // per
+				IDENTIFIER,     // disk
+				WITH,           // with
+				NUMBER_PERCENT, // 10%
+				IDENTIFIER,     // buffer
+				EOF,
+			},
+		},
+		{
+			name:  "pure numbers",
+			input: "100 at 25 per batch",
+			expected: []TokenType{
+				NUMBER,     // 100
+				AT,         // at
+				NUMBER,     // 25
+				PER,        // per
+				IDENTIFIER, // batch
+				EOF,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(tokens) != len(tt.expected) {
+				t.Fatalf("expected %d tokens, got %d\ntokens: %v", len(tt.expected), len(tokens), tokens)
+			}
+
+			for i, expectedType := range tt.expected {
+				if tokens[i].Type != expectedType {
+					t.Errorf("token %d: expected %s, got %s (value: %q)",
+						i, expectedType, tokens[i].Type, tokens[i].Value)
+				}
+			}
+		})
+	}
+}
+
+// TestBufferIsIdentifier tests that "buffer" is lexed as IDENTIFIER (not a reserved keyword)
+// This is important because the parser handles "buffer" contextually after "with N%"
+func TestBufferIsIdentifier(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected TokenType
+	}{
+		{"buffer alone", "buffer", IDENTIFIER},
+		{"buffer uppercase", "BUFFER", IDENTIFIER},
+		{"buffer mixed", "Buffer", IDENTIFIER},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tokens[0].Type != tt.expected {
+				t.Errorf("expected token type %s, got %s", tt.expected, tokens[0].Type)
+			}
+		})
+	}
+}
+
 // TestWhitespaceVariations tests various whitespace scenarios
 func TestWhitespaceVariations(t *testing.T) {
 	tests := []struct {

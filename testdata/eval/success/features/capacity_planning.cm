@@ -1,21 +1,21 @@
 # Valid Capacity Planning Examples
-# Natural syntax for requires() function
+# Natural syntax for capacity() function using "at ... per" syntax
 
-# Basic capacity planning: load with capacity
-10000 req/s with 450 req/s
-10 TB with 2 TB  
-100 with 30
+# Basic capacity planning: demand at capacity per unit
+10000 req/s at 450 req/s per server
+10 TB at 2 TB per disk
+100 at 30 per crate
 
 # With buffer percentage
-10000 req/s with 450 req/s and 20%
-10 TB with 2 TB and 10%
-1000 with 100 and 50%
+10000 req/s at 450 req/s per server with 20% buffer
+10 TB at 2 TB per disk with 10% buffer
+1000 at 100 per batch with 50% buffer
 
 # Various buffer percentages
-100 with 25 and 0.1%
-1000 with 200 and 120%
-5000 with 500 and 1k%
+100 at 25 per unit with 0.1% buffer
+1000 at 200 per container with 120% buffer
+5000 at 500 per box with 1000% buffer
 
 # Edge cases
-5 with 10        # load < capacity, still needs 1 unit
-100 with 100     # exact match, needs 1 unit
+5 at 10 per unit        # demand < capacity, still needs 1 unit
+100 at 100 per item     # exact match, needs 1 unit

@@ -84,6 +84,11 @@ var MonthNames = map[string]string{
 // TimeUnits maps time unit keywords to canonical forms
 // Performance: O(1) lookup via map
 var TimeUnits = map[string]string{
+	// Milliseconds
+	"millisecond":  "millisecond",
+	"milliseconds": "millisecond",
+	"ms":           "millisecond",
+
 	// Seconds
 	"second":  "second",
 	"seconds": "second",

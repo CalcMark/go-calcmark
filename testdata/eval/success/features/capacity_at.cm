@@ -1,0 +1,50 @@
+# Capacity Planning with "at ... per UNIT" Syntax
+# Tests that capacity planning evaluates correctly and returns quantities with units
+
+# Basic quantity capacity planning
+storage_disks = 10 TB at 2 TB per disk
+# Expected: 5 disks
+
+# Rate-based capacity planning
+web_servers = 10000 req/s at 450 req/s per server
+# Expected: 23 servers (ceiling of 22.22)
+
+# Bandwidth capacity
+network_connections = 100 MB/s at 10 MB/s per connection
+# Expected: 10 connections
+
+# Items in containers
+fruit_crates = 100 apples at 30 per crate
+# Expected: 4 crates (ceiling of 3.33)
+
+# Pure numbers with abstract units
+production_batches = 100 at 25 per batch
+# Expected: 4 batches
+
+# Demand less than capacity (minimum 1)
+minimum_units = 5 at 10 per unit
+# Expected: 1 unit (ceiling of 0.5)
+
+# Exact division
+exact_division = 100 at 50 per container
+# Expected: 2 containers
+
+# With buffer percentages
+buffered_disks = 10 TB at 2 TB per disk with 10% buffer
+# Expected: 6 disks (ceiling of 5.5)
+
+buffered_servers = 10000 req/s at 450 req/s per server with 20% buffer
+# Expected: 27 servers (ceiling of 26.67)
+
+large_buffer = 100 at 50 per unit with 100% buffer
+# Expected: 4 units (ceiling of 4.0 = 200/50)
+
+# Alternative slash syntax (instead of "per")
+slash_disks = 10 TB at 2 TB/disk
+# Expected: 5 disks
+
+slash_batches = 100 at 25/batch
+# Expected: 4 batches
+
+slash_with_buffer = 10 GB/day at 2 GB/disk with 30% buffer
+# Expected: 7 disks (ceiling of 6.5 = 13/2)

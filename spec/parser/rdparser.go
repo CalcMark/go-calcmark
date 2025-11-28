@@ -510,32 +510,62 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 	}
 
-	// Check for "with" keyword: "10000 req/s with 450 req/s capacity"
-	// Natural syntax for requires(load, capacity, buffer?)
-	if p.match(lexer.WITH) {
-		// Parse capacity expression - use parseMultiplicative() to handle rates
-		// (parseExponent() would miss the /s part of slash-rates)
-		capacity, err := p.parseMultiplicative()
+	// Check for "at" keyword: "10 TB at 2 TB per disk"
+	// Natural syntax for capacity(demand, capacity_per_unit, unit, buffer?)
+	// Returns a Quantity with the specified unit
+	if p.match(lexer.AT) {
+		// Parse capacity expression - use parseExponent() to avoid consuming "per"
+		// The "per" keyword belongs to our syntax, not a rate expression
+		capacityExpr, err := p.parseCapacityValue()
 		if err != nil {
 			return nil, err
 		}
 
-		// Check for optional "and N%" buffer
+		// Require "per" keyword OR "/" operator
+		// Supports both: "10 TB at 2 TB per disk" and "10 TB at 2 TB/disk"
+		var unitName string
+		if p.match(lexer.PER) {
+			// "per disk" syntax
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected unit name after 'per' (e.g., 'disk', 'server', 'crate')")
+			}
+			unitName = string(p.previous().Value)
+		} else if p.match(lexer.DIVIDE) {
+			// "/disk" syntax
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected unit name after '/' (e.g., 'disk', 'server', 'crate')")
+			}
+			unitName = string(p.previous().Value)
+		} else {
+			return nil, p.error("expected 'per' or '/' after capacity in 'X at Y per UNIT' syntax")
+		}
+		unitNode := &ast.Identifier{
+			Name:  unitName,
+			Range: &ast.Range{},
+		}
+
+		// Check for optional "with N% buffer"
 		var args []ast.Node
-		if p.match(lexer.AND) {
-			// Parse buffer percentage - parseExponent() is fine here
+		if p.match(lexer.WITH) {
+			// Parse buffer percentage
 			bufferExpr, err := p.parseExponent()
 			if err != nil {
 				return nil, err
 			}
-			args = []ast.Node{left, capacity, bufferExpr}
+
+			// Require "buffer" keyword after the percentage
+			if !p.match(lexer.IDENTIFIER) || p.previous().Value != "buffer" {
+				return nil, p.error("expected 'buffer' after percentage in 'with N% buffer' syntax")
+			}
+
+			args = []ast.Node{left, capacityExpr, unitNode, bufferExpr}
 		} else {
-			args = []ast.Node{left, capacity}
+			args = []ast.Node{left, capacityExpr, unitNode}
 		}
 
-		// Create function call: requires(load, capacity, buffer?)
+		// Create function call: capacity(demand, capacity_per_unit, unit, buffer?)
 		return &ast.FunctionCall{
-			Name:      "requires",
+			Name:      "capacity",
 			Arguments: args,
 			Range:     &ast.Range{},
 		}, nil
@@ -1094,9 +1124,13 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 
 // isNaturalSyntaxKeyword checks if an identifier is a reserved natural syntax keyword.
 // These keywords have special meaning in the grammar and should NOT be consumed as unit names.
-// Examples: "downtime", "over", "per", "with", "capacity", "as" are used in natural language constructs.
+// Examples: "downtime", "over", "per", "with", "at", "capacity", "as" are used in natural language constructs.
 func isNaturalSyntaxKeyword(ident string) bool {
 	switch ident {
+	case "at":
+		return true // Used in capacity planning: "10 TB at 2 TB per disk"
+	case "buffer":
+		return true // Used in capacity planning: "with 10% buffer"
 	case "downtime":
 		return true
 	case "over":

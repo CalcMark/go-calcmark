@@ -64,30 +64,58 @@ func FormatNumber(value decimal.Decimal) string {
 }
 
 // FormatQuantity formats a quantity (value + unit) in human-readable form.
+// For known units (length, mass, volume, data, etc.), it normalizes to the
+// most appropriate unit scale (e.g., 1000000 GB → 976.56 TB).
+// For unknown/arbitrary units, it uses K/M/B/T number suffixes.
 //
 // Examples:
 //
+//	FormatQuantity(1000 m) → "1 km"
+//	FormatQuantity(23400000 GB) → "22.31 PB"
 //	FormatQuantity(100000 users) → "100K users"
-//	FormatQuantity(1500000 bytes) → "1.5M bytes"
 func FormatQuantity(q *types.Quantity) string {
 	if q == nil {
 		return ""
 	}
+
+	// Try to normalize to a better unit (e.g., 1000 m → 1 km)
+	normValue, normUnit := NormalizeForDisplay(q.Value, q.Unit)
+
+	// If normalization changed the unit, use the normalized form without K/M/B/T
+	if normUnit != q.Unit {
+		return formatNormalizedQuantity(normValue, normUnit)
+	}
+
+	// Unknown unit: fall back to K/M/B/T number suffixes
 	return formatWithSuffix(q.Value, q.Unit)
 }
 
 // FormatRate formats a rate (quantity per time) in human-readable form.
+// For known units, normalizes to appropriate scale (e.g., 1000000 bytes/s → 976.56 KB/s).
 //
 // Examples:
 //
+//	FormatRate(1000000 bytes/s) → "976.56 KB/s"
 //	FormatRate(100000 users/day) → "100K users/day"
-//	FormatRate(1500000 bytes/s) → "1.5M bytes/s"
 func FormatRate(r *types.Rate) string {
 	if r == nil || r.Amount == nil {
 		return "0/s"
 	}
-	numStr := formatWithSuffix(r.Amount.Value, r.Amount.Unit)
+
+	// Try to normalize the amount to a better unit
+	normValue, normUnit := NormalizeForDisplay(r.Amount.Value, r.Amount.Unit)
 	timeAbbrev := abbreviateTimeUnit(r.PerUnit)
+
+	// If normalization changed the unit, use the normalized form
+	if normUnit != r.Amount.Unit {
+		numStr := formatNormalizedQuantity(normValue, normUnit)
+		// Remove the unit from the formatted quantity (it's already included)
+		// formatNormalizedQuantity returns "value unit", we need "value unit/time"
+		return fmt.Sprintf("%s/%s", numStr, timeAbbrev)
+	}
+
+	// Unknown unit: fall back to K/M/B/T number suffixes
+	numStr := formatWithSuffix(r.Amount.Value, r.Amount.Unit)
 	return fmt.Sprintf("%s/%s", numStr, timeAbbrev)
 }
 
@@ -129,12 +157,20 @@ func FormatDuration(d *types.Duration) string {
 	return d.String()
 }
 
-// formatWithSuffix formats a number with optional unit suffix.
+// formatWithSuffix formats a number with optional unit suffix using K/M/B/T.
 func formatWithSuffix(value decimal.Decimal, unit string) string {
 	numStr := formatNumberWithSuffix(value)
 	if unit == "" {
 		return numStr
 	}
+	return fmt.Sprintf("%s %s", numStr, unit)
+}
+
+// formatNormalizedQuantity formats a value+unit that has already been
+// normalized to the best unit scale. Does NOT apply K/M/B/T suffixes
+// since the unit itself encodes the magnitude (e.g., km, GB, etc.).
+func formatNormalizedQuantity(value decimal.Decimal, unit string) string {
+	numStr := formatSmallNumber(value)
 	return fmt.Sprintf("%s %s", numStr, unit)
 }
 

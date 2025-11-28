@@ -18,6 +18,7 @@ const (
 	CategoryEnergy      QuantityCategory = "energy"
 	CategoryPower       QuantityCategory = "power"
 	CategoryArea        QuantityCategory = "area"
+	CategoryDataSize    QuantityCategory = "datasize"
 	CategoryUnknown     QuantityCategory = "unknown"
 )
 
@@ -50,6 +51,7 @@ func buildUnitRegistry() map[string]UnitInfo {
 	addEnergyUnits(registry)
 	addPowerUnits(registry)
 	addAreaUnits(registry)
+	addDataSizeUnits(registry)
 
 	return registry
 }
@@ -576,4 +578,207 @@ func addAreaUnits(registry map[string]UnitInfo) {
 	)
 	registry["hectare"] = registry["ha"]
 	registry["hectares"] = registry["ha"]
+}
+
+// addDataSizeUnits adds data size unit conversions using martinlindhe/unit library.
+// Base unit: bit (to allow conversion between bytes and bits)
+//
+// Supports three conventions:
+// 1. Binary (IEC): KiB, MiB, GiB - 1024-based, traditional computing
+// 2. Decimal (SI): KB, MB, GB - 1000-based, storage marketing & some contexts
+// 3. Bits: Kbit, Mbit, Gbit, Mbps, Gbps - 1000-based, networking
+//
+// Note: KB/MB/GB use binary (1024) by default as this matches user expectations
+// in most computing contexts. Use KiB/MiB/GiB or explicit decimal units if needed.
+func addDataSizeUnits(registry map[string]UnitInfo) {
+	makeDataSizeUnit := func(toBits, fromBits func(float64) float64) UnitInfo {
+		return UnitInfo{
+			Category:     CategoryDataSize,
+			ToBaseUnit:   toBits,
+			FromBaseUnit: fromBits,
+		}
+	}
+
+	// ========== BASE UNITS ==========
+
+	// Bit (base unit for data size category)
+	registry["bit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Bit) },
+		func(v float64) float64 { return units.Datasize(v).Bits() },
+	)
+	registry["bits"] = registry["bit"]
+
+	// Byte (8 bits)
+	registry["byte"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Byte) },
+		func(v float64) float64 { return units.Datasize(v).Bytes() },
+	)
+	registry["bytes"] = registry["byte"]
+	registry["b"] = registry["byte"] // Common abbreviation
+
+	// ========== BINARY PREFIXES (IEC) - 1024-based ==========
+	// These are the traditional computing units
+
+	// Kibibyte (KiB = 1024 bytes)
+	registry["kib"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Kibibyte) },
+		func(v float64) float64 { return units.Datasize(v).Kibibytes() },
+	)
+	registry["kibibyte"] = registry["kib"]
+	registry["kibibytes"] = registry["kib"]
+
+	// Mebibyte (MiB = 1024 KiB)
+	registry["mib"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Mebibyte) },
+		func(v float64) float64 { return units.Datasize(v).Mebibytes() },
+	)
+	registry["mebibyte"] = registry["mib"]
+	registry["mebibytes"] = registry["mib"]
+
+	// Gibibyte (GiB = 1024 MiB)
+	registry["gib"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Gibibyte) },
+		func(v float64) float64 { return units.Datasize(v).Gibibytes() },
+	)
+	registry["gibibyte"] = registry["gib"]
+	registry["gibibytes"] = registry["gib"]
+
+	// Tebibyte (TiB = 1024 GiB)
+	registry["tib"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Tebibyte) },
+		func(v float64) float64 { return units.Datasize(v).Tebibytes() },
+	)
+	registry["tebibyte"] = registry["tib"]
+	registry["tebibytes"] = registry["tib"]
+
+	// Pebibyte (PiB = 1024 TiB)
+	registry["pib"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Pebibyte) },
+		func(v float64) float64 { return units.Datasize(v).Pebibytes() },
+	)
+	registry["pebibyte"] = registry["pib"]
+	registry["pebibytes"] = registry["pib"]
+
+	// ========== DECIMAL PREFIXES (SI) - 1000-based ==========
+	// Used in storage marketing and networking contexts
+	// Note: KB/MB/GB are aliased to binary (KiB/MiB/GiB) for user convenience
+
+	// Kilobyte - use binary (1024) as default for KB (matches most user expectations)
+	registry["kb"] = registry["kib"]
+	registry["kilobyte"] = registry["kib"]
+	registry["kilobytes"] = registry["kib"]
+
+	// Megabyte - use binary (1024²) as default for MB
+	registry["mb"] = registry["mib"]
+	registry["megabyte"] = registry["mib"]
+	registry["megabytes"] = registry["mib"]
+
+	// Gigabyte - use binary (1024³) as default for GB
+	registry["gb"] = registry["gib"]
+	registry["gigabyte"] = registry["gib"]
+	registry["gigabytes"] = registry["gib"]
+
+	// Terabyte - use binary (1024⁴) as default for TB
+	registry["tb"] = registry["tib"]
+	registry["terabyte"] = registry["tib"]
+	registry["terabytes"] = registry["tib"]
+
+	// Petabyte - use binary (1024⁵) as default for PB
+	registry["pb"] = registry["pib"]
+	registry["petabyte"] = registry["pib"]
+	registry["petabytes"] = registry["pib"]
+
+	// Exabyte - use binary (1024⁶) as default for EB
+	registry["eb"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Exbibyte) },
+		func(v float64) float64 { return units.Datasize(v).Exbibytes() },
+	)
+	registry["exabyte"] = registry["eb"]
+	registry["exabytes"] = registry["eb"]
+	registry["eib"] = registry["eb"]
+	registry["exbibyte"] = registry["eb"]
+	registry["exbibytes"] = registry["eb"]
+
+	// ========== BIT UNITS (NETWORK) - 1000-based ==========
+	// Standard for network throughput (Mbps, Gbps, etc.)
+
+	// Kilobit (1000 bits)
+	registry["kbit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Kilobit) },
+		func(v float64) float64 { return units.Datasize(v).Kilobits() },
+	)
+	registry["kilobit"] = registry["kbit"]
+	registry["kilobits"] = registry["kbit"]
+	registry["kbps"] = registry["kbit"] // Kbps when used as rate numerator
+
+	// Megabit (1,000,000 bits)
+	registry["mbit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Megabit) },
+		func(v float64) float64 { return units.Datasize(v).Megabits() },
+	)
+	registry["megabit"] = registry["mbit"]
+	registry["megabits"] = registry["mbit"]
+	registry["mbps"] = registry["mbit"] // Mbps when used as rate numerator
+
+	// Gigabit (1,000,000,000 bits)
+	registry["gbit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Gigabit) },
+		func(v float64) float64 { return units.Datasize(v).Gigabits() },
+	)
+	registry["gigabit"] = registry["gbit"]
+	registry["gigabits"] = registry["gbit"]
+	registry["gbps"] = registry["gbit"] // Gbps when used as rate numerator
+
+	// Terabit (1,000,000,000,000 bits)
+	registry["tbit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Terabit) },
+		func(v float64) float64 { return units.Datasize(v).Terabits() },
+	)
+	registry["terabit"] = registry["tbit"]
+	registry["terabits"] = registry["tbit"]
+	registry["tbps"] = registry["tbit"] // Tbps when used as rate numerator
+
+	// Petabit (1,000,000,000,000,000 bits)
+	registry["pbit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Petabit) },
+		func(v float64) float64 { return units.Datasize(v).Petabits() },
+	)
+	registry["petabit"] = registry["pbit"]
+	registry["petabits"] = registry["pbit"]
+	registry["pbps"] = registry["pbit"] // Pbps when used as rate numerator
+
+	// ========== BINARY BIT UNITS (IEC) - 1024-based ==========
+	// Less common but included for completeness
+
+	// Kibibit (1024 bits)
+	registry["kibit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Kibibit) },
+		func(v float64) float64 { return units.Datasize(v).Kibibits() },
+	)
+	registry["kibibit"] = registry["kibit"]
+	registry["kibibits"] = registry["kibit"]
+
+	// Mebibit (1024 Kibibits)
+	registry["mibit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Mebibit) },
+		func(v float64) float64 { return units.Datasize(v).Mebibits() },
+	)
+	registry["mebibit"] = registry["mibit"]
+	registry["mebibits"] = registry["mibit"]
+
+	// Gibibit (1024 Mebibits)
+	registry["gibit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Gibibit) },
+		func(v float64) float64 { return units.Datasize(v).Gibibits() },
+	)
+	registry["gibibit"] = registry["gibit"]
+	registry["gibibits"] = registry["gibit"]
+
+	// Tebibit (1024 Gibibits)
+	registry["tibit"] = makeDataSizeUnit(
+		func(v float64) float64 { return float64(units.Datasize(v) * units.Tebibit) },
+		func(v float64) float64 { return units.Datasize(v).Tebibits() },
+	)
+	registry["tebibit"] = registry["tibit"]
+	registry["tebibits"] = registry["tibit"]
 }

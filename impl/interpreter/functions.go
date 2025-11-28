@@ -179,6 +179,53 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		return calculateCompression(sizeQty, compressionIdent.Name)
 	}
 
+	// Special case: capacity's third argument is an identifier (unit name)
+	// capacity(demand, capacity_per_unit, unit_identifier, buffer?)
+	if f.Name == "capacity" {
+		if len(f.Arguments) < 3 || len(f.Arguments) > 4 {
+			return nil, fmt.Errorf("capacity() requires 3 or 4 arguments (demand, capacity, unit, buffer?)")
+		}
+
+		// Evaluate first argument (demand)
+		demand, err := interp.evalNode(f.Arguments[0])
+		if err != nil {
+			return nil, err
+		}
+
+		// Evaluate second argument (capacity per unit)
+		capacityVal, err := interp.evalNode(f.Arguments[1])
+		if err != nil {
+			return nil, err
+		}
+
+		// Third argument is the unit identifier (NOT evaluated)
+		unitIdent, ok := f.Arguments[2].(*ast.Identifier)
+		if !ok {
+			return nil, fmt.Errorf("capacity() unit must be an identifier (e.g., disk, server, crate)")
+		}
+		unitName := unitIdent.Name
+
+		// Check for optional buffer (4th argument)
+		if len(f.Arguments) == 4 {
+			bufferVal, err := interp.evalNode(f.Arguments[3])
+			if err != nil {
+				return nil, err
+			}
+			// Extract buffer percentage as decimal
+			var bufferPercent decimal.Decimal
+			switch buf := bufferVal.(type) {
+			case *types.Number:
+				bufferPercent = buf.Value
+			default:
+				return nil, fmt.Errorf("capacity() buffer must be a percentage number, got %T", bufferVal)
+			}
+			return capacityAtWithBuffer(demand, capacityVal, unitName, bufferPercent)
+		}
+
+		// No buffer
+		return capacityAt(demand, capacityVal, unitName)
+	}
+
 	// Evaluate all arguments for other functions
 	args := make([]types.Type, len(f.Arguments))
 	for i, arg := range f.Arguments {
@@ -200,8 +247,6 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	case "convert_rate":
 		// Already handled above
 		return nil, fmt.Errorf("convert_rate should have been handled")
-	case "requires":
-		return evalRequires(args)
 	case "downtime":
 		// Already handled above
 		return nil, fmt.Errorf("downtime should have been handled")
@@ -226,33 +271,6 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	default:
 		return nil, fmt.Errorf("unknown function: %s", f.Name)
 	}
-}
-
-// evalRequires handles requires(load, capacity, buffer?) function calls.
-func evalRequires(args []types.Type) (types.Type, error) {
-	if len(args) < 2 || len(args) > 3 {
-		return nil, fmt.Errorf("requires() requires 2 or 3 arguments (load, capacity, buffer?)")
-	}
-
-	load := args[0]
-	capacity := args[1]
-
-	// Handle optional buffer
-	if len(args) == 3 {
-		// Extract buffer percentage value
-		var bufferPercent decimal.Decimal
-		switch buf := args[2].(type) {
-		case *types.Number:
-			bufferPercent = buf.Value
-		default:
-			return nil, fmt.Errorf("requires() buffer must be a percentage number, got %T", args[2])
-		}
-
-		return requiresCapacity(load, capacity, bufferPercent)
-	}
-
-	// No buffer - use the no-buffer version
-	return requiresCapacityNoBuffer(load, capacity)
 }
 
 // evalAccumulate handles accumulate(rate, time_period) function calls.

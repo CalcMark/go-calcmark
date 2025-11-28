@@ -63,4 +63,7 @@ const (
 
 	// Arithmetic diagnostics
 	DiagDivisionByZero = "division_by_zero"
+
+	// Data size unit hints
+	DiagMixedBaseUnits = "mixed_base_units"
 )

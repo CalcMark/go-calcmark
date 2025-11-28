@@ -488,6 +488,8 @@ func (m model) handleInput() model {
 			output:  output,
 			isError: true,
 		})
+		// Clear the error since it's now in history - prevents duplicate display
+		result.err = nil
 	} else {
 		// Find the last value
 		blocks := result.doc.GetBlocks()

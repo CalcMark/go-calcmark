@@ -66,13 +66,14 @@ const (
 
 	// Keywords for natural language constructs
 	AS       // "as" - for conversions like "as napkin"
+	AT       // "at" - capacity planning: "10 TB at 2 TB per disk"
 	FROM     // "from" - for date expressions: "2 days from today"
 	IN       // "in" - for unit conversions: "10 meters in feet"
 	NAPKIN   // "napkin" - for human-readable number formatting (e.g., "1234567 as napkin")
 	OF       // "of" - for percentage expressions: "10% of 200"
 	PER      // "per" - rate expressions: "100 MB per second"
 	OVER     // "over" - rate accumulation: "100 MB/s over 1 day"
-	WITH     // "with" - capacity planning: "10000 req/s with 450 req/s capacity"
+	WITH     // "with" - capacity planning: "10000 req/s with 450 req/s capacity" (legacy)
 	DOWNTIME // "downtime" - for availability (e.g., "99.9% downtime per month")
 
 	WHILE
@@ -197,6 +198,8 @@ func (tt TokenType) String() string {
 		return "FOR"
 	case AS:
 		return "AS"
+	case AT:
+		return "AT"
 	case FROM:
 		return "FROM"
 	case IN:

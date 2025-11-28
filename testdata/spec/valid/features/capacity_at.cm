@@ -1,0 +1,32 @@
+# Capacity Planning with "at ... per UNIT" Syntax
+
+# Basic quantity capacity planning
+# "How many disks to store 10 TB if each holds 2 TB?"
+10 TB at 2 TB per disk
+
+# Rate-based capacity planning
+# "How many servers to handle 10000 req/s if each handles 450 req/s?"
+10000 req/s at 450 req/s per server
+
+# Bandwidth capacity
+100 MB/s at 10 MB/s per connection
+
+# Items in containers
+100 apples at 30 per crate
+
+# Pure numbers (abstract units)
+100 at 25 per batch
+
+# With buffer percentages
+10 TB at 2 TB per disk with 10% buffer
+10000 req/s at 450 req/s per server with 20% buffer
+100 at 30 per crate with 50% buffer
+
+# Edge cases
+5 at 10 per unit
+100 at 100 per unit
+
+# Alternative slash syntax (instead of "per")
+10 TB at 2 TB/disk
+100 at 25/batch
+10 GB/day at 2 GB/disk with 30% buffer

@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -64,7 +65,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				tl := TemplateLine{Source: line}
 				// Add result if available for this line
 				if i < len(results) && results[i] != nil {
-					tl.Result = results[i].String() // Use Type.String() for formatting
+					tl.Result = display.Format(results[i]) // Use display package for human-readable output
 				}
 				tb.SourceLines[i] = tl
 			}

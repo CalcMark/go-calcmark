@@ -174,6 +174,24 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 			c.checkExpression(f.Arguments[0])
 		}
 		return
+	case "capacity":
+		// capacity(demand, capacity_per_unit, unit_identifier, buffer?)
+		// First two arguments are expressions, third is an identifier, fourth (optional) is expression
+		if len(f.Arguments) > 0 {
+			c.checkExpression(f.Arguments[0]) // demand
+		}
+		if len(f.Arguments) > 1 {
+			c.checkExpression(f.Arguments[1]) // capacity_per_unit
+		}
+		// Skip third argument (unit identifier)
+		if len(f.Arguments) > 3 {
+			c.checkExpression(f.Arguments[3]) // buffer percentage
+		}
+		// Check for base mixing between demand and capacity units
+		if len(f.Arguments) >= 2 {
+			c.checkDataSizeBaseMixingForCapacity(f.Arguments[0], f.Arguments[1])
+		}
+		return
 	}
 
 	// Check all arguments for other functions
@@ -246,4 +264,12 @@ func isBooleanKeyword(name string) bool {
 // GetEnvironment returns the current environment (for testing/debugging).
 func (c *Checker) GetEnvironment() *Environment {
 	return c.env
+}
+
+// checkDataSizeBaseMixingForCapacity checks if demand and capacity units mix binary and decimal bases.
+func (c *Checker) checkDataSizeBaseMixingForCapacity(demand, capacity ast.Node) {
+	demandUnit := getNodeUnit(demand)
+	capacityUnit := getNodeUnit(capacity)
+
+	c.checkDataSizeBaseMixingForUnits(demandUnit, capacityUnit)
 }
