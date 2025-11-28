@@ -440,6 +440,54 @@ func TestCtrlDExitsInAllModes(t *testing.T) {
 	}
 }
 
+// TestDoubleEscClearsInput tests that double-ESC clears the input line.
+func TestDoubleEscClearsInput(t *testing.T) {
+	doc, _ := document.NewDocument("x = 5\n")
+	m := newTUIModel(doc)
+
+	// Set some input text
+	m.input.SetValue("some text to clear")
+
+	// First ESC - should not clear, just record the time
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	result := newModel.(model)
+
+	if result.input.Value() != "some text to clear" {
+		t.Error("First ESC should not clear input")
+	}
+	if result.lastEscTime == 0 {
+		t.Error("First ESC should set lastEscTime")
+	}
+
+	// Second ESC immediately after - should clear the input
+	newModel, _ = result.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	result = newModel.(model)
+
+	if result.input.Value() != "" {
+		t.Errorf("Double-ESC should clear input, got: %q", result.input.Value())
+	}
+	if result.lastEscTime != 0 {
+		t.Error("Double-ESC should reset lastEscTime to prevent triple-ESC trigger")
+	}
+}
+
+// TestSingleEscDoesNotClear tests that a single ESC doesn't clear input.
+func TestSingleEscDoesNotClear(t *testing.T) {
+	doc, _ := document.NewDocument("x = 5\n")
+	m := newTUIModel(doc)
+
+	// Set some input text
+	m.input.SetValue("keep this text")
+
+	// Single ESC - should not clear
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	result := newModel.(model)
+
+	if result.input.Value() != "keep this text" {
+		t.Errorf("Single ESC should not clear input, got: %q", result.input.Value())
+	}
+}
+
 // TestHandleCommandOpenNoArg tests open command without filename.
 func TestHandleCommandOpenNoArg(t *testing.T) {
 	doc, _ := document.NewDocument("x = 5\n")

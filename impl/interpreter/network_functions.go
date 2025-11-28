@@ -21,15 +21,11 @@ var networkLatencies = map[string]float64{
 // All values in MB/s (megabytes per second)
 var networkThroughput = map[string]float64{
 	"gigabit":     125.0,   // 1 Gbps = 125 MB/s
-	"10g":         1250.0,  // 10 Gbps = 1.25 GB/s
-	"ten_gig":     1250.0,  // Alias for 10g (avoids multiplier conflict)
-	"100g":        12500.0, // 100 Gbps = 12.5 GB/s
-	"hundred_gig": 12500.0, // Alias for 100g (avoids multiplier conflict)
+	"ten_gig":     1250.0,  // 10 Gbps = 1.25 GB/s
+	"hundred_gig": 12500.0, // 100 Gbps = 12.5 GB/s
 	"wifi":        12.5,    // ~100 Mbps typical WiFi
-	"4g":          2.5,     // ~20 Mbps typical 4G
-	"four_g":      2.5,     // Alias for 4g (avoids multiplier conflict)
-	"5g":          50.0,    // ~400 Mbps typical 5G
-	"five_g":      50.0,    // Alias for 5g (avoids multiplier conflict)
+	"four_g":      2.5,     // ~20 Mbps typical 4G
+	"five_g":      50.0,    // ~400 Mbps typical 5G
 }
 
 // calculateRTT returns network round-trip time as a Duration.
@@ -61,12 +57,12 @@ func calculateRTT(scope string) (*types.Duration, error) {
 }
 
 // calculateThroughput returns network bandwidth as a Rate (MB/s).
-// Network types: gigabit, 10g, 100g, wifi, 4g, 5g
+// Network types: gigabit, ten_gig, hundred_gig, wifi, four_g, five_g
 // Time Complexity: O(1) - map lookup
 //
 // Examples:
 //   - throughput(gigabit) → 125 MB/s
-//   - throughput(10g) → 1250 MB/s
+//   - throughput(ten_gig) → 1250 MB/s
 //   - throughput(wifi) → 12.5 MB/s
 func calculateThroughput(networkType string) (*types.Rate, error) {
 	typeLower := strings.ToLower(strings.TrimSpace(networkType))
@@ -74,7 +70,7 @@ func calculateThroughput(networkType string) (*types.Rate, error) {
 	mbps, exists := networkThroughput[typeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown network type '%s' (valid types: gigabit, 10g/ten_gig, 100g/hundred_gig, wifi, 4g/four_g, 5g/five_g)",
+			"unknown network type '%s' (valid types: gigabit, ten_gig, hundred_gig, wifi, four_g, five_g)",
 			networkType,
 		)
 	}
@@ -95,7 +91,7 @@ func calculateThroughput(networkType string) (*types.Rate, error) {
 // Examples:
 //   - transfer_time(1 KB, regional, gigabit) → ~10 ms (RTT dominates)
 //   - transfer_time(1 GB, global, gigabit) → ~8.15 seconds (150ms RTT + 8s transmission)
-//   - transfer_time(10 MB, local, 10g) → ~8.5 ms (0.5ms RTT + 8ms transmission)
+//   - transfer_time(10 MB, local, ten_gig) → ~8.5 ms (0.5ms RTT + 8ms transmission)
 func calculateTransferTime(size *types.Quantity, scope string, networkType string) (*types.Duration, error) {
 	// Get RTT
 	rtt, err := calculateRTT(scope)

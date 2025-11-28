@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/format/display"
@@ -49,6 +50,7 @@ type model struct {
 	outputHistory   []outputHistoryItem // Display history (commands + results)
 	historyIdx      int                 // Current position in history (-1 = not browsing)
 	lastSuggestions []features.Feature  // Last suggestions shown (persists while typing)
+	lastEscTime     int64               // Unix nano timestamp of last ESC press (for double-ESC)
 	width           int
 	height          int
 	err             error
@@ -220,7 +222,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input.Prompt = "> "
 				return m, nil
 			}
-			// In normal mode, Esc does nothing (prevents accidental exits)
+			// In normal mode, double-ESC clears the input line
+			now := time.Now().UnixNano()
+			// Check if this is a double-ESC (within 500ms of last ESC)
+			if m.lastEscTime > 0 && (now-m.lastEscTime) < 500_000_000 {
+				// Double-ESC: clear the input
+				m.input.SetValue("")
+				m.lastEscTime = 0 // Reset to prevent triple-ESC from triggering again
+				m.lastSuggestions = nil
+				return m, nil
+			}
+			m.lastEscTime = now
 			return m, nil
 
 		case tea.KeyRunes:
@@ -830,12 +842,29 @@ func (m *model) updateSuggestions() []features.Feature {
 		return m.lastSuggestions
 	}
 
-	// Extract the last word being typed
+	// Check if we're inside a function call - find unclosed '('
+	if funcName, paramIdx := detectFunctionContext(input); funcName != "" {
+		// Search for the function to get its signature
+		matches := m.registry.Search(funcName)
+		for _, f := range matches {
+			if f.Name == funcName && f.Category == features.CategoryFunction {
+				// Create a synthetic feature with parameter hints
+				hintFeature := createParameterHint(f, paramIdx)
+				m.lastSuggestions = []features.Feature{hintFeature}
+				return m.lastSuggestions
+			}
+		}
+	}
+
+	// Extract the last word being typed (strip trailing punctuation like '(')
 	words := strings.Fields(input)
 	if len(words) == 0 {
 		return m.lastSuggestions
 	}
 	lastWord := words[len(words)-1]
+
+	// Strip trailing '(' to match function names
+	lastWord = strings.TrimRight(lastWord, "(,")
 
 	// Only search if the last word is at least 2 characters
 	if len(lastWord) < 2 {
@@ -858,6 +887,166 @@ func (m *model) updateSuggestions() []features.Feature {
 	return m.lastSuggestions
 }
 
+// detectFunctionContext checks if the cursor is inside a function call.
+// Returns the function name and the current parameter index (0-based).
+// Returns ("", -1) if not inside a function call.
+func detectFunctionContext(input string) (string, int) {
+	// Find the last unclosed '('
+	parenDepth := 0
+	lastOpenParen := -1
+
+	for i := len(input) - 1; i >= 0; i-- {
+		switch input[i] {
+		case ')':
+			parenDepth++
+		case '(':
+			if parenDepth > 0 {
+				parenDepth--
+			} else {
+				lastOpenParen = i
+				break
+			}
+		}
+		if lastOpenParen >= 0 {
+			break
+		}
+	}
+
+	if lastOpenParen < 0 {
+		return "", -1
+	}
+
+	// Extract function name before the '('
+	funcEnd := lastOpenParen
+	funcStart := funcEnd
+	for funcStart > 0 && (isIdentChar(input[funcStart-1])) {
+		funcStart--
+	}
+
+	if funcStart == funcEnd {
+		return "", -1
+	}
+
+	funcName := input[funcStart:funcEnd]
+
+	// Count commas after the '(' to determine parameter index
+	paramIdx := 0
+	innerParenDepth := 0
+	for i := lastOpenParen + 1; i < len(input); i++ {
+		switch input[i] {
+		case '(':
+			innerParenDepth++
+		case ')':
+			innerParenDepth--
+		case ',':
+			if innerParenDepth == 0 {
+				paramIdx++
+			}
+		}
+	}
+
+	return funcName, paramIdx
+}
+
+// isIdentChar returns true if c is a valid identifier character.
+func isIdentChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'
+}
+
+// createParameterHint creates a feature with highlighted parameter info.
+func createParameterHint(f features.Feature, paramIdx int) features.Feature {
+	// Get parameter options for specific functions
+	paramOptions := getParameterOptions(f.Name, paramIdx)
+
+	var syntax string
+	if paramOptions != "" {
+		syntax = paramOptions
+	} else {
+		syntax = f.Syntax
+	}
+
+	return features.Feature{
+		Name:        f.Name,
+		Category:    f.Category,
+		Syntax:      syntax,
+		Description: f.Description,
+	}
+}
+
+// getParameterOptions returns valid options for a function parameter.
+func getParameterOptions(funcName string, paramIdx int) string {
+	switch funcName {
+	case "transfer_time":
+		switch paramIdx {
+		case 0:
+			return "size: 1 GB, 100 MB, ..."
+		case 1:
+			return "scope: local | regional | continental | global"
+		case 2:
+			return "network: gigabit | ten_gig | hundred_gig | wifi | four_g | five_g"
+		}
+	case "rtt":
+		if paramIdx == 0 {
+			return "scope: local | regional | continental | global"
+		}
+	case "throughput":
+		if paramIdx == 0 {
+			return "network: gigabit | ten_gig | hundred_gig | wifi | four_g | five_g"
+		}
+	case "read":
+		switch paramIdx {
+		case 0:
+			return "size: 1 GB, 100 MB, ..."
+		case 1:
+			return "storage: ssd | nvme | pcie_ssd | hdd"
+		}
+	case "seek":
+		if paramIdx == 0 {
+			return "storage: ssd | nvme | pcie_ssd | hdd"
+		}
+	case "compress":
+		switch paramIdx {
+		case 0:
+			return "size: 1 GB, 100 MB, ..."
+		case 1:
+			return "algorithm: gzip | lz4 | zstd | bzip2 | snappy"
+		}
+	case "downtime":
+		switch paramIdx {
+		case 0:
+			return "availability: 99.9%, 99.99%, ..."
+		case 1:
+			return "period: day | week | month | year"
+		}
+	case "convert_rate":
+		switch paramIdx {
+		case 0:
+			return "rate: 1000 req/s, ..."
+		case 1:
+			return "unit: second | minute | hour | day"
+		}
+	case "accumulate":
+		switch paramIdx {
+		case 0:
+			return "rate: 100 req/s, ..."
+		case 1:
+			return "time: 1 hour, 5 minutes, ..."
+		}
+	case "capacity":
+		switch paramIdx {
+		case 0:
+			return "demand: 10 TB, 10000 req/s, ..."
+		case 1:
+			return "capacity: 2 TB, 500 req/s, ..."
+		case 2:
+			return "unit: disk, server, connection, ..."
+		case 3:
+			return "buffer: 10%, 20%, ... (optional)"
+		}
+	}
+	return ""
+}
+
 // renderSuggestions formats the autosuggest line.
 func renderSuggestions(suggestions []features.Feature, varCompletions []string) string {
 	var parts []string
@@ -869,7 +1058,13 @@ func renderSuggestions(suggestions []features.Feature, varCompletions []string) 
 
 	// Add feature suggestions
 	for _, s := range suggestions {
-		parts = append(parts, fmt.Sprintf("%s (%s)", s.Name, s.Syntax))
+		// Check if this is a parameter hint (syntax starts with parameter name like "scope:")
+		if strings.Contains(s.Syntax, ":") && s.Category == features.CategoryFunction {
+			// This is a parameter hint - show just the options without repeating function name
+			parts = append(parts, s.Syntax)
+		} else {
+			parts = append(parts, fmt.Sprintf("%s (%s)", s.Name, s.Syntax))
+		}
 	}
 
 	if len(parts) == 0 {

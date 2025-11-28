@@ -62,13 +62,13 @@ func TestCalculateThroughput(t *testing.T) {
 		description  string
 	}{
 		{"gigabit", 125.0, false, "1 Gbps"},
-		{"10g", 1250.0, false, "10 Gbps"},
-		{"100g", 12500.0, false, "100 Gbps"},
+		{"ten_gig", 1250.0, false, "10 Gbps"},
+		{"hundred_gig", 12500.0, false, "100 Gbps"},
 		{"wifi", 12.5, false, "WiFi ~100 Mbps"},
-		{"4g", 2.5, false, "4G ~20 Mbps"},
-		{"5g", 50.0, false, "5G ~400 Mbps"},
+		{"four_g", 2.5, false, "4G ~20 Mbps"},
+		{"five_g", 50.0, false, "5G ~400 Mbps"},
 		{"GIGABIT", 125.0, false, "Case insensitive"},
-		{"  10g  ", 1250.0, false, "Whitespace trimming"},
+		{"  ten_gig  ", 1250.0, false, "Whitespace trimming"},
 		{"invalid", 0, true, "Invalid type"},
 	}
 
@@ -128,9 +128,9 @@ func TestCalculateTransferTime(t *testing.T) {
 			tolerance:  50.0,
 		},
 		{
-			name:      "10 MB local 10g",
+			name:      "10 MB local ten_gig",
 			sizeValue: 10, sizeUnit: "megabyte",
-			scope: "local", networkType: "10g",
+			scope: "local", networkType: "ten_gig",
 			expectedMs: 8.5, // 0.5ms RTT + 8ms transmission
 			tolerance:  1.0,
 		},

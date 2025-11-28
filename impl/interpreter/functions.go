@@ -89,7 +89,7 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		}
 		typeIdent, ok := f.Arguments[0].(*ast.Identifier)
 		if !ok {
-			return nil, fmt.Errorf("throughput() network type must be an identifier (gigabit, 10g, 100g, wifi, 4g, 5g)")
+			return nil, fmt.Errorf("throughput() network type must be an identifier (gigabit, ten_gig, hundred_gig, wifi, four_g, five_g)")
 		}
 		return calculateThroughput(typeIdent.Name)
 	}
@@ -111,11 +111,11 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 		// Extract scope and network type as identifiers
 		scopeIdent, ok := f.Arguments[1].(*ast.Identifier)
 		if !ok {
-			return nil, fmt.Errorf("transfer_time() scope must be an identifier")
+			return nil, fmt.Errorf("transfer_time() scope must be an identifier (local, regional, continental, global)")
 		}
 		typeIdent, ok := f.Arguments[2].(*ast.Identifier)
 		if !ok {
-			return nil, fmt.Errorf("transfer_time() network type must be an identifier")
+			return nil, fmt.Errorf("transfer_time() network type must be an identifier (gigabit, ten_gig, hundred_gig, wifi, four_g, five_g)")
 		}
 		return calculateTransferTime(sizeQty, scopeIdent.Name, typeIdent.Name)
 	}
