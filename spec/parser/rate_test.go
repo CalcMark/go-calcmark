@@ -118,3 +118,89 @@ func TestRateParsing(t *testing.T) {
 		})
 	}
 }
+
+// TestRateUnitConversionParsing tests parsing of rate-to-rate unit conversion.
+// Examples: "10 m/s in inch/s", "60 km/h in mph"
+func TestRateUnitConversionParsing(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          string
+		expectError    bool
+		targetUnit     string
+		targetTimeUnit string
+	}{
+		{
+			name:           "meters per second to inches per second",
+			input:          "10 m/s in inch/s\n",
+			expectError:    false,
+			targetUnit:     "inch",
+			targetTimeUnit: "s",
+		},
+		{
+			name:           "km per hour to miles per hour",
+			input:          "60 km/h in mile/h\n",
+			expectError:    false,
+			targetUnit:     "mile",
+			targetTimeUnit: "h",
+		},
+		{
+			name:           "rate conversion with per keyword",
+			input:          "10 m/s in inch per second\n",
+			expectError:    false,
+			targetUnit:     "inch",
+			targetTimeUnit: "second",
+		},
+		{
+			name:           "rate conversion changing time unit",
+			input:          "60 m/s in m/min\n",
+			expectError:    false,
+			targetUnit:     "m",
+			targetTimeUnit: "min",
+		},
+		{
+			name:        "invalid time unit in rate conversion",
+			input:       "10 m/s in inch/foo\n",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
+			}
+
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+
+			conv, ok := nodes[0].(*ast.UnitConversion)
+			if !ok {
+				t.Fatalf("Expected UnitConversion, got %T", nodes[0])
+			}
+
+			if conv.TargetUnit != tt.targetUnit {
+				t.Errorf("Expected target unit '%s', got '%s'", tt.targetUnit, conv.TargetUnit)
+			}
+
+			if conv.TargetTimeUnit != tt.targetTimeUnit {
+				t.Errorf("Expected target time unit '%s', got '%s'", tt.targetTimeUnit, conv.TargetTimeUnit)
+			}
+
+			// Verify the source is a RateLiteral
+			_, isRate := conv.Quantity.(*ast.RateLiteral)
+			if !isRate {
+				t.Errorf("Expected source to be RateLiteral, got %T", conv.Quantity)
+			}
+		})
+	}
+}

@@ -1,0 +1,30 @@
+# Rate Unit Conversion
+# Tests converting rates between different quantity and time units.
+
+# Length rate conversions (same time unit)
+speed1 = 10 m/s in inch/s
+speed2 = 100 km/h in mile/h
+speed3 = 60 feet/s in m/s
+
+# Time unit conversion only (same quantity unit)
+rate1 = 60 m/s in m/min
+
+# Combined quantity and time conversion
+speed4 = 1 km/h in m/s
+speed5 = 100 km/h in m/s
+
+# Using 'per' syntax for target
+speed6 = 10 m/s in inch per second
+speed7 = 60 km/h in mile per hour
+
+# Mass rate conversion
+mass_rate1 = 10 kg/s in lb/s
+mass_rate2 = 100 lb/h in kg/h
+
+# Length-to-length with time change
+speed8 = 1 mile/h in feet/s
+
+# Time-only conversion with simple time unit target
+# "10 MB/day in seconds" keeps MB, converts day to seconds
+data_rate1 = 10 MB/day in seconds
+data_rate2 = 100 GB/month in hours

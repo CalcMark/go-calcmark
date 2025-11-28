@@ -192,3 +192,9 @@ func TimeUnitToSeconds(unit string) (decimal.Decimal, error) {
 
 	return decimal.Zero, fmt.Errorf("unknown time unit: %s", unit)
 }
+
+// IsTimeUnit returns true if the given unit is a valid time unit.
+func IsTimeUnit(unit string) bool {
+	_, err := TimeUnitToSeconds(unit)
+	return err == nil
+}

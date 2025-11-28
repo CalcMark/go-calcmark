@@ -59,13 +59,18 @@ func (q *QuantityLiteral) GetRange() *Range {
 }
 
 // UnitConversion represents explicit unit conversion (e.g., "10 meters in feet").
+// For rate conversions (e.g., "10 m/s in inch/s"), TargetTimeUnit is set.
 type UnitConversion struct {
-	Quantity   Node   // The quantity expression to convert
-	TargetUnit string // The target unit to convert to
-	Range      *Range
+	Quantity       Node   // The quantity expression to convert
+	TargetUnit     string // The target unit to convert to
+	TargetTimeUnit string // For rate conversions: the target time unit (e.g., "s" in "inch/s")
+	Range          *Range
 }
 
 func (u *UnitConversion) String() string {
+	if u.TargetTimeUnit != "" {
+		return fmt.Sprintf("UnitConversion(%s in %s/%s)", u.Quantity.String(), u.TargetUnit, u.TargetTimeUnit)
+	}
 	return fmt.Sprintf("UnitConversion(%s in %s)", u.Quantity.String(), u.TargetUnit)
 }
 

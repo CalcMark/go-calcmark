@@ -542,6 +542,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	}
 
 	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
+	// Also handles rate unit conversion: "10 m/s in inch/s"
 	if p.match(lexer.IN) {
 		if !p.match(lexer.IDENTIFIER) {
 			return nil, p.error("expected unit name after 'in'")
@@ -558,10 +559,35 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			}
 		}
 
+		// Check for rate target unit: "in inch/s" or "in inch per second"
+		var targetTimeUnit string
+		if p.match(lexer.DIVIDE) {
+			// Rate syntax: "in inch/s"
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected time unit after '/' in rate conversion")
+			}
+			timeUnit := string(p.previous().Value)
+			if !isTimeUnit(timeUnit) {
+				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit for rate conversion", timeUnit))
+			}
+			targetTimeUnit = timeUnit
+		} else if p.match(lexer.PER) {
+			// Natural syntax: "in inch per second"
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected time unit after 'per' in rate conversion")
+			}
+			timeUnit := string(p.previous().Value)
+			if !isTimeUnit(timeUnit) {
+				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit for rate conversion", timeUnit))
+			}
+			targetTimeUnit = timeUnit
+		}
+
 		return &ast.UnitConversion{
-			Quantity:   left,
-			TargetUnit: targetUnitName,
-			Range:      &ast.Range{},
+			Quantity:       left,
+			TargetUnit:     targetUnitName,
+			TargetTimeUnit: targetTimeUnit,
+			Range:          &ast.Range{},
 		}, nil
 	}
 

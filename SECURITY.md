@@ -41,9 +41,11 @@ CalcMark is designed to be safe for evaluating user-provided calculation code. T
 ### Protection Mechanisms
 
 1. **File Size Validation**: Reject files >1MB before processing
-2. **Path Validation**: Block directory traversal (`..` in paths)
-3. **Extension Validation**: Only `.cm` and `.calcmark` files
+2. **Path Validation**: Block directory traversal (`..` in paths) for **input** files
+3. **Extension Validation**: Only `.cm` and `.calcmark` files for input
 4. **Timeout Protection** (recommended): Set timeouts in production environments
+
+Note: Output commands (`/output`, `/save`) allow writing to any path the user specifies, including paths with `..`. This is intentional - users should be able to export results anywhere they have write access.
 
 ### Recommended Timeouts
 
