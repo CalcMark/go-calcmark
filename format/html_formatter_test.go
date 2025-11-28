@@ -133,3 +133,100 @@ x = 100
 		t.Error("Expected styled calc blocks")
 	}
 }
+
+// TestHTMLFormatterIntermediateValues tests that HTML output includes
+// intermediate calculation results for each line.
+func TestHTMLFormatterIntermediateValues(t *testing.T) {
+	// Multiple calculations in one block with dependencies
+	source := `x = 10
+y = x * 2
+z = y + 5
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain all intermediate results
+	// x = 10 → 10
+	if !strings.Contains(output, "10") {
+		t.Errorf("Expected HTML to contain x result (10), got: %s", output)
+	}
+	// y = x * 2 → 20
+	if !strings.Contains(output, "20") {
+		t.Errorf("Expected HTML to contain y result (20), got: %s", output)
+	}
+	// z = y + 5 → 25
+	if !strings.Contains(output, "25") {
+		t.Errorf("Expected HTML to contain z result (25), got: %s", output)
+	}
+
+	// Should contain source expressions
+	if !strings.Contains(output, "x = 10") {
+		t.Error("Expected HTML to contain source 'x = 10'")
+	}
+	if !strings.Contains(output, "y = x * 2") {
+		t.Error("Expected HTML to contain source 'y = x * 2'")
+	}
+}
+
+// TestHTMLFormatterMultiBlockIntermediates tests intermediate values across blocks.
+func TestHTMLFormatterMultiBlockIntermediates(t *testing.T) {
+	// Two separate blocks with dependencies
+	source := `base = 100
+
+
+rate = base * 0.15
+total = base + rate
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain results from both blocks
+	// base = 100 → 100
+	if !strings.Contains(output, "100") {
+		t.Errorf("Expected HTML to contain base result (100)")
+	}
+	// rate = base * 0.15 → 15
+	if !strings.Contains(output, "15") {
+		t.Errorf("Expected HTML to contain rate result (15)")
+	}
+	// total = base + rate → 115
+	if !strings.Contains(output, "115") {
+		t.Errorf("Expected HTML to contain total result (115)")
+	}
+}

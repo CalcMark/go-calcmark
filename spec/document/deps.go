@@ -2,7 +2,6 @@ package document
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/parser"
@@ -40,14 +39,19 @@ func (da *DependencyAnalyzer) AnalyzeBlock(block *CalcBlock) error {
 	// Store parsed statements
 	block.SetStatements(nodes)
 
-	// Extract defined and referenced variables
-	defined := []string{}
+	// Extract defined and referenced variables.
+	// Use a map to track defined variables (deduplicates reassignments).
+	definedSet := make(map[string]bool)
+	definedOrder := []string{} // Preserve first-definition order
 	referenced := make(map[string]bool)
 
 	for _, node := range nodes {
 		// Find variable definitions (assignments)
 		if assignment, ok := node.(*ast.Assignment); ok {
-			defined = append(defined, assignment.Name)
+			if !definedSet[assignment.Name] {
+				definedSet[assignment.Name] = true
+				definedOrder = append(definedOrder, assignment.Name)
+			}
 		}
 
 		// Find variable references (identifiers)
@@ -57,12 +61,12 @@ func (da *DependencyAnalyzer) AnalyzeBlock(block *CalcBlock) error {
 	// Remove self-references (variables defined in this block)
 	dependencies := []string{}
 	for varName := range referenced {
-		if !contains(defined, varName) {
+		if !definedSet[varName] {
 			dependencies = append(dependencies, varName)
 		}
 	}
 
-	block.SetVariables(defined)
+	block.SetVariables(definedOrder)
 	block.SetDependencies(dependencies)
 
 	return nil
@@ -115,9 +119,4 @@ func extractIdentifiers(node ast.Node, identifiers map[string]bool) {
 	default:
 		// Unknown node type - skip
 	}
-}
-
-// contains checks if a slice contains a string.
-func contains(slice []string, item string) bool {
-	return slices.Contains(slice, item)
 }

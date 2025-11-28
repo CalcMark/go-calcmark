@@ -170,19 +170,25 @@ func (d *Document) InsertBlock(afterBlockID string, blockType BlockType, source 
 	d.blocks = append(d.blocks[:pos+1], append([]*BlockNode{newNode}, d.blocks[pos+1:]...)...)
 	d.blockIndex[newNode.ID] = newNode
 
-	// Rebuild dependencies
+	// Rebuild dependencies (this analyzes the new block and updates varToBlocks)
 	err := d.rebuildDependencies()
 	if err != nil {
 		return nil, err
 	}
 
-	// All blocks after this position might be affected (top-down resolution)
+	// Collect affected blocks: the new block + all blocks that transitively depend
+	// on variables defined by the new block
 	affectedIDs := []string{newNode.ID}
-	for i := pos + 2; i < len(d.blocks); i++ {
-		if d.blocks[i].Block.Type() == BlockCalculation {
-			affectedIDs = append(affectedIDs, d.blocks[i].ID)
-		}
+
+	if calcBlock, ok := newNode.Block.(*CalcBlock); ok {
+		// Use GetTransitiveDependents to find ALL affected blocks (direct + transitive)
+		changedVars := calcBlock.Variables()
+		transitiveIDs := d.GetTransitiveDependents(changedVars)
+		affectedIDs = append(affectedIDs, transitiveIDs...)
 	}
+
+	// Remove duplicates
+	affectedIDs = uniqueStrings(affectedIDs)
 
 	return &UpdateResult{
 		ModifiedBlockID:  newNode.ID,
@@ -290,6 +296,79 @@ func uniqueStrings(strs []string) []string {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// GetTransitiveDependents returns all block IDs that transitively depend on
+// any of the given variables. This follows the dependency chain:
+// if a→b→c, changing 'a' returns blocks containing 'b' AND 'c'.
+//
+// This is the key API for reactive UIs: when a variable changes, call this
+// to get the minimal set of blocks that need re-evaluation.
+func (d *Document) GetTransitiveDependents(changedVars []string) []string {
+	affected := make(map[string]bool)
+	visited := make(map[string]bool)
+
+	// Start with all variables that changed
+	varsToProcess := make([]string, len(changedVars))
+	copy(varsToProcess, changedVars)
+
+	for len(varsToProcess) > 0 {
+		// Pop a variable
+		varName := varsToProcess[0]
+		varsToProcess = varsToProcess[1:]
+
+		if visited[varName] {
+			continue
+		}
+		visited[varName] = true
+
+		// Find all blocks that depend on this variable
+		for _, blockID := range d.varToBlocks[varName] {
+			if affected[blockID] {
+				continue
+			}
+			affected[blockID] = true
+
+			// Find variables defined by this block - they're now "changed" too
+			if node, ok := d.blockIndex[blockID]; ok {
+				if cb, ok := node.Block.(*CalcBlock); ok {
+					for _, definedVar := range cb.Variables() {
+						if !visited[definedVar] {
+							varsToProcess = append(varsToProcess, definedVar)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Convert to slice
+	result := make([]string, 0, len(affected))
+	for blockID := range affected {
+		result = append(result, blockID)
+	}
+	return result
+}
+
+// GetBlocksInDependencyOrder returns block IDs sorted so that dependencies
+// come before dependents. This is a topological sort based on the dependency graph.
+// Useful for evaluating blocks in the correct order after a change.
+func (d *Document) GetBlocksInDependencyOrder(blockIDs []string) []string {
+	// Build a set for quick lookup
+	blockSet := make(map[string]bool)
+	for _, id := range blockIDs {
+		blockSet[id] = true
+	}
+
+	// Return in document order (which is already topologically sorted for top-down semantics)
+	// This works because CalcMark has top-down semantics: variables must be defined before use
+	result := make([]string, 0, len(blockIDs))
+	for _, node := range d.blocks {
+		if blockSet[node.ID] {
+			result = append(result, node.ID)
 		}
 	}
 	return result

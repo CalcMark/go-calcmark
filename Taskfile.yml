@@ -147,10 +147,16 @@ tasks:
     cmds:
       - go vet -v $(go list ./... | grep -v '/impl/wasm')
 
-  staticcheck:
-    desc: Run staticcheck (install with 'go install honnef.co/go/tools/cmd/staticcheck@latest')
+  modernize:
+    desc: Run Go modernize analyzer (suggests modern Go idioms)
     cmds:
-      - staticcheck ./...
+      - go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest $(go list ./... | grep -v '/impl/wasm')
+      - echo '✓ Modernize check passed'
+
+  staticcheck:
+    desc: Run staticcheck (uses go run, no global install needed)
+    cmds:
+      - go run honnef.co/go/tools/cmd/staticcheck@latest $(go list ./... | grep -v '/impl/wasm')
       - echo '✓ Staticcheck passed'
 
   lint:strict:
@@ -163,6 +169,7 @@ tasks:
     desc: Run all quality checks (recommended before commit)
     cmds:
       - task: lint
+      - task: modernize
       - task: staticcheck
       - echo '✓ All quality checks passed'
 

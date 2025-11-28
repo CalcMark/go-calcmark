@@ -85,8 +85,6 @@ This runs:
 
 ## Architecture Overview
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
-
 ### Key Packages
 
 | Package | Purpose | Entry Point |
@@ -94,9 +92,28 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
 | `spec/lexer` | Tokenization | `NewLexer(text)` |
 | `spec/parser` | Parsing to AST | `Parse(text)` |
 | `spec/semantic` | Semantic analysis | `NewChecker().Check(nodes)` |
-| `impl/interpreter` | Execution | `NewInterpreter().Eval(nodes)` |
-| `spec/types` | Type system | `NewNumber()`, `NewCurrency()`, etc. |
 | `spec/document` | Document model | `NewDocument()` |
+| `impl/interpreter` | Execution | `NewInterpreter().Eval(nodes)` |
+| `impl/document` | Document evaluation | `NewEvaluator().Evaluate(doc)` |
+| `spec/types` | Type system | `NewNumber()`, `NewCurrency()`, etc. |
+
+### Evaluation Flow
+
+```
+Source Text
+    ↓
+Lexer (spec/lexer) → Tokens
+    ↓
+Parser (spec/parser) → AST Nodes
+    ↓
+Semantic Checker (spec/semantic) → Validated AST + Diagnostics
+    ↓
+Interpreter (impl/interpreter) → Results + Updated Environment
+```
+
+For detailed documentation on in-memory data structures, global variable scope, and
+the relationship between Document, CalcBlock, Evaluator, and Environment, see
+[impl/README.md](impl/README.md).
 
 ## Adding New Features
 
@@ -176,6 +193,7 @@ return fmt.Errorf("syntax error")
 
 ## Questions?
 
-- Check [ARCHITECTURE.md](ARCHITECTURE.md) for system design
+- See the [Architecture Overview](#architecture-overview) section above for system design
 - See [LANGUAGE_SPEC.md](spec/LANGUAGE_SPEC.md) for language details
+- See [OUTPUT_FORMATTERS.md](OUTPUT_FORMATTERS.md) for output format details
 - Review existing code for patterns

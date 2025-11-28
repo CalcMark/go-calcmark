@@ -22,12 +22,25 @@ func (f *CalcMarkFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 	blocks := doc.GetBlocks()
 
 	for i, node := range blocks {
-		// Write source lines
-		for _, line := range node.Block.Source() {
-			fmt.Fprintln(w, line)
+		source := node.Block.Source()
+		isLastBlock := i == len(blocks)-1
+
+		// Write source lines exactly as stored (lines don't include \n)
+		for j, line := range source {
+			isLastLine := j == len(source)-1
+
+			// Skip the trailing empty line for the last block
+			// (it was created by splitLines and represents "trailing \n")
+			// The previous line's \n already provides the final newline
+			if isLastBlock && isLastLine && line == "" {
+				continue
+			}
+
+			fmt.Fprint(w, line)
+			fmt.Fprint(w, "\n")
 		}
 
-		// Optionally add result as comment
+		// Optionally add result as comment (verbose mode only)
 		if opts.Verbose {
 			if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
 				if calcBlock.LastValue() != nil {
@@ -36,9 +49,11 @@ func (f *CalcMarkFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 			}
 		}
 
-		// Add spacing between blocks (except after the last one)
-		if i < len(blocks)-1 {
-			fmt.Fprintln(w)
+		// Add block boundary between blocks (except after the last one)
+		// Block boundary = 2 consecutive empty lines = \n\n after content\n
+		// Source already includes one empty line from trailing \n, so add one more \n
+		if !isLastBlock {
+			fmt.Fprint(w, "\n")
 		}
 	}
 
