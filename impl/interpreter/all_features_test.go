@@ -82,15 +82,9 @@ func TestAllInterpreterFeatures(t *testing.T) {
 
 			// For floating point conversions, compare first significant characters
 			// This handles precision artifacts (e.g., 11.5239999... matches 11.524)
-			minLen := len(tt.expected)
-			if len(actual) < minLen {
-				minLen = len(actual)
-			}
+			minLen := min(len(tt.expected), len(actual))
 			// Compare at least first 5 chars or full expected length, whichever is smaller
-			compareLen := 5
-			if minLen < compareLen {
-				compareLen = minLen
-			}
+			compareLen := min(5, minLen)
 			if len(tt.expected) > compareLen {
 				compareLen = len(tt.expected) - 1 // Compare all but last char to allow tolerance
 			}

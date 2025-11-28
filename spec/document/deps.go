@@ -2,6 +2,7 @@ package document
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/parser"
@@ -118,10 +119,5 @@ func extractIdentifiers(node ast.Node, identifiers map[string]bool) {
 
 // contains checks if a slice contains a string.
 func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, item)
 }

@@ -66,10 +66,7 @@ func TestInUnitSyntax(t *testing.T) {
 			}
 
 			// Check actual starts with expected number prefix (first 5-6 chars)
-			compareLen := len(expectedNum)
-			if compareLen > len(actual) {
-				compareLen = len(actual)
-			}
+			compareLen := min(len(expectedNum), len(actual))
 			if !strings.HasPrefix(actual, expectedNum[:compareLen]) {
 				t.Errorf("Result = %s, expected approximately %s", actual, tt.expected)
 			}

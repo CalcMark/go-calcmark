@@ -15,7 +15,7 @@ func BenchmarkUnitConversion(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = convertQuantity(qty, "feet")
 	}
 }
@@ -28,7 +28,7 @@ func BenchmarkUnitConversion_SameUnit(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = convertQuantity(qty, "meters")
 	}
 }
@@ -47,7 +47,7 @@ func BenchmarkMultipleConversions(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, u := range units {
 			qty := &types.Quantity{
 				Value: decimal.NewFromInt(100),

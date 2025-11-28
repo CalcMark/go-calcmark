@@ -76,7 +76,7 @@ func formatNapkin(value decimal.Decimal, precision int) string {
 //   - roundToSignificantFigures(1.234567, 2) → 1.2
 //   - roundToSignificantFigures(8734, 2) → 8700
 //   - roundToSignificantFigures(0.0123, 2) → 0.012
-func roundToSignificantFigures(value float64, sigFigs int) interface{} {
+func roundToSignificantFigures(value float64, sigFigs int) any {
 	if value == 0 {
 		return 0
 	}

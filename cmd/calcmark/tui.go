@@ -275,10 +275,7 @@ func (m model) View() string {
 	// Layout: If pinned vars exist, show side-by-side
 	if len(m.pinnedVars) > 0 {
 		// Right panel: Pinned variables (50% width)
-		rightWidth := m.width / 2
-		if rightWidth < 30 {
-			rightWidth = 30
-		}
+		rightWidth := max(m.width/2, 30)
 
 		pinnedContent := m.renderPinnedVars()
 		rightPanel := pinnedPanelStyle.
@@ -287,10 +284,7 @@ func (m model) View() string {
 			Render(pinnedContent)
 
 		// Left panel: Main content (50% width)
-		leftWidth := m.width - rightWidth
-		if leftWidth < 30 {
-			leftWidth = 30
-		}
+		leftWidth := max(m.width-rightWidth, 30)
 
 		leftPanel := lipgloss.NewStyle().
 			Width(leftWidth).
@@ -464,10 +458,7 @@ func (m model) renderHistory() string {
 
 	// Calculate how many history items to show based on terminal height
 	// Reserve space for: title(2) + mode(1) + separator(1) + input(2) + error(1) + help(2) = ~9 lines
-	maxHistoryLines := m.height - 12
-	if maxHistoryLines < 5 {
-		maxHistoryLines = 5
-	}
+	maxHistoryLines := max(m.height-12, 5)
 
 	// Count lines needed for history
 	historyLines := 0

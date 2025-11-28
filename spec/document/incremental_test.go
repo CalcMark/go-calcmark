@@ -1,6 +1,7 @@
 package document
 
 import (
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -170,15 +171,7 @@ y = 20`
 	t.Logf("✅ Modified 1 block, affected %d blocks", len(result.AffectedBlockIDs))
 
 	// At minimum, the modified block should be in affected list
-	found := false
-	for _, id := range result.AffectedBlockIDs {
-		if id == firstID {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !slices.Contains(result.AffectedBlockIDs, firstID) {
 		t.Error("Modified block should be in affected list")
 	}
 }

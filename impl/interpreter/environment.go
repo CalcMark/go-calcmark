@@ -1,6 +1,10 @@
 package interpreter
 
-import "github.com/CalcMark/go-calcmark/spec/types"
+import (
+	"maps"
+
+	"github.com/CalcMark/go-calcmark/spec/types"
+)
 
 // Environment tracks variable bindings during interpretation.
 // This is separate from Go's context.Context - it's simply variable storage for CalcMark variables.
@@ -49,9 +53,7 @@ func (e *Environment) Clone() *Environment {
 	newEnv := &Environment{
 		vars: make(map[string]types.Type),
 	}
-	for k, v := range e.vars {
-		newEnv.vars[k] = v
-	}
+	maps.Copy(newEnv.vars, e.vars)
 	return newEnv
 }
 

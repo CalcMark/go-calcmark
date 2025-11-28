@@ -24,8 +24,8 @@ func runEval(args []string) error {
 		// Backward compatibility: --json maps to --format=json
 		if arg == "--json" {
 			formatName = "json"
-		} else if strings.HasPrefix(arg, "--format=") {
-			formatName = strings.TrimPrefix(arg, "--format=")
+		} else if f, ok := strings.CutPrefix(arg, "--format="); ok {
+			formatName = f
 		} else if arg == "--verbose" || arg == "-v" {
 			verbose = true
 		} else if !strings.HasPrefix(arg, "-") {

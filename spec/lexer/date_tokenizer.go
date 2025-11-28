@@ -222,7 +222,7 @@ func (l *Lexer) readDurationLiteral() Token {
 		}
 
 		// Consume "and"
-		for i := 0; i < 3; i++ {
+		for range 3 {
 			l.advance()
 		}
 		l.skipWhitespace()

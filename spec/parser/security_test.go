@@ -38,7 +38,7 @@ func TestSecurityTokenCountLimit(t *testing.T) {
 	// Create expression with >10,000 tokens
 	// Format: x1+x2+x3+...+x15000
 	var b strings.Builder
-	for i := 0; i < 15000; i++ {
+	for i := range 15000 {
 		if i > 0 {
 			b.WriteString("+")
 		}
@@ -60,7 +60,7 @@ func TestSecurityTokenCountLimit(t *testing.T) {
 func TestSecurityTokenCountOK(t *testing.T) {
 	// Create expression with ~5000 tokens (within limit)
 	var b strings.Builder
-	for i := 0; i < 2500; i++ {
+	for i := range 2500 {
 		if i > 0 {
 			b.WriteString("+")
 		}
@@ -95,11 +95,11 @@ func TestSecurityCombinedDepth(t *testing.T) {
 	// 120 levels of parentheses should exceed the limit
 	var b strings.Builder
 	b.WriteString("avg(")
-	for i := 0; i < 120; i++ {
+	for range 120 {
 		b.WriteString("(")
 	}
 	b.WriteString("1")
-	for i := 0; i < 120; i++ {
+	for range 120 {
 		b.WriteString(")")
 	}
 	b.WriteString(")")

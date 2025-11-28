@@ -1,6 +1,10 @@
 package semantic
 
-import "github.com/CalcMark/go-calcmark/spec/types"
+import (
+	"maps"
+
+	"github.com/CalcMark/go-calcmark/spec/types"
+)
 
 // Environment tracks variable bindings during semantic analysis.
 // This is separate from Go's context.Context - it's simply variable storage.
@@ -39,9 +43,7 @@ func (e *Environment) Clone() *Environment {
 	newEnv := &Environment{
 		vars: make(map[string]types.Type),
 	}
-	for k, v := range e.vars {
-		newEnv.vars[k] = v
-	}
+	maps.Copy(newEnv.vars, e.vars)
 	return newEnv
 }
 

@@ -213,7 +213,7 @@ func BenchmarkQuantityParsing(b *testing.B) {
 	input := "10 meters\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -226,7 +226,7 @@ func BenchmarkArbitraryUnit(b *testing.B) {
 	input := "10 apples\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -239,7 +239,7 @@ func BenchmarkMultiplierWithUnit(b *testing.B) {
 	input := "12k meters\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)

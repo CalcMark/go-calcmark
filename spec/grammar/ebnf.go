@@ -394,10 +394,7 @@ func formatDiagnosticTitle(code string) string {
 func w3cProduction(name, definition string) string {
 	// Align production names to column 16 for readability
 	const alignColumn = 16
-	padding := alignColumn - len(name)
-	if padding < 1 {
-		padding = 1
-	}
+	padding := max(alignColumn-len(name), 1)
 	spaces := strings.Repeat(" ", padding)
 	return fmt.Sprintf("%s%s::= %s\n\n", name, spaces, definition)
 }

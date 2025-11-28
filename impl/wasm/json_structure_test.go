@@ -28,21 +28,21 @@ func TestEvaluateJSONStructure(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		expected map[string]interface{} // Expected JSON structure
+		expected map[string]any // Expected JSON structure
 	}{
 		{
 			name:  "number result",
 			input: "x = 5",
-			expected: map[string]interface{}{
-				"Value":        map[string]interface{}{}, // decimal.Decimal structure
+			expected: map[string]any{
+				"Value":        map[string]any{}, // decimal.Decimal structure
 				"SourceFormat": "",
 			},
 		},
 		{
 			name:  "currency result",
 			input: "budget = $1000",
-			expected: map[string]interface{}{
-				"Value":        map[string]interface{}{}, // decimal.Decimal structure
+			expected: map[string]any{
+				"Value":        map[string]any{}, // decimal.Decimal structure
 				"Symbol":       "$",
 				"SourceFormat": "$1000",
 			},
@@ -50,7 +50,7 @@ func TestEvaluateJSONStructure(t *testing.T) {
 		{
 			name:  "boolean result",
 			input: "flag = true",
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"Value": true,
 			},
 		},
@@ -79,7 +79,7 @@ func TestEvaluateJSONStructure(t *testing.T) {
 			t.Logf("JSON: %s", string(jsonBytes))
 
 			// Unmarshal to see structure
-			var unmarshaled []map[string]interface{}
+			var unmarshaled []map[string]any
 			err = json.Unmarshal(jsonBytes, &unmarshaled)
 			if err != nil {
 				t.Fatalf("JSON unmarshal failed: %v", err)
@@ -110,9 +110,9 @@ func TestActualResultStructure(t *testing.T) {
 		jsonBytes, _ := json.Marshal(num)
 		t.Logf("Number JSON: %s", string(jsonBytes))
 
-		var result map[string]interface{}
+		var result map[string]any
 		json.Unmarshal(jsonBytes, &result)
-		t.Logf("Number keys: %v", getKeys(result))
+		t.Logf("Number keys: %v", getKeysNonWasm(result))
 		t.Logf("Number structure: %+v", result)
 	})
 
@@ -121,9 +121,9 @@ func TestActualResultStructure(t *testing.T) {
 		jsonBytes, _ := json.Marshal(curr)
 		t.Logf("Currency JSON: %s", string(jsonBytes))
 
-		var result map[string]interface{}
+		var result map[string]any
 		json.Unmarshal(jsonBytes, &result)
-		t.Logf("Currency keys: %v", getKeys(result))
+		t.Logf("Currency keys: %v", getKeysNonWasm(result))
 		t.Logf("Currency structure: %+v", result)
 	})
 
@@ -132,9 +132,9 @@ func TestActualResultStructure(t *testing.T) {
 		jsonBytes, _ := json.Marshal(boolean)
 		t.Logf("Boolean JSON: %s", string(jsonBytes))
 
-		var result map[string]interface{}
+		var result map[string]any
 		json.Unmarshal(jsonBytes, &result)
-		t.Logf("Boolean keys: %v", getKeys(result))
+		t.Logf("Boolean keys: %v", getKeysNonWasm(result))
 		t.Logf("Boolean structure: %+v", result)
 	})
 }
@@ -169,11 +169,11 @@ func TestWASMEvaluateOutput(t *testing.T) {
 			t.Logf("JSON output: %s", string(jsonBytes))
 
 			// Parse it back
-			var parsed []interface{}
+			var parsed []any
 			json.Unmarshal(jsonBytes, &parsed)
 			if len(parsed) > 0 {
 				t.Logf("Parsed result type: %T", parsed[0])
-				if m, ok := parsed[0].(map[string]interface{}); ok {
+				if m, ok := parsed[0].(map[string]any); ok {
 					t.Logf("Available keys: %v", getKeysNonWasm(m))
 					for key, val := range m {
 						t.Logf("  %s = %v (type: %T)", key, val, val)
@@ -184,7 +184,7 @@ func TestWASMEvaluateOutput(t *testing.T) {
 	}
 }
 
-func getKeysNonWasm(m map[string]interface{}) []string {
+func getKeysNonWasm(m map[string]any) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)

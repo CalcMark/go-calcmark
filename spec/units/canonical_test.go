@@ -1,6 +1,7 @@
 package units_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/units"
@@ -174,14 +175,7 @@ func TestAllUnitsHaveAliases(t *testing.T) {
 		}
 
 		// Canonical name should be in aliases
-		found := false
-		for _, alias := range mapping.Aliases {
-			if alias == canonical {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(mapping.Aliases, canonical) {
 			t.Errorf("Unit %q canonical name not in aliases: %v", canonical, mapping.Aliases)
 		}
 	}

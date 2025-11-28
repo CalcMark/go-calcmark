@@ -256,8 +256,7 @@ func hasUnitExpression(line string) bool {
 
 	// Check for known units using canonical unit registry
 	// Extract potential unit words from the line
-	words := strings.Fields(line)
-	for _, word := range words {
+	for word := range strings.FieldsSeq(line) {
 		// Clean up punctuation
 		cleaned := strings.TrimRight(word, ".,;:!?")
 		lower := strings.ToLower(cleaned)

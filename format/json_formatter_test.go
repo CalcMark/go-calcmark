@@ -3,6 +3,7 @@ package format
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -32,7 +33,7 @@ func TestJSONFormatterSimple(t *testing.T) {
 	}
 
 	// Parse JSON to verify it's valid
-	var result []map[string]interface{}
+	var result []map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		t.Fatalf("Invalid JSON output: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestJSONFormatterStructure(t *testing.T) {
 	}
 
 	// Parse and check structure
-	var result []map[string]interface{}
+	var result []map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		t.Fatalf("Invalid JSON: %v", err)
 	}
@@ -111,7 +112,7 @@ func TestJSONFormatterError(t *testing.T) {
 	}
 
 	// Should still be valid JSON
-	var result []map[string]interface{}
+	var result []map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		t.Fatalf("Invalid JSON: %v", err)
 	}
@@ -126,15 +127,7 @@ func TestJSONFormatterExtensions(t *testing.T) {
 		t.Fatal("JSONFormatter should return at least one extension")
 	}
 
-	found := false
-	for _, ext := range exts {
-		if ext == ".json" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !slices.Contains(exts, ".json") {
 		t.Error("JSONFormatter should handle .json extension")
 	}
 }

@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-
+	"slices"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -106,11 +106,9 @@ func (p *RecursiveDescentParser) isAtEnd() bool {
 // match checks if the current token matches any of the given types.
 // If it matches, consumes the token and returns true.
 func (p *RecursiveDescentParser) match(types ...lexer.TokenType) bool {
-	for _, t := range types {
-		if p.check(t) {
-			p.advance()
-			return true
-		}
+	if slices.ContainsFunc(types, p.check) {
+		p.advance()
+		return true
 	}
 	return false
 }

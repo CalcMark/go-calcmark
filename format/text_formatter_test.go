@@ -2,6 +2,7 @@ package format
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 
@@ -107,15 +108,7 @@ func TestTextFormatterExtensions(t *testing.T) {
 		t.Fatal("TextFormatter should return at least one extension")
 	}
 
-	found := false
-	for _, ext := range exts {
-		if ext == ".txt" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !slices.Contains(exts, ".txt") {
 		t.Error("TextFormatter should handle .txt extension")
 	}
 }

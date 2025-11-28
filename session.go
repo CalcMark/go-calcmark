@@ -38,6 +38,6 @@ func (s *Session) Reset() {
 
 // GetVariable retrieves a variable value by name.
 // Returns the value and true if found, nil and false otherwise.
-func (s *Session) GetVariable(name string) (interface{}, bool) {
+func (s *Session) GetVariable(name string) (any, bool) {
 	return s.env.Get(name)
 }

@@ -441,7 +441,7 @@ func (l *Lexer) readCurrencyCodeQuantity() Token {
 
 	// Read 3 uppercase letters
 	var codeStr strings.Builder
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		codeStr.WriteRune(l.currentChar())
 		l.advance()
 	}

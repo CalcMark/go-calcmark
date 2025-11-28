@@ -3,6 +3,7 @@ package format
 import (
 	"bytes"
 	"io"
+	"slices"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -29,14 +30,7 @@ func TestGetFormatterExplicit(t *testing.T) {
 			}
 
 			exts := f.Extensions()
-			found := false
-			for _, ext := range exts {
-				if ext == tt.expected {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(exts, tt.expected) {
 				t.Errorf("Expected formatter to handle %s, got extensions: %v", tt.expected, exts)
 			}
 		})
@@ -68,14 +62,7 @@ func TestGetFormatterByExtension(t *testing.T) {
 			}
 
 			exts := f.Extensions()
-			found := false
-			for _, ext := range exts {
-				if ext == tt.expectedExt {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(exts, tt.expectedExt) {
 				t.Errorf("Expected formatter to handle %s, got extensions: %v", tt.expectedExt, exts)
 			}
 		})
@@ -91,14 +78,7 @@ func TestGetFormatterExplicitOverridesExtension(t *testing.T) {
 	}
 
 	exts := f.Extensions()
-	found := false
-	for _, ext := range exts {
-		if ext == ".json" {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(exts, ".json") {
 		t.Error("Explicit format should override filename extension")
 	}
 }
@@ -112,14 +92,7 @@ func TestGetFormatterDefaultToText(t *testing.T) {
 	}
 
 	exts := f.Extensions()
-	found := false
-	for _, ext := range exts {
-		if ext == ".txt" {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(exts, ".txt") {
 		t.Error("Should default to text formatter for unknown extensions")
 	}
 }
@@ -134,14 +107,7 @@ func TestGetFormatterUnknownFormat(t *testing.T) {
 
 	// Should default to text
 	exts := f.Extensions()
-	found := false
-	for _, ext := range exts {
-		if ext == ".txt" {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(exts, ".txt") {
 		t.Error("Unknown format should default to text formatter")
 	}
 }

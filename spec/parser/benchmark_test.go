@@ -12,7 +12,7 @@ func BenchmarkParseSimple(b *testing.B) {
 	input := "1 + 2\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -25,7 +25,7 @@ func BenchmarkParseNumberMultiplier(b *testing.B) {
 	input := "1.5M\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -38,7 +38,7 @@ func BenchmarkParseComplex(b *testing.B) {
 	input := "total = (price + tax) * quantity / 100\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -51,7 +51,7 @@ func BenchmarkParseNaturalLanguage(b *testing.B) {
 	input := "average of 10, 20, 30, 40, 50\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -64,7 +64,7 @@ func BenchmarkParseNestedFunctions(b *testing.B) {
 	input := "avg(sqrt(16), sqrt(25), sqrt(36))\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -77,7 +77,7 @@ func BenchmarkParseCurrency(b *testing.B) {
 	input := "$100.50\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -90,7 +90,7 @@ func BenchmarkParseCurrencyCode(b *testing.B) {
 	input := "100 USD\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -103,7 +103,7 @@ func BenchmarkParseQuantity(b *testing.B) {
 	input := "10 meters\n"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -120,7 +120,7 @@ avg = total / 2
 `
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := parser.Parse(input)
 		if err != nil {
 			b.Fatal(err)
@@ -135,8 +135,10 @@ avg = total / 2
 // - Multi-line: < 50μs, < 5KB
 //
 // Run with:
-//   go test -bench=. -benchmem -benchtime=10s ./spec/parser
+//
+//	go test -bench=. -benchmem -benchtime=10s ./spec/parser
 //
 // Profile with:
-//   go test -bench=. -cpuprofile=cpu.prof ./spec/parser
-//   go tool pprof cpu.prof
+//
+//	go test -bench=. -cpuprofile=cpu.prof ./spec/parser
+//	go tool pprof cpu.prof

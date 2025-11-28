@@ -2,6 +2,7 @@ package format
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -32,10 +33,8 @@ func GetFormatter(format string, filename string) Formatter {
 		ext := strings.ToLower(filepath.Ext(filename))
 		if ext != "" {
 			for _, fmt := range formatters {
-				for _, fmtExt := range fmt.Extensions() {
-					if ext == fmtExt {
-						return fmt
-					}
+				if slices.Contains(fmt.Extensions(), ext) {
+					return fmt
 				}
 			}
 		}
