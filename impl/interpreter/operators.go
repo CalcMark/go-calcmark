@@ -201,7 +201,8 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
-	return nil, fmt.Errorf("unsupported operation: %T %s %T", left, operator, right)
+	// Provide helpful error messages for common mistakes
+	return nil, unsupportedOperationError(left, right, operator)
 }
 
 // evalNumberOperation performs operations on two numbers.
@@ -441,4 +442,79 @@ func getDurationFactor(unit string) int64 {
 		"year": 31536000, "years": 31536000, // 365 days
 	}
 	return factors[unit]
+}
+
+// unsupportedOperationError provides helpful error messages for common type mismatches.
+func unsupportedOperationError(left, right types.Type, operator string) error {
+	// Quantity * Duration or Duration * Quantity → suggest rate syntax
+	_, leftIsQty := left.(*types.Quantity)
+	_, rightIsQty := right.(*types.Quantity)
+	_, leftIsDur := left.(*types.Duration)
+	_, rightIsDur := right.(*types.Duration)
+
+	if (leftIsQty && rightIsDur) || (leftIsDur && rightIsQty) {
+		var qty *types.Quantity
+		var dur *types.Duration
+		if leftIsQty {
+			qty = left.(*types.Quantity)
+			dur = right.(*types.Duration)
+		} else {
+			qty = right.(*types.Quantity)
+			dur = left.(*types.Duration)
+		}
+
+		// Suggest: "100k users * 1 month" → "100k users/month" or "RATE over 1 month"
+		return fmt.Errorf("cannot multiply %s by %s directly\n"+
+			"  Hint: To create a rate, use: %v %s/%s\n"+
+			"  Hint: To accumulate a rate over time, use: RATE over %s",
+			formatTypeForError(left), formatTypeForError(right),
+			qty.Value, qty.Unit, dur.Unit,
+			dur.String())
+	}
+
+	// Generic fallback
+	return fmt.Errorf("cannot %s %s and %s",
+		operatorVerb(operator), formatTypeForError(left), formatTypeForError(right))
+}
+
+// formatTypeForError returns a user-friendly description of a type.
+func formatTypeForError(t types.Type) string {
+	switch v := t.(type) {
+	case *types.Number:
+		return fmt.Sprintf("number (%s)", v.String())
+	case *types.Quantity:
+		return fmt.Sprintf("quantity (%s)", v.String())
+	case *types.Duration:
+		return fmt.Sprintf("duration (%s)", v.String())
+	case *types.Rate:
+		return fmt.Sprintf("rate (%s)", v.String())
+	case *types.Currency:
+		return fmt.Sprintf("currency (%s)", v.String())
+	case *types.Date:
+		return fmt.Sprintf("date (%s)", v.String())
+	case *types.Boolean:
+		return fmt.Sprintf("boolean (%s)", v.String())
+	default:
+		return fmt.Sprintf("%T", t)
+	}
+}
+
+// operatorVerb returns a verb for the operator.
+func operatorVerb(op string) string {
+	switch op {
+	case "+":
+		return "add"
+	case "-":
+		return "subtract"
+	case "*":
+		return "multiply"
+	case "/":
+		return "divide"
+	case "%":
+		return "modulo"
+	case "^":
+		return "exponentiate"
+	default:
+		return "operate on"
+	}
 }
