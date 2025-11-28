@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
@@ -146,7 +147,7 @@ func newTUIModel(doc *document.Document) model {
 				if trimmed != "" {
 					var output string
 					if calcBlock.LastValue() != nil {
-						output = fmt.Sprintf("= %v", calcBlock.LastValue())
+						output = fmt.Sprintf("= %s", display.Format(calcBlock.LastValue()))
 					}
 					m.outputHistory = append(m.outputHistory, outputHistoryItem{
 						input:   trimmed,
@@ -493,7 +494,7 @@ func (m model) handleInput() model {
 		if len(blocks) > 0 {
 			if calcBlock, ok := blocks[len(blocks)-1].Block.(*document.CalcBlock); ok {
 				if calcBlock.LastValue() != nil {
-					output = fmt.Sprintf("= %v", calcBlock.LastValue())
+					output = fmt.Sprintf("= %s", display.Format(calcBlock.LastValue()))
 					result.outputHistory = append(result.outputHistory, outputHistoryItem{
 						input:   input,
 						output:  output,

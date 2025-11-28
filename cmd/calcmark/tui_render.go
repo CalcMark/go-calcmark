@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/format/display"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 	glamourStyles "github.com/charmbracelet/glamour/styles"
@@ -64,22 +66,33 @@ func renderPinnedPanel(vars []pinnedVariable) string {
 	}
 
 	for _, v := range vars {
+		// Format value using display package if it's a CalcMark type
+		valueStr := formatPinnedValue(v.Value)
+
 		if v.Changed {
 			// Mark changed variables with * prefix
 			b.WriteString(styles.Changed.Render("* "))
 			b.WriteString(styles.Var.Bold(true).Render(v.Name))
 			b.WriteString(" = ")
-			b.WriteString(styles.Changed.Render(fmt.Sprintf("%v", v.Value)))
+			b.WriteString(styles.Changed.Render(valueStr))
 		} else {
 			b.WriteString("  ") // Align with * prefix
 			b.WriteString(styles.Var.Render(v.Name))
 			b.WriteString(" = ")
-			b.WriteString(fmt.Sprintf("%v", v.Value))
+			b.WriteString(valueStr)
 		}
 		b.WriteString("\n")
 	}
 
 	return b.String()
+}
+
+// formatPinnedValue formats a pinned variable value using human-readable display.
+func formatPinnedValue(value any) string {
+	if t, ok := value.(types.Type); ok {
+		return display.Format(t)
+	}
+	return fmt.Sprintf("%v", value)
 }
 
 // markdownRenderer is a cached glamour renderer to avoid repeated initialization

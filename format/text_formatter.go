@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -36,9 +37,8 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			if block.Error() != nil {
 				fmt.Fprintf(w, "Error: %v\n", block.Error())
 			} else if block.LastValue() != nil {
-				// Use the Type's String() method for display
-				// This is centralized in spec/types and impl/types
-				fmt.Fprintln(w, block.LastValue().String())
+				// Use display package for human-readable output
+				fmt.Fprintln(w, display.Format(block.LastValue()))
 			}
 
 		case *document.TextBlock:
