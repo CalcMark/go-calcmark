@@ -1,0 +1,41 @@
+# CalcMark Default Configuration
+# This file is embedded in the binary at build time.
+# User overrides: ~/.config/calcmark/config.toml or ~/.calcmarkrc.toml
+
+[tui]
+dark_mode = true
+
+[tui.theme]
+# Primary brand color - titles, prompts, variable names
+primary = "#7D56F4"
+# Accent color - borders, highlights
+accent = "#874BFD"
+# Error messages
+error = "#FF5555"
+# Changed/modified indicator
+warning = "#FFAA00"
+# Help text, secondary info
+muted = "#888888"
+# Hints, suggestions, preview text
+dimmed = "#BBBBBB"
+# Calculation results - high contrast for readability
+output = "#FFFFFF"
+# Syntax emphasis in help
+bright = "#FFFFFF"
+# Divider lines
+separator = "#555555"
+
+# Markdown preview colors
+md_text = "#FFFFFF"       # Body text
+md_h1_bg = "#FF9900"      # H1 heading background (orange)
+md_h2_bg = "#33CC33"      # H2 heading background (green)
+md_heading = "#FF9900"    # H3+ heading text
+md_link = "#22AA22"       # Links (darker green for readability)
+md_quote = "#888888"      # Block quote indicator (gray)
+md_code = "#33CC33"       # Inline code text
+md_code_bg = "#333333"    # Code background
+
+[formatter]
+verbose = false
+include_errors = true
+default_format = "text"

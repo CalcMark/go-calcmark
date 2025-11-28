@@ -38,5 +38,11 @@ func (interp *Interpreter) evalBooleanLiteral(b *ast.BooleanLiteral) (types.Type
 }
 
 func (interp *Interpreter) evalQuantityLiteral(q *ast.QuantityLiteral) (types.Type, error) {
-	return types.NewQuantityFromString(q.Value, q.Unit)
+	// Expand multipliers like "1k" → 1000, "1M" → 1000000
+	value, err := expandNumberLiteral(q.Value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid quantity value %q: %w", q.Value, err)
+	}
+
+	return types.NewQuantity(value, q.Unit), nil
 }

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,53 +15,46 @@ import (
 	"github.com/muesli/termenv"
 )
 
+// styles holds the pre-built lipgloss styles from configuration.
+// Initialized in init() after config is loaded.
+var styles config.Styles
+
 func init() {
 	// CRITICAL: Set color profile and background explicitly to avoid terminal queries.
 	// Terminal color detection sends OSC sequences (like OSC 11 for background color)
 	// that can leak into input buffers, causing garbage text like "]11;rgb:ffff/ffff/ffff".
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	lipgloss.SetHasDarkBackground(true)
+
+	// Load configuration and build styles
+	if _, err := config.Load(); err != nil {
+		// Config load failed - styles will use zero values
+		// This is a development error, should not happen in production
+		panic("failed to load config: " + err.Error())
+	}
+	styles = config.GetStyles()
 }
-
-// Styles
-var (
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#7D56F4")).
-			Margin(1, 0)
-
-	pinnedPanelStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#874BFD")).
-				Padding(0, 1).
-				Margin(1, 0)
-
-	errorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF0000"))
-
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#626262")).
-			Margin(1, 0)
-)
 
 // model represents the TUI state
 type model struct {
-	doc           *document.Document
-	eval          *implDoc.Evaluator  // Persistent evaluator (holds variable environment)
-	input         textinput.Model     // Single-line input for calc expressions
-	mdInput       textarea.Model      // Multi-line input for markdown mode
-	pinnedVars    map[string]bool     // Which variables are pinned
-	changedVars   map[string]bool     // Variables that changed in last update
-	history       []string            // Command history (for ↑↓ navigation)
-	outputHistory []outputHistoryItem // Display history (commands + results)
-	historyIdx    int                 // Current position in history (-1 = not browsing)
-	width         int
-	height        int
-	err           error
-	lastInputted  string
-	quitting      bool
-	markdownMode  bool // In multi-line markdown mode
-	slashMode     bool // In slash command mode (triggered by / key)
+	doc             *document.Document
+	eval            *implDoc.Evaluator  // Persistent evaluator (holds variable environment)
+	registry        *features.Registry  // Feature registry for help and autosuggest
+	input           textinput.Model     // Single-line input for calc expressions
+	mdInput         textarea.Model      // Multi-line input for markdown mode
+	pinnedVars      map[string]bool     // Which variables are pinned
+	changedVars     map[string]bool     // Variables that changed in last update
+	history         []string            // Command history (for ↑↓ navigation)
+	outputHistory   []outputHistoryItem // Display history (commands + results)
+	historyIdx      int                 // Current position in history (-1 = not browsing)
+	lastSuggestions []features.Feature  // Last suggestions shown (persists while typing)
+	width           int
+	height          int
+	err             error
+	lastInputted    string
+	quitting        bool
+	markdownMode    bool // In multi-line markdown mode
+	slashMode       bool // In slash command mode (triggered by / key)
 }
 
 // outputHistoryItem represents a command and its result for display
@@ -67,6 +62,26 @@ type outputHistoryItem struct {
 	input   string // The command entered
 	output  string // The result/output
 	isError bool   // Whether this was an error
+}
+
+// slashCommand defines a slash command with its syntax and description
+type slashCommand struct {
+	name        string // Command name without /
+	syntax      string // Full syntax example
+	description string // Brief description
+}
+
+// slashCommands is the list of available slash commands for autosuggestion
+var slashCommands = []slashCommand{
+	{"pin", "/pin [var]", "Pin variable(s) to panel"},
+	{"unpin", "/unpin [var]", "Unpin variable(s)"},
+	{"open", "/open <file>", "Load CalcMark file"},
+	{"save", "/save <file>", "Save as CalcMark (.cm)"},
+	{"output", "/output <file>", "Export with results"},
+	{"md", "/md", "Multi-line markdown mode"},
+	{"quit", "/quit", "Exit the REPL"},
+	{"q", "/q", "Exit (shortcut)"},
+	{"help", "/help [topic]", "Show help"},
 }
 
 // newTUIModel creates initial TUI model
@@ -78,19 +93,32 @@ func newTUIModel(doc *document.Document) model {
 	ti.CharLimit = 200
 	ti.Width = 50
 
-	// Create textarea for markdown mode
+	// Create textarea for markdown mode with high-contrast styling
 	ta := textarea.New()
 	ta.Placeholder = "Enter markdown... (Esc to finish)"
 	ta.ShowLineNumbers = false
 	ta.CharLimit = 10000
 
+	// Style the textarea for visibility on dark backgrounds
+	// CursorLine style applies to the active line, so it needs both fg and bg
+	ta.FocusedStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color("#333333"))
+	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
+	ta.BlurredStyle = ta.FocusedStyle
+
 	// Create persistent evaluator and evaluate the loaded document
 	eval := implDoc.NewEvaluator()
 	_ = eval.Evaluate(doc) // Ignore error - blocks will show their own errors
 
+	// Create feature registry for help and autosuggest
+	registry := features.NewRegistry()
+
 	m := model{
 		doc:           doc,
 		eval:          eval,
+		registry:      registry,
 		input:         ti,
 		mdInput:       ta,
 		pinnedVars:    make(map[string]bool),
@@ -251,6 +279,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 			return m, nil
+
+		case tea.KeyTab:
+			// Tab completion for variable names
+			if !m.markdownMode && !m.slashMode {
+				if completed := m.tryCompleteVariable(); completed {
+					return m, nil
+				}
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -276,7 +312,7 @@ func (m model) View() string {
 	var b strings.Builder
 
 	// Title
-	title := titleStyle.Render("CalcMark REPL")
+	title := styles.Title.Render("CalcMark REPL")
 	b.WriteString(title)
 	b.WriteString("\n")
 
@@ -288,9 +324,7 @@ func (m model) View() string {
 
 	// Mode indicator for slash mode
 	if m.slashMode {
-		modeIndicator := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
-			Render("💬 COMMAND MODE - Type command or Esc to exit")
+		modeIndicator := styles.ModeIndicator.Render("💬 COMMAND MODE - Type command or Esc to exit")
 		b.WriteString(modeIndicator)
 		b.WriteString("\n")
 	}
@@ -304,7 +338,7 @@ func (m model) View() string {
 
 	// Separator
 	if len(m.outputHistory) > 0 {
-		leftContent.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#444")).Render("─────────────────────────────────────────"))
+		leftContent.WriteString(styles.Separator.Render("─────────────────────────────────────────"))
 		leftContent.WriteString("\n")
 	}
 
@@ -312,22 +346,40 @@ func (m model) View() string {
 	leftContent.WriteString(m.input.View())
 	leftContent.WriteString("\n")
 
+	// Autosuggest line (below input)
+	if m.slashMode {
+		// Slash mode: show command suggestions
+		slashSuggestions := getSlashCommandSuggestions(m.input.Value())
+		if len(slashSuggestions) > 0 {
+			leftContent.WriteString(renderSlashSuggestions(slashSuggestions))
+			leftContent.WriteString("\n")
+		}
+	} else {
+		// Normal mode: show variable completions and feature hints
+		suggestions := m.updateSuggestions()
+		varCompletions := m.getVariableCompletions()
+		if len(suggestions) > 0 || len(varCompletions) > 0 {
+			leftContent.WriteString(renderSuggestions(suggestions, varCompletions))
+			leftContent.WriteString("\n")
+		}
+	}
+
 	// Error display
 	if m.err != nil {
-		leftContent.WriteString(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
+		leftContent.WriteString(styles.Error.Render(fmt.Sprintf("Error: %v", m.err)))
 		leftContent.WriteString("\n")
 	}
 
 	// Help text
 	help := m.renderHelp()
-	leftContent.WriteString(helpStyle.Render(help))
+	leftContent.WriteString(styles.Help.Render(help))
 
 	// Layout: Always show pinned panel on the right
 	// Right panel: Pinned variables (40% width)
 	rightWidth := max(m.width*2/5, 25)
 
 	pinnedContent := m.renderPinnedVars()
-	rightPanel := pinnedPanelStyle.
+	rightPanel := styles.PinnedPanel.
 		Width(rightWidth - 4).
 		Height(m.height - 10).
 		Render(pinnedContent)
@@ -352,12 +404,13 @@ func (m model) renderMarkdownMode() string {
 	halfWidth := m.width / 2
 
 	// Header with mode indicator and help link
+	cfg := config.Get()
 	header := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FF9800")).
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Warning)).
 		Bold(true).
 		Render("📝 MARKDOWN MODE - Esc to save and exit")
 	helpLink := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#626262")).
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Muted)).
 		Render("  Help: https://commonmark.org/help/")
 	headerLine := header + helpLink + "\n\n"
 
@@ -365,7 +418,7 @@ func (m model) renderMarkdownMode() string {
 	leftTitle := lipgloss.NewStyle().Bold(true).Render("Edit")
 	leftPanel := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#FF9800")).
+		BorderForeground(lipgloss.Color(cfg.TUI.Theme.Warning)).
 		Padding(0, 1).
 		Width(halfWidth - 4).
 		Height(m.height - 8).
@@ -376,7 +429,7 @@ func (m model) renderMarkdownMode() string {
 	preview := m.renderMarkdownPreview()
 	rightPanel := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#874BFD")).
+		BorderForeground(lipgloss.Color(cfg.TUI.Theme.Accent)).
 		Padding(0, 1).
 		Width(halfWidth - 4).
 		Height(m.height - 8).
@@ -411,6 +464,7 @@ func (m model) handleInput() model {
 	// Normal mode: CalcMark expression
 	m.lastInputted = input
 	m.changedVars = make(map[string]bool) // Reset changed tracking
+	m.lastSuggestions = nil               // Clear suggestions after submit
 
 	// Add to history (skip duplicates of last command)
 	if len(m.history) == 0 || m.history[len(m.history)-1] != input {
@@ -526,22 +580,20 @@ func (m model) handleCommand(cmd string) model {
 		return m
 
 	case "help", "h", "?":
-		// Add help to output history
-		helpText := `/pin          Pin all variables
-/pin <var>    Pin a specific variable
-/unpin        Unpin all variables
-/unpin <var>  Unpin a specific variable
-/open <file>  Load a CalcMark file
-/save <file>  Save as CalcMark (.cm)
-/output <file> Export with results (.html, .md, .json)
-/md           Enter multi-line markdown mode
-/quit or /q   Exit the REPL
-/help or /?   Show this help`
-		m.outputHistory = append(m.outputHistory, outputHistoryItem{
-			input:   "/help",
-			output:  helpText,
-			isError: false,
-		})
+		// Handle /help or /help <topic>
+		if len(parts) == 1 {
+			// Show general help with dynamic formatting based on terminal width
+			helpText := renderHelpText(m.width)
+			m.outputHistory = append(m.outputHistory, outputHistoryItem{
+				input:   "/help",
+				output:  helpText,
+				isError: false,
+			})
+		} else {
+			// Search for topic
+			topic := strings.ToLower(parts[1])
+			m = m.showHelpTopic(topic)
+		}
 		return m
 
 	default:
@@ -684,4 +736,275 @@ func (m model) collectPinnedVariables() ([]string, map[string]any) {
 // Delegates to pure renderHelpLine function.
 func (m model) renderHelp() string {
 	return renderHelpLine(m.slashMode, m.width)
+}
+
+// showHelpTopic displays help for a specific topic or search term.
+func (m model) showHelpTopic(topic string) model {
+	var output strings.Builder
+
+	// Use pre-built styles from config
+	syntaxStyle := styles.Syntax
+	descStyle := styles.Output
+	exampleStyle := styles.Example
+	headerStyle := styles.Header
+
+	// Check for category names first
+	var cat features.Category
+	switch topic {
+	case "function", "functions", "func":
+		cat = features.CategoryFunction
+	case "unit", "units":
+		cat = features.CategoryUnit
+	case "date", "dates", "time":
+		cat = features.CategoryDate
+	case "network", "net":
+		cat = features.CategoryNetwork
+	case "storage", "disk":
+		cat = features.CategoryStorage
+	case "compression", "compress":
+		cat = features.CategoryCompression
+	case "keyword", "keywords":
+		cat = features.CategoryKeyword
+	case "operator", "operators", "ops":
+		cat = features.CategoryOperator
+	}
+
+	var results []features.Feature
+	if cat != "" {
+		// Get all features in category
+		results = m.registry.ByCategory(cat)
+		output.WriteString(headerStyle.Render("== "+strings.ToUpper(string(cat))+" ==") + "\n\n")
+	} else {
+		// Search by prefix
+		results = m.registry.Search(topic)
+		if len(results) == 0 {
+			m.outputHistory = append(m.outputHistory, outputHistoryItem{
+				input:   "/help " + topic,
+				output:  fmt.Sprintf("No matches for '%s'. Try: /help functions, /help units", topic),
+				isError: false,
+			})
+			return m
+		}
+		output.WriteString(headerStyle.Render("== Search: "+topic+" ==") + "\n\n")
+	}
+
+	// Format results with styled syntax (bold) and examples (italic)
+	for _, f := range results {
+		output.WriteString(syntaxStyle.Render(f.Syntax))
+		output.WriteString("  ")
+		output.WriteString(descStyle.Render(f.Description))
+		output.WriteString("\n")
+		if f.Example != "" {
+			output.WriteString("  ")
+			output.WriteString(exampleStyle.Render(f.Example))
+			output.WriteString("\n")
+		}
+	}
+
+	if len(results) > 10 {
+		output.WriteString(fmt.Sprintf("\n(%d items)", len(results)))
+	}
+
+	m.outputHistory = append(m.outputHistory, outputHistoryItem{
+		input:   "/help " + topic,
+		output:  output.String(),
+		isError: false,
+	})
+	return m
+}
+
+// updateSuggestions searches for new suggestions based on current input.
+// Returns new suggestions if found, otherwise returns previous suggestions.
+// This keeps hints visible while the user continues typing.
+func (m *model) updateSuggestions() []features.Feature {
+	if m.slashMode || m.markdownMode {
+		return nil
+	}
+
+	input := strings.TrimSpace(m.input.Value())
+	if input == "" {
+		// Keep showing last suggestions when input is cleared
+		return m.lastSuggestions
+	}
+
+	// Extract the last word being typed
+	words := strings.Fields(input)
+	if len(words) == 0 {
+		return m.lastSuggestions
+	}
+	lastWord := words[len(words)-1]
+
+	// Only search if the last word is at least 2 characters
+	if len(lastWord) < 2 {
+		return m.lastSuggestions
+	}
+
+	// Search for matches
+	matches := m.registry.Search(lastWord)
+
+	// Limit to top 3 suggestions
+	if len(matches) > 3 {
+		matches = matches[:3]
+	}
+
+	// Update stored suggestions if we found new ones
+	if len(matches) > 0 {
+		m.lastSuggestions = matches
+	}
+
+	return m.lastSuggestions
+}
+
+// renderSuggestions formats the autosuggest line.
+func renderSuggestions(suggestions []features.Feature, varCompletions []string) string {
+	var parts []string
+
+	// Add variable completions first (Tab to complete)
+	for _, v := range varCompletions {
+		parts = append(parts, v+" [Tab]")
+	}
+
+	// Add feature suggestions
+	for _, s := range suggestions {
+		parts = append(parts, fmt.Sprintf("%s (%s)", s.Name, s.Syntax))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	// Use Hint style from config
+	return styles.Hint.Render("Hints: " + strings.Join(parts, " | "))
+}
+
+// getSlashCommandSuggestions returns slash commands that match the current input.
+func getSlashCommandSuggestions(input string) []slashCommand {
+	input = strings.ToLower(strings.TrimSpace(input))
+	if input == "" {
+		// Show all commands when input is empty
+		return slashCommands
+	}
+
+	var matches []slashCommand
+	for _, cmd := range slashCommands {
+		if strings.HasPrefix(cmd.name, input) {
+			matches = append(matches, cmd)
+		}
+	}
+
+	// Limit to top 4 suggestions
+	if len(matches) > 4 {
+		matches = matches[:4]
+	}
+
+	return matches
+}
+
+// renderSlashSuggestions formats slash command suggestions.
+func renderSlashSuggestions(suggestions []slashCommand) string {
+	if len(suggestions) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for _, cmd := range suggestions {
+		parts = append(parts, fmt.Sprintf("%s (%s)", cmd.syntax, cmd.description))
+	}
+
+	return styles.Hint.Render(strings.Join(parts, " │ "))
+}
+
+// getVariableCompletions returns variable names that match the current partial input.
+func (m model) getVariableCompletions() []string {
+	input := m.input.Value()
+	if input == "" {
+		return nil
+	}
+
+	// Find the last word being typed (potential variable name)
+	words := strings.Fields(input)
+	if len(words) == 0 {
+		return nil
+	}
+
+	// Get the last token - could be after an operator
+	lastWord := extractLastToken(input)
+	if len(lastWord) < 2 {
+		return nil
+	}
+
+	// Get all defined variables from the environment
+	env := m.eval.GetEnvironment()
+	allVars := env.GetAllVariables()
+
+	// Find matching variables
+	var matches []string
+	prefix := strings.ToLower(lastWord)
+	for varName := range allVars {
+		if strings.HasPrefix(strings.ToLower(varName), prefix) && varName != lastWord {
+			matches = append(matches, varName)
+		}
+	}
+
+	// Sort and limit
+	if len(matches) > 3 {
+		matches = matches[:3]
+	}
+
+	return matches
+}
+
+// extractLastToken gets the last identifier-like token from input.
+// Handles cases like "b = 2 * aaaa" -> "aaaa"
+func extractLastToken(input string) string {
+	// Walk backwards to find the start of the last identifier
+	end := len(input)
+	start := end
+
+	for i := len(input) - 1; i >= 0; i-- {
+		ch := input[i]
+		if isIdentifierChar(ch) {
+			start = i
+		} else {
+			break
+		}
+	}
+
+	if start >= end {
+		return ""
+	}
+	return input[start:end]
+}
+
+// isIdentifierChar returns true if ch can be part of a variable name.
+func isIdentifierChar(ch byte) bool {
+	return (ch >= 'a' && ch <= 'z') ||
+		(ch >= 'A' && ch <= 'Z') ||
+		(ch >= '0' && ch <= '9') ||
+		ch == '_'
+}
+
+// tryCompleteVariable attempts to complete the current variable name with Tab.
+// Returns true if a completion was made.
+func (m *model) tryCompleteVariable() bool {
+	completions := m.getVariableCompletions()
+	if len(completions) == 0 {
+		return false
+	}
+
+	// Complete with the first match
+	completion := completions[0]
+	input := m.input.Value()
+	lastToken := extractLastToken(input)
+
+	if lastToken == "" {
+		return false
+	}
+
+	// Replace the partial token with the full variable name
+	newInput := input[:len(input)-len(lastToken)] + completion
+	m.input.SetValue(newInput)
+	m.input.SetCursor(len(newInput))
+
+	return true
 }

@@ -19,7 +19,10 @@ func TestMultipliers(t *testing.T) {
 		{"5k + 2k", "5k + 2k\n", "7000"},
 		{"1M + 500k", "1M + 500k\n", "1500000"},
 
-		// Not testing with units yet - that's a separate feature
+		// Quantities with multipliers (bug fix: multipliers in quantities)
+		{"1k MB", "1k MB\n", "1000 MB"},
+		{"1.5k meters", "1.5k meters\n", "1500 meter"},
+		{"2M bytes", "2M bytes\n", "2000000 bytes"},
 	}
 
 	for _, tt := range tests {

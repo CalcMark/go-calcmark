@@ -239,61 +239,6 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	return nil
 }
 
-// evaluateCalcBlockWithEnv evaluates a CalcBlock using the given environment
-// and updates the environment with computed values for dependent blocks.
-func (e *Evaluator) evaluateCalcBlockWithEnv(blockID string, block *document.CalcBlock, env *interpreter.Environment) error {
-	// Clear previous error
-	block.SetError(nil)
-
-	// 1. Parse source to AST
-	source := strings.Join(block.Source(), "\n")
-	if !strings.HasSuffix(source, "\n") {
-		source += "\n"
-	}
-
-	nodes, err := parser.Parse(source)
-	if err != nil {
-		block.SetError(err)
-		return err
-	}
-
-	// Store parsed AST
-	block.SetStatements(nodes)
-
-	// 2. Semantic check with the provided environment
-	checker := semantic.NewChecker()
-	for varName, value := range env.GetAllVariables() {
-		checker.GetEnvironment().Set(varName, value)
-	}
-
-	diagnostics := checker.Check(nodes)
-	for _, diag := range diagnostics {
-		if diag.Severity == semantic.Error {
-			err := fmt.Errorf("%s: %s", diag.Code, diag.Message)
-			block.SetError(err)
-			return err
-		}
-	}
-
-	// 3. Interpret with the provided environment (expressions use current values)
-	// The interpreter modifies env directly, so computed values propagate
-	interp := interpreter.NewInterpreterWithEnv(env)
-	results, err := interp.Eval(nodes)
-	if err != nil {
-		block.SetError(err)
-		return err
-	}
-
-	// 4. Store results
-	block.SetResults(results)
-	if len(results) > 0 {
-		block.SetLastValue(results[len(results)-1])
-	}
-
-	block.SetDirty(false)
-	return nil
-}
-
 // evaluateCalcBlock evaluates a single CalcBlock.
 // Steps: parse → semantic check → interpret → store results
 func (e *Evaluator) evaluateCalcBlock(blockID string, block *document.CalcBlock) error {
