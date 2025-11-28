@@ -1,0 +1,48 @@
+# Function Call Syntax Test
+
+All valid function call syntaxes in CalcMark.
+
+## Traditional Function Syntax
+
+avg(10, 20, 30)
+avg(1, 2, 3, 4, 5)
+sqrt(16)
+sqrt(2)
+
+## Natural Language Function Syntax
+
+average of 10, 20, 30
+average of 1, 2, 3, 4, 5
+square root of 16
+square root of 2
+
+## Functions with Expressions
+
+avg(x, y, z)
+avg(10 + 5, 20 * 2, 30 - 10)
+sqrt(x + y)
+square root of (a + b)
+
+## Nested Functions
+
+avg(sqrt(16), sqrt(25))
+sqrt(avg(1, 2, 3))
+average of square root of 4, square root of 9
+
+## Functions in Assignments
+
+mean = avg(10, 20, 30)
+root = sqrt(16)
+calculated = average of 100, 200, 300
+side = square root of 25
+
+## Mixed Syntax in Same Document
+
+Traditional syntax:
+total1 = avg(1, 2, 3)
+
+Natural language syntax:
+total2 = average of 1, 2, 3
+
+Both should produce same result:
+same = total1 == total2

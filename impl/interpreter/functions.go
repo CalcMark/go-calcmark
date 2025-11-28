@@ -228,15 +228,6 @@ func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, er
 	}
 }
 
-// eval Downtime handles downtime(availability%, time_period) function calls.
-func evalDowntime(args []types.Type) (types.Type, error) {
-	if len(args) != 2 {
-		return nil, fmt.Errorf("downtime() requires 2 arguments (availability%%, time_period)")
-	}
-
-	return calculateDowntime(args[0], args[1])
-}
-
 // evalRequires handles requires(load, capacity, buffer?) function calls.
 func evalRequires(args []types.Type) (types.Type, error) {
 	if len(args) < 2 || len(args) > 3 {
@@ -296,26 +287,6 @@ func evalAccumulate(args []types.Type) (types.Type, error) {
 	}
 
 	return accumulateRate(rate, periodValue, periodUnit)
-}
-
-// evalConvertRate handles convert_rate(rate, target_unit) function calls.
-func evalConvertRate(args []types.Type) (types.Type, error) {
-	if len(args) != 2 {
-		return nil, fmt.Errorf("convert_rate() requires 2 arguments (rate, target_time_unit)")
-	}
-
-	rate, ok := args[0].(*types.Rate)
-	if !ok {
-		return nil, fmt.Errorf("convert_rate() first argument must be a rate, got %T", args[0])
-	}
-
-	// Second argument: for natural syntax the parser passes an ast.Identifier
-	// which will fail to evaluate (no such variable). We'll catch that and extract
-	// the identifier name from the error, or better yet, handle it in the function
-	// call evaluation. For now, just use String() representation
-	targetUnit := args[1].String()
-
-	return convertRateTimeUnit(rate, targetUnit)
 }
 
 // evalAverage calculates the average of numbers.

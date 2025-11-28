@@ -28,14 +28,15 @@ func mapCurrencySymbol(symbol string) string {
 	}
 }
 
+// currencySymbols is a pre-computed set of currency symbols.
+// Package-level to avoid allocation on every isCurrency call.
+var currencySymbols = map[string]bool{
+	"$": true, "€": true, "£": true, "¥": true,
+}
+
 // isCurrency checks if a unit string is a currency code or symbol
 func isCurrency(unit string) bool {
-	// Common currency symbols
-	symbols := map[string]bool{
-		"$": true, "€": true, "£": true, "¥": true,
-	}
-
-	if symbols[unit] {
+	if currencySymbols[unit] {
 		return true
 	}
 

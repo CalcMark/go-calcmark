@@ -4,6 +4,7 @@ import (
 	"maps"
 
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
 
 // Environment tracks variable bindings during interpretation.
@@ -24,10 +25,17 @@ func NewEnvironment() *Environment {
 	return env
 }
 
+// Mathematical constants with high precision (50 decimal places).
+// These are sufficient for any practical calculation.
+var (
+	piValue = decimal.RequireFromString("3.14159265358979323846264338327950288419716939937510")
+	eValue  = decimal.RequireFromString("2.71828182845904523536028747135266249775724709369995")
+)
+
 // addConstants adds built-in mathematical constants (PI, E).
 func (e *Environment) addConstants() {
-	// TODO: Add PI and E as Number constants
-	// We'll implement this once we have decimal support for constants
+	e.vars["PI"] = types.NewNumber(piValue)
+	e.vars["E"] = types.NewNumber(eValue)
 }
 
 // Set stores a variable binding.

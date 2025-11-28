@@ -1,0 +1,67 @@
+# Valid Rate Expressions
+# Tests various rate syntaxes with different time units
+
+# Bandwidth rates
+r1 = 100 MB/s
+r2 = 1 GB/sec
+r3 = 10 TB per second
+r4 = 1000 MB/s
+r5 = 1500000 req/s
+
+# Data transfer rates
+r6 = 5 GB/day
+r7 = 100 TB/d
+r8 = 1 PB per day
+
+# Request rates with minute variants
+r9 = 1000 req/min
+r10 = 100000 req/m
+r11 = 50000 requests per minute
+r12 = 1000000 hits per minutes
+
+# Cost rates with hour variants
+r13 = $0.10/h
+r14 = $5/hr
+r15 = $100 per hour
+r16 = $1000 per hours
+
+# Weekly rates
+r17 = 40 workers per week
+r18 = 100 workers per week
+r19 = 50 workers per week
+r20 = 40 workers per weeks
+
+# Monthly rates
+r21 = $50/mo
+r22 = $100/month
+r23 = 1 TB per month
+r24 = 500 GB per months
+
+# Yearly rates
+r25 = $1000/y
+r26 = $5000/yr
+r27 = $10000 per year
+r28 = 1000000 users per years
+
+# With large numbers instead of multipliers
+r29 = 100000 requests per min
+r30 = 1500000 GB per day
+r31 = 1200000 bytes/s
+r32 = 10000000000 requests/year
+
+# Arbitrary/custom units (semantically valid)
+# CalcMark supports any unit name, not just canonical ones
+r33 = 20 apples/sec
+r34 = 100 widgets per minute
+r35 = 1000 cars/day
+r36 = 500 items/h
+r37 = 1000000 users/year
+r38 = 50 apples per hour
+r39 = 10000 transactions/s
+
+# Assignment
+bandwidth = 100 MB/s
+cost_per_hour = $0.10/h
+daily_data = 5 GB per day
+qps = 1000 req/s
+processing_rate = 20 apples/sec

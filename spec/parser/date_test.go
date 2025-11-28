@@ -72,8 +72,8 @@ func TestDateArithmetic(t *testing.T) {
 		{name: "tomorrow + 1 day", input: "tomorrow + 1 day\n"},
 		{name: "Dec 25 + 30 days", input: "Dec 25 + 30 days\n"},
 		{name: "today - 3 days", input: "today - 3 days\n"},
-		{name: "2 weeks from today", input: "2 weeks from today\n", skip: true, reason: "TODO: 'X from Y' syntax not implemented yet"},
-		{name: "1 month from Dec 25", input: "1 month from Dec 25\n", skip: true, reason: "TODO: 'X from Y' syntax not implemented yet"},
+		{name: "2 weeks from today", input: "2 weeks from today\n"},
+		{name: "1 month from Dec 25", input: "1 month from Dec 25\n"},
 	}
 
 	for _, tt := range tests {

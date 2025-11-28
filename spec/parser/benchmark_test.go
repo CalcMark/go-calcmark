@@ -116,7 +116,7 @@ func BenchmarkParseMultiLine(b *testing.B) {
 	input := `x = 10
 y = 20
 total = x + y
-avg = total / 2
+result = total / 2
 `
 
 	b.ResetTimer()

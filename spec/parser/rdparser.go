@@ -7,6 +7,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
@@ -239,11 +240,59 @@ func (p *RecursiveDescentParser) parseAssignment() (ast.Node, error) {
 	}, nil
 }
 
-// parseExpression parses an expression (just delegates to comparison).
-// Expression → Comparison
+// parseExpression parses an expression.
+// Expression → Or
 // Note: No depth tracking here since parseUnary and parsePrimary handle it
 func (p *RecursiveDescentParser) parseExpression() (ast.Node, error) {
-	return p.parseComparison()
+	return p.parseOr()
+}
+
+// parseOr parses OR expressions.
+// Or → And ( 'or' And )*
+func (p *RecursiveDescentParser) parseOr() (ast.Node, error) {
+	left, err := p.parseAnd()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(lexer.OR) {
+		right, err := p.parseAnd()
+		if err != nil {
+			return nil, err
+		}
+
+		left = &ast.BinaryOp{
+			Operator: "or",
+			Left:     left,
+			Right:    right,
+		}
+	}
+
+	return left, nil
+}
+
+// parseAnd parses AND expressions.
+// And → Comparison ( 'and' Comparison )*
+func (p *RecursiveDescentParser) parseAnd() (ast.Node, error) {
+	left, err := p.parseComparison()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(lexer.AND) {
+		right, err := p.parseComparison()
+		if err != nil {
+			return nil, err
+		}
+
+		left = &ast.BinaryOp{
+			Operator: "and",
+			Left:     left,
+			Right:    right,
+		}
+	}
+
+	return left, nil
 }
 
 // parseComparison parses comparison operators.
@@ -545,7 +594,7 @@ func (p *RecursiveDescentParser) parseExponent() (ast.Node, error) {
 }
 
 // parseUnary parses unary operators.
-// Unary → ('+'|'-') Unary | Primary
+// Unary → ('+'|'-'|'not') Unary | Primary
 func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 	// Security: track depth for recursive unary (e.g., ---5)
 	if p.match(lexer.PLUS, lexer.MINUS) {
@@ -562,6 +611,24 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 
 		return &ast.UnaryOp{
 			Operator: string(op.Value),
+			Operand:  operand,
+		}, nil
+	}
+
+	// Handle NOT operator
+	if p.match(lexer.NOT) {
+		if err := p.enterDepth(); err != nil {
+			return nil, err
+		}
+		defer p.exitDepth()
+
+		operand, err := p.parseUnary()
+		if err != nil {
+			return nil, err
+		}
+
+		return &ast.UnaryOp{
+			Operator: "not",
 			Operand:  operand,
 		}, nil
 	}
@@ -647,7 +714,9 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 					if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
 						p.advance() // Consume the second word
 						unitName = multiWordUnit
-						normalizedUnit, _ = units.NormalizeUnitName(multiWordUnit)
+						if normalized, ok := units.NormalizeUnitName(multiWordUnit); ok {
+							unitName = normalized
+						}
 					}
 				}
 
@@ -815,6 +884,7 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 	}
 
 	// Duration literals: "2 days", "3 weeks and 4 days"
+	// Also handles "X from Y" syntax: "2 days from today"
 	if p.match(lexer.DURATION_LITERAL) {
 		tok := p.previous()
 		// Value format: "value:unit:value:unit:..." (e.g., "2:week:3:day")
@@ -822,11 +892,30 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 
 		// For now, use first value/unit pair
 		// Semantic analyzer will handle compound durations
-		return &ast.DurationLiteral{
+		durationNode := &ast.DurationLiteral{
 			Value:      parts[0],
 			Unit:       parts[1],
 			SourceText: string(tok.OriginalText),
-		}, nil
+		}
+
+		// Check for "from" keyword: "2 days from today"
+		// This transforms to: baseDate + duration
+		if p.match(lexer.FROM) {
+			// Parse the base date expression (today, tomorrow, yesterday, or date literal)
+			baseDate, err := p.parseFromTarget()
+			if err != nil {
+				return nil, err
+			}
+
+			// Transform "2 days from today" into "today + 2 days"
+			return &ast.BinaryOp{
+				Operator: "+",
+				Left:     baseDate,
+				Right:    durationNode,
+			}, nil
+		}
+
+		return durationNode, nil
 	}
 
 	// Parenthesized expression
@@ -933,25 +1022,48 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 	}, nil
 }
 
-// tryConsumeUnit attempts to consume an identifier as a unit.
-// STATEFUL: Advances parser cursor only if identifier is a valid unit.
-// PURE VALIDATION: Uses units.NormalizeUnitName (O(1) hash lookup).
-// Time Complexity: O(1) - single token peek + map lookup + optional advance
-// Returns: (normalizedUnit string, consumed bool)
-func (p *RecursiveDescentParser) tryConsumeUnit() (string, bool) {
-	if !p.check(lexer.IDENTIFIER) {
-		return "", false // O(1) token type check
+// parseFromTarget parses the target of a "from" expression.
+// Valid targets: today, tomorrow, yesterday, or date literals (Dec 25, Dec 25 2025)
+func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
+	// Try relative date keywords first
+	if p.match(lexer.DATE_TODAY) {
+		return &ast.RelativeDateLiteral{
+			Keyword:    "today",
+			SourceText: string(p.previous().OriginalText),
+		}, nil
+	}
+	if p.match(lexer.DATE_TOMORROW) {
+		return &ast.RelativeDateLiteral{
+			Keyword:    "tomorrow",
+			SourceText: string(p.previous().OriginalText),
+		}, nil
+	}
+	if p.match(lexer.DATE_YESTERDAY) {
+		return &ast.RelativeDateLiteral{
+			Keyword:    "yesterday",
+			SourceText: string(p.previous().OriginalText),
+		}, nil
 	}
 
-	unitName := string(p.peek().Value)                           // O(1) peek without side effect
-	normalizedUnit, isValid := units.NormalizeUnitName(unitName) // O(1) map lookup
+	// Try date literal (Dec 25, December 25 2025)
+	if p.match(lexer.DATE_LITERAL) {
+		tok := p.previous()
+		parts := strings.Split(string(tok.Value), ":")
 
-	if !isValid {
-		return "", false // No consumption - pure until this point
+		var year *string
+		if len(parts) >= 3 && parts[2] != "" {
+			year = &parts[2]
+		}
+
+		return &ast.DateLiteral{
+			Month:      parts[0],
+			Day:        parts[1],
+			Year:       year,
+			SourceText: string(tok.OriginalText),
+		}, nil
 	}
 
-	p.advance() // O(1) - only side effect, only if valid
-	return normalizedUnit, true
+	return nil, p.error("expected date (today, tomorrow, yesterday, or date literal) after 'from'")
 }
 
 // isNaturalSyntaxKeyword checks if an identifier is a reserved natural syntax keyword.
@@ -977,29 +1089,17 @@ func isNaturalSyntaxKeyword(ident string) bool {
 }
 
 // isTimeUnit checks if a string is a valid time unit for rate expressions.
-// Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), year(s), and abbreviations
+// Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), year(s), and abbreviations.
+// Uses types.NormalizeTimeUnit as the source of truth for time unit recognition.
 func isTimeUnit(unit string) bool {
-	normalized := strings.ToLower(strings.TrimSpace(unit))
-
-	timeUnits := map[string]bool{
-		// Full names and plurals
-		"second": true, "seconds": true,
-		"minute": true, "minutes": true,
-		"hour": true, "hours": true,
-		"day": true, "days": true,
-		"week": true, "weeks": true,
-		"month": true, "months": true,
-		"year": true, "years": true,
-
-		// Common abbreviations
-		"s": true, "sec": true,
-		"m": true, "min": true,
-		"h": true, "hr": true,
-		"d": true,
-		"w": true, "wk": true,
-		"mo": true,
-		"y":  true, "yr": true,
+	normalized := types.NormalizeTimeUnit(unit)
+	// NormalizeTimeUnit returns the input unchanged if not recognized,
+	// but returns a canonical form (second, minute, etc.) if recognized.
+	// If the output matches one of the canonical forms, it's a time unit.
+	switch normalized {
+	case "second", "minute", "hour", "day", "week", "month", "year":
+		return true
+	default:
+		return false
 	}
-
-	return timeUnits[normalized]
 }

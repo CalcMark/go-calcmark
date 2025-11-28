@@ -1,0 +1,59 @@
+# CalcMark Date Features
+
+Tests for date keywords, literals, and arithmetic.
+
+## Basic Date Keywords
+
+d1 = today
+d2 = tomorrow
+d3 = yesterday
+
+## Date Literals (Month Day)
+
+d4 = Dec 25
+d5 = January 15
+d6 = Jul 4
+
+## Date Literals (Month Day Year)
+
+d7 = Dec 25 2025
+d8 = January 1 2026
+d9 = Jul 4 2024
+
+## Date Arithmetic (Date + Duration)
+
+d10 = today + 2 days
+d11 = tomorrow + 1 week
+d12 = Dec 25 2025 + 7 days
+d13 = today - 3 days
+d14 = yesterday - 1 week
+
+## Date Arithmetic (Specific Dates)
+
+christmas = Dec 25 2025
+new_year = christmas + 7 days
+week_before = Dec 25 2025 - 1 week
+
+## Duration Literals
+
+dur1 = 2 days
+dur2 = 3 weeks
+dur3 = 1 hour
+dur4 = 30 minutes
+dur5 = 1 year
+
+## Duration Arithmetic
+
+total_time = 2 weeks + 3 days
+
+## X from Y Syntax (Duration from Date)
+
+d15 = 2 days from today
+d16 = 3 weeks from tomorrow
+d17 = 1 week from yesterday
+d18 = 5 days from Dec 25 2025
+
+## X from Y with Different Units
+
+d19 = 1 month from today
+d20 = 2 years from Jan 1 2025

@@ -15,12 +15,3 @@ func (e *ParseError) Error() string {
 	}
 	return fmt.Sprintf("parse error: %s", e.Message)
 }
-
-// newParseError creates a new ParseError
-func newParseError(message string, line, column int) *ParseError {
-	return &ParseError{
-		Message: message,
-		Line:    line,
-		Column:  column,
-	}
-}

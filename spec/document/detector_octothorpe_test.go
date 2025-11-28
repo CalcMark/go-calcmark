@@ -1,53 +1,45 @@
 package document
 
 import (
-	"strings"
 	"testing"
 )
 
-// TestDetectorOctothorpeError verifies that lines with inline octothorpe
-// are properly rejected during block detection.
-// TDD: This test should FAIL initially, then PASS after fix.
-func TestDetectorOctothorpeError(t *testing.T) {
+// TestDetectorOctothorpeHandling verifies that lines with inline octothorpe
+// are treated as text (not calculations) since they fail to tokenize.
+//
+// Design decision: Invalid calculation syntax is treated as markdown text,
+// not as an error. This follows the principle: "if a line is NOT syntactically
+// valid calculation then it's markdown."
+func TestDetectorOctothorpeHandling(t *testing.T) {
 	tests := []struct {
-		name        string
-		source      string
-		shouldError bool
-		errorMsg    string
+		name       string
+		source     string
+		expectText bool // true if line should be treated as text
 	}{
 		{
-			name:        "inline octothorpe after assignment",
-			source:      "x = 10 # this is invalid",
-			shouldError: true,
-			errorMsg:    "octothorpe",
+			name:       "inline octothorpe after assignment - treated as text",
+			source:     "x = 10 # this is invalid",
+			expectText: true,
 		},
 		{
-			name:        "inline octothorpe with result annotation",
-			source:      "result = rtt(local) # → 0.5 ms",
-			shouldError: true,
-			errorMsg:    "octothorpe",
+			name:       "inline octothorpe with result annotation - treated as text",
+			source:     "result = rtt(local) # → 0.5 ms",
+			expectText: true,
 		},
 		{
-			name:        "octothorpe in expression",
-			source:      "y = 5 + # incomplete",
-			shouldError: true,
-			errorMsg:    "octothorpe",
+			name:       "octothorpe in expression - treated as text",
+			source:     "y = 5 + # incomplete",
+			expectText: true,
 		},
 		{
-			name:        "valid heading at line start",
-			source:      "# This is a valid markdown heading",
-			shouldError: false,
+			name:       "valid heading at line start - treated as text",
+			source:     "# This is a valid markdown heading",
+			expectText: true,
 		},
 		{
-			name:        "valid calculation without octothorpe",
-			source:      "x = 10 + 20",
-			shouldError: false,
-		},
-		{
-			name:        "multiple lines with octothorpe error",
-			source:      "x = 10\ny = 20 # bad comment\nz = 30",
-			shouldError: true,
-			errorMsg:    "octothorpe",
+			name:       "valid calculation without octothorpe - is calculation",
+			source:     "x = 10 + 20",
+			expectText: false,
 		},
 	}
 
@@ -56,18 +48,23 @@ func TestDetectorOctothorpeError(t *testing.T) {
 			detector := NewDetector()
 			blocks, err := detector.DetectBlocks(tt.source)
 
-			if tt.shouldError {
-				if err == nil {
-					t.Errorf("Expected error for %q, but got none. Blocks: %v", tt.source, blocks)
-					return
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if len(blocks) != 1 {
+				t.Errorf("Expected 1 block, got %d", len(blocks))
+				return
+			}
+
+			isText := blocks[0].Type() == BlockText
+			if isText != tt.expectText {
+				expectedType := "calculation"
+				if tt.expectText {
+					expectedType = "text"
 				}
-				if !strings.Contains(err.Error(), tt.errorMsg) {
-					t.Errorf("Expected error containing %q, got: %v", tt.errorMsg, err)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error for %q: %v", tt.source, err)
-				}
+				t.Errorf("Expected %s block, got %v", expectedType, blocks[0].Type())
 			}
 		})
 	}

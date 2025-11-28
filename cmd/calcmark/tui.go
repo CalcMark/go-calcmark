@@ -24,13 +24,6 @@ var (
 				Padding(0, 1).
 				Margin(1, 0)
 
-	varChangedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF5F87")).
-			Bold(true)
-
-	varUpdatedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#5FD7FF"))
-
 	errorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FF0000"))
 
@@ -603,15 +596,6 @@ func (m model) renderPinnedVars() string {
 	return b.String()
 }
 
-// extractVarName extracts variable name from assignment
-func (m model) extractVarName(expr string) string {
-	parts := strings.Split(expr, "=")
-	if len(parts) >= 2 {
-		return strings.TrimSpace(parts[0])
-	}
-	return ""
-}
-
 // renderHelp renders help text responsively
 func (m model) renderHelp() string {
 	// Compact help that fits most terminal widths
@@ -642,11 +626,4 @@ func (m model) renderHelp() string {
 			return strings.Join(helps, "  │  ")
 		}
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

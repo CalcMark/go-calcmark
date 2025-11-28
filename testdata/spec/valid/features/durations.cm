@@ -1,0 +1,48 @@
+# Duration Expression Test
+
+Tests all valid duration literal formats.
+
+## Simple Durations (Singular)
+
+1 second
+1 minute
+1 hour
+1 day
+1 week
+1 month
+1 year
+
+## Simple Durations (Plural)
+
+2 seconds
+3 minutes
+4 hours
+5 days
+6 weeks
+7 months
+8 years
+
+## Compound Durations with 'and'
+
+2 weeks and 3 days
+1 year and 6 months
+3 months and 2 weeks
+5 days and 12 hours
+
+## Multi-term Compound Durations
+
+1 year and 6 months and 2 weeks
+2 months and 1 week and 3 days
+10 weeks and 5 days and 12 hours
+
+## Duration Arithmetic
+
+2 weeks + 3 days
+1 month - 1 week
+5 days + 12 hours
+
+## Durations in Context
+
+deadline = today + 2 weeks
+period = 1 month and 2 days
+extended = period + 1 week

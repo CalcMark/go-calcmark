@@ -217,3 +217,64 @@ func TestAssignmentAndLookup(t *testing.T) {
 		t.Errorf("Result = %v, want 42", result.String())
 	}
 }
+
+// TestBuiltinConstants verifies PI and E are pre-defined.
+func TestBuiltinConstants(t *testing.T) {
+	interp := NewInterpreter()
+
+	tests := []struct {
+		name   string
+		prefix string // Expected prefix of the value
+	}{
+		{"PI", "3.14159265358979"},
+		{"E", "2.71828182845904"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id := &ast.Identifier{Name: tt.name}
+			result, err := interp.evalIdentifier(id)
+			if err != nil {
+				t.Fatalf("evalIdentifier(%q) error = %v", tt.name, err)
+			}
+
+			num, ok := result.(*types.Number)
+			if !ok {
+				t.Fatalf("Expected *types.Number, got %T", result)
+			}
+
+			str := num.String()
+			if len(str) < len(tt.prefix) || str[:len(tt.prefix)] != tt.prefix {
+				t.Errorf("%s = %v, want prefix %v", tt.name, str, tt.prefix)
+			}
+		})
+	}
+}
+
+// TestBuiltinConstantsUsage verifies PI and E can be used in expressions.
+func TestBuiltinConstantsUsage(t *testing.T) {
+	interp := NewInterpreter()
+
+	// Test: 2 * PI (should be ~6.28...)
+	node := &ast.BinaryOp{
+		Operator: "*",
+		Left:     &ast.NumberLiteral{Value: "2"},
+		Right:    &ast.Identifier{Name: "PI"},
+	}
+
+	result, err := interp.evalBinaryOp(node)
+	if err != nil {
+		t.Fatalf("evalBinaryOp error = %v", err)
+	}
+
+	num, ok := result.(*types.Number)
+	if !ok {
+		t.Fatalf("Expected *types.Number, got %T", result)
+	}
+
+	// 2*PI should be approximately 6.28
+	val := num.Value.InexactFloat64()
+	if val < 6.28 || val > 6.29 {
+		t.Errorf("2 * PI = %v, want ~6.28", val)
+	}
+}

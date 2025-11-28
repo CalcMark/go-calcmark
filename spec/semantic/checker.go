@@ -70,6 +70,14 @@ func (c *Checker) checkNode(node ast.Node) {
 		// Validated at parse time
 	case *ast.QuantityLiteral:
 		c.checkQuantityLiteral(n)
+	case *ast.RateLiteral:
+		c.checkRateLiteral(n)
+	case *ast.UnitConversion:
+		c.checkUnitConversion(n)
+	case *ast.NapkinConversion:
+		c.checkNapkinConversion(n)
+	case *ast.PercentageOf:
+		c.checkPercentageOf(n)
 	}
 }
 
@@ -180,6 +188,43 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 func (c *Checker) checkQuantityLiteral(q *ast.QuantityLiteral) {
 	// Quantity literals are valid - we check compatibility during operations
 	// No need to error here
+}
+
+// checkRateLiteral validates rate literals (e.g., "100 MB/s").
+func (c *Checker) checkRateLiteral(r *ast.RateLiteral) {
+	// Check the amount expression
+	if r.Amount != nil {
+		c.checkExpression(r.Amount)
+	}
+	// Rate time unit is validated at parse time
+}
+
+// checkUnitConversion validates unit conversion expressions (e.g., "10 meters in feet").
+func (c *Checker) checkUnitConversion(u *ast.UnitConversion) {
+	// Check the quantity expression being converted
+	if u.Quantity != nil {
+		c.checkExpression(u.Quantity)
+	}
+	// Target unit validity is checked at runtime by the interpreter
+}
+
+// checkNapkinConversion validates napkin conversions (e.g., "1234567 as napkin").
+func (c *Checker) checkNapkinConversion(n *ast.NapkinConversion) {
+	// Check the expression being formatted
+	if n.Expression != nil {
+		c.checkExpression(n.Expression)
+	}
+}
+
+// checkPercentageOf validates percentage-of expressions (e.g., "10% of 200").
+func (c *Checker) checkPercentageOf(p *ast.PercentageOf) {
+	// Check both the percentage and value expressions
+	if p.Percentage != nil {
+		c.checkExpression(p.Percentage)
+	}
+	if p.Value != nil {
+		c.checkExpression(p.Value)
+	}
 }
 
 // addDiagnostic adds a diagnostic to the checker's list.

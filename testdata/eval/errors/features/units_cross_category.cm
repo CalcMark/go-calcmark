@@ -1,0 +1,45 @@
+# Cross-Category Unit Operations
+
+These expressions are syntactically valid CalcMark but produce runtime errors because they attempt to combine units from incompatible categories.
+
+## Temperature with other units
+
+Temperature cannot be combined with length or mass dimensions.
+
+10 celsius + 5 meters
+100 fahrenheit + 10 kilograms
+
+## Speed with Length
+
+Speed and length are fundamentally different dimensions.
+
+50 mph + 10 meters
+100 kph + 5 kilometers
+
+## Energy with Power
+
+Energy (joules, kWh) measures total work done. Power (watts) measures rate of energy transfer. They cannot be directly added.
+
+1000 joules + 100 watts
+1 kwh + 1 kilowatt
+
+## Power with other dimensions
+
+Power cannot be combined with length or mass.
+
+1 horsepower + 10 meters
+5 watts + 5 kilograms
+
+## Energy with Mass
+
+Energy and mass are different physical quantities.
+
+100 calories + 5 grams
+1 kj + 1 kilogram
+
+## Temperature with Energy
+
+Temperature and energy measure different properties.
+
+100 celsius + 1000 joules
+50 fahrenheit + 1 kwh

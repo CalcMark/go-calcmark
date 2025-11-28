@@ -11,7 +11,7 @@ func Evaluate(source string, env *Environment) error {
 	if err != nil {
 		return err
 	}
-	
+
 	interp := NewInterpreterWithEnv(env)
 	_, err = interp.Eval(nodes)
 	return err

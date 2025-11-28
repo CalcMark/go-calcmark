@@ -50,6 +50,22 @@ func (interp *Interpreter) evalUnaryOp(u *ast.UnaryOp) (types.Type, error) {
 // evalBinaryOperation performs binary arithmetic operations.
 // This is a pure function for easier testing.
 func evalBinaryOperation(left, right types.Type, operator string) (types.Type, error) {
+	// Boolean operations (AND, OR)
+	if leftBool, ok := left.(*types.Boolean); ok {
+		if rightBool, ok := right.(*types.Boolean); ok {
+			switch operator {
+			case "and":
+				return types.NewBoolean(leftBool.Value && rightBool.Value), nil
+			case "or":
+				return types.NewBoolean(leftBool.Value || rightBool.Value), nil
+			}
+		}
+		// AND/OR with non-boolean right operand
+		if operator == "and" || operator == "or" {
+			return nil, fmt.Errorf("'%s' operator requires boolean operands, got %T and %T", operator, left, right)
+		}
+	}
+
 	// Number operations
 	if leftNum, ok := left.(*types.Number); ok {
 		if rightNum, ok := right.(*types.Number); ok {
@@ -219,50 +235,6 @@ func evalNumberOperation(left, right *types.Number, operator string) (types.Type
 	return types.NewNumber(result), nil
 }
 
-// evalCurrencyOperation performs operations on two currencies.
-func evalCurrencyOperation(left, right *types.Currency, operator string) (types.Type, error) {
-	// Check if same currency
-	if left.Code != right.Code {
-		return nil, fmt.Errorf("cannot %s different currencies: %s and %s", operator, left.Code, right.Code)
-	}
-
-	var result decimal.Decimal
-
-	switch operator {
-	case "+":
-		result = left.Value.Add(right.Value)
-	case "-":
-		result = left.Value.Sub(right.Value)
-	default:
-		return nil, fmt.Errorf("unsupported currency operation: %s", operator)
-	}
-
-	return types.NewCurrency(result, left.Symbol), nil
-}
-
-// evalCurrencyNumberOperation handles currency + number operations (relaxed rules).
-func evalCurrencyNumberOperation(cur *types.Currency, num *types.Number, operator string) (types.Type, error) {
-	var result decimal.Decimal
-
-	switch operator {
-	case "+":
-		result = cur.Value.Add(num.Value)
-	case "-":
-		result = cur.Value.Sub(num.Value)
-	case "*":
-		result = cur.Value.Mul(num.Value)
-	case "/":
-		if num.Value.IsZero() {
-			return nil, fmt.Errorf("division by zero")
-		}
-		result = cur.Value.Div(num.Value)
-	default:
-		return nil, fmt.Errorf("unsupported currency-number operation: %s", operator)
-	}
-
-	return types.NewCurrency(result, cur.Symbol), nil
-}
-
 // evalDateDurationOperation handles date ± duration.
 func evalDateDurationOperation(date *types.Date, dur *types.Duration, operator string) (types.Type, error) {
 	// Convert duration to days (approximate for non-day units)
@@ -334,8 +306,16 @@ func evalDurationNumberOperation(dur *types.Duration, num *types.Number, operato
 	return &types.Duration{Value: result, Unit: dur.Unit}, nil
 }
 
-// evalUnaryOperation performs unary operations (-, +).
+// evalUnaryOperation performs unary operations (-, +, not).
 func evalUnaryOperation(operand types.Type, operator string) (types.Type, error) {
+	// Handle NOT operator on Boolean first
+	if operator == "not" {
+		if b, ok := operand.(*types.Boolean); ok {
+			return types.NewBoolean(!b.Value), nil
+		}
+		return nil, fmt.Errorf("'not' operator requires boolean, got %T", operand)
+	}
+
 	if num, ok := operand.(*types.Number); ok {
 		switch operator {
 		case "-":

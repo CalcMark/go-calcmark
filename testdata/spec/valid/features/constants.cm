@@ -1,0 +1,29 @@
+# CalcMark Mathematical Constants
+
+Tests for PI and E mathematical constants.
+
+## PI Constant
+
+PI
+circumference = 2 * PI * 5
+area = PI * 10 * 10
+
+## E Constant (Euler's Number)
+
+E
+growth = E ^ 2
+decay = 100 * E ^ -1
+
+## Using Constants in Expressions
+
+half_pi = PI / 2
+two_pi = PI * 2
+e_squared = E * E
+pi_plus_e = PI + E
+
+## Comparisons with Constants
+
+pi_gt_3 = PI > 3
+pi_lt_4 = PI < 4
+e_gt_2 = E > 2
+e_lt_3 = E < 3

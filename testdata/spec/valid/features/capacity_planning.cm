@@ -1,0 +1,21 @@
+# Valid Capacity Planning Examples
+# Natural syntax for requires() function
+
+# Basic capacity planning: load with capacity
+10000 req/s with 450 req/s
+10 TB with 2 TB  
+100 with 30
+
+# With buffer percentage
+10000 req/s with 450 req/s and 20%
+10 TB with 2 TB and 10%
+1000 with 100 and 50%
+
+# Various buffer percentages
+100 with 25 and 0.1%
+1000 with 200 and 120%
+5000 with 500 and 1k%
+
+# Edge cases
+5 with 10        # load < capacity, still needs 1 unit
+100 with 100     # exact match, needs 1 unit

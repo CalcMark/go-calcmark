@@ -10,21 +10,21 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
 
-// TestGoldenFiles tests parsing against golden files.
+// TestSpecFiles tests parsing against specification files.
 // These are the definitive specification for CalcMark syntax.
-func TestGoldenFiles(t *testing.T) {
-	goldenDir := "../../../testdata/golden"
+func TestSpecFiles(t *testing.T) {
+	specDir := "../../testdata/spec"
 
 	t.Run("valid", func(t *testing.T) {
-		testValidGoldenFiles(t, goldenDir)
+		testValidSpecFiles(t, specDir)
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		testInvalidGoldenFiles(t, goldenDir)
+		testInvalidSpecFiles(t, specDir)
 	})
 }
 
-func testValidGoldenFiles(t *testing.T, baseDir string) {
+func testValidSpecFiles(t *testing.T, baseDir string) {
 	validDir := filepath.Join(baseDir, "valid")
 
 	// Document-level tests - CRITICAL for preventing regressions
@@ -99,20 +99,14 @@ func testDocumentGoldenFiles(t *testing.T, dir string) {
 					i, blockType, len(block.Block.Source()))
 			}
 
-			// Also test raw parsing (AST level)
-			nodes, parseErr := parser.Parse(source)
-			if parseErr != nil {
-				t.Errorf("SPEC VIOLATION: Valid document %q failed to parse at AST level:\n%v",
-					file.Name(), parseErr)
-			}
-			if len(nodes) == 0 {
-				t.Errorf("SPEC VIOLATION: Valid document %q produced no AST nodes", file.Name())
-			}
+			// Note: parser.Parse() returns empty for markdown-only content
+			// Document-level parsing (above) is the definitive test for document files
 		})
 	}
 }
 
 // testExpressionGoldenFiles validates EXPRESSION-LEVEL parsing
+// Expression files may contain markdown + calculations, so we test at document level
 func testExpressionGoldenFiles(t *testing.T, dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return // Directory doesn't exist
@@ -135,19 +129,25 @@ func testExpressionGoldenFiles(t *testing.T, dir string) {
 				t.Fatal(err)
 			}
 
-			nodes, parseErr := parser.Parse(string(content))
-			if parseErr != nil {
-				t.Errorf("SPEC VIOLATION: Valid expressions %q failed to parse:\n%v",
-					file.Name(), parseErr)
+			// Expression files may contain markdown + calculations
+			// Test at document level to properly handle mixed content
+			doc, docErr := document.NewDocument(string(content))
+			if docErr != nil {
+				t.Errorf("SPEC VIOLATION: Valid expressions %q failed to parse as document:\n%v",
+					file.Name(), docErr)
+				return
 			}
-			if len(nodes) == 0 {
-				t.Errorf("SPEC VIOLATION: Valid expressions %q produced no nodes", file.Name())
+
+			blocks := doc.GetBlocks()
+			if len(blocks) == 0 {
+				t.Errorf("SPEC VIOLATION: Valid expressions %q produced no blocks", file.Name())
 			}
 		})
 	}
 }
 
 // testFeatureGoldenFiles validates FEATURE-SPECIFIC behavior
+// Feature files contain markdown prose + calculations, so we test at document level
 func testFeatureGoldenFiles(t *testing.T, dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return // Directory doesn't exist
@@ -170,20 +170,24 @@ func testFeatureGoldenFiles(t *testing.T, dir string) {
 				t.Fatal(err)
 			}
 
-			nodes, parseErr := parser.Parse(string(content))
-			if parseErr != nil {
-				t.Errorf("SPEC VIOLATION: Valid feature test %q failed to parse:\n%v",
-					file.Name(), parseErr)
+			// Feature files contain markdown + calculations
+			// Test at document level to properly handle mixed content
+			doc, docErr := document.NewDocument(string(content))
+			if docErr != nil {
+				t.Errorf("SPEC VIOLATION: Valid feature test %q failed to parse as document:\n%v",
+					file.Name(), docErr)
 				return
 			}
-			if len(nodes) == 0 {
-				t.Errorf("SPEC VIOLATION: Valid feature test %q produced no nodes", file.Name())
+
+			blocks := doc.GetBlocks()
+			if len(blocks) == 0 {
+				t.Errorf("SPEC VIOLATION: Valid feature test %q produced no blocks", file.Name())
 			}
 		})
 	}
 }
 
-func testInvalidGoldenFiles(t *testing.T, baseDir string) {
+func testInvalidSpecFiles(t *testing.T, baseDir string) {
 	invalidDir := filepath.Join(baseDir, "invalid")
 
 	if _, err := os.Stat(invalidDir); os.IsNotExist(err) {

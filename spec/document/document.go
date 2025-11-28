@@ -247,16 +247,7 @@ func (d *Document) rebuildDependencies() error {
 				continue
 			}
 
-			// For each variable this block depends on,
-			// we need to track which block defines it
-			// (This requires top-down resolution)
-
-			// Build reverse mapping: defined var → block that defines it
-			for _ = range calcBlock.Variables() {
-				// This block defines this variable
-				// Any block AFTER this one that references it depends on this block
-				// (We'll build the actual dependency graph in a second pass)
-			}
+			// Variables and dependencies are tracked in the second pass below
 		}
 	}
 

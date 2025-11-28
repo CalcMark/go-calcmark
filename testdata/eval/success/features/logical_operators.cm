@@ -1,0 +1,55 @@
+# CalcMark Logical Operators
+
+Tests for AND, OR, and NOT logical operators.
+
+## Basic Boolean Operations
+
+true and true
+true and false
+false and true
+false and false
+
+true or true
+true or false
+false or true
+false or false
+
+not true
+not false
+
+## Boolean Variables
+
+a = true
+b = false
+c = a and b
+d = a or b
+e = not a
+
+## Combined Logical Expressions
+
+result1 = true and true and true
+result2 = false or false or true
+result3 = not (true and false)
+result4 = not true or false
+result5 = not false and true
+
+## Operator Precedence (NOT > AND > OR)
+
+prec1 = not false and true
+prec2 = not true or false
+prec3 = true or false and false
+prec4 = false and false or true
+prec5 = (true or false) and false
+
+## Comparisons with Logical Operators
+
+comp1 = 5 > 3 and 10 < 20
+comp2 = 1 > 2 or 3 > 2
+comp3 = not (5 == 5)
+comp4 = 10 >= 10 and 5 <= 5
+
+## Complex Expressions
+
+complex1 = (5 > 3) and (10 < 20) and not false
+complex2 = (1 > 2) or (2 > 3) or true
+complex3 = not (5 > 10) and not (10 > 20)

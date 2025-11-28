@@ -205,6 +205,59 @@ func TestDateValidation_YearRange(t *testing.T) {
 	}
 }
 
+// TestDateValidation_ShortMonthNames tests that short month names work
+func TestDateValidation_ShortMonthNames(t *testing.T) {
+	tests := []struct {
+		month     string
+		day       string
+		expectErr bool
+	}{
+		// Valid short month names
+		{"Dec", "25", false},
+		{"Jan", "31", false},
+		{"Feb", "28", false},
+		{"Mar", "31", false},
+		{"Apr", "30", false},
+		{"Jun", "30", false},
+		{"Jul", "31", false},
+		{"Aug", "31", false},
+		{"Sep", "30", false},
+		{"Oct", "31", false},
+		{"Nov", "30", false},
+
+		// Invalid: day out of range
+		{"Dec", "32", true},
+		{"Feb", "30", true},
+		{"Nov", "31", true},
+		{"Apr", "31", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.month+" "+tt.day, func(t *testing.T) {
+			checker := semantic.NewChecker()
+
+			dateLiteral := &ast.DateLiteral{
+				Month: tt.month,
+				Day:   tt.day,
+				Year:  strPtr("2025"),
+				Range: &ast.Range{},
+			}
+
+			diagnostics := checker.Check([]ast.Node{dateLiteral})
+
+			if tt.expectErr {
+				if len(diagnostics) == 0 {
+					t.Errorf("Expected error for %s %s, got none", tt.month, tt.day)
+				}
+			} else {
+				if len(diagnostics) > 0 {
+					t.Errorf("Expected no error for %s %s, got: %s", tt.month, tt.day, diagnostics[0].Message)
+				}
+			}
+		})
+	}
+}
+
 // Helper function
 func strPtr(s string) *string {
 	return &s

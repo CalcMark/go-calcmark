@@ -31,6 +31,7 @@ var ReservedKeywords = map[string]TokenType{
 	"elif":   ELIF,
 	"end":    END,
 	"for":    FOR,
+	"from":   FROM, // Date expressions: "2 days from today"
 	"in":     IN,
 	"as":     AS,     // Conversion: "1234567 as napkin"
 	"napkin": NAPKIN, // Human-readable formatting: "1234567 as napkin"
@@ -133,11 +134,7 @@ func (l *Lexer) isValidThousandsSeparator(separatorChar rune) bool {
 
 	// 4th character must not be a digit (unless it's another separator)
 	fourthChar := l.peek(4)
-	if unicode.IsDigit(fourthChar) {
-		return false
-	}
-
-	return true
+	return !unicode.IsDigit(fourthChar)
 }
 
 // readNumber reads a number token (supports commas and underscores as thousands separators)
@@ -620,6 +617,7 @@ func (l *Lexer) readIdentifier() Token {
 	// Normal identifier parsing
 	var identifier strings.Builder
 	isFirst := true
+	identLength := 0
 
 	for l.currentChar() != 0 {
 		char := l.currentChar()
@@ -632,6 +630,20 @@ func (l *Lexer) readIdentifier() Token {
 		// Check if character is valid for identifier
 		if !l.isIdentifierChar(char, isFirst) {
 			break
+		}
+
+		// Security: Enforce maximum identifier length
+		identLength++
+		if identLength > MaxIdentifierLength {
+			// Return error token - caller will handle
+			return Token{
+				Type:     ERROR,
+				Value:    fmt.Sprintf("identifier exceeds maximum length of %d characters", MaxIdentifierLength),
+				Line:     startLine,
+				Column:   startColumn,
+				StartPos: startPos,
+				EndPos:   l.pos,
+			}
 		}
 
 		identifier.WriteRune(char)
@@ -796,6 +808,15 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 				}
 			}
 			token := l.readIdentifier()
+
+			// Security: Check for ERROR token from readIdentifier (e.g., identifier too long)
+			if token.Type == ERROR {
+				return nil, &LexerError{
+					Message: token.Value,
+					Line:    token.Line,
+					Column:  token.Column,
+				}
+			}
 
 			// Error if IDENTIFIER token (not boolean or reserved keyword) is immediately followed by % (no whitespace)
 			// Booleans and reserved keywords can be followed by % (it becomes modulus operator)

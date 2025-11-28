@@ -91,9 +91,9 @@ func TestEvalStdin(t *testing.T) {
 
 // TestEvalFile tests evaluation from file
 func TestEvalFile(t *testing.T) {
-	// Create temp file
+	// Create temp file in current directory (security constraint)
 	content := "x = 10\ny = x + 5\nz = y * 2\n"
-	tmpfile, err := os.CreateTemp("", "test*.cm")
+	tmpfile, err := os.CreateTemp(".", "test*.cm")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,9 +166,9 @@ func TestEvalJSON(t *testing.T) {
 
 // TestLoadAndEvaluate tests file loading helper
 func TestLoadAndEvaluate(t *testing.T) {
-	// Create temp file
+	// Create temp file in current directory (security constraint)
 	content := "x = 42\n"
-	tmpfile, err := os.CreateTemp("", "test*.cm")
+	tmpfile, err := os.CreateTemp(".", "test*.cm")
 	if err != nil {
 		t.Fatal(err)
 	}

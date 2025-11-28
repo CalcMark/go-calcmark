@@ -3,9 +3,11 @@ package semantic
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/spec/lexer"
 )
 
 // checkDateLiteral validates date literals
@@ -86,13 +88,28 @@ func (c *Checker) checkDateLiteral(node *ast.DateLiteral) {
 
 // Helper functions for date validation
 
+// monthNameToNumber converts a month name to its number (1-12).
+// Uses lexer.MonthNames as the single source of truth for month name recognition.
 func monthNameToNumber(name string) int {
-	months := map[string]int{
+	// Month number lookup (canonical names only)
+	monthNumbers := map[string]int{
 		"January": 1, "February": 2, "March": 3, "April": 4,
 		"May": 5, "June": 6, "July": 7, "August": 8,
 		"September": 9, "October": 10, "November": 11, "December": 12,
 	}
-	return months[name]
+
+	// First try direct lookup (handles canonical names)
+	if num, ok := monthNumbers[name]; ok {
+		return num
+	}
+
+	// Normalize using lexer's month names map
+	canonical, ok := lexer.MonthNames[strings.ToLower(name)]
+	if !ok {
+		return 0
+	}
+
+	return monthNumbers[canonical]
 }
 
 func daysInMonth(month, year int) int {

@@ -139,6 +139,7 @@ func NormalizeTimeUnit(unit string) string {
 		"days": "day",
 
 		"w":     "week",
+		"wk":    "week",
 		"week":  "week",
 		"weeks": "week",
 

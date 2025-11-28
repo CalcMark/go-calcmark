@@ -180,49 +180,6 @@ func (c *Currency) String() string {
 	return c.Symbol + " " + rounded.StringFixed(2)
 }
 
-// addThousandsSeparators adds commas to a numeric string
-// Always uses commas (US format) regardless of locale
-func addThousandsSeparators(s string) string {
-	// Handle negative numbers
-	negative := strings.HasPrefix(s, "-")
-	if negative {
-		s = s[1:]
-	}
-
-	n := len(s)
-
-	// No separators needed for 3 or fewer digits
-	if n <= 3 {
-		if negative {
-			return "-" + s
-		}
-		return s
-	}
-
-	// Build result left-to-right with commas every 3 digits from the right
-	var result strings.Builder
-
-	// Calculate size of first group (1-3 digits)
-	firstGroupSize := n % 3
-	if firstGroupSize == 0 {
-		firstGroupSize = 3
-	}
-
-	// Write first group
-	result.WriteString(s[:firstGroupSize])
-
-	// Write remaining groups of 3, each preceded by comma
-	for i := firstGroupSize; i < n; i += 3 {
-		result.WriteByte(',')
-		result.WriteString(s[i : i+3])
-	}
-
-	if negative {
-		return "-" + result.String()
-	}
-	return result.String()
-}
-
 // TypeName returns "Currency"
 func (c *Currency) TypeName() string {
 	return "Currency"

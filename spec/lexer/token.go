@@ -66,6 +66,7 @@ const (
 
 	// Keywords for natural language constructs
 	AS       // "as" - for conversions like "as napkin"
+	FROM     // "from" - for date expressions: "2 days from today"
 	IN       // "in" - for unit conversions: "10 meters in feet"
 	NAPKIN   // "napkin" - for human-readable number formatting (e.g., "1234567 as napkin")
 	OF       // "of" - for percentage expressions: "10% of 200"
@@ -112,6 +113,7 @@ const (
 	// Special
 	NEWLINE
 	EOF
+	ERROR // Security/syntax error token
 )
 
 // String returns the string representation of a TokenType
@@ -195,6 +197,8 @@ func (tt TokenType) String() string {
 		return "FOR"
 	case AS:
 		return "AS"
+	case FROM:
+		return "FROM"
 	case IN:
 		return "IN"
 	case NAPKIN:
@@ -261,6 +265,8 @@ func (tt TokenType) String() string {
 		return "NEWLINE"
 	case EOF:
 		return "EOF"
+	case ERROR:
+		return "ERROR"
 	default:
 		return fmt.Sprintf("UNKNOWN(%d)", tt)
 	}

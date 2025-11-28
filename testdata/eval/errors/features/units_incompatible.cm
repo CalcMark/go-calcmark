@@ -1,0 +1,33 @@
+# Incompatible Unit Operations
+
+These expressions parse correctly but fail at evaluation because units cannot be combined or converted.
+
+## Mixing Dimensions
+
+Length, mass, and volume are fundamentally different dimensions.
+
+10 meters + 5 kilograms
+100 grams + 2 liters
+5 feet + 3 cups
+
+## Converting Arbitrary Units
+
+Arbitrary units like "apples" cannot be converted to known measurement units.
+
+10 apples in meters
+5 widgets in kilograms
+100 items in liters
+
+## Arbitrary with Known Units
+
+Arbitrary units cannot be combined with known measurement units.
+
+10 apples + 5 meters
+5 widgets + 3 kilograms
+
+## Different Arbitrary Units
+
+Different arbitrary units cannot be added together since there's no defined conversion.
+
+10 apples + 5 bananas
+100 widgets + 50 gadgets

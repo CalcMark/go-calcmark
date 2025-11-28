@@ -201,13 +201,13 @@ func TestDateLiteralEdgeCases(t *testing.T) {
 				Range:      &Range{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 1 + 1}},
 			}
 
-			// AST node should always be creatable
-			if node == nil {
-				t.Error("Failed to create DateLiteral node")
-			}
-
 			// Should implement Node interface
 			var _ Node = node
+
+			// Verify fields are set correctly
+			if node.Month != tt.month {
+				t.Errorf("Month = %q, want %q", node.Month, tt.month)
+			}
 		})
 	}
 }
