@@ -66,24 +66,6 @@ Design document for units and quantities system (currency, measurements, etc.).
 ### `SYNTAX_HIGHLIGHTER_SPEC.json`
 Machine-readable syntax specification for editor integrations.
 
-## Generating EBNF Grammar
-
-To generate an EBNF (Extended Backus-Naur Form) grammar from the current specification:
-
-```bash
-cmspec > calcmark.ebnf
-```
-
-The EBNF is **dynamically generated** by introspecting the actual lexer and parser implementation at runtime, ensuring it stays in sync with the code.
-
-This allows you to:
-- Diff the intended spec against the implemented spec
-- Generate railroad diagrams
-- Validate spec consistency
-- Share the grammar with other implementers
-
-The grammar generation logic is in `/spec/grammar/ebnf.go`, which introspects the token types and operator precedence from the actual implementation.
-
 ## Import Paths
 
 ```go
@@ -100,7 +82,7 @@ If you're implementing CalcMark in another language:
 
 1. **Study the spec packages** - They define the authoritative behavior
 2. **Run the tests** - They document expected behavior comprehensively
-3. **Generate EBNF** - Use `calcmark-spec` to get the formal grammar
+3. **Review `LANGUAGE_SPEC.md`** - Contains the formal grammar specification
 4. **Don't depend on `/impl`** - Those are Go-specific implementation details
 
 The Go implementation in `/impl` is just one possible way to evaluate CalcMark. Your implementation might:

@@ -44,7 +44,7 @@ git push origin v0.2.0
 The GitHub Action will automatically:
 - Validate version matches tag
 - Run all tests (excluding `impl/wasm`)
-- Build CLI tools (`calcmark`, `cmspec`)
+- Build CLI tool (`calcmark`)
 - Build WASM artifacts
 - Create GitHub release with generated notes
 - Attach `calcmark-{VERSION}.wasm` and `wasm_exec.js`
@@ -153,7 +153,7 @@ This triggers the GitHub Action which will:
 
 1. **Validate** version matches tag
 2. **Run tests** - all must pass
-3. **Build CLI tools** (`calcmark`, `cmspec`)
+3. **Build CLI tool** (`calcmark`)
 4. **Build WASM** using `calcmark wasm`
 5. **Create release** on GitHub
 6. **Upload artifacts**:

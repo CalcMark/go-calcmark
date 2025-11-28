@@ -79,19 +79,16 @@ echo
 # 4. Build CLI tools
 echo -e "${BLUE}[4/6]${NC} Building CLI tools..."
 go build -o calcmark ./cmd/calcmark
-go build -o cmspec ./cmd/cmspec
 
 # Verify version commands work
 CALCMARK_VERSION=$(./calcmark version)
-CMSPEC_VERSION=$(./cmspec version)
 
-if [ "$CALCMARK_VERSION" != "$VERSION" ] || [ "$CMSPEC_VERSION" != "$VERSION" ]; then
-    echo -e "${RED}Error: Built binaries report wrong version${NC}"
+if [ "$CALCMARK_VERSION" != "$VERSION" ]; then
+    echo -e "${RED}Error: Built binary reports wrong version${NC}"
     echo "  calcmark: $CALCMARK_VERSION (expected $VERSION)"
-    echo "  cmspec: $CMSPEC_VERSION (expected $VERSION)"
     exit 1
 fi
-echo -e "${GREEN}✓ CLI tools built (calcmark, cmspec)${NC}"
+echo -e "${GREEN}✓ CLI tool built (calcmark)${NC}"
 echo
 
 # 5. Build WASM artifacts
@@ -200,7 +197,7 @@ else
 fi
 
 # Cleanup
-rm -f ./calcmark ./cmspec
+rm -f ./calcmark
 
 echo
 echo -e "${GREEN}════════════════════════════════════════${NC}"

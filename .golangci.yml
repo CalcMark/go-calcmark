@@ -52,11 +52,6 @@ issues:
         - gocyclo
         - dupl
         - goconst
-    # Allow long lines in generated code
-    - path: spec/grammar/
-      linters:
-        - lll
-
 run:
   timeout: 5m
   tests: true
