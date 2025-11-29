@@ -164,7 +164,7 @@ func TestSlashCommandModeTransition(t *testing.T) {
 
 	// Entering a command puts us in normal mode after execution
 	m.slashMode = true // Simulate entering slash mode
-	m = m.handleCommand("pin")
+	m, _ = m.handleCommand("pin")
 
 	// After command execution, slash mode should be handled by Update()
 	// handleCommand doesn't reset slashMode - that's done in handleInput
@@ -174,7 +174,7 @@ func TestSlashCommandModeTransition(t *testing.T) {
 	m = newTUIModel(doc)
 	m.slashMode = true
 	m.input.SetValue("pin")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// After handleInput with slashMode=true, slashMode should be false
 	if m.slashMode {
@@ -192,13 +192,13 @@ func TestPinSpecificVariable(t *testing.T) {
 	m := newTUIModel(doc)
 
 	// Unpin all first
-	m = m.handleCommand("unpin")
+	m, _ = m.handleCommand("unpin")
 	if len(m.pinnedVars) != 0 {
 		t.Errorf("Expected 0 pinned vars after unpin, got %d", len(m.pinnedVars))
 	}
 
 	// Pin specific variable
-	m = m.handleCommand("pin x")
+	m, _ = m.handleCommand("pin x")
 	if !m.pinnedVars["x"] {
 		t.Error("Variable 'x' should be pinned")
 	}
@@ -232,7 +232,7 @@ func TestUnpinSpecificVariable(t *testing.T) {
 	// Auto-pins all variables
 
 	// Unpin specific variable
-	m = m.handleCommand("unpin x")
+	m, _ = m.handleCommand("unpin x")
 	if m.pinnedVars["x"] {
 		t.Error("Variable 'x' should be unpinned")
 	}
@@ -252,19 +252,19 @@ func TestPinUnpinCommands(t *testing.T) {
 	// Model starts with all vars pinned (auto-pin in newTUIModel)
 
 	// /unpin should unpin all
-	m = m.handleCommand("unpin")
+	m, _ = m.handleCommand("unpin")
 	if len(m.pinnedVars) != 0 {
 		t.Errorf("Expected 0 pinned vars after /unpin, got %d", len(m.pinnedVars))
 	}
 
 	// /pin should pin all
-	m = m.handleCommand("pin")
+	m, _ = m.handleCommand("pin")
 	if !m.pinnedVars["x"] || !m.pinnedVars["y"] || !m.pinnedVars["z"] {
 		t.Error("All variables should be pinned after /pin")
 	}
 
 	// /pin again should still have all pinned (not toggle)
-	m = m.handleCommand("pin")
+	m, _ = m.handleCommand("pin")
 	if !m.pinnedVars["x"] || !m.pinnedVars["y"] || !m.pinnedVars["z"] {
 		t.Error("All variables should still be pinned after second /pin")
 	}
@@ -275,7 +275,7 @@ func TestHandleCommandUnknown(t *testing.T) {
 	doc, _ := document.NewDocument("x = 5\n")
 	m := newTUIModel(doc)
 
-	m = m.handleCommand("notarealcommand")
+	m, _ = m.handleCommand("notarealcommand")
 
 	if m.err == nil {
 		t.Error("Expected error for unknown command")
@@ -294,7 +294,7 @@ func TestHelpCommand(t *testing.T) {
 	m := newTUIModel(doc)
 	initialHistoryLen := len(m.outputHistory)
 
-	m = m.handleCommand("help")
+	m, _ = m.handleCommand("help")
 
 	if len(m.outputHistory) != initialHistoryLen+1 {
 		t.Errorf("Expected help to add to output history, got %d items (was %d)",
@@ -317,7 +317,7 @@ func TestHelpCommandAliases(t *testing.T) {
 		m := newTUIModel(doc)
 		initialLen := len(m.outputHistory)
 
-		m = m.handleCommand(cmd)
+		m, _ = m.handleCommand(cmd)
 
 		if len(m.outputHistory) != initialLen+1 {
 			t.Errorf("/%s should add help to output history", cmd)
@@ -335,7 +335,7 @@ func TestPromptResetAfterCommand(t *testing.T) {
 	m.input.Prompt = "/ "
 	m.input.SetValue("help")
 
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	if m.slashMode {
 		t.Error("Should exit slash mode after command")
@@ -351,14 +351,14 @@ func TestHandleCommandQuit(t *testing.T) {
 
 	// Test "quit"
 	m := newTUIModel(doc)
-	m = m.handleCommand("quit")
+	m, _ = m.handleCommand("quit")
 	if !m.quitting {
 		t.Error("'quit' command should set quitting=true")
 	}
 
 	// Test "q"
 	m = newTUIModel(doc)
-	m = m.handleCommand("q")
+	m, _ = m.handleCommand("q")
 	if !m.quitting {
 		t.Error("'q' command should set quitting=true")
 	}
@@ -488,18 +488,18 @@ func TestSingleEscDoesNotClear(t *testing.T) {
 	}
 }
 
-// TestHandleCommandOpenNoArg tests open command without filename.
+// TestHandleCommandOpenNoArg tests open command without filename shows file picker.
 func TestHandleCommandOpenNoArg(t *testing.T) {
 	doc, _ := document.NewDocument("x = 5\n")
 	m := newTUIModel(doc)
 
-	m = m.handleCommand("open")
+	m, _ = m.handleCommand("open")
 
-	if m.err == nil {
-		t.Error("Expected error for 'open' without filename")
+	if !m.filePickerMode {
+		t.Error("Expected file picker mode when 'open' called without filename")
 	}
-	if !strings.Contains(m.err.Error(), "usage") {
-		t.Errorf("Expected usage error, got: %v", m.err)
+	if m.err != nil {
+		t.Errorf("Expected no error, got: %v", m.err)
 	}
 }
 
@@ -509,14 +509,14 @@ func TestHandleCommandMarkdown(t *testing.T) {
 
 	// Test "md"
 	m := newTUIModel(doc)
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 	if !m.markdownMode {
 		t.Error("'md' command should enter markdown mode")
 	}
 
 	// Test "markdown"
 	m = newTUIModel(doc)
-	m = m.handleCommand("markdown")
+	m, _ = m.handleCommand("markdown")
 	if !m.markdownMode {
 		t.Error("'markdown' command should enter markdown mode")
 	}
@@ -528,13 +528,13 @@ func TestSlashPrefixStripped(t *testing.T) {
 	m := newTUIModel(doc)
 
 	// /unpin with / prefix should work
-	m = m.handleCommand("/unpin")
+	m, _ = m.handleCommand("/unpin")
 	if len(m.pinnedVars) != 0 {
 		t.Errorf("/unpin with / prefix should unpin all, got %d pinned", len(m.pinnedVars))
 	}
 
 	// /pin with / prefix should work
-	m = m.handleCommand("/pin")
+	m, _ = m.handleCommand("/pin")
 	if len(m.pinnedVars) == 0 {
 		t.Error("/pin with / prefix should pin all")
 	}
@@ -549,7 +549,7 @@ func TestMarkdownModeEntry(t *testing.T) {
 		t.Error("Should not start in markdown mode")
 	}
 
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 
 	if !m.markdownMode {
 		t.Error("Should be in markdown mode after /md command")
@@ -562,7 +562,7 @@ func TestMarkdownModeExitOnEsc(t *testing.T) {
 	m := newTUIModel(doc)
 
 	// Enter markdown mode
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 	if !m.markdownMode {
 		t.Error("Should be in markdown mode")
 	}
@@ -592,7 +592,7 @@ func TestMarkdownBlockInsertion(t *testing.T) {
 	initialBlockCount := len(m.doc.GetBlocks())
 
 	// Enter markdown mode and add content
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 	m.mdInput.SetValue("# Test Header\n\nSome text content.")
 	m = m.insertMarkdownBlock()
 
@@ -618,7 +618,7 @@ func TestMarkdownEmptyContentNotInserted(t *testing.T) {
 	initialBlockCount := len(m.doc.GetBlocks())
 
 	// Enter markdown mode with empty content
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 	m.mdInput.SetValue("   \n   ")
 	m = m.insertMarkdownBlock()
 
@@ -636,7 +636,7 @@ func TestMarkdownPreviewRender(t *testing.T) {
 	m.width = 80 // Set reasonable width for rendering
 
 	// Enter markdown mode
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 
 	// Test empty state
 	preview := m.renderMarkdownPreview()
@@ -660,7 +660,7 @@ func TestMarkdownModeViewLayout(t *testing.T) {
 	m.height = 30
 
 	// Enter markdown mode
-	m = m.handleCommand("md")
+	m, _ = m.handleCommand("md")
 
 	view := m.View()
 
@@ -696,7 +696,7 @@ func TestNewVariablesAutoPinned(t *testing.T) {
 
 	// Simulate evaluating a new expression with a variable
 	m.input.SetValue("x = 42")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// x should now be auto-pinned
 	if !m.pinnedVars["x"] {
@@ -705,7 +705,7 @@ func TestNewVariablesAutoPinned(t *testing.T) {
 
 	// Add another variable
 	m.input.SetValue("y = 100")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// Both should be pinned
 	if !m.pinnedVars["x"] {
@@ -729,7 +729,7 @@ func TestChangedVarsMarkedWithAsterisk(t *testing.T) {
 
 	// Reassign x - should mark x as changed
 	m.input.SetValue("x = 100")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	if !m.changedVars["x"] {
 		t.Error("Variable 'x' should be marked as changed after reassignment")
@@ -743,7 +743,7 @@ func TestChangedVarsMarkedWithAsterisk(t *testing.T) {
 
 	// Next input should clear changedVars
 	m.input.SetValue("z = 1")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// x should no longer be in changedVars (cleared at start of handleInput)
 	// but z should be
@@ -763,14 +763,14 @@ func TestDependentVarsMarkedAsChanged(t *testing.T) {
 
 	// Add y = x + 1
 	m.input.SetValue("y = x + 1")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// Clear changed vars for next test
 	m.changedVars = make(map[string]bool)
 
 	// Change x - should mark both x and y as changed (y depends on x)
 	m.input.SetValue("x = 100")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	if !m.changedVars["x"] {
 		t.Error("Variable 'x' should be marked as changed")
@@ -788,16 +788,16 @@ func TestTransitiveDependencyValuePropagation(t *testing.T) {
 
 	// Build dependency chain: a -> b -> c
 	m.input.SetValue("a = 10")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	m.input.SetValue("b = a * 2")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	m.input.SetValue("c = b + 10")
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// Verify initial values
-	_, values := m.collectPinnedVariables()
+	_, values, _ := m.collectPinnedVariables()
 
 	aVal, ok := values["a"]
 	if !ok {
@@ -826,7 +826,7 @@ func TestTransitiveDependencyValuePropagation(t *testing.T) {
 	// Now change a to 20
 	m.input.SetValue("a = 20")
 	// Note: handleInput calls evaluateExpression which should track affected blocks
-	m = m.handleInput()
+	m, _ = m.handleInput()
 
 	// Check which variables are marked as changed
 	t.Logf("Changed vars after a=20: %v", m.changedVars)
@@ -840,7 +840,7 @@ func TestTransitiveDependencyValuePropagation(t *testing.T) {
 	}
 
 	// Verify values updated correctly
-	_, values = m.collectPinnedVariables()
+	_, values, _ = m.collectPinnedVariables()
 
 	aVal = values["a"]
 	if fmt.Sprintf("%v", aVal) != "20" {
@@ -948,14 +948,20 @@ func TestRenderHistoryItems(t *testing.T) {
 func TestRenderHelpLine(t *testing.T) {
 	// Narrow terminal
 	result := renderHelpLine(false, 60)
-	if !strings.Contains(result, "Ctrl+C") {
-		t.Error("Narrow help should contain Ctrl+C")
+	if !strings.Contains(result, "History") {
+		t.Error("Narrow help should contain History")
+	}
+	if !strings.Contains(result, "PgUp") || !strings.Contains(result, "Scroll") {
+		t.Error("Narrow help should mention PgUp/Scroll")
 	}
 
 	// Wide terminal, normal mode
 	result = renderHelpLine(false, 150)
 	if !strings.Contains(result, "History") {
 		t.Error("Wide normal mode should mention History")
+	}
+	if !strings.Contains(result, "PgUp/PgDn") {
+		t.Error("Wide normal mode should mention PgUp/PgDn for scrolling pinned panel")
 	}
 
 	// Wide terminal, slash mode
@@ -1021,7 +1027,7 @@ func TestSaveCommand(t *testing.T) {
 	m := newTUIModel(doc)
 
 	// Invalid extension should error
-	m = m.handleCommand("save test.txt")
+	m, _ = m.handleCommand("save test.txt")
 	if m.err == nil {
 		t.Error("Expected error for invalid extension")
 	}
@@ -1036,7 +1042,7 @@ func TestOutputCommand(t *testing.T) {
 	m := newTUIModel(doc)
 
 	// No filename should error
-	m = m.handleCommand("output")
+	m, _ = m.handleCommand("output")
 	if m.err == nil {
 		t.Error("Expected error for missing filename")
 	}
@@ -1050,7 +1056,7 @@ func TestHelpIncludesSaveOutput(t *testing.T) {
 	doc, _ := document.NewDocument("x = 10\n")
 	m := newTUIModel(doc)
 
-	m = m.handleCommand("help")
+	m, _ = m.handleCommand("help")
 
 	// Check output history for help text
 	if len(m.outputHistory) == 0 {
@@ -1063,5 +1069,121 @@ func TestHelpIncludesSaveOutput(t *testing.T) {
 	}
 	if !strings.Contains(lastItem.output, "/output") {
 		t.Error("Help should mention /output command")
+	}
+}
+
+// TestFrontmatterGlobalVarPinned tests that @global.xxx creates a pinned variable.
+func TestFrontmatterGlobalVarPinned(t *testing.T) {
+	// Create document with @global assignment
+	doc, err := document.NewDocument("@global.tax_rate = 0.32\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	// Create TUI model (should auto-pin the variable)
+	m := newTUIModel(doc)
+
+	// Check that tax_rate is pinned
+	if !m.pinnedVars["tax_rate"] {
+		t.Error("Expected tax_rate to be auto-pinned")
+	}
+
+	// Check that it appears in rendered pinned panel with @ visual indicator
+	// (the @ prefix is display-only, indicating it's a frontmatter variable)
+	rendered := m.renderPinnedVars()
+	if !strings.Contains(rendered, "@tax_rate") {
+		t.Errorf("Expected @tax_rate (with @ visual indicator) in pinned panel, got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "0.32") {
+		t.Errorf("Expected 0.32 value in pinned panel, got:\n%s", rendered)
+	}
+}
+
+// TestFrontmatterVisualIndicator tests that frontmatter variables show @ prefix in pinned panel.
+func TestFrontmatterVisualIndicator(t *testing.T) {
+	// Create document with both frontmatter and regular variables
+	doc, err := document.NewDocument("@global.fm_var = 100\nreg_var = 200\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := newTUIModel(doc)
+
+	// Collect pinned variables
+	names, _, isFrontmatter := m.collectPinnedVariables()
+
+	// Verify fm_var is marked as frontmatter
+	found := false
+	for _, name := range names {
+		if name == "fm_var" {
+			found = true
+			if !isFrontmatter["fm_var"] {
+				t.Error("Expected fm_var to be marked as frontmatter")
+			}
+		}
+		if name == "reg_var" {
+			if isFrontmatter["reg_var"] {
+				t.Error("Expected reg_var NOT to be marked as frontmatter")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected fm_var in pinned variables")
+	}
+
+	// Verify rendered output shows @ prefix for frontmatter var only
+	rendered := m.renderPinnedVars()
+	if !strings.Contains(rendered, "@fm_var") {
+		t.Errorf("Expected @fm_var in rendered output, got:\n%s", rendered)
+	}
+	// reg_var should NOT have @ prefix
+	if strings.Contains(rendered, "@reg_var") {
+		t.Errorf("Expected reg_var without @ prefix, but found @reg_var in:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "reg_var") {
+		t.Errorf("Expected reg_var in rendered output, got:\n%s", rendered)
+	}
+}
+
+// TestFrontmatterGlobalInFrontmatter tests that @global updates document frontmatter.
+func TestFrontmatterGlobalInFrontmatter(t *testing.T) {
+	doc, err := document.NewDocument("@global.my_var = 123\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := newTUIModel(doc)
+
+	// Check that frontmatter was updated
+	fm := m.doc.GetFrontmatter()
+	if fm == nil {
+		t.Fatal("Expected frontmatter to be created")
+	}
+	if fm.Globals["my_var"] != "123" {
+		t.Errorf("Expected frontmatter global my_var=123, got %q", fm.Globals["my_var"])
+	}
+}
+
+// TestFmCommand tests the /fm command shows frontmatter.
+func TestFmCommand(t *testing.T) {
+	doc, err := document.NewDocument("@global.tax = 0.1\n@exchange.USD_EUR = 0.92\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := newTUIModel(doc)
+	m, _ = m.handleCommand("fm")
+
+	// Check output history
+	if len(m.outputHistory) == 0 {
+		t.Fatal("Expected /fm output in history")
+	}
+
+	lastItem := m.outputHistory[len(m.outputHistory)-1]
+	if !strings.Contains(lastItem.output, "@global.tax") {
+		t.Errorf("Expected @global.tax in /fm output:\n%s", lastItem.output)
+	}
+	if !strings.Contains(lastItem.output, "@exchange.USD_EUR") {
+		t.Errorf("Expected @exchange.USD_EUR in /fm output:\n%s", lastItem.output)
 	}
 }

@@ -46,9 +46,10 @@ func indentLines(text, prefix string) string {
 
 // pinnedVariable represents a variable to display in the pinned panel.
 type pinnedVariable struct {
-	Name    string
-	Value   any
-	Changed bool
+	Name          string
+	Value         any
+	Changed       bool
+	IsFrontmatter bool // Visual indicator only - shows @ prefix for frontmatter vars
 }
 
 // renderPinnedPanel renders the pinned variables panel as a string.
@@ -69,15 +70,21 @@ func renderPinnedPanel(vars []pinnedVariable) string {
 		// Format value using display package if it's a CalcMark type
 		valueStr := formatPinnedValue(v.Value)
 
+		// Build the name with optional @ prefix for frontmatter vars
+		displayName := v.Name
+		if v.IsFrontmatter {
+			displayName = "@" + v.Name
+		}
+
 		if v.Changed {
 			// Mark changed variables with * prefix
 			b.WriteString(styles.Changed.Render("* "))
-			b.WriteString(styles.Var.Bold(true).Render(v.Name))
+			b.WriteString(styles.Var.Bold(true).Render(displayName))
 			b.WriteString(" = ")
 			b.WriteString(styles.Changed.Render(valueStr))
 		} else {
 			b.WriteString("  ") // Align with * prefix
-			b.WriteString(styles.Var.Render(v.Name))
+			b.WriteString(styles.Var.Render(displayName))
 			b.WriteString(" = ")
 			b.WriteString(valueStr)
 		}
@@ -302,7 +309,7 @@ func renderHelpLine(slashMode bool, width int) string {
 
 	// Normal mode
 	if width < 80 {
-		return "↑↓ History │ / Commands │ Ctrl+C Quit"
+		return "↑↓ History │ PgUp/Dn Scroll │ / Cmds"
 	}
-	return "↑↓ History │ / for commands │ /help for features │ Ctrl+C to quit"
+	return "↑↓ History │ PgUp/PgDn scroll pinned │ / for commands │ /help for features"
 }

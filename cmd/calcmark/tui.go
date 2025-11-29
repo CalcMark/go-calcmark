@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/charmbracelet/bubbles/filepicker"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -45,7 +48,9 @@ type model struct {
 	registry        *features.Registry  // Feature registry for help and autosuggest
 	input           textinput.Model     // Single-line input for calc expressions
 	mdInput         textarea.Model      // Multi-line input for markdown mode
+	filePicker      filepicker.Model    // File picker for /open command
 	helpViewport    viewport.Model      // Scrollable viewport for help content
+	pinnedViewport  viewport.Model      // Scrollable viewport for pinned variables
 	pinnedVars      map[string]bool     // Which variables are pinned
 	changedVars     map[string]bool     // Variables that changed in last update
 	history         []string            // Command history (for ↑↓ navigation)
@@ -58,9 +63,10 @@ type model struct {
 	err             error
 	lastInputted    string
 	quitting        bool
-	markdownMode    bool // In multi-line markdown mode
-	slashMode       bool // In slash command mode (triggered by / key)
-	helpMode        bool // In scrollable help viewer mode
+	markdownMode    bool   // In multi-line markdown mode
+	slashMode       bool   // In slash command mode (triggered by / key)
+	helpMode        bool   // In scrollable help viewer mode
+	filePickerMode  bool   // In file picker mode for /open
 	helpContent     string // Content being shown in help viewer
 }
 
@@ -82,7 +88,8 @@ type slashCommand struct {
 var slashCommands = []slashCommand{
 	{"pin", "/pin [var]", "Pin variable(s) to panel"},
 	{"unpin", "/unpin [var]", "Unpin variable(s)"},
-	{"open", "/open <file>", "Load CalcMark file"},
+	{"fm", "/fm", "Show frontmatter (globals, exchange rates)"},
+	{"open", "/open [file]", "Open file picker or load file"},
 	{"save", "/save <file>", "Save as CalcMark (.cm)"},
 	{"output", "/output <file>", "Export with results"},
 	{"md", "/md", "Multi-line markdown mode"},
@@ -122,26 +129,64 @@ func newTUIModel(doc *document.Document) model {
 	// Create feature registry for help and autosuggest
 	registry := features.NewRegistry()
 
+	// Initialize pinned viewport with default size (will be resized on WindowSizeMsg)
+	pinnedVP := viewport.New(25, 18)
+
+	// Initialize file picker for /open command
+	fp := filepicker.New()
+	fp.AllowedTypes = []string{".cm"} // Only show CalcMark files
+	fp.CurrentDirectory, _ = os.Getwd()
+	fp.SetHeight(15)
+	// Customize KeyMap so Enter opens directories AND selects files
+	// The filepicker checks Open first (navigates dirs), then Select (selects files)
+	// By binding Enter to both, Enter navigates into dirs OR selects files
+	fp.KeyMap.Open = key.NewBinding(
+		key.WithKeys("l", "right", "enter"),
+		key.WithHelp("enter", "open"),
+	)
+	fp.KeyMap.Select = key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "select"),
+	)
+
 	m := model{
-		doc:           doc,
-		eval:          eval,
-		registry:      registry,
-		input:         ti,
-		mdInput:       ta,
-		pinnedVars:    make(map[string]bool),
-		changedVars:   make(map[string]bool),
-		history:       []string{},
-		outputHistory: []outputHistoryItem{},
-		historyIdx:    -1,
-		width:         80,
-		height:        24,
-		markdownMode:  false,
-		slashMode:     false,
+		doc:            doc,
+		eval:           eval,
+		registry:       registry,
+		input:          ti,
+		mdInput:        ta,
+		filePicker:     fp,
+		pinnedViewport: pinnedVP,
+		pinnedVars:     make(map[string]bool),
+		changedVars:    make(map[string]bool),
+		history:        []string{},
+		outputHistory:  []outputHistoryItem{},
+		historyIdx:     -1,
+		width:          80,
+		height:         24,
+		markdownMode:   false,
+		slashMode:      false,
 	}
 
-	// Auto-pin all variables in the loaded document
-	// Display order will be determined by document block order (via UUIDs)
-	for _, node := range doc.GetBlocks() {
+	// Populate UI state from the loaded document
+	m.populateFromDocument()
+
+	return m
+}
+
+// populateFromDocument updates the model's UI state from the current document.
+// This includes auto-pinning variables, populating output history, and command history.
+// Used by both newTUIModel (initial load) and openFile (file picker).
+func (m *model) populateFromDocument() {
+	// Reset state for new document
+	m.pinnedVars = make(map[string]bool)
+	m.changedVars = make(map[string]bool)
+	m.outputHistory = []outputHistoryItem{}
+	m.history = []string{}
+	m.historyIdx = -1
+
+	// Auto-pin all variables and populate output history
+	for _, node := range m.doc.GetBlocks() {
 		if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
 			for _, varName := range calcBlock.Variables() {
 				m.pinnedVars[varName] = true
@@ -165,11 +210,9 @@ func newTUIModel(doc *document.Document) model {
 		}
 	}
 
-	// Populate history with all statements from the document
-	// This allows users to scroll through the loaded file with ↑/↓
-	for _, node := range doc.GetBlocks() {
+	// Populate command history with statements from the document
+	for _, node := range m.doc.GetBlocks() {
 		if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
-			// Add each source line to history
 			for _, line := range calcBlock.Source() {
 				trimmed := strings.TrimSpace(line)
 				if trimmed != "" {
@@ -178,11 +221,6 @@ func newTUIModel(doc *document.Document) model {
 			}
 		}
 	}
-
-	// Reset history index to -1 (start at end, ready for new input)
-	m.historyIdx = -1
-
-	return m
 }
 
 // Init implements tea.Model
@@ -208,6 +246,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEsc:
+			// ESC exits file picker mode
+			if m.filePickerMode {
+				m.filePickerMode = false
+				m.input.Focus()
+				return m, nil
+			}
 			// ESC exits help viewer mode
 			if m.helpMode {
 				m.helpMode = false
@@ -264,9 +308,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case tea.KeyUp:
+			// In file picker mode, let filepicker handle navigation
+			if m.filePickerMode {
+				break
+			}
 			// In help mode, scroll up
 			if m.helpMode {
-				m.helpViewport.LineUp(1)
+				m.helpViewport.ScrollUp(1)
 				return m, nil
 			}
 			// Don't handle history in markdown mode - textarea handles it
@@ -287,9 +335,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyDown:
+			// In file picker mode, let filepicker handle navigation
+			if m.filePickerMode {
+				break
+			}
 			// In help mode, scroll down
 			if m.helpMode {
-				m.helpViewport.LineDown(1)
+				m.helpViewport.ScrollDown(1)
 				return m, nil
 			}
 			// Don't handle history in markdown mode - textarea handles it
@@ -309,31 +361,46 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyPgUp:
-			// In help mode, page up
+			// In help mode, page up the help content
 			if m.helpMode {
-				m.helpViewport.HalfViewUp()
+				m.helpViewport.HalfPageUp()
+				return m, nil
+			}
+			// In normal mode, scroll pinned panel up
+			if !m.markdownMode {
+				m.pinnedViewport.HalfPageUp()
 				return m, nil
 			}
 
 		case tea.KeyPgDown:
-			// In help mode, page down
+			// In help mode, page down the help content
 			if m.helpMode {
-				m.helpViewport.HalfViewDown()
+				m.helpViewport.HalfPageDown()
+				return m, nil
+			}
+			// In normal mode, scroll pinned panel down
+			if !m.markdownMode {
+				m.pinnedViewport.HalfPageDown()
 				return m, nil
 			}
 
 		case tea.KeyEnter:
+			// In file picker mode, let filepicker handle enter
+			if m.filePickerMode {
+				break
+			}
 			// In markdown mode, let textarea handle enter for newlines
 			if m.markdownMode {
 				break
 			}
-			m = m.handleInput()
+			var inputCmd tea.Cmd
+			m, inputCmd = m.handleInput()
 			m.input.SetValue("")
 			m.historyIdx = -1 // Reset history browsing
 			if m.quitting {
 				return m, tea.Quit
 			}
-			return m, nil
+			return m, inputCmd
 
 		case tea.KeyTab:
 			// Tab completion for variable names
@@ -354,10 +421,37 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update viewport size for help mode (leave room for header and footer)
 		m.helpViewport.Width = m.width - 4
 		m.helpViewport.Height = m.height - 6
+		// Update viewport size for pinned panel (40% width, minus border/padding)
+		rightWidth := max(m.width*2/5, 25)
+		m.pinnedViewport.Width = rightWidth - 2
+		m.pinnedViewport.Height = m.height - 8 // Leave room for title
+		// Update file picker height
+		m.filePicker.SetHeight(m.height - 8)
 	}
 
 	// Forward events to the appropriate input component
-	if m.helpMode {
+	if m.filePickerMode {
+		m.filePicker, cmd = m.filePicker.Update(msg)
+
+		// Check if user selected a file
+		// DidSelectFile checks if the Select key was pressed AND a valid file is selected
+		if didSelect, path := m.filePicker.DidSelectFile(msg); didSelect {
+			m.filePickerMode = false
+			m.input.Focus()
+			m = m.openFile(path)
+			return m, nil
+		}
+
+		// Also check Path directly - filepicker sets this when a file is selected
+		if m.filePicker.Path != "" {
+			path := m.filePicker.Path
+			m.filePicker.Path = "" // Reset for next use
+			m.filePickerMode = false
+			m.input.Focus()
+			m = m.openFile(path)
+			return m, nil
+		}
+	} else if m.helpMode {
 		m.helpViewport, cmd = m.helpViewport.Update(msg)
 	} else if m.markdownMode {
 		m.mdInput, cmd = m.mdInput.Update(msg)
@@ -385,6 +479,12 @@ func (m model) View() string {
 	// Help viewer mode: scrollable help content
 	if m.helpMode {
 		b.WriteString(m.renderHelpMode())
+		return b.String()
+	}
+
+	// File picker mode: show file navigator
+	if m.filePickerMode {
+		b.WriteString(m.renderFilePickerMode())
 		return b.String()
 	}
 
@@ -440,24 +540,39 @@ func (m model) View() string {
 	help := m.renderHelp()
 	leftContent.WriteString(styles.Help.Render(help))
 
-	// Layout: Always show pinned panel on the right
-	// Right panel: Pinned variables (40% width)
+	// Layout: Always show pinned panel on the right (40% of screen width)
+	// The panel has left border only (1 char) and left padding (1 char)
 	rightWidth := max(m.width*2/5, 25)
 
+	// Render pinned variables into a scrollable viewport
 	pinnedContent := m.renderPinnedVars()
-	rightPanel := styles.PinnedPanel.
-		Width(rightWidth - 4).
-		Height(m.height - 10).
-		Render(pinnedContent)
+	m.pinnedViewport.SetContent(pinnedContent)
 
-	// Left panel: Main content (60% width)
-	leftWidth := max(m.width-rightWidth, 40)
+	// Build the pinned panel with viewport content and scroll indicator
+	var pinnedPanel strings.Builder
+	pinnedPanel.WriteString(m.pinnedViewport.View())
+
+	// Show scroll indicator if content overflows
+	if m.pinnedViewport.TotalLineCount() > m.pinnedViewport.Height {
+		scrollPct := int(m.pinnedViewport.ScrollPercent() * 100)
+		scrollHint := fmt.Sprintf("\n%s", styles.Hint.Render(fmt.Sprintf("↑↓ %d%%", scrollPct)))
+		pinnedPanel.WriteString(scrollHint)
+	}
+
+	// Apply panel styling
+	rightPanel := styles.PinnedPanel.
+		Width(rightWidth - 2).
+		Height(m.height - 6).
+		Render(pinnedPanel.String())
+
+	// Left panel: remaining 60% of screen
+	leftWidth := m.width - rightWidth
 
 	leftPanel := lipgloss.NewStyle().
 		Width(leftWidth).
 		Render(leftContent.String())
 
-	// Join horizontally
+	// Join panels horizontally, aligned at top
 	mainContent := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 	b.WriteString(mainContent)
 
@@ -510,6 +625,41 @@ func (m model) renderMarkdownPreview() string {
 	return renderMarkdownPreviewContent(m.mdInput.Value(), m.width/2-8)
 }
 
+// renderFilePickerMode renders the file picker for /open command.
+func (m model) renderFilePickerMode() string {
+	cfg := config.Get()
+
+	// Header
+	header := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Warning)).
+		Bold(true).
+		Render("📂 OPEN FILE - ↑/↓ navigate, Enter select, Esc cancel")
+	headerLine := header + "\n\n"
+
+	// Current directory indicator
+	dirStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Muted)).
+		Italic(true)
+	dirLine := dirStyle.Render("Directory: "+m.filePicker.CurrentDirectory) + "\n\n"
+
+	// File picker content in a bordered box
+	pickerStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(cfg.TUI.Theme.Accent)).
+		Padding(0, 1).
+		Width(m.width - 4).
+		Height(m.height - 10)
+
+	content := pickerStyle.Render(m.filePicker.View())
+
+	// Help footer
+	footer := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Muted)).
+		Render("Only .cm files are shown")
+
+	return headerLine + dirLine + content + "\n" + footer
+}
+
 // renderHelpMode renders the scrollable help viewer.
 func (m model) renderHelpMode() string {
 	cfg := config.Get()
@@ -551,20 +701,21 @@ func (m *model) enterHelpMode(content string) {
 }
 
 // handleInput processes user input
-func (m model) handleInput() model {
+func (m model) handleInput() (model, tea.Cmd) {
 	input := strings.TrimSpace(m.input.Value())
 	m.err = nil
 
 	if input == "" {
-		return m
+		return m, nil
 	}
 
 	// Slash mode: treat input as command
 	if m.slashMode {
-		m = m.handleCommand(input)
+		var cmd tea.Cmd
+		m, cmd = m.handleCommand(input)
 		m.slashMode = false
 		m.input.Prompt = "> " // Reset prompt after command
-		return m
+		return m, cmd
 	}
 
 	// Normal mode: CalcMark expression
@@ -612,17 +763,17 @@ func (m model) handleInput() model {
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // handleCommand processes REPL commands
-func (m model) handleCommand(cmd string) model {
+func (m model) handleCommand(cmd string) (model, tea.Cmd) {
 	// Strip leading / if present (for slash mode compatibility)
 	cmd = strings.TrimPrefix(cmd, "/")
 
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
-		return m
+		return m, nil
 	}
 
 	switch parts[0] {
@@ -653,10 +804,25 @@ func (m model) handleCommand(cmd string) model {
 			delete(m.pinnedVars, varName)
 		}
 
+	case "fm", "frontmatter":
+		// Show frontmatter (globals, exchange rates)
+		output := m.renderFrontmatter()
+		m.outputHistory = append(m.outputHistory, outputHistoryItem{
+			input:   "/fm",
+			output:  output,
+			isError: false,
+		})
+		return m, nil
+
 	case "open":
 		if len(parts) < 2 {
-			m.err = fmt.Errorf("usage: /open <filename>")
-			return m
+			// No filename provided - show file picker
+			m.filePickerMode = true
+			m.input.Blur()
+			// Reset file picker to current directory
+			m.filePicker.CurrentDirectory, _ = os.Getwd()
+			// Initialize the file picker to read directory contents
+			return m, m.filePicker.Init()
 		}
 
 		filename := parts[1]
@@ -672,20 +838,20 @@ func (m model) handleCommand(cmd string) model {
 	case "save":
 		if len(parts) < 2 {
 			m.err = fmt.Errorf("usage: /save <filename.cm>")
-			return m
+			return m, nil
 		}
 		m = m.saveFile(parts[1])
 
 	case "output":
 		if len(parts) < 2 {
 			m.err = fmt.Errorf("usage: /output <filename.html|.md|.json>")
-			return m
+			return m, nil
 		}
 		m = m.outputFile(parts[1])
 
 	case "quit", "q":
 		m.quitting = true
-		return m
+		return m, nil
 
 	case "help", "h", "?":
 		// Handle /help or /help <topic>
@@ -702,13 +868,13 @@ func (m model) handleCommand(cmd string) model {
 			topic := strings.ToLower(parts[1])
 			m = m.showHelpTopic(topic)
 		}
-		return m
+		return m, nil
 
 	default:
 		m.err = fmt.Errorf("unknown command: /%s (type /help for available commands)", parts[0])
 	}
 
-	return m
+	return m, nil
 }
 
 // renderHistory renders the scrollback history of commands and results.
@@ -791,15 +957,16 @@ func (m model) evaluateExpression(expr string) model {
 // Delegates to pure renderPinnedPanel function.
 func (m model) renderPinnedVars() string {
 	// Collect pinned variables in definition order with their latest values.
-	names, values := m.collectPinnedVariables()
+	names, values, isFrontmatter := m.collectPinnedVariables()
 
 	// Convert to pinnedVariable structs for pure rendering function
 	vars := make([]pinnedVariable, 0, len(names))
 	for _, name := range names {
 		vars = append(vars, pinnedVariable{
-			Name:    name,
-			Value:   values[name],
-			Changed: m.changedVars[name],
+			Name:          name,
+			Value:         values[name],
+			Changed:       m.changedVars[name],
+			IsFrontmatter: isFrontmatter[name],
 		})
 	}
 
@@ -809,9 +976,19 @@ func (m model) renderPinnedVars() string {
 // collectPinnedVariables returns pinned variables in first-definition order
 // with their current values from the interpreter environment.
 // Each variable appears only once.
-func (m model) collectPinnedVariables() ([]string, map[string]any) {
+// Returns: ordered names, values map, and frontmatter indicator map.
+func (m model) collectPinnedVariables() ([]string, map[string]any, map[string]bool) {
 	order := []string{}
 	seen := make(map[string]bool)
+	isFrontmatter := make(map[string]bool)
+
+	// Track which variables are defined in frontmatter
+	fmVars := make(map[string]bool)
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		for name := range fm.Globals {
+			fmVars[name] = true
+		}
+	}
 
 	// Collect variables in document order (first definition wins for ordering)
 	for _, node := range m.doc.GetBlocks() {
@@ -822,6 +999,19 @@ func (m model) collectPinnedVariables() ([]string, map[string]any) {
 				}
 				seen[varName] = true
 				order = append(order, varName)
+				isFrontmatter[varName] = fmVars[varName]
+			}
+		}
+	}
+
+	// Also include frontmatter globals that are pinned but not yet in blocks
+	// (e.g., from YAML frontmatter in loaded documents)
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		for name := range fm.Globals {
+			if m.pinnedVars[name] && !seen[name] {
+				seen[name] = true
+				order = append(order, name)
+				isFrontmatter[name] = true
 			}
 		}
 	}
@@ -837,7 +1027,45 @@ func (m model) collectPinnedVariables() ([]string, map[string]any) {
 		}
 	}
 
-	return order, values
+	return order, values, isFrontmatter
+}
+
+// renderFrontmatter renders the frontmatter (globals and exchange rates) for /fm command.
+func (m model) renderFrontmatter() string {
+	fm := m.doc.GetFrontmatter()
+	if fm == nil || (len(fm.Globals) == 0 && len(fm.Exchange) == 0) {
+		return styles.Hint.Render("(no frontmatter defined)")
+	}
+
+	var sb strings.Builder
+	headerStyle := styles.Header
+	keyStyle := styles.Syntax
+	valStyle := styles.Output
+
+	// Globals section
+	if len(fm.Globals) > 0 {
+		sb.WriteString(headerStyle.Render("Globals:") + "\n")
+		for name, expr := range fm.Globals {
+			sb.WriteString(fmt.Sprintf("  %s = %s\n",
+				keyStyle.Render("@global."+name),
+				valStyle.Render(expr)))
+		}
+	}
+
+	// Exchange rates section
+	if len(fm.Exchange) > 0 {
+		if len(fm.Globals) > 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString(headerStyle.Render("Exchange Rates:") + "\n")
+		for key, rate := range fm.Exchange {
+			sb.WriteString(fmt.Sprintf("  %s = %s\n",
+				keyStyle.Render("@exchange."+key),
+				valStyle.Render(rate.String())))
+		}
+	}
+
+	return strings.TrimSuffix(sb.String(), "\n")
 }
 
 // renderHelp returns context-sensitive help text.
@@ -1005,7 +1233,6 @@ func detectFunctionContext(input string) (string, int) {
 				parenDepth--
 			} else {
 				lastOpenParen = i
-				break
 			}
 		}
 		if lastOpenParen >= 0 {

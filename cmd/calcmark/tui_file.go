@@ -11,7 +11,7 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
-// openFile loads a CalcMark file and replaces the current document
+// openFile loads a CalcMark file and replaces the current document.
 func (m model) openFile(path string) model {
 	// Security: validate file path
 	if err := validateFilePath(path); err != nil {
@@ -33,21 +33,17 @@ func (m model) openFile(path string) model {
 		return m
 	}
 
-	// Evaluate
+	// Create new evaluator and evaluate
 	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		m.err = fmt.Errorf("evaluate document: %w", err)
-		return m
-	}
+	_ = eval.Evaluate(doc) // Ignore error - blocks will show their own errors
 
-	// Replace current document
+	// Replace current document and evaluator
 	m.doc = doc
-
-	// Clear pinned vars (new document)
-	m.pinnedVars = make(map[string]bool)
-
-	// Clear error
+	m.eval = eval
 	m.err = nil
+
+	// Populate UI state from the new document
+	m.populateFromDocument()
 
 	return m
 }
