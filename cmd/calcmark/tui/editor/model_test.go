@@ -296,6 +296,38 @@ func TestHandleCommandMode(t *testing.T) {
 	}
 }
 
+func TestHandleCommandMode_SpaceInCommand(t *testing.T) {
+	m := New(nil)
+	m.mode = ModeCommand
+	m.cmdInput = "save"
+
+	// Type a space
+	tm, _ := m.handleCommandKey(tea.KeyMsg{Type: tea.KeySpace})
+	result := tm.(Model)
+
+	if result.cmdInput != "save " {
+		t.Errorf("Space should be added to command input, got %q", result.cmdInput)
+	}
+
+	// Type filename characters
+	tm, _ = result.handleCommandKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t', 'e', 's', 't'}})
+	result = tm.(Model)
+
+	if result.cmdInput != "save test" {
+		t.Errorf("Expected 'save test', got %q", result.cmdInput)
+	}
+
+	// Type another space and more
+	tm, _ = result.handleCommandKey(tea.KeyMsg{Type: tea.KeySpace})
+	result = tm.(Model)
+	tm, _ = result.handleCommandKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f', 'i', 'l', 'e'}})
+	result = tm.(Model)
+
+	if result.cmdInput != "save test file" {
+		t.Errorf("Expected 'save test file', got %q", result.cmdInput)
+	}
+}
+
 func TestUndo(t *testing.T) {
 	doc, _ := document.NewDocument("x = 10\n")
 	m := New(doc)

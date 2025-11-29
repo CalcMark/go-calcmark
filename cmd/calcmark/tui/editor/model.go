@@ -528,6 +528,8 @@ func (m Model) handleCommandKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.cmdInput) > 0 {
 			m.cmdInput = m.cmdInput[:len(m.cmdInput)-1]
 		}
+	case tea.KeySpace:
+		m.cmdInput += " "
 	case tea.KeyRunes:
 		for _, r := range msg.Runes {
 			m.cmdInput += string(r)
