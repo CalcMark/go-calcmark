@@ -2173,6 +2173,129 @@ another_short = 3`
 	}
 }
 
+func TestBlockTypeRedetection_CalcToMarkdown(t *testing.T) {
+	// Test that editing a calc line to markdown content properly re-detects the block type
+	content := `x = 10
+y = 20`
+
+	doc, _ := document.NewDocument(content)
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Verify initial state - both lines should be calc
+	results := m.GetLineResults()
+	if !results[0].IsCalc {
+		t.Error("Line 0 should initially be a calc")
+	}
+	if !results[1].IsCalc {
+		t.Error("Line 1 should initially be a calc")
+	}
+
+	// Edit line 1 to be markdown
+	m.cursorLine = 1
+	m.enterEditMode()
+	m.editBuf = "- this is a list item"
+	m.exitEditMode(true)
+
+	// After exit, the document should have re-detected block types
+	results = m.GetLineResults()
+
+	// Line 0 should still be calc
+	if !results[0].IsCalc {
+		t.Error("Line 0 should still be a calc after editing line 1")
+	}
+
+	// Line 1 should now be text (markdown)
+	if results[1].IsCalc {
+		t.Errorf("Line 1 should now be text/markdown, but IsCalc=%v, Source=%q",
+			results[1].IsCalc, results[1].Source)
+	}
+}
+
+func TestBlockTypeRedetection_MarkdownToCalc(t *testing.T) {
+	// Test that editing a markdown line to calc content properly re-detects the block type
+	content := `# Header
+Some text here`
+
+	doc, _ := document.NewDocument(content)
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Verify initial state - both lines should be text
+	results := m.GetLineResults()
+	if results[0].IsCalc {
+		t.Error("Line 0 should initially be text")
+	}
+	if results[1].IsCalc {
+		t.Error("Line 1 should initially be text")
+	}
+
+	// Edit line 1 to be a calculation
+	m.cursorLine = 1
+	m.enterEditMode()
+	m.editBuf = "total = 100 + 200"
+	m.exitEditMode(true)
+
+	// After exit, the document should have re-detected block types
+	results = m.GetLineResults()
+
+	// Line 0 should still be text
+	if results[0].IsCalc {
+		t.Error("Line 0 should still be text after editing line 1")
+	}
+
+	// Line 1 should now be calc
+	if !results[1].IsCalc {
+		t.Errorf("Line 1 should now be calc, but IsCalc=%v, Source=%q",
+			results[1].IsCalc, results[1].Source)
+	}
+
+	// Verify the calculation was evaluated
+	if results[1].Value == "" {
+		t.Error("Line 1 should have a computed value")
+	}
+}
+
+func TestInsertLine_ThenEditAsMarkdown(t *testing.T) {
+	// Test the original bug: insert a new line, type markdown, it should render
+	content := `x = 10`
+
+	doc, _ := document.NewDocument(content)
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Insert line below and enter edit mode (simulates pressing 'o')
+	m.cursorLine = 0
+	m.insertLineBelow()
+	m.enterEditMode()
+
+	// Type markdown content
+	m.editBuf = "- list item one"
+	m.exitEditMode(true)
+
+	// The new line should be detected as markdown
+	results := m.GetLineResults()
+
+	// Should have 2 lines now
+	if len(results) != 2 {
+		t.Fatalf("Expected 2 lines, got %d", len(results))
+	}
+
+	// Line 0 should be calc
+	if !results[0].IsCalc {
+		t.Error("Line 0 should be calc")
+	}
+
+	// Line 1 should be markdown (not calc)
+	if results[1].IsCalc {
+		t.Errorf("Line 1 should be markdown, but IsCalc=%v, Source=%q",
+			results[1].IsCalc, results[1].Source)
+	}
+}
+
 func TestEditMode_CursorOnWrappedLine(t *testing.T) {
 	// Test editing a line that wraps to multiple visual lines
 
