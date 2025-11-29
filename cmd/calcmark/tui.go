@@ -12,6 +12,7 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -44,6 +45,7 @@ type model struct {
 	registry        *features.Registry  // Feature registry for help and autosuggest
 	input           textinput.Model     // Single-line input for calc expressions
 	mdInput         textarea.Model      // Multi-line input for markdown mode
+	helpViewport    viewport.Model      // Scrollable viewport for help content
 	pinnedVars      map[string]bool     // Which variables are pinned
 	changedVars     map[string]bool     // Variables that changed in last update
 	history         []string            // Command history (for ↑↓ navigation)
@@ -58,6 +60,8 @@ type model struct {
 	quitting        bool
 	markdownMode    bool // In multi-line markdown mode
 	slashMode       bool // In slash command mode (triggered by / key)
+	helpMode        bool // In scrollable help viewer mode
+	helpContent     string // Content being shown in help viewer
 }
 
 // outputHistoryItem represents a command and its result for display
@@ -204,6 +208,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEsc:
+			// ESC exits help viewer mode
+			if m.helpMode {
+				m.helpMode = false
+				m.helpContent = ""
+				m.input.Focus()
+				return m, nil
+			}
 			// ESC exits markdown mode and saves the block
 			if m.markdownMode {
 				content := m.mdInput.Value()
@@ -236,6 +247,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyRunes:
+			// In help mode, 'q' exits
+			if m.helpMode && len(msg.Runes) == 1 && msg.Runes[0] == 'q' {
+				m.helpMode = false
+				m.helpContent = ""
+				m.input.Focus()
+				return m, nil
+			}
 			// Check if user typed '/' in normal mode (not markdown mode)
 			if !m.markdownMode && !m.slashMode && len(msg.Runes) == 1 && msg.Runes[0] == '/' && m.input.Value() == "" {
 				// Enter slash command mode
@@ -246,6 +264,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case tea.KeyUp:
+			// In help mode, scroll up
+			if m.helpMode {
+				m.helpViewport.LineUp(1)
+				return m, nil
+			}
 			// Don't handle history in markdown mode - textarea handles it
 			if m.markdownMode {
 				break
@@ -264,6 +287,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyDown:
+			// In help mode, scroll down
+			if m.helpMode {
+				m.helpViewport.LineDown(1)
+				return m, nil
+			}
 			// Don't handle history in markdown mode - textarea handles it
 			if m.markdownMode {
 				break
@@ -279,6 +307,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+
+		case tea.KeyPgUp:
+			// In help mode, page up
+			if m.helpMode {
+				m.helpViewport.HalfViewUp()
+				return m, nil
+			}
+
+		case tea.KeyPgDown:
+			// In help mode, page down
+			if m.helpMode {
+				m.helpViewport.HalfViewDown()
+				return m, nil
+			}
 
 		case tea.KeyEnter:
 			// In markdown mode, let textarea handle enter for newlines
@@ -309,10 +351,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update textarea size for markdown mode
 		m.mdInput.SetWidth(m.width/2 - 4)
 		m.mdInput.SetHeight(m.height - 10)
+		// Update viewport size for help mode (leave room for header and footer)
+		m.helpViewport.Width = m.width - 4
+		m.helpViewport.Height = m.height - 6
 	}
 
 	// Forward events to the appropriate input component
-	if m.markdownMode {
+	if m.helpMode {
+		m.helpViewport, cmd = m.helpViewport.Update(msg)
+	} else if m.markdownMode {
 		m.mdInput, cmd = m.mdInput.Update(msg)
 	} else {
 		m.input, cmd = m.input.Update(msg)
@@ -332,6 +379,12 @@ func (m model) View() string {
 	// Markdown mode: split view with editor on left, preview on right
 	if m.markdownMode {
 		b.WriteString(m.renderMarkdownMode())
+		return b.String()
+	}
+
+	// Help viewer mode: scrollable help content
+	if m.helpMode {
+		b.WriteString(m.renderHelpMode())
 		return b.String()
 	}
 
@@ -455,6 +508,46 @@ func (m model) renderMarkdownMode() string {
 // Delegates to pure renderMarkdownPreviewContent function.
 func (m model) renderMarkdownPreview() string {
 	return renderMarkdownPreviewContent(m.mdInput.Value(), m.width/2-8)
+}
+
+// renderHelpMode renders the scrollable help viewer.
+func (m model) renderHelpMode() string {
+	cfg := config.Get()
+
+	// Header
+	header := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Warning)).
+		Bold(true).
+		Render("📖 HELP - ↑/↓ scroll, PgUp/PgDn page, Esc/q to exit")
+	headerLine := header + "\n\n"
+
+	// Viewport content
+	viewportStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(cfg.TUI.Theme.Accent)).
+		Padding(0, 1).
+		Width(m.width - 4).
+		Height(m.height - 6)
+
+	content := viewportStyle.Render(m.helpViewport.View())
+
+	// Footer with scroll position
+	scrollPercent := int(m.helpViewport.ScrollPercent() * 100)
+	footer := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(cfg.TUI.Theme.Muted)).
+		Render(fmt.Sprintf("─── %d%% ───", scrollPercent))
+
+	return headerLine + content + "\n" + footer
+}
+
+// enterHelpMode sets up and enters the scrollable help viewer.
+func (m *model) enterHelpMode(content string) {
+	m.helpMode = true
+	m.helpContent = content
+
+	// Initialize viewport with current dimensions
+	m.helpViewport = viewport.New(m.width-6, m.height-8)
+	m.helpViewport.SetContent(content)
 }
 
 // handleInput processes user input
@@ -754,6 +847,7 @@ func (m model) renderHelp() string {
 }
 
 // showHelpTopic displays help for a specific topic or search term.
+// For large results (>10 items), opens in scrollable help viewer.
 func (m model) showHelpTopic(topic string) model {
 	var output strings.Builder
 
@@ -820,6 +914,13 @@ func (m model) showHelpTopic(topic string) model {
 		output.WriteString(fmt.Sprintf("\n(%d items)", len(results)))
 	}
 
+	// For large results, use scrollable help viewer
+	if len(results) > 10 {
+		m.enterHelpMode(output.String())
+		return m
+	}
+
+	// For small results, show inline in output history
 	m.outputHistory = append(m.outputHistory, outputHistoryItem{
 		input:   "/help " + topic,
 		output:  output.String(),

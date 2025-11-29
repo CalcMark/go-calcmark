@@ -400,7 +400,7 @@ var StandardUnits = map[string]UnitMapping{
 	// Area - SI
 	"square meter": {
 		Canonical:   "square meter",
-		Symbol:      "m²",
+		Symbol:      "m2",
 		Aliases:     []string{"square meter", "square meters", "square metre", "square metres", "m²", "m2", "sq m"},
 		System:      "SI",
 		Quantity:    "Area",
@@ -408,19 +408,19 @@ var StandardUnits = map[string]UnitMapping{
 	},
 	"square kilometer": {
 		Canonical:   "square kilometer",
-		Symbol:      "km²",
+		Symbol:      "km2",
 		Aliases:     []string{"square kilometer", "square kilometers", "square kilometre", "square kilometres", "km²", "km2", "sq km"},
 		System:      "SI",
 		Quantity:    "Area",
-		Description: "1 km² = 1,000,000 m²",
+		Description: "1,000,000 square meters",
 	},
 	"square centimeter": {
 		Canonical:   "square centimeter",
-		Symbol:      "cm²",
+		Symbol:      "cm2",
 		Aliases:     []string{"square centimeter", "square centimeters", "square centimetre", "square centimetres", "cm²", "cm2", "sq cm"},
 		System:      "SI",
 		Quantity:    "Area",
-		Description: "1 cm² = 0.0001 m²",
+		Description: "0.0001 square meters",
 	},
 	"hectare": {
 		Canonical:   "hectare",
@@ -428,41 +428,41 @@ var StandardUnits = map[string]UnitMapping{
 		Aliases:     []string{"hectare", "hectares", "ha"},
 		System:      "SI",
 		Quantity:    "Area",
-		Description: "1 ha = 10,000 m²",
+		Description: "10,000 square meters",
 	},
 
 	// Area - Imperial/US
 	"square foot": {
 		Canonical:   "square foot",
-		Symbol:      "ft²",
+		Symbol:      "ft2",
 		Aliases:     []string{"square foot", "square feet", "ft²", "ft2", "sq ft"},
 		System:      "Imperial",
 		Quantity:    "Area",
-		Description: "1 ft² = 0.09290304 m²",
+		Description: "0.0929 square meters",
 	},
 	"square inch": {
 		Canonical:   "square inch",
-		Symbol:      "in²",
+		Symbol:      "in2",
 		Aliases:     []string{"square inch", "square inches", "in²", "in2", "sq in"},
 		System:      "Imperial",
 		Quantity:    "Area",
-		Description: "1 in² = 0.00064516 m²",
+		Description: "0.000645 square meters",
 	},
 	"square yard": {
 		Canonical:   "square yard",
-		Symbol:      "yd²",
+		Symbol:      "yd2",
 		Aliases:     []string{"square yard", "square yards", "yd²", "yd2", "sq yd"},
 		System:      "Imperial",
 		Quantity:    "Area",
-		Description: "1 yd² = 0.83612736 m²",
+		Description: "0.836 square meters",
 	},
 	"square mile": {
 		Canonical:   "square mile",
-		Symbol:      "mi²",
+		Symbol:      "mi2",
 		Aliases:     []string{"square mile", "square miles", "mi²", "mi2", "sq mi"},
 		System:      "Imperial",
 		Quantity:    "Area",
-		Description: "1 mi² = 2,589,988.110336 m²",
+		Description: "2.59 million square meters",
 	},
 	"acre": {
 		Canonical:   "acre",
@@ -470,7 +470,7 @@ var StandardUnits = map[string]UnitMapping{
 		Aliases:     []string{"acre", "acres", "ac"},
 		System:      "US_Customary",
 		Quantity:    "Area",
-		Description: "1 acre = 4,046.8564224 m²",
+		Description: "4,047 square meters",
 	},
 
 	// ========== END OF UNITS ==========
