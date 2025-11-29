@@ -573,9 +573,10 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 
 	// Check for unit conversion: "10 meters in feet" or "10 feet in nautical miles"
 	// Also handles rate unit conversion: "10 m/s in inch/s"
+	// Also handles currency conversion: "100 USD in EUR"
 	if p.match(lexer.IN) {
-		if !p.match(lexer.IDENTIFIER) {
-			return nil, p.error("expected unit name after 'in'")
+		if !p.match(lexer.IDENTIFIER) && !p.match(lexer.CURRENCY_CODE) {
+			return nil, p.error("expected unit name or currency code after 'in'")
 		}
 		targetUnit := p.previous()
 		targetUnitName := string(targetUnit.Value)
@@ -800,7 +801,7 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 	}
 
 	// Prefix currency symbols: $100, €50, £30, ¥1000
-	// These combine into QuantityLiteral with mapped unit
+	// These create CurrencyLiteral for proper currency handling
 	if p.match(lexer.CURRENCY_SYM) {
 		currencyTok := p.previous()
 
@@ -812,14 +813,10 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 
 		numberTok := p.previous()
 
-		// Map currency symbol to ISO code
-		currencyCode := mapCurrencySymbol(string(currencyTok.Value))
-
-		// Create QuantityLiteral with currency as unit
-		// SourceText preserves the original format: "$100"
-		return &ast.QuantityLiteral{
+		// Create CurrencyLiteral (preserves the symbol for display)
+		return &ast.CurrencyLiteral{
+			Symbol:     string(currencyTok.Value),
 			Value:      string(numberTok.Value),
-			Unit:       currencyCode,
 			SourceText: string(currencyTok.OriginalText) + string(numberTok.OriginalText),
 		}, nil
 	}

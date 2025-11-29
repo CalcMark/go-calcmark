@@ -40,8 +40,9 @@ func TestNaturalSyntaxInterpreter(t *testing.T) {
 					t.Fatalf("Expected Quantity, got %T", result)
 				}
 				// $0.10/hour * (30 days * 24 hours) = $72
-				if qty.Unit != "USD" {
-					t.Errorf("Expected unit USD, got %s", qty.Unit)
+				// The $ symbol is preserved in rates (not converted to USD)
+				if qty.Unit != "$" {
+					t.Errorf("Expected unit $, got %s", qty.Unit)
 				}
 				t.Logf("✓ Result: %s", result.String())
 			},

@@ -226,6 +226,25 @@ file_size = 1.5 GB
 file_size_mb = file_size in MB
 ```
 
+### Currency Conversion
+
+Convert between currencies using `in` with exchange rates defined in YAML frontmatter:
+
+```yaml
+---
+exchange:
+  USD/EUR: 0.92
+  EUR/GBP: 0.86
+---
+price_usd = $100
+price_eur = price_usd in EUR    # → €92.00
+
+salary = 50000 EUR
+salary_gbp = salary in GBP      # → £43000.00
+```
+
+Exchange rates use the format `FROM/TO: rate` where 1 unit of FROM equals `rate` units of TO.
+
 ### Built-in Functions
 
 | Function | Description | Example |

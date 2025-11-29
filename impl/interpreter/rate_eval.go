@@ -27,8 +27,15 @@ func (interp *Interpreter) evalRateLiteral(node *ast.RateLiteral) (types.Type, e
 			Value: v.Value,
 			Unit:  "", // Unitless
 		}
+	case *types.Currency:
+		// Currency as rate amount (e.g., "$50 per hour", "100 USD/day")
+		// Use the symbol for display (preserves $ vs USD)
+		amountQty = &types.Quantity{
+			Value: v.Value,
+			Unit:  v.Symbol,
+		}
 	default:
-		return nil, fmt.Errorf("rate amount must be a number or quantity, got %T", amountVal)
+		return nil, fmt.Errorf("rate amount must be a number, quantity, or currency, got %T", amountVal)
 	}
 
 	// Create the Rate

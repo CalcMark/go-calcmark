@@ -9,11 +9,17 @@ import (
 
 // evalUnitConversion evaluates explicit unit conversion: "10 meters in feet"
 // Also handles rate-to-rate conversion: "10 m/s in inch/s"
+// Also handles currency conversion: "100 USD in EUR" (requires exchange rate in frontmatter)
 func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type, error) {
 	// Evaluate the quantity expression
 	result, err := interp.evalNode(u.Quantity)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if this is currency conversion
+	if currency, ok := result.(*types.Currency); ok {
+		return interp.evalCurrencyConversion(currency, u.TargetUnit)
 	}
 
 	// Check if this is a rate-to-rate conversion
@@ -45,6 +51,34 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 	}
 
 	return converted, nil
+}
+
+// evalCurrencyConversion converts a currency value to another currency.
+// Requires an exchange rate to be defined in the frontmatter.
+// Example: "100 USD in EUR" with exchange rate USD/EUR: 0.92 → €92.00
+func (interp *Interpreter) evalCurrencyConversion(currency *types.Currency, targetCode string) (types.Type, error) {
+	// Normalize the target currency code
+	normalizedTarget := types.NormalizeCurrencyCode(targetCode)
+
+	// Same currency - no conversion needed
+	if currency.Code == normalizedTarget {
+		return currency, nil
+	}
+
+	// Look up exchange rate
+	rate, found := interp.env.GetExchangeRate(currency.Code, normalizedTarget)
+	if !found {
+		return nil, fmt.Errorf("no exchange rate defined for %s → %s; add to frontmatter: exchange: { %s/%s: <rate> }",
+			currency.Code, normalizedTarget, currency.Code, normalizedTarget)
+	}
+
+	// Convert the value
+	convertedValue := currency.Value.Mul(rate)
+
+	// Get the display symbol for the target currency
+	targetSymbol := types.GetCurrencySymbol(normalizedTarget)
+
+	return types.NewCurrency(convertedValue, targetSymbol), nil
 }
 
 // evalRateUnitConversion handles rate-to-rate conversion: "10 m/s in inch/s"

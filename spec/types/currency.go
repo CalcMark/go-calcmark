@@ -68,3 +68,44 @@ func (c *Currency) String() string {
 func (c *Currency) IsSameCurrency(other *Currency) bool {
 	return c.Code == other.Code
 }
+
+// CodeToSymbol maps ISO 4217 codes to display symbols.
+// This is the reverse of SymbolToCode.
+var CodeToSymbol = map[string]string{
+	"USD": "$",
+	"EUR": "€",
+	"GBP": "£",
+	"JPY": "¥",
+}
+
+// IsCurrencyCode checks if a string is a known currency code or symbol.
+func IsCurrencyCode(s string) bool {
+	// Check if it's a known symbol
+	if _, ok := SymbolToCode[s]; ok {
+		return true
+	}
+	// Check if it's a known ISO code
+	if _, ok := CodeToSymbol[s]; ok {
+		return true
+	}
+	return false
+}
+
+// NormalizeCurrencyCode converts a symbol or code to its ISO code.
+// Returns the original string if not recognized.
+func NormalizeCurrencyCode(s string) string {
+	if code, ok := SymbolToCode[s]; ok {
+		return code
+	}
+	// Already a code or unknown - return uppercase
+	return s
+}
+
+// GetCurrencySymbol returns the display symbol for a currency code.
+// Returns the code itself if no symbol is defined.
+func GetCurrencySymbol(code string) string {
+	if sym, ok := CodeToSymbol[code]; ok {
+		return sym
+	}
+	return code
+}

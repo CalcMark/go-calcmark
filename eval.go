@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
 )
@@ -44,6 +45,26 @@ func Eval(input string) (*Result, error) {
 
 // evaluate is the internal pipeline that connects parser → semantic → interpreter.
 func evaluate(input string, env *interpreter.Environment) (*Result, error) {
+	// 0. Parse frontmatter (if present)
+	frontmatter, remaining, fmErr := document.ParseFrontmatter(input)
+	if fmErr != nil {
+		return nil, fmt.Errorf("frontmatter error: %w", fmErr)
+	}
+
+	// Apply frontmatter to environment
+	if frontmatter != nil {
+		for key, rate := range frontmatter.Exchange {
+			from, to, err := document.ParseExchangeRateKey(key)
+			if err != nil {
+				return nil, fmt.Errorf("frontmatter error: %w", err)
+			}
+			env.SetExchangeRate(from, to, rate)
+		}
+	}
+
+	// Use remaining content (after frontmatter)
+	input = remaining
+
 	// Ensure input ends with newline (parser requirement)
 	if len(input) > 0 && input[len(input)-1] != '\n' {
 		input = input + "\n"

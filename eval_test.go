@@ -30,7 +30,7 @@ func TestEvalSimple(t *testing.T) {
 		{
 			name:  "currency",
 			input: "$100",
-			want:  "100 USD", // Parser converts $ → USD, formatter displays as needed
+			want:  "$100.00", // Currency preserves the symbol for display
 		},
 	}
 
@@ -177,6 +177,154 @@ func hasErrorDiagnostic(result *Result) bool {
 	}
 	for _, d := range result.Diagnostics {
 		if d.Severity == Error {
+			return true
+		}
+	}
+	return false
+}
+
+// Test currency conversion with frontmatter exchange rates
+func TestCurrencyConversion(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "USD to EUR",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+---
+100 USD in EUR`,
+			want: "€92.00",
+		},
+		{
+			name: "EUR to GBP",
+			input: `---
+exchange:
+  EUR/GBP: 0.86
+---
+50 EUR in GBP`,
+			want: "£43.00",
+		},
+		{
+			name: "using dollar symbol",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+---
+$200 in EUR`,
+			want: "€184.00",
+		},
+		{
+			name: "no exchange rate defined",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+---
+100 USD in GBP`,
+			wantErr: true,
+		},
+		{
+			name: "same currency no-op with code",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+---
+100 USD in USD`,
+			want: "USD100.00", // Input uses code, output preserves code
+		},
+		{
+			name: "same currency no-op with symbol",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+---
+$100 in USD`,
+			want: "$100.00", // Input uses symbol, output preserves symbol
+		},
+		{
+			name: "variable with currency conversion",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+---
+price = $1000
+price in EUR`,
+			want: "€920.00",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Eval(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got result: %v", result.Value)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if result.Value == nil {
+				t.Error("expected value, got nil")
+				return
+			}
+			got := result.Value.String()
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test frontmatter parsing errors
+func TestFrontmatterErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr string
+	}{
+		{
+			name: "unclosed frontmatter",
+			input: `---
+exchange:
+  USD/EUR: 0.92
+x = 10`,
+			wantErr: "missing closing '---' delimiter",
+		},
+		{
+			name: "invalid exchange key format",
+			input: `---
+exchange:
+  USDEUR: 0.92
+---
+x = 10`,
+			wantErr: "expected format 'FROM/TO'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Eval(tt.input)
+			if err == nil {
+				t.Error("expected error")
+				return
+			}
+			if !containsSubstring(err.Error(), tt.wantErr) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func containsSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
 			return true
 		}
 	}
