@@ -1,0 +1,101 @@
+# Recipe Scaling and Unit Conversion
+
+Converting a European bread recipe from metric to US customary units,
+while scaling from 1 loaf to 4 loaves for a dinner party.
+
+## Original Recipe (1 loaf, metric)
+
+original_flour_g = 500
+original_water_g = 350
+original_salt_g = 10
+original_yeast_g = 7
+
+Hydration ratio (baker's percentage):
+
+hydration_pct = original_water_g / original_flour_g * 100
+
+## Scaling Factor
+
+original_yield = 1
+target_yield = 4
+scale = target_yield / original_yield
+
+## Scaled Quantities (Still Metric)
+
+scaled_flour_g = original_flour_g * scale
+scaled_water_g = original_water_g * scale
+scaled_salt_g = original_salt_g * scale
+scaled_yeast_g = original_yeast_g * scale
+
+## Convert to US Customary
+
+Using standard conversions (grams per unit):
+
+grams_per_cup_flour = 120
+grams_per_cup_water = 237
+grams_per_tsp_salt = 6
+grams_per_tsp_yeast = 3
+
+flour_cups = scaled_flour_g / grams_per_cup_flour
+water_cups = scaled_water_g / grams_per_cup_water
+salt_tsp = scaled_salt_g / grams_per_tsp_salt
+yeast_tsp = scaled_yeast_g / grams_per_tsp_yeast
+
+## Temperature Conversion
+
+Original proofing temp in Celsius, converted to Fahrenheit:
+
+proof_temp_c = 24 celsius
+proof_temp_f = proof_temp_c in fahrenheit
+
+Oven temperature:
+
+oven_temp_c = 230 celsius
+oven_temp_f = oven_temp_c in fahrenheit
+
+## Timing Adjustments
+
+Larger batches may need slightly longer rise times:
+
+base_rise_minutes = 90
+rise_adjustment = 1.15
+adjusted_rise = base_rise_minutes * rise_adjustment
+
+base_proof_minutes = 45
+adjusted_proof = base_proof_minutes * rise_adjustment
+
+bake_time = 45
+total_time_minutes = adjusted_rise + adjusted_proof + bake_time
+total_time_hours = total_time_minutes / 60
+
+## Cost Analysis
+
+flour_price_per_kg = 3.50
+salt_price_per_kg = 1.50
+yeast_price_per_100g = 5.00
+
+flour_cost = scaled_flour_g / 1000 * flour_price_per_kg
+salt_cost = scaled_salt_g / 1000 * salt_price_per_kg
+yeast_cost = scaled_yeast_g / 100 * yeast_price_per_100g
+
+total_ingredient_cost = flour_cost + salt_cost + yeast_cost
+cost_per_loaf = total_ingredient_cost / target_yield
+
+## Shopping List Summary
+
+Rounding up for practical shopping:
+
+flour_to_buy_kg = 2
+salt_to_buy_g = 50
+yeast_packets = 1
+
+## Nutritional Estimate (per loaf)
+
+calories_per_gram_flour = 3.64
+total_calories = scaled_flour_g * calories_per_gram_flour
+calories_per_loaf = total_calories / target_yield
+
+Assuming 12 slices per loaf:
+
+slices_per_loaf = 12
+calories_per_slice = calories_per_loaf / slices_per_loaf

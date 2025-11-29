@@ -1,0 +1,94 @@
+# Back-of-Napkin System Sizing
+
+Estimating infrastructure for a social media app with 10M monthly active users.
+
+## User Activity Assumptions
+
+monthly_users = 10M
+daily_active_pct = 0.40
+daily_users = monthly_users * daily_active_pct
+
+Posts per day (each user posts ~2x/week on average):
+
+posts_per_user_per_day = 2 / 7
+daily_posts = daily_users * posts_per_user_per_day
+
+## Read vs Write Ratio
+
+Social media is read-heavy. Users scroll far more than they post.
+
+reads_per_user_per_day = 100
+daily_reads = daily_users * reads_per_user_per_day
+read_write_ratio = daily_reads / daily_posts
+
+## Storage Requirements
+
+Average post size (text + metadata, excluding media):
+
+avg_post_size_kb = 2
+daily_storage_kb = daily_posts * avg_post_size_kb
+daily_storage_gb = daily_storage_kb / 1000000
+yearly_storage_gb = daily_storage_gb * 365
+
+Media storage (images average 500KB, 30% of posts have images):
+
+posts_with_media_pct = 0.30
+avg_image_size_kb = 500
+daily_media_kb = daily_posts * posts_with_media_pct * avg_image_size_kb
+daily_media_gb = daily_media_kb / 1000000
+yearly_media_gb = daily_media_gb * 365
+
+total_yearly_storage_tb = (yearly_storage_gb + yearly_media_gb) / 1000
+
+## Database Sizing
+
+Using capacity function to determine server count:
+
+seconds_per_day = 86400
+queries_per_second = daily_reads / seconds_per_day
+queries_per_server = 5000
+db_read_replicas = capacity(queries_per_second, queries_per_server, server, 0.20)
+
+Write capacity (primary DB):
+
+writes_per_second = daily_posts / seconds_per_day
+writes_per_primary = 2000
+db_primaries = capacity(writes_per_second, writes_per_primary, server, 0.25)
+
+total_db_servers = db_read_replicas + db_primaries
+
+## Network Estimates
+
+Bandwidth for reads (assuming 10KB average response):
+
+avg_response_size_kb = 10
+peak_multiplier = 3
+peak_reads_per_second = queries_per_second * peak_multiplier
+peak_bandwidth_kb_per_sec = peak_reads_per_second * avg_response_size_kb
+peak_bandwidth_gbps = peak_bandwidth_kb_per_sec / 125000
+
+## CDN and Caching
+
+Cache hit ratio target:
+
+cache_hit_target = 0.95
+cache_miss_rate = 1 - cache_hit_target
+origin_requests = daily_reads * cache_miss_rate
+
+## Cost Estimates (Rough Cloud Pricing)
+
+db_server_cost_monthly = 500
+cdn_cost_per_tb = 80
+storage_cost_per_tb_monthly = 20
+
+monthly_db_cost = total_db_servers * db_server_cost_monthly
+monthly_storage_cost = total_yearly_storage_tb * storage_cost_per_tb_monthly
+
+daily_bandwidth_tb = peak_bandwidth_gbps * seconds_per_day * 8 / 1000000
+monthly_bandwidth_tb = daily_bandwidth_tb * 30
+monthly_cdn_cost = monthly_bandwidth_tb * cdn_cost_per_tb
+
+## Summary
+
+total_monthly_infra = monthly_db_cost + monthly_storage_cost + monthly_cdn_cost
+cost_per_1k_users = total_monthly_infra / (monthly_users / 1000)

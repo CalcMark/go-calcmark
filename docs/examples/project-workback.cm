@@ -1,0 +1,87 @@
+# Project Workback Schedule
+
+Planning a product launch with a fixed deadline.
+
+## Key Dates
+
+launch_date = Mar 15 2025
+start_ref = Jan 15 2025
+total_days = 59
+
+## Phase Durations
+
+We need time for: Development, QA, Staging, and Launch prep.
+
+development_weeks = 4
+qa_weeks = 2
+staging_weeks = 1
+launch_prep_days = 5
+
+total_planned_days = development_weeks * 7 + qa_weeks * 7 + staging_weeks * 7 + launch_prep_days
+
+## Buffer Calculation
+
+buffer_days = total_days - total_planned_days
+buffer_pct = buffer_days / total_days * 100
+
+## Working Backwards from Launch
+
+launch_prep_start = launch_date - 5 days
+staging_start = launch_prep_start - 1 week
+qa_start = staging_start - 2 weeks
+dev_start = qa_start - 4 weeks
+
+## Sprint Planning
+
+Assuming 2-week sprints during development:
+
+sprint_weeks = 2
+num_sprints = development_weeks / sprint_weeks
+
+Points per sprint (team velocity):
+
+team_velocity = 40
+total_points = num_sprints * team_velocity
+
+## Resource Allocation
+
+developers = 4
+qa_engineers = 2
+devops = 1
+
+dev_person_weeks = developers * development_weeks
+qa_person_weeks = qa_engineers * qa_weeks
+devops_person_weeks = devops * (staging_weeks + 1)
+
+total_person_weeks = dev_person_weeks + qa_person_weeks + devops_person_weeks
+
+## Risk Assessment
+
+Add contingency for unknowns:
+
+risk_buffer_pct = 0.15
+risk_buffer_days = total_planned_days * risk_buffer_pct
+adjusted_dev_start = dev_start - 8 days
+
+## Cost Estimate
+
+avg_daily_rate = 800
+work_days_per_week = 5
+total_work_days = total_person_weeks * work_days_per_week
+total_labor_cost = total_work_days * avg_daily_rate
+
+## Milestones Summary
+
+Key dates for your calendar:
+
+project_kickoff = adjusted_dev_start
+code_complete = qa_start
+qa_complete = staging_start
+staging_complete = launch_prep_start
+go_live = launch_date
+
+## Go/No-Go Check
+
+days_available = 59
+days_needed = total_planned_days + risk_buffer_days
+schedule_feasible = days_available > days_needed
