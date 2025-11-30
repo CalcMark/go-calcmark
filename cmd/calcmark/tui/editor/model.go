@@ -12,7 +12,6 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
 	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -105,7 +104,7 @@ type Model struct {
 	// UI state
 	width       int
 	height      int
-	lastEscTime int64       // For double-ESC detection
+	lastEscTime int64 // For double-ESC detection
 	quitting    bool
 	previewMode PreviewMode // Preview pane mode: Full, Minimal, Hidden
 	pendingKey  rune        // For two-key sequences like gg, dd, yy
@@ -122,6 +121,11 @@ type Model struct {
 
 	// Styles
 	styles config.Styles
+
+	// Cached alignment model - computed once and invalidated on changes
+	alignedCache       *AlignedModel
+	alignedCacheKey    alignedCacheKey // Key for cache validation
+	alignedCacheWidths [2]int          // [sourceWidth, previewWidth] used for cache
 }
 
 // New creates a new editor model with an optional document.
@@ -249,6 +253,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.InvalidateAlignedCache()
 
 	case evalDebounceMsg:
 		// Only evaluate if editBuf hasn't changed since the timer was started
@@ -263,6 +268,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKey processes keyboard input.
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Invalidate aligned model cache - state may change
+	m.InvalidateAlignedCache()
+
 	// Clear status message on any key
 	m.statusMsg = ""
 	m.statusIsErr = false
@@ -328,6 +336,9 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyCtrlU:
 		// Half-page up
 		m.moveCursor(-m.height/2, 0)
+	case tea.KeyDelete:
+		// Delete current line (same as dd)
+		m.deleteLine()
 	case tea.KeyRunes:
 		return m.handleNormalRune(msg.Runes)
 	}
@@ -450,19 +461,65 @@ func (m Model) handleEditKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEsc:
 		m.exitEditMode(true) // Save changes
 	case tea.KeyEnter:
-		m.exitEditMode(true)
+		// Split line at cursor position (like a normal text editor)
+		// Text before cursor stays on current line, text after goes to new line
+		textBefore := m.editBuf[:m.cursorCol]
+		textAfter := m.editBuf[m.cursorCol:]
+
+		// Update current line with text before cursor
+		m.editBuf = textBefore
+		m.exitEditMode(true) // Save the current line
+
+		// Insert new line below with text after cursor
 		m.insertLineBelow()
 		m.enterEditMode()
+		m.editBuf = textAfter
+		m.cursorCol = 0
+		contentChanged = true
 	case tea.KeyBackspace:
-		if len(m.editBuf) > 0 && m.cursorCol > 0 {
+		if m.cursorCol > 0 && len(m.editBuf) > 0 {
 			m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
 			m.cursorCol--
 			contentChanged = true
+		} else if len(m.editBuf) == 0 && m.cursorLine > 0 {
+			// Empty line with a previous line - delete this line and move to end of previous
+			m.exitEditMode(false) // Don't save the empty line
+			prevLine := m.cursorLine - 1
+			m.deleteLine()
+			// Move to previous line and enter edit mode at end
+			m.cursorLine = prevLine
+			m.enterEditMode()
+			m.cursorCol = len(m.editBuf)
 		}
 	case tea.KeyDelete:
 		if m.cursorCol < len(m.editBuf) {
+			// Delete character forward
 			m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
 			contentChanged = true
+		} else if len(m.editBuf) == 0 {
+			// Empty line - delete it and move to next line (or stay if last line)
+			m.exitEditMode(false)
+			m.deleteLine()
+			// After deletion, cursorLine stays the same (now pointing to what was next line)
+			// If we deleted the last line, deleteLine adjusts cursorLine
+			if m.TotalLines() > 0 {
+				// Clamp to valid range
+				if m.cursorLine >= m.TotalLines() {
+					m.cursorLine = m.TotalLines() - 1
+				}
+				m.enterEditMode()
+				m.cursorCol = 0 // Beginning of the (now current) line
+			}
+		}
+	case tea.KeyUp:
+		// Move to previous line while staying in edit mode
+		if m.cursorLine > 0 {
+			m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+		}
+	case tea.KeyDown:
+		// Move to next line while staying in edit mode
+		if m.cursorLine < m.TotalLines()-1 {
+			m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
 		}
 	case tea.KeyLeft:
 		if m.cursorCol > 0 {
@@ -625,6 +682,9 @@ func (m *Model) moveCursor(dLine, dCol int) {
 
 // enterEditMode enters line editing mode.
 func (m *Model) enterEditMode() {
+	// Clear previous change markers when starting a new edit session
+	m.changedBlockIDs = make(map[string]bool)
+
 	lines := m.GetLines()
 	isNewDocument := len(lines) == 0
 
@@ -677,6 +737,37 @@ func (m *Model) exitEditMode(save bool) {
 	}
 	m.mode = ModeNormal
 	m.editBuf = ""
+}
+
+// saveCurrentLineAndMoveTo saves the current edit buffer and moves to a new line,
+// staying in edit mode. Used for up/down navigation while editing.
+func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
+	// Save current line content
+	m.updateCurrentLine(m.editBuf)
+	m.modified = true
+
+	// Remember cursor column to try to preserve it
+	savedCol := m.cursorCol
+
+	// Move to new line
+	m.cursorLine = newLine
+
+	// Load new line into edit buffer
+	lines := m.GetLines()
+	if m.cursorLine < len(lines) {
+		m.editBuf = lines[m.cursorLine]
+	} else {
+		m.editBuf = ""
+	}
+
+	// Try to preserve column position, clamp to line length
+	if savedCol > len(m.editBuf) {
+		m.cursorCol = len(m.editBuf)
+	} else {
+		m.cursorCol = savedCol
+	}
+
+	// Stay in edit mode (don't change m.mode)
 }
 
 // redetectBlockTypes rebuilds the document to properly detect block types.
@@ -762,36 +853,57 @@ func (m *Model) insertLineAbove() {
 	m.insertLine(m.cursorLine)
 }
 
-// insertLine inserts a new line at the given position.
+// insertLine inserts a new empty line at the given position.
+// This rebuilds the document with the new line inserted at the correct position.
 func (m *Model) insertLine(at int) {
-	// For now, just add an empty calc block
-	blocks := m.doc.GetBlocks()
-	if len(blocks) == 0 {
+	lines := m.GetLines()
+
+	// Clamp position
+	if at < 0 {
+		at = 0
+	}
+	if at > len(lines) {
+		at = len(lines)
+	}
+
+	// Insert empty line at position
+	newLines := make([]string, 0, len(lines)+1)
+	newLines = append(newLines, lines[:at]...)
+	newLines = append(newLines, "")
+	newLines = append(newLines, lines[at:]...)
+
+	// Rebuild document with new content
+	content := strings.Join(newLines, "\n")
+	newDoc, err := document.NewDocument(content)
+	if err != nil {
 		return
 	}
 
-	// Find block at position
-	lineIdx := 0
-	for _, node := range blocks {
-		var blockLines []string
-		switch b := node.Block.(type) {
-		case *document.CalcBlock:
-			blockLines = b.Source()
-		case *document.TextBlock:
-			blockLines = b.Source()
-		}
+	// Replace document
+	m.doc = newDoc
+	m.eval = implDoc.NewEvaluator()
+	_ = m.eval.Evaluate(m.doc)
 
-		if lineIdx+len(blockLines) >= at {
-			// Insert after this block
-			_, _ = m.doc.InsertBlock(node.ID, document.BlockCalculation, []string{""})
-			m.cursorLine = at
-			m.cursorCol = 0
-			m.modified = true
-			m.pushUndoState()
-			return
-		}
-		lineIdx += len(blockLines)
+	// Set cursor to new line
+	m.cursorLine = at
+	m.cursorCol = 0
+	m.modified = true
+	m.pushUndoState()
+
+	// Adjust scroll to keep cursor visible
+	visibleHeight := m.height - 6 // Account for status bar etc
+	if visibleHeight < 1 {
+		visibleHeight = 1
 	}
+	if m.cursorLine < m.scrollOffset {
+		m.scrollOffset = m.cursorLine
+	}
+	if m.cursorLine >= m.scrollOffset+visibleHeight {
+		m.scrollOffset = m.cursorLine - visibleHeight + 1
+	}
+
+	// Auto-pin any new variables
+	m.autoPinVariables()
 }
 
 // reEvaluate re-evaluates affected blocks after an edit.
@@ -808,6 +920,13 @@ func (m *Model) reEvaluate() {
 		orderedBlocks := m.doc.GetBlocksInDependencyOrder(affectedIDs)
 		m.eval.EvaluateAffectedBlocks(m.doc, orderedBlocks)
 
+		// Update changedBlockIDs to include ALL affected blocks (including dependents)
+		// This allows the view to show visual feedback for cascading changes
+		m.changedBlockIDs = make(map[string]bool)
+		for _, id := range orderedBlocks {
+			m.changedBlockIDs[id] = true
+		}
+
 		// Track changed variables
 		for _, id := range orderedBlocks {
 			node, ok := m.doc.GetBlock(id)
@@ -822,8 +941,8 @@ func (m *Model) reEvaluate() {
 			}
 		}
 	}
-
-	m.changedBlockIDs = make(map[string]bool)
+	// Note: changedBlockIDs is NOT cleared here - it persists until the next edit
+	// so the view can show which blocks were affected by the last change
 }
 
 // undo reverts to the previous state.
@@ -1187,129 +1306,90 @@ func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 	}
 }
 
-// LineResult represents a line's evaluation result.
-type LineResult struct {
-	LineNum    int
-	Source     string
-	IsCalc     bool
-	VarName    string
-	Value      string
-	Error      string
-	BlockID    string
-	WasChanged bool
+// alignedCacheKey captures the inputs that affect AlignedModel computation.
+// If any of these change, the cache must be invalidated.
+type alignedCacheKey struct {
+	contentHash uint64      // Hash of document content
+	cursorLine  int         // Cursor position affects highlighting
+	previewMode PreviewMode // Affects rendering
+	totalLines  int         // Quick check for document changes
 }
 
-// GetLineResults returns evaluation results for all lines.
-// Each source line maps to its corresponding statement result when available.
-func (m *Model) GetLineResults() []LineResult {
-	var results []LineResult
-	lineNum := 0
-
-	for _, node := range m.doc.GetBlocks() {
-		switch b := node.Block.(type) {
-		case *document.CalcBlock:
-			sourceLines := b.Source()
-			vars := b.Variables()
-			stmtResults := b.Results()    // Per-statement results
-			statements := b.Statements()  // Parsed AST nodes
-			blockError := b.Error()
-
-			// Build a map of variable index for lookup
-			// Variables are in definition order, so vars[i] corresponds to the
-			// i-th assignment statement
-			varIndex := 0
-
-			for i, line := range sourceLines {
-				lr := LineResult{
-					LineNum:    lineNum,
-					Source:     line,
-					IsCalc:     true,
-					BlockID:    node.ID,
-					WasChanged: m.changedBlockIDs[node.ID],
-				}
-
-				// Skip empty/whitespace-only lines (no result to show)
-				trimmed := line
-				for _, c := range line {
-					if c != ' ' && c != '\t' {
-						trimmed = line
-						break
-					}
-				}
-				if len(trimmed) == 0 || trimmed == "" {
-					results = append(results, lr)
-					lineNum++
-					continue
-				}
-
-				// If there's a block-level error, show it on first non-empty line
-				if blockError != nil && i == 0 {
-					lr.Error = blockError.Error()
-					results = append(results, lr)
-					lineNum++
-					continue
-				}
-
-				// Map source line index to statement index
-				// This is approximate - assumes 1:1 mapping of non-empty lines to statements
-				stmtIdx := m.countNonEmptyLinesBefore(sourceLines, i)
-
-				// Get result for this statement if available
-				if stmtIdx < len(stmtResults) && stmtResults[stmtIdx] != nil {
-					lr.Value = display.Format(stmtResults[stmtIdx])
-				}
-
-				// Get variable name if this statement defines one
-				if stmtIdx < len(statements) {
-					if varName := m.getAssignmentVarName(statements[stmtIdx]); varName != "" {
-						lr.VarName = varName
-					} else if varIndex < len(vars) {
-						// Fallback: use vars list in order
-						lr.VarName = vars[varIndex]
-						varIndex++
-					}
-				}
-
-				results = append(results, lr)
-				lineNum++
-			}
-
-		case *document.TextBlock:
-			for _, line := range b.Source() {
-				results = append(results, LineResult{
-					LineNum: lineNum,
-					Source:  line,
-					IsCalc:  false,
-					BlockID: node.ID,
-				})
-				lineNum++
-			}
+// computeCacheKey computes a cache key from current model state.
+func (m *Model) computeCacheKey() alignedCacheKey {
+	// Simple hash of content - just use length and first/last chars for speed
+	// A proper implementation would use a real hash, but this catches most changes
+	lines := m.GetLines()
+	var contentHash uint64
+	for i, line := range lines {
+		contentHash ^= uint64(len(line)) << (uint(i%8) * 8)
+		if len(line) > 0 {
+			contentHash ^= uint64(line[0]) << 32
+			contentHash ^= uint64(line[len(line)-1]) << 40
 		}
 	}
 
-	return results
+	return alignedCacheKey{
+		contentHash: contentHash,
+		cursorLine:  m.cursorLine,
+		previewMode: m.previewMode,
+		totalLines:  len(lines),
+	}
 }
 
-// countNonEmptyLinesBefore counts non-empty lines before index i.
-func (m *Model) countNonEmptyLinesBefore(lines []string, i int) int {
-	count := 0
-	for j := 0; j < i; j++ {
-		if strings.TrimSpace(lines[j]) != "" {
-			count++
+// GetAlignedModel returns the cached aligned model, computing it if necessary.
+// This is the single source of truth for visual line alignment.
+// The cache is automatically invalidated when inputs change.
+func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
+	currentKey := m.computeCacheKey()
+
+	// Check if cache is valid: same key and same widths
+	if m.alignedCache != nil &&
+		m.alignedCacheKey == currentKey &&
+		m.alignedCacheWidths[0] == sourceWidth &&
+		m.alignedCacheWidths[1] == previewWidth {
+		return m.alignedCache
+	}
+
+	// Cache miss - recompute
+	// Calculate content width for source pane (accounting for line numbers)
+	lineNumWidth := 4
+	sourceContentWidth := sourceWidth - lineNumWidth - 2
+	if sourceContentWidth < 10 {
+		sourceContentWidth = 10
+	}
+
+	input := AlignedModelInput{
+		Lines:              m.GetLines(),
+		Results:            m.GetLineResults(),
+		SourceContentWidth: sourceContentWidth,
+		PreviewWidth:       previewWidth,
+		CursorLine:         m.cursorLine,
+		PreviewMode:        m.previewMode,
+	}
+
+	// Compute with render functions that match view.go behavior
+	aligned := ComputeAlignedModel(input, m.renderCalcLine, func(line string, width int) []string {
+		mdRenderer, _ := NewMarkdownRenderer(width)
+		if mdRenderer != nil {
+			return mdRenderer.RenderLine(line)
 		}
-	}
-	return count
+		return WrapText(line, width)
+	})
+
+	// Update cache
+	m.alignedCache = &aligned
+	m.alignedCacheKey = currentKey
+	m.alignedCacheWidths = [2]int{sourceWidth, previewWidth}
+
+	return m.alignedCache
 }
 
-// getAssignmentVarName extracts the variable name from an assignment AST node.
-func (m *Model) getAssignmentVarName(node ast.Node) string {
-	switch n := node.(type) {
-	case *ast.Assignment:
-		return n.Name
-	case *ast.FrontmatterAssignment:
-		return n.Property
-	}
-	return ""
+// InvalidateAlignedCache explicitly invalidates the cache.
+// This is called on key presses, but the cache will also auto-invalidate
+// when computeCacheKey() detects changed inputs.
+func (m *Model) InvalidateAlignedCache() {
+	m.alignedCache = nil
 }
 
 // Quitting returns whether the editor should quit.
@@ -1399,6 +1479,77 @@ func (m Model) Key() shared.KeyMap {
 	return shared.DefaultKeyMap()
 }
 
+// Debug returns a string representation of the model's alignment state.
+// This is used by catwalk tests to verify visual/source line consistency.
+func (m Model) Debug() string {
+	leftWidth, rightWidth := m.GetPaneWidths(m.width)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+
+	// Get cursor's visual position from the mapping
+	cursorVisual := -1
+	if v, ok := aligned.sourceToVisual[m.cursorLine]; ok {
+		cursorVisual = v
+	}
+
+	// Find where cursor is actually highlighted in the visual structure
+	cursorHighlightAt := -1
+	for i, sl := range aligned.sourceLines {
+		if sl.isCursorLine {
+			cursorHighlightAt = i
+			break
+		}
+	}
+
+	// Check invariants
+	sourcePreviewMatch := len(aligned.sourceLines) == len(aligned.previewLines)
+	cursorInBounds := cursorVisual >= 0 && cursorVisual < len(aligned.sourceLines)
+	highlightMatchesMapping := cursorHighlightAt == cursorVisual
+	mappingComplete := true
+	for i := 0; i < m.TotalLines(); i++ {
+		if _, ok := aligned.sourceToVisual[i]; !ok {
+			mappingComplete = false
+			break
+		}
+	}
+
+	return fmt.Sprintf(
+		"mode=%v cursorLine=%d cursorCol=%d cursorVisual=%d cursorHighlight=%d "+
+			"scrollOffset=%d totalSource=%d totalVisual=%d editBuf=%q "+
+			"sourcePreviewMatch=%v cursorInBounds=%v highlightMatch=%v mappingComplete=%v",
+		m.mode, m.cursorLine, m.cursorCol, cursorVisual, cursorHighlightAt,
+		m.scrollOffset, m.TotalLines(), len(aligned.sourceLines), m.editBuf,
+		sourcePreviewMatch, cursorInBounds, highlightMatchesMapping, mappingComplete,
+	)
+}
+
+// DebugLines returns a detailed breakdown of the visual line structure.
+// This is used for debugging alignment issues.
+func (m Model) DebugLines() string {
+	leftWidth, rightWidth := m.GetPaneWidths(m.width)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("sourceToVisual: %v\n", aligned.sourceToVisual))
+	b.WriteString("Visual lines:\n")
+	for i, sl := range aligned.sourceLines {
+		cursor := ""
+		if sl.isCursorLine {
+			cursor = " <CURSOR>"
+		}
+		b.WriteString(fmt.Sprintf("  [%d] srcIdx=%d lineNum=%d wrap=%v pad=%v content=%q%s\n",
+			i, sl.sourceLineIdx, sl.lineNum, sl.isWrapped, sl.isPadding,
+			truncateStr(sl.content, 30), cursor))
+	}
+	return b.String()
+}
+
+func truncateStr(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 // deleteLine deletes the current line (dd command).
 func (m *Model) deleteLine() {
 	lines := m.GetLines()
@@ -1438,13 +1589,22 @@ func (m *Model) deleteLine() {
 				m.modified = true
 				m.pushUndoState()
 				m.reEvaluate()
+				m.InvalidateAlignedCache()
 
 				// Adjust cursor if needed
 				total := m.TotalLines()
 				if m.cursorLine >= total && total > 0 {
 					m.cursorLine = total - 1
 				}
-				m.statusMsg = "Line deleted"
+
+				// Adjust scroll offset if it's now past document end
+				if m.scrollOffset > 0 && m.scrollOffset >= total {
+					m.scrollOffset = total - 1
+					if m.scrollOffset < 0 {
+						m.scrollOffset = 0
+					}
+				}
+
 				return
 			}
 			lineIdx++

@@ -33,8 +33,8 @@ func (m Model) View() string {
 	totalWidth := m.width
 	totalHeight := m.height
 
-	// Reserve space: status bar (1) + context footer (1) + separator (1)
-	contentHeight := totalHeight - 3
+	// Reserve space: status bar (2) + context footer (2) + separator (1)
+	contentHeight := totalHeight - 5
 	if contentHeight < 5 {
 		contentHeight = 5
 	}
@@ -146,12 +146,47 @@ func (m Model) View() string {
 
 // computeAlignedPanes computes both pane line structures once with fixed widths.
 // This is the single source of truth for alignment, preventing reflow cycles.
-// Alignment is done BLOCK-BY-BLOCK: for each block, we compare source vs preview
-// line counts and pad whichever is shorter.
+// It uses the cached AlignedModel and converts to the legacy format for rendering.
 func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
-	results := m.GetLineResults()
-	lines := m.GetLines()
+	// Use the cached AlignedModel - this is the canonical computation
+	// Note: We need a mutable reference to update the cache, but View() receives
+	// a value copy. For now, we recompute each time in View() but the AlignedModel
+	// computation is still the single source of truth.
+	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth)
 
+	// Convert AlignedModel to legacy alignedPanes format
+	sourceLines := make([]sourceLine, len(aligned.SourceLines))
+	for i, al := range aligned.SourceLines {
+		sourceLines[i] = sourceLine{
+			content:       al.Content,
+			lineNum:       al.LineNum,
+			isPadding:     al.Kind == AlignedLinePadding,
+			isWrapped:     al.Kind == AlignedLineWrapped || al.Kind == AlignedLineCursorWrapped,
+			isCursorLine:  al.Kind == AlignedLineCursor,
+			sourceLineIdx: al.SourceLineIdx,
+		}
+	}
+
+	previewLines := make([]previewLine, len(aligned.PreviewLines))
+	for i, al := range aligned.PreviewLines {
+		previewLines[i] = previewLine{
+			content:       al.Content,
+			sourceLineNum: al.SourceLineIdx,
+			blockID:       al.BlockID,
+			isCalc:        al.IsCalc,
+		}
+	}
+
+	return alignedPanes{
+		sourceLines:    sourceLines,
+		previewLines:   previewLines,
+		sourceToVisual: aligned.SourceToVisual,
+	}
+}
+
+// computeAlignedModelFresh computes a fresh AlignedModel without caching.
+// Used by computeAlignedPanes since View() receives a value copy of Model.
+func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int) AlignedModel {
 	// Calculate content width for source pane (accounting for line numbers)
 	lineNumWidth := 4
 	sourceContentWidth := sourceWidth - lineNumWidth - 2
@@ -159,131 +194,23 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
 		sourceContentWidth = 10
 	}
 
-	var sourceLines []sourceLine
-	var previewLines []previewLine
-	sourceToVisual := make(map[int]int)
-
-	// Process results block by block
-	i := 0
-	for i < len(results) {
-		blockID := results[i].BlockID
-		isCalcBlock := results[i].IsCalc
-
-		// Collect all results in this block
-		var blockResults []LineResult
-		for i < len(results) && results[i].BlockID == blockID {
-			blockResults = append(blockResults, results[i])
-			i++
-		}
-
-		// Build source and preview lines with LINE-BY-LINE alignment
-		// Algorithm: For each source line, wrap both sides independently,
-		// take max visual lines, pad shorter side to match.
-		var blockSourceLines []sourceLine
-		var blockPreviewLines []previewLine
-		mdRenderer, _ := NewMarkdownRenderer(previewWidth)
-
-		for _, r := range blockResults {
-			if r.LineNum >= len(lines) {
-				continue
-			}
-			line := lines[r.LineNum]
-			isCursor := r.LineNum == m.cursorLine
-
-			// Wrap source content
-			wrappedSource := wrapLine(line, sourceContentWidth)
-
-			// Render and wrap preview content
-			var wrappedPreview []string
-			if isCalcBlock {
-				previewContent := m.renderCalcLine(r, previewWidth)
-				// For styled content (ANSI codes), use visual width wrapping
-				wrappedPreview = wrapStyledLine(previewContent, previewWidth)
-			} else if mdRenderer != nil {
-				// Glamour already wraps to width, returns multiple lines
-				wrappedPreview = mdRenderer.RenderLine(r.Source)
-			} else {
-				wrappedPreview = wrapLine(r.Source, previewWidth)
-			}
-
-			// Determine max visual lines needed
-			sourceCount := len(wrappedSource)
-			previewCount := len(wrappedPreview)
-			maxLines := sourceCount
-			if previewCount > maxLines {
-				maxLines = previewCount
-			}
-
-			// Record mapping: source line -> first visual line index
-			// This is recorded BEFORE adding to blockSourceLines so we get the correct offset
-			visualIdx := len(sourceLines) + len(blockSourceLines)
-			if _, exists := sourceToVisual[r.LineNum]; !exists {
-				sourceToVisual[r.LineNum] = visualIdx
-			}
-
-			// Emit source visual lines
-			for j := 0; j < maxLines; j++ {
-				var sl sourceLine
-				if j < sourceCount {
-					sl = sourceLine{
-						content:       wrappedSource[j],
-						sourceLineIdx: r.LineNum,
-						isCursorLine:  isCursor && j == 0,
-					}
-					if j == 0 {
-						sl.lineNum = r.LineNum + 1
-						sl.isWrapped = false
-					} else {
-						sl.lineNum = 0
-						sl.isWrapped = true
-					}
-				} else {
-					// Padding line for source (preview wrapped more)
-					sl = sourceLine{
-						content:       "",
-						sourceLineIdx: r.LineNum,
-						lineNum:       0,
-						isPadding:     true,
-						isWrapped:     false,
-						isCursorLine:  false,
-					}
-				}
-				blockSourceLines = append(blockSourceLines, sl)
-			}
-
-			// Emit preview visual lines
-			for j := 0; j < maxLines; j++ {
-				var pl previewLine
-				if j < previewCount {
-					pl = previewLine{
-						content:       wrappedPreview[j],
-						sourceLineNum: r.LineNum,
-						blockID:       blockID,
-						isCalc:        isCalcBlock,
-					}
-				} else {
-					// Padding line for preview (source wrapped more)
-					pl = previewLine{
-						content:       "",
-						sourceLineNum: r.LineNum,
-						blockID:       blockID,
-						isCalc:        isCalcBlock,
-					}
-				}
-				blockPreviewLines = append(blockPreviewLines, pl)
-			}
-		}
-
-		// Append block lines to final result
-		sourceLines = append(sourceLines, blockSourceLines...)
-		previewLines = append(previewLines, blockPreviewLines...)
+	input := AlignedModelInput{
+		Lines:              m.GetLines(),
+		Results:            m.GetLineResults(),
+		SourceContentWidth: sourceContentWidth,
+		PreviewWidth:       previewWidth,
+		CursorLine:         m.cursorLine,
+		PreviewMode:        m.previewMode,
 	}
 
-	return alignedPanes{
-		sourceLines:    sourceLines,
-		previewLines:   previewLines,
-		sourceToVisual: sourceToVisual,
-	}
+	// Compute with render functions that match view.go behavior
+	return ComputeAlignedModel(input, m.renderCalcLine, func(line string, width int) []string {
+		mdRenderer, _ := NewMarkdownRenderer(width)
+		if mdRenderer != nil {
+			return mdRenderer.RenderLine(line)
+		}
+		return WrapText(line, width)
+	})
 }
 
 // sourceLine represents a line in the source pane (may be padding or wrapped).
@@ -310,9 +237,14 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 		cursorVisualLine = visualIdx
 	}
 
-	// Calculate scroll offset in visual line space
+	// Convert m.scrollOffset from source-line space to visual-line space
+	// m.scrollOffset is stored as a source line index, but we need visual line index
+	visualScrollOffset := 0
+	if visualIdx, ok := aligned.sourceToVisual[m.scrollOffset]; ok {
+		visualScrollOffset = visualIdx
+	}
+
 	// Ensure cursor is visible by adjusting scroll based on visual position
-	visualScrollOffset := m.scrollOffset
 	if cursorVisualLine < visualScrollOffset {
 		visualScrollOffset = cursorVisualLine
 	}
@@ -440,69 +372,6 @@ func wrapStyledLine(line string, maxWidth int) []string {
 	return []string{line}
 }
 
-// wrapLine wraps a single line of text to fit within maxWidth, preferring word boundaries.
-// Returns a slice of strings, each fitting within maxWidth.
-// Uses visual width (lipgloss.Width) to correctly handle unicode and double-width characters.
-func wrapLine(line string, maxWidth int) []string {
-	if maxWidth <= 0 {
-		return []string{line}
-	}
-
-	if lipgloss.Width(line) <= maxWidth {
-		return []string{line}
-	}
-
-	var result []string
-	runes := []rune(line)
-	start := 0
-
-	for start < len(runes) {
-		// Find how many runes fit within maxWidth
-		end := start
-		currentWidth := 0
-		lastSpaceIdx := -1
-
-		for end < len(runes) {
-			rw := lipgloss.Width(string(runes[end]))
-			if currentWidth+rw > maxWidth {
-				break
-			}
-			if runes[end] == ' ' {
-				lastSpaceIdx = end
-			}
-			currentWidth += rw
-			end++
-		}
-
-		// If we've consumed all remaining runes, we're done
-		if end >= len(runes) {
-			result = append(result, string(runes[start:]))
-			break
-		}
-
-		// Prefer breaking at word boundary
-		if lastSpaceIdx > start {
-			// Break after the space
-			result = append(result, string(runes[start:lastSpaceIdx+1]))
-			start = lastSpaceIdx + 1
-		} else if end > start {
-			// No space found, hard break
-			result = append(result, string(runes[start:end]))
-			start = end
-		} else {
-			// Single character wider than maxWidth - include it anyway to avoid infinite loop
-			result = append(result, string(runes[start:start+1]))
-			start++
-		}
-	}
-
-	if len(result) == 0 {
-		return []string{line}
-	}
-
-	return result
-}
-
 // renderEditLine renders the line being edited with cursor (single line, no wrapping).
 func (m Model) renderEditLine(width int) string {
 	var line string
@@ -537,7 +406,7 @@ func (m Model) renderEditLineWrapped(width int) []string {
 	}
 
 	// Wrap the edit buffer content
-	wrappedContent := wrapLine(m.editBuf, width)
+	wrappedContent := WrapText(m.editBuf, width)
 	var result []string
 
 	// Track which wrapped line contains the cursor
@@ -624,8 +493,14 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		cursorVisualLine = visualIdx
 	}
 
-	// Calculate scroll offset in visual line space
-	visualScrollOffset := m.scrollOffset
+	// Convert m.scrollOffset from source-line space to visual-line space
+	// m.scrollOffset is stored as a source line index, but we need visual line index
+	visualScrollOffset := 0
+	if visualIdx, ok := aligned.sourceToVisual[m.scrollOffset]; ok {
+		visualScrollOffset = visualIdx
+	}
+
+	// Ensure cursor is visible by adjusting scroll based on visual position
 	if cursorVisualLine < visualScrollOffset {
 		visualScrollOffset = cursorVisualLine
 	}
@@ -638,19 +513,75 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	start := visualScrollOffset
 	end := min(start+resultsHeight, len(previewLines))
 
-	for j := start; j < end; j++ {
+	// In edit mode, source pane may render different number of lines for cursor line
+	// because it renders the live edit buffer. We need to:
+	// 1. Count how many pre-computed lines exist for cursor's source line
+	// 2. Count how many lines the edit buffer would render
+	// 3. Adjust by skipping pre-computed wrapped lines or adding empty lines
+	var editLineCount int
+	var preComputedCursorLineCount int
+	if m.mode == ModeEditing {
+		// Count how many lines the edit buffer would produce
+		contentWidth := width // approximate
+		editLines := WrapText(m.editBuf, contentWidth)
+		editLineCount = len(editLines)
+		if editLineCount == 0 {
+			editLineCount = 1
+		}
+
+		// Count how many pre-computed visual lines exist for cursor's source line
+		for _, pl := range previewLines {
+			if pl.sourceLineNum == m.cursorLine {
+				preComputedCursorLineCount++
+			}
+		}
+	}
+
+	linesWritten := 0
+	cursorLineProcessed := false
+	for j := start; j < end && linesWritten < resultsHeight; j++ {
 		if j >= len(previewLines) {
 			break
 		}
 		pl := previewLines[j]
-		b.WriteString(pl.content)
-		if j < end-1 {
+
+		// In edit mode, handle cursor line specially to match source pane's edit rendering
+		if m.mode == ModeEditing && pl.sourceLineNum == m.cursorLine {
+			if !cursorLineProcessed {
+				// First occurrence of cursor line - output editLineCount lines
+				// to match the source pane's edit buffer rendering.
+				// Show the actual preview content (computed result) rather than blank.
+				cursorPreviewLines := []previewLine{}
+				for _, cpl := range previewLines {
+					if cpl.sourceLineNum == m.cursorLine {
+						cursorPreviewLines = append(cursorPreviewLines, cpl)
+					}
+				}
+				for k := 0; k < editLineCount && linesWritten < resultsHeight; k++ {
+					if k > 0 || linesWritten > 0 {
+						b.WriteString("\n")
+					}
+					// Show preview content if available, otherwise empty
+					if k < len(cursorPreviewLines) {
+						b.WriteString(cursorPreviewLines[k].content)
+					}
+					linesWritten++
+				}
+				cursorLineProcessed = true
+			}
+			// Skip all pre-computed lines for cursor (we've already output editLineCount lines)
+			continue
+		}
+
+		if linesWritten > 0 {
 			b.WriteString("\n")
 		}
+		b.WriteString(pl.content)
+		linesWritten++
 	}
 
 	// Fill remaining space to maintain consistent height
-	for i := end - start; i < resultsHeight; i++ {
+	for i := linesWritten; i < resultsHeight; i++ {
 		b.WriteString("\n")
 	}
 
@@ -664,12 +595,12 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	isActuallyCalc, _ := detector.IsCalculation(r.Source)
 
 	if r.Error != "" && isActuallyCalc {
-		// Error display (amber) - only for actual calculation errors
-		// Errors wrap like other content - no truncation
-		errText := "⚠ " + r.Error
-		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color("3")).
-			Render(errText)
+		// Show brief error indicator inline - detailed error shown in context footer
+		errStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("208")) // amber
+
+		// Just show a brief indicator - the context footer has the details
+		return errStyle.Render("⚠ error")
 	}
 
 	if !isActuallyCalc {
@@ -692,22 +623,29 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	valueStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("6"))
 
+	// Changed indicator: asterisk in yellow for values that were recomputed
+	changedMarker := ""
 	if r.WasChanged {
 		valueStyle = valueStyle.Foreground(lipgloss.Color("3"))
+		changedMarker = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("3")).
+			Bold(true).
+			Render("* ")
 	}
 
 	switch m.previewMode {
 	case PreviewFull:
-		// Full mode: left-aligned "varName  value"
+		// Full mode: left-aligned "varName → value" (with * if changed)
 		varStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240"))
-		// Left-justify: name followed by spaces, then value
-		return varStyle.Render(r.VarName) + "  " + valueStyle.Render(r.Value)
+		arrowStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240"))
+		return changedMarker + varStyle.Render(r.VarName) + " " + arrowStyle.Render("→") + " " + valueStyle.Render(r.Value)
 
 	case PreviewMinimal:
-		// Minimal mode: left-aligned "→ value"
+		// Minimal mode: left-aligned "→ value" (with * if changed)
 		arrow := "→ "
-		return valueStyle.Render(arrow + r.Value)
+		return changedMarker + valueStyle.Render(arrow + r.Value)
 	}
 
 	return ""
@@ -803,48 +741,43 @@ func (m Model) renderGlobalsPanel(width int) string {
 	return b.String()
 }
 
-// renderContextFooter renders the context footer showing referenced variables.
+// renderContextFooter renders the context footer showing errors or referenced variables.
+// Delegates to components.RenderContextFooter with prepared state.
 func (m Model) renderContextFooter(width int) string {
 	results := m.GetLineResults()
 
-	if m.cursorLine >= len(results) {
-		return ""
+	// Build state for the pure render function
+	state := components.ContextFooterState{}
+
+	// Check bounds
+	if m.cursorLine < len(results) {
+		currentResult := results[m.cursorLine]
+		state.IsCalcLine = currentResult.IsCalc
+
+		if currentResult.IsCalc && currentResult.Error != "" {
+			state.HasError = true
+			state.Diagnostic = currentResult.Diagnostic
+
+			// If no structured diagnostic, parse the error string for display
+			if state.Diagnostic == nil {
+				errInfo := components.ParseErrorForDisplay(currentResult.Error)
+				state.ErrorMessage = errInfo.ShortMessage
+				state.ErrorHint = errInfo.Hint
+			}
+		}
+
+		// Get variable references if no error
+		if !state.HasError && state.IsCalcLine {
+			state.References = m.getLineReferences(m.cursorLine)
+		}
 	}
 
-	currentResult := results[m.cursorLine]
-	if !currentResult.IsCalc {
-		return ""
-	}
-
-	// Get referenced variables for the current line
-	refs := m.getLineReferences(m.cursorLine)
-	if len(refs) == 0 {
-		return ""
-	}
-
-	// Format as: "var1 = value │ var2 = value │ ..."
-	var parts []string
-	for _, ref := range refs {
-		parts = append(parts, fmt.Sprintf("%s = %s", ref.Name, ref.Value))
-	}
-
-	content := strings.Join(parts, " │ ")
-
-	// Let content wrap naturally - no truncation
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
-		Width(width).
-		Render(content)
-}
-
-// VarReference represents a referenced variable and its value.
-type VarReference struct {
-	Name  string
-	Value string
+	return components.RenderContextFooter(state, width)
 }
 
 // getLineReferences returns variables referenced in the given line.
-func (m Model) getLineReferences(lineNum int) []VarReference {
+// Delegates to components.FindLineReferences with model's known variables.
+func (m Model) getLineReferences(lineNum int) []components.VarReference {
 	lines := m.GetLines()
 	if lineNum >= len(lines) {
 		return nil
@@ -852,33 +785,14 @@ func (m Model) getLineReferences(lineNum int) []VarReference {
 
 	line := lines[lineNum]
 
-	// Simple variable reference extraction
-	// Look for identifier patterns that match known variables
+	// Build map of known variables from environment
 	env := m.eval.GetEnvironment()
 	allVars := env.GetAllVariables()
 
-	var refs []VarReference
-	seen := make(map[string]bool)
-
+	knownVars := make(map[string]string)
 	for varName, val := range allVars {
-		// Check if this variable is referenced in the line
-		// Skip if it's being defined on this line (left of =)
-		if strings.Contains(line, varName) && !strings.HasPrefix(strings.TrimSpace(line), varName+" =") {
-			if !seen[varName] {
-				seen[varName] = true
-				refs = append(refs, VarReference{
-					Name:  varName,
-					Value: fmt.Sprintf("%v", val),
-				})
-			}
-		}
+		knownVars[varName] = fmt.Sprintf("%v", val)
 	}
 
-	// Limit to 4 references to fit in footer
-	if len(refs) > 4 {
-		refs = refs[:4]
-	}
-
-	return refs
+	return components.FindLineReferences(line, knownVars, 4)
 }
-
