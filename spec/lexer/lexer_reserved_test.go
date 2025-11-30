@@ -594,3 +594,224 @@ func TestWhitespaceVariations(t *testing.T) {
 		})
 	}
 }
+
+// TestFrontmatterAtSyntax tests the @ prefix for REPL frontmatter assignments.
+// This syntax is ONLY valid in the REPL, not in CalcMark documents (which use YAML frontmatter).
+func TestFrontmatterAtSyntax(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []TokenType
+	}{
+		{
+			name:  "exchange rate assignment",
+			input: "@exchange.USD_EUR = 0.92",
+			expected: []TokenType{
+				AT_PREFIX,  // @
+				IDENTIFIER, // exchange
+				DOT,        // .
+				IDENTIFIER, // USD_EUR
+				ASSIGN,     // =
+				NUMBER,     // 0.92
+				EOF,
+			},
+		},
+		{
+			name:  "global variable assignment",
+			input: "@global.tax_rate = 0.32",
+			expected: []TokenType{
+				AT_PREFIX,  // @
+				IDENTIFIER, // global
+				DOT,        // .
+				IDENTIFIER, // tax_rate
+				ASSIGN,     // =
+				NUMBER,     // 0.32
+				EOF,
+			},
+		},
+		{
+			name:  "exchange rate with underscore",
+			input: "@exchange.EUR_GBP = 1.17",
+			expected: []TokenType{
+				AT_PREFIX,  // @
+				IDENTIFIER, // exchange
+				DOT,        // .
+				IDENTIFIER, // EUR_GBP
+				ASSIGN,     // =
+				NUMBER,     // 1.17
+				EOF,
+			},
+		},
+		{
+			name:  "global with currency value",
+			input: "@global.budget = $1000",
+			expected: []TokenType{
+				AT_PREFIX,    // @
+				IDENTIFIER,   // global
+				DOT,          // .
+				IDENTIFIER,   // budget
+				ASSIGN,       // =
+				CURRENCY_SYM, // $
+				NUMBER,       // 1000
+				EOF,
+			},
+		},
+		{
+			name:  "global with expression",
+			input: "@global.rate = 100 / 3",
+			expected: []TokenType{
+				AT_PREFIX,  // @
+				IDENTIFIER, // global
+				DOT,        // .
+				IDENTIFIER, // rate
+				ASSIGN,     // =
+				NUMBER,     // 100
+				DIVIDE,     // /
+				NUMBER,     // 3
+				EOF,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if len(tokens) != len(tt.expected) {
+				t.Fatalf("expected %d tokens, got %d\ntokens: %v", len(tt.expected), len(tokens), tokens)
+			}
+
+			for i, expectedType := range tt.expected {
+				if tokens[i].Type != expectedType {
+					t.Errorf("token %d: expected %s, got %s (value: %q)",
+						i, expectedType, tokens[i].Type, tokens[i].Value)
+				}
+			}
+		})
+	}
+}
+
+// TestAtPrefixTokenValue tests that @ prefix token has correct value
+func TestAtPrefixTokenValue(t *testing.T) {
+	lex := NewLexer("@exchange.USD_EUR = 0.92")
+	tokens, err := lex.Tokenize()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if tokens[0].Type != AT_PREFIX {
+		t.Fatalf("expected AT_PREFIX, got %s", tokens[0].Type)
+	}
+	if tokens[0].Value != "@" {
+		t.Errorf("expected AT_PREFIX value '@', got %q", tokens[0].Value)
+	}
+}
+
+// TestDotOnlyInAtContext tests that DOT tokens are only emitted within @ context
+// and don't interfere with decimal number parsing
+func TestDotOnlyInAtContext(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		desc  string
+	}{
+		{"decimal number", "3.14159", "decimal point should be part of NUMBER"},
+		{"currency with decimals", "$99.99", "decimal point should be part of CURRENCY"},
+		{"expression with decimals", "2.5 + 3.7", "decimal points in expression"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// DOT token should NOT appear in regular numeric contexts
+			for i, token := range tokens {
+				if token.Type == DOT {
+					t.Errorf("token %d: unexpected DOT token in %q (case: %s)", i, tt.input, tt.desc)
+				}
+			}
+		})
+	}
+}
+
+// TestTrailingDotNotConsumed tests that a number followed by "." without decimals
+// does NOT consume the dot (it's a syntax error, not a valid number).
+// This ensures "2. Second" is parsed as text (not a calculation).
+func TestTrailingDotNotConsumed(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		desc   string
+		expect []TokenType
+	}{
+		{
+			name:   "number dot space text",
+			input:  "2. Second",
+			desc:   "ordered list item - dot should not be consumed as part of number",
+			expect: []TokenType{NUMBER, IDENTIFIER, EOF}, // Should error or produce NUMBER without dot
+		},
+		{
+			name:   "number dot newline",
+			input:  "3.\n",
+			desc:   "number with trailing dot and newline",
+			expect: []TokenType{NUMBER, NEWLINE, EOF},
+		},
+		{
+			name:   "valid decimal",
+			input:  "3.14",
+			desc:   "valid decimal number",
+			expect: []TokenType{NUMBER, EOF},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				// Trailing dot causing error is acceptable
+				t.Logf("input %q: tokenization error (expected): %v", tt.input, err)
+				return
+			}
+
+			// For ordered lists, the number should NOT include the trailing dot
+			if tokens[0].Type == NUMBER {
+				val := tokens[0].Value
+				if len(val) > 0 && val[len(val)-1] == '.' {
+					t.Errorf("NUMBER token should not have trailing dot: %q", val)
+				}
+			}
+		})
+	}
+}
+
+// TestAtWithInvalidFollower tests @ followed by non-identifier characters
+func TestAtWithInvalidFollower(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"@ at end of input", "@"},
+		{"@ followed by number", "@123"},
+		{"@ followed by special chars", "@#$%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := NewLexer(tt.input)
+			_, err := lex.Tokenize()
+			// These should produce tokenization errors
+			if err == nil {
+				t.Errorf("expected error for input %q, got none", tt.input)
+			}
+		})
+	}
+}

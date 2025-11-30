@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -9,32 +9,40 @@ import (
 	"github.com/CalcMark/go-calcmark/format"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/spf13/cobra"
 )
 
-// runEval handles the eval subcommand with formatter support
+var evalVerbose bool
+
+var evalCmd = &cobra.Command{
+	Use:   "eval [file.cm]",
+	Short: "Evaluate CalcMark and print the result",
+	Long: `Evaluate a CalcMark file or stdin and print the result.
+
+Examples:
+  cm eval calc.cm           Evaluate file and print result
+  cm eval -v calc.cm        Evaluate with verbose output (all values)
+  echo "x = 10" | cm eval   Evaluate from stdin`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runEval(args)
+	},
+}
+
+func init() {
+	evalCmd.Flags().BoolVarP(&evalVerbose, "verbose", "v", false, "Show all intermediate values")
+	rootCmd.AddCommand(evalCmd)
+}
+
+// runEval handles the eval subcommand - evaluates and prints the result
 func runEval(args []string) error {
 	var input string
 	var hasFile bool
-	var formatName string
-	var verbose bool
 
-	// Parse flags and get filename
-	filename := ""
-	for _, arg := range args {
-		// Backward compatibility: --json maps to --format=json
-		if arg == "--json" {
-			formatName = "json"
-		} else if f, ok := strings.CutPrefix(arg, "--format="); ok {
-			formatName = f
-		} else if arg == "--verbose" || arg == "-v" {
-			verbose = true
-		} else if !strings.HasPrefix(arg, "-") {
-			filename = arg
-			hasFile = true
-		}
-	}
+	if len(args) > 0 {
+		filename := args[0]
+		hasFile = true
 
-	if hasFile {
 		// Read from file
 		if err := validateFilePath(filename); err != nil {
 			return fmt.Errorf("invalid file: %w", err)
@@ -45,7 +53,9 @@ func runEval(args []string) error {
 			return fmt.Errorf("read file: %w", err)
 		}
 		input = string(bytes)
-	} else {
+	}
+
+	if !hasFile {
 		// Read from stdin
 		bytes, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -69,15 +79,13 @@ func runEval(args []string) error {
 		return fmt.Errorf("evaluation error: %w", err)
 	}
 
-	// Get formatter (defaults to text if not specified)
-	formatter := format.GetFormatter(formatName, "")
+	// Use text formatter for eval output
+	formatter := format.GetFormatter("text", "")
 
-	// Format options
 	opts := format.Options{
-		Verbose: verbose,
+		Verbose: evalVerbose,
 	}
 
-	// Format and output
 	if err := formatter.Format(os.Stdout, doc, opts); err != nil {
 		return fmt.Errorf("format error: %w", err)
 	}

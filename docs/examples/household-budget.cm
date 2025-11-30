@@ -1,16 +1,17 @@
 # Monthly Household Budget
 
 A practical monthly budget for a two-income household.
+Uses CalcMark's currency support and percentage calculations.
 
 ## Income
 
-gross_salary_1 = 6500
-gross_salary_2 = 5200
+gross_salary_1 = $6500
+gross_salary_2 = $5200
 total_gross = gross_salary_1 + gross_salary_2
 
 ## Tax Withholding
 
-Estimated combined effective tax rate:
+Estimated combined effective tax rates:
 
 federal_rate = 0.18
 state_rate = 0.05
@@ -24,13 +25,13 @@ net_income = total_gross - total_taxes
 
 These don't change month to month:
 
-rent = 2200
-car_payment = 450
-car_insurance = 180
-health_insurance = 400
-phone_plans = 120
-internet = 80
-streaming = 45
+rent = $2200
+car_payment = $450
+car_insurance = $180
+health_insurance = $400
+phone_plans = $120
+internet = $80
+streaming = $45
 
 total_fixed = rent + car_payment + car_insurance + health_insurance + phone_plans + internet + streaming
 
@@ -38,23 +39,23 @@ total_fixed = rent + car_payment + car_insurance + health_insurance + phone_plan
 
 Estimates based on past spending:
 
-groceries = 800
-gas = 250
-utilities = 150
-dining_out = 300
-entertainment = 200
-personal_care = 100
-household_supplies = 150
+groceries = $800
+gas = $250
+utilities = $150
+dining_out = $300
+entertainment = $200
+personal_care = $100
+household_supplies = $150
 
 total_variable = groceries + gas + utilities + dining_out + entertainment + personal_care + household_supplies
 
 ## Savings Goals
 
-emergency_fund_target = 500
-retirement_401k = 600
-vacation_fund = 200
+emergency_fund_contribution = $500
+retirement_401k = $600
+vacation_fund = $200
 
-total_savings = emergency_fund_target + retirement_401k + vacation_fund
+total_savings = emergency_fund_contribution + retirement_401k + vacation_fund
 
 ## Summary
 
@@ -63,6 +64,8 @@ total_outflow = total_expenses + total_savings
 remaining = net_income - total_outflow
 
 ## Budget Health Check
+
+Calculate percentages of net income:
 
 savings_rate = total_savings / net_income * 100
 fixed_pct = total_fixed / net_income * 100
@@ -81,7 +84,7 @@ savings_check = total_savings
 
 needs_pct = needs / net_income * 100
 wants_pct = wants / net_income * 100
-savings_pct_check = savings_check / net_income * 100
+savings_pct = savings_check / net_income * 100
 
 ## Annual Projections
 
@@ -94,18 +97,18 @@ annual_variable = total_variable * 12
 
 Current emergency fund balance:
 
-current_emergency = 8500
+current_emergency = $8500
 monthly_expenses = total_fixed + total_variable
 months_runway = current_emergency / monthly_expenses
 target_months = 6
-target_fund = target_months * monthly_expenses
+target_fund = monthly_expenses * target_months
 shortfall = target_fund - current_emergency
-months_to_goal = shortfall / emergency_fund_target
+months_to_goal = shortfall / emergency_fund_contribution
 
-## Discretionary Breakdown
+## Daily Discretionary
 
-Per-day discretionary spending:
+Per-day discretionary spending as a rate:
 
-daily_dining = dining_out / 30
-daily_entertainment = entertainment / 30
-daily_discretionary = (dining_out + entertainment) / 30
+daily_dining = $300/month per day
+daily_entertainment = $200/month per day
+daily_discretionary = $500/month per day

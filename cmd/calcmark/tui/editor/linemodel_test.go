@@ -188,7 +188,7 @@ func TestComputeLineModel_EditMode_NoDuplicate(t *testing.T) {
 	input := LineModelInput{
 		Lines:         []string{"this is a really long line that should wrap"},
 		BlockIDs:      []string{"block1"},
-		IsCalcLine:   []bool{false},
+		IsCalcLine:    []bool{false},
 		LineResults:   []string{"rendered"},
 		SourceWidth:   20,
 		PreviewWidth:  40,

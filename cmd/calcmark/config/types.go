@@ -26,6 +26,15 @@ type ThemeConfig struct {
 	Bright    string `mapstructure:"bright"`    // Syntax emphasis
 	Separator string `mapstructure:"separator"` // Divider lines
 
+	// Editor colors
+	EditLineBg    string `mapstructure:"edit_line_bg"`    // Background for line being edited
+	EditLineFg    string `mapstructure:"edit_line_fg"`    // Foreground for line being edited
+	CursorBg      string `mapstructure:"cursor_bg"`       // Cursor background color
+	CursorFg      string `mapstructure:"cursor_fg"`       // Cursor foreground color
+	CurrentLineBg string `mapstructure:"current_line_bg"` // Background for current line in normal mode
+	CurrentLineFg string `mapstructure:"current_line_fg"` // Foreground for current line in normal mode
+	LineNumber    string `mapstructure:"line_number"`     // Line number color
+
 	// Markdown preview colors
 	MdText    string `mapstructure:"md_text"`    // Markdown body text
 	MdH1Bg    string `mapstructure:"md_h1_bg"`   // H1 background

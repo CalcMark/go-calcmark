@@ -245,6 +245,35 @@ salary_gbp = salary in GBP      # → £43000.00
 
 Exchange rates use the format `FROM/TO: rate` where 1 unit of FROM equals `rate` units of TO.
 
+### Global Variables
+
+Define reusable values in the frontmatter that can be referenced throughout your document:
+
+```yaml
+---
+globals:
+  base_date: Jan 15 2025
+  tax_rate: 0.32
+  base_price: $100
+  sprint_length: 2 weeks
+  bandwidth: 100 MB/s
+---
+net_price = base_price * (1 - tax_rate)
+project_end = base_date + sprint_length * 6
+monthly_transfer = bandwidth over 30 days
+```
+
+Globals support all CalcMark literal types:
+- **Numbers**: `42`, `3.14`, `1.5K`, `25%`
+- **Quantities**: `10 meters`, `5 kg`, `100 MB`
+- **Currencies**: `$100`, `50 EUR`
+- **Dates**: `Jan 15 2025`
+- **Durations**: `5 days`, `2 weeks`
+- **Rates**: `100 MB/s`, `$50/hour`
+- **Booleans**: `true`, `false`
+
+Note: Globals must be literal values. Expressions like `1 + 1` are not allowed.
+
 ### Built-in Functions
 
 | Function | Description | Example |

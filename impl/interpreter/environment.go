@@ -12,7 +12,7 @@ import (
 // This is separate from Go's context.Context - it's simply variable storage for CalcMark variables.
 type Environment struct {
 	vars          map[string]types.Type
-	exchangeRates map[string]decimal.Decimal // "USD/EUR" -> rate
+	exchangeRates map[string]decimal.Decimal // "USD_EUR" -> rate
 }
 
 // NewEnvironment creates a new empty environment with built-in constants.
@@ -76,16 +76,16 @@ func (e *Environment) GetAllVariables() map[string]types.Type {
 }
 
 // SetExchangeRate sets an exchange rate for currency conversion.
-// Key format: "FROM/TO" (e.g., "USD/EUR").
+// Key format: "FROM_TO" (e.g., "USD_EUR").
 func (e *Environment) SetExchangeRate(from, to string, rate decimal.Decimal) {
-	key := strings.ToUpper(from) + "/" + strings.ToUpper(to)
+	key := strings.ToUpper(from) + "_" + strings.ToUpper(to)
 	e.exchangeRates[key] = rate
 }
 
 // GetExchangeRate retrieves an exchange rate for currency conversion.
 // Returns the rate and true if found, zero and false if not defined.
 func (e *Environment) GetExchangeRate(from, to string) (decimal.Decimal, bool) {
-	key := strings.ToUpper(from) + "/" + strings.ToUpper(to)
+	key := strings.ToUpper(from) + "_" + strings.ToUpper(to)
 	rate, ok := e.exchangeRates[key]
 	return rate, ok
 }

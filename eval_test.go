@@ -195,7 +195,7 @@ func TestCurrencyConversion(t *testing.T) {
 			name: "USD to EUR",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 ---
 100 USD in EUR`,
 			want: "€92.00",
@@ -204,7 +204,7 @@ exchange:
 			name: "EUR to GBP",
 			input: `---
 exchange:
-  EUR/GBP: 0.86
+  EUR_GBP: 0.86
 ---
 50 EUR in GBP`,
 			want: "£43.00",
@@ -213,7 +213,7 @@ exchange:
 			name: "using dollar symbol",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 ---
 $200 in EUR`,
 			want: "€184.00",
@@ -222,7 +222,7 @@ $200 in EUR`,
 			name: "no exchange rate defined",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 ---
 100 USD in GBP`,
 			wantErr: true,
@@ -231,7 +231,7 @@ exchange:
 			name: "same currency no-op with code",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 ---
 100 USD in USD`,
 			want: "USD100.00", // Input uses code, output preserves code
@@ -240,7 +240,7 @@ exchange:
 			name: "same currency no-op with symbol",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 ---
 $100 in USD`,
 			want: "$100.00", // Input uses symbol, output preserves symbol
@@ -249,7 +249,7 @@ $100 in USD`,
 			name: "variable with currency conversion",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 ---
 price = $1000
 price in EUR`,
@@ -293,7 +293,7 @@ func TestFrontmatterErrors(t *testing.T) {
 			name: "unclosed frontmatter",
 			input: `---
 exchange:
-  USD/EUR: 0.92
+  USD_EUR: 0.92
 x = 10`,
 			wantErr: "missing closing '---' delimiter",
 		},
@@ -304,7 +304,7 @@ exchange:
   USDEUR: 0.92
 ---
 x = 10`,
-			wantErr: "expected format 'FROM/TO'",
+			wantErr: "expected format 'FROM_TO'",
 		},
 	}
 
@@ -329,4 +329,123 @@ func containsSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// Test globals in frontmatter
+func TestGlobalsInFrontmatter(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "simple number global",
+			input: `---
+globals:
+  tax_rate: 0.32
+---
+100 * tax_rate`,
+			want: "32",
+		},
+		{
+			name: "currency global",
+			input: `---
+globals:
+  base_price: $100
+---
+base_price * 2`,
+			want: "$200.00",
+		},
+		{
+			name: "quantity global",
+			input: `---
+globals:
+  distance: 42 km
+---
+distance * 2`,
+			want: "84 km",
+		},
+		{
+			name: "duration global",
+			input: `---
+globals:
+  sprint_length: 2 weeks
+---
+sprint_length * 3`,
+			want: "6 week", // Duration uses canonical singular unit
+		},
+		{
+			name: "globals with exchange rates",
+			input: `---
+exchange:
+  USD_EUR: 0.92
+globals:
+  base_price: $100
+---
+base_price in EUR`,
+			want: "€92.00",
+		},
+		{
+			name: "multiple globals",
+			input: `---
+globals:
+  price: $50
+  quantity: 3
+---
+total = price * quantity
+total`,
+			want: "$150.00",
+		},
+		{
+			name: "rate global",
+			input: `---
+globals:
+  bandwidth: 100 MB/s
+---
+bandwidth over 10 seconds`,
+			want: "1000 MB",
+		},
+		{
+			name: "expression not allowed in global",
+			input: `---
+globals:
+  sum: 1 + 1
+---
+sum`,
+			wantErr: true,
+		},
+		{
+			name: "unknown frontmatter key rejected",
+			input: `---
+my_var: 42
+---
+my_var`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Eval(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got result: %v", result.Value)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if result.Value == nil {
+				t.Error("expected value, got nil")
+				return
+			}
+			got := result.Value.String()
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
 }

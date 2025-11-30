@@ -1,6 +1,7 @@
 # Back-of-Napkin System Sizing
 
 Estimating infrastructure for a social media app with 10M monthly active users.
+Uses CalcMark's built-in network, storage, and capacity planning functions.
 
 ## User Activity Assumptions
 
@@ -12,6 +13,7 @@ Posts per day (each user posts ~2x/week on average):
 
 posts_per_user_per_day = 2 / 7
 daily_posts = daily_users * posts_per_user_per_day
+daily_posts_napkin = daily_posts as napkin
 
 ## Read vs Write Ratio
 
@@ -21,74 +23,106 @@ reads_per_user_per_day = 100
 daily_reads = daily_users * reads_per_user_per_day
 read_write_ratio = daily_reads / daily_posts
 
+## Traffic Rates
+
+Convert daily totals to per-second rates using CalcMark rate conversion:
+
+read_rate = (daily_reads)/day per second
+write_rate = (daily_posts)/day per second
+
+Peak traffic is typically 3x average:
+
+peak_multiplier = 3
+peak_read_rate = read_rate * peak_multiplier
+
 ## Storage Requirements
 
 Average post size (text + metadata, excluding media):
 
-avg_post_size_kb = 2
-daily_storage_kb = daily_posts * avg_post_size_kb
-daily_storage_gb = daily_storage_kb / 1000000
-yearly_storage_gb = daily_storage_gb * 365
+avg_post_size = 2 KB
+daily_post_storage = daily_posts * avg_post_size
+yearly_post_storage = daily_post_storage * 365
 
 Media storage (images average 500KB, 30% of posts have images):
 
 posts_with_media_pct = 0.30
-avg_image_size_kb = 500
-daily_media_kb = daily_posts * posts_with_media_pct * avg_image_size_kb
-daily_media_gb = daily_media_kb / 1000000
-yearly_media_gb = daily_media_gb * 365
+avg_image_size = 500 KB
+daily_media_storage = daily_posts * posts_with_media_pct * avg_image_size
+yearly_media_storage = daily_media_storage * 365
 
-total_yearly_storage_tb = (yearly_storage_gb + yearly_media_gb) / 1000
+Total storage with compression (gzip typically achieves 3:1 on text):
+
+compressed_posts = compress(yearly_post_storage, gzip)
+total_yearly_storage = compressed_posts + yearly_media_storage
 
 ## Database Sizing
 
-Using capacity function to determine server count:
+Using natural capacity planning syntax:
 
-seconds_per_day = 86400
-queries_per_second = daily_reads / seconds_per_day
-queries_per_server = 5000
-db_read_replicas = capacity(queries_per_second, queries_per_server, server, 0.20)
-
-Write capacity (primary DB):
-
-writes_per_second = daily_posts / seconds_per_day
-writes_per_primary = 2000
-db_primaries = capacity(writes_per_second, writes_per_primary, server, 0.25)
-
+db_read_replicas = peak_read_rate at 5000 req/s per server with 20% buffer
+db_primaries = write_rate at 2000 req/s per server with 25% buffer
 total_db_servers = db_read_replicas + db_primaries
 
-## Network Estimates
+## Storage I/O Performance
 
-Bandwidth for reads (assuming 10KB average response):
+Typical database query reads ~5MB of data. Compare storage options:
 
-avg_response_size_kb = 10
-peak_multiplier = 3
-peak_reads_per_second = queries_per_second * peak_multiplier
-peak_bandwidth_kb_per_sec = peak_reads_per_second * avg_response_size_kb
-peak_bandwidth_gbps = peak_bandwidth_kb_per_sec / 125000
+query_data = 5 MB
+hdd_query_time = seek(hdd) + read(query_data, hdd)
+ssd_query_time = seek(ssd) + read(query_data, ssd)
+nvme_query_time = seek(nvme) + read(query_data, nvme)
+
+NVMe is clearly the right choice for hot data.
+
+## Network Latency Budget
+
+API response latency breakdown for regional users:
+
+network_rtt = rtt(regional)
+db_query = nvme_query_time
+app_processing = 10 ms
+total_latency = network_rtt + db_query + app_processing
+
+## Bandwidth Requirements
+
+Average response is 10KB, peak bandwidth in MB/s:
+
+avg_response_kb = 10
+peak_bandwidth_kbs = peak_read_rate * avg_response_kb
+peak_bandwidth_mbs = peak_bandwidth_kbs / 1000
+
+Compare to network capacity:
+
+gigabit_capacity = throughput(gigabit)
+ten_gig_capacity = throughput(ten_gig)
 
 ## CDN and Caching
 
-Cache hit ratio target:
+Cache hit ratio target and origin traffic:
 
 cache_hit_target = 0.95
 cache_miss_rate = 1 - cache_hit_target
-origin_requests = daily_reads * cache_miss_rate
+origin_read_rate = read_rate * cache_miss_rate
 
-## Cost Estimates (Rough Cloud Pricing)
+Media transfer time from origin to CDN edge:
 
-db_server_cost_monthly = 500
-cdn_cost_per_tb = 80
-storage_cost_per_tb_monthly = 20
+media_transfer = transfer_time(avg_image_size, continental, ten_gig)
 
-monthly_db_cost = total_db_servers * db_server_cost_monthly
-monthly_storage_cost = total_yearly_storage_tb * storage_cost_per_tb_monthly
+## Availability and Downtime
 
-daily_bandwidth_tb = peak_bandwidth_gbps * seconds_per_day * 8 / 1000000
-monthly_bandwidth_tb = daily_bandwidth_tb * 30
-monthly_cdn_cost = monthly_bandwidth_tb * cdn_cost_per_tb
+Target 99.9% availability (three nines):
+
+monthly_downtime = downtime(0.999, month)
+yearly_downtime = downtime(0.999, year)
+
+For 99.99% (four nines):
+
+strict_monthly_downtime = downtime(0.9999, month)
 
 ## Summary
 
-total_monthly_infra = monthly_db_cost + monthly_storage_cost + monthly_cdn_cost
-cost_per_1k_users = total_monthly_infra / (monthly_users / 1000)
+Key metrics in human-readable format:
+
+storage_napkin = total_yearly_storage as napkin
+traffic_napkin = daily_reads as napkin
+servers_napkin = total_db_servers as napkin

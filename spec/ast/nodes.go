@@ -314,6 +314,26 @@ func (a *Assignment) GetRange() *Range {
 	return a.Range
 }
 
+// FrontmatterAssignment represents an assignment to a frontmatter variable.
+// Syntax: @namespace.property = value
+// Examples:
+//   - @exchange.USD_EUR = 0.92
+//   - @global.tax_rate = 0.32
+type FrontmatterAssignment struct {
+	Namespace string // "exchange" or "global"
+	Property  string // e.g., "USD_EUR" or "tax_rate"
+	Value     Node
+	Range     *Range
+}
+
+func (f *FrontmatterAssignment) String() string {
+	return fmt.Sprintf("FrontmatterAssignment(@%s.%s, %s)", f.Namespace, f.Property, f.Value)
+}
+
+func (f *FrontmatterAssignment) GetRange() *Range {
+	return f.Range
+}
+
 // Expression represents a standalone expression (no assignment)
 type Expression struct {
 	Expr  Node

@@ -189,8 +189,10 @@ func (l *Lexer) readNumber() Token {
 		}
 	}
 
-	// Read decimal part
-	if l.currentChar() == '.' {
+	// Read decimal part - only consume the dot if followed by at least one digit.
+	// "2.5" is valid, but "2." is not (trailing dot without decimals is invalid).
+	// This ensures "2. Second" (markdown ordered list) doesn't tokenize as a calculation.
+	if l.currentChar() == '.' && unicode.IsDigit(l.peek(1)) {
 		numStr.WriteRune('.')
 		l.advance()
 		for l.currentChar() != 0 {
@@ -946,6 +948,37 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			tokens = append(tokens, l.makeToken(COMMA, ",", 1))
 			l.advance()
 			continue
+		}
+
+		// At-sign prefix for frontmatter variables (@exchange.USD_EUR, @global.tax_rate)
+		// This is a REPL-only syntax for modifying frontmatter values.
+		// In actual CalcMark documents, frontmatter is YAML between --- markers.
+		// We emit: AT_PREFIX, IDENTIFIER (namespace), DOT, IDENTIFIER (property)
+		if char == '@' {
+			// After @, we expect an identifier (namespace like "exchange" or "global")
+			nextChar := l.peek(1)
+			if l.isIdentifierChar(nextChar, true) {
+				tokens = append(tokens, l.makeToken(AT_PREFIX, "@", 1))
+				l.advance()
+
+				// Read the namespace identifier
+				namespaceToken := l.readIdentifier()
+				tokens = append(tokens, namespaceToken)
+
+				// After namespace, we expect a dot
+				if l.currentChar() == '.' {
+					tokens = append(tokens, l.makeToken(DOT, ".", 1))
+					l.advance()
+
+					// After dot, we expect property identifier
+					if l.isIdentifierChar(l.currentChar(), true) {
+						propertyToken := l.readIdentifier()
+						tokens = append(tokens, propertyToken)
+					}
+				}
+				continue
+			}
+			// @ not followed by identifier - fall through to unknown character error
 		}
 
 		// Octothorpe - not allowed mid-line in calculations

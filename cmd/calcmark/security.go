@@ -11,11 +11,9 @@ import (
 // Prevents path traversal attacks and validates file constraints.
 func validateFilePath(path string) error {
 	// Security: Clean and resolve the path to prevent traversal attacks
-	// filepath.Clean normalizes paths and removes ".." sequences
 	cleanPath := filepath.Clean(path)
 
 	// Security: Ensure the cleaned path doesn't escape current working directory
-	// After cleaning, check if ".." still appears (shouldn't happen, but defense in depth)
 	if strings.Contains(cleanPath, "..") {
 		return fmt.Errorf("invalid path: path traversal detected")
 	}
@@ -33,7 +31,6 @@ func validateFilePath(path string) error {
 	}
 
 	// Security: Ensure the resolved path is within the current working directory
-	// This prevents accessing files outside the allowed scope via symlinks or absolute paths
 	relPath, err := filepath.Rel(cwd, absPath)
 	if err != nil || strings.HasPrefix(relPath, "..") {
 		return fmt.Errorf("invalid path: file must be within current directory")
@@ -45,7 +42,7 @@ func validateFilePath(path string) error {
 		return fmt.Errorf("invalid file extension: expected .cm or .calcmark")
 	}
 
-	// Security: Verify file exists and is a regular file (not a directory or symlink target to directory)
+	// Security: Verify file exists and is a regular file
 	info, err := os.Stat(absPath)
 	if err != nil {
 		return fmt.Errorf("stat file: %w", err)
@@ -56,7 +53,7 @@ func validateFilePath(path string) error {
 	}
 
 	// Security: Limit file size to 1MB
-	const maxFileSize = 1 * 1024 * 1024 // 1MB
+	const maxFileSize = 1 * 1024 * 1024
 	if info.Size() > maxFileSize {
 		return fmt.Errorf("file too large: %d bytes (max %d)", info.Size(), maxFileSize)
 	}

@@ -278,3 +278,164 @@ func TestBuiltinConstantsUsage(t *testing.T) {
 		t.Errorf("2 * PI = %v, want ~6.28", val)
 	}
 }
+
+// TestFrontmatterGlobalAssignment tests @global.name = value syntax.
+func TestFrontmatterGlobalAssignment(t *testing.T) {
+	interp := NewInterpreter()
+
+	// @global.tax_rate = 0.32
+	fmAssign := &ast.FrontmatterAssignment{
+		Namespace: "global",
+		Property:  "tax_rate",
+		Value:     &ast.NumberLiteral{Value: "0.32"},
+	}
+
+	result, err := interp.evalFrontmatterAssignment(fmAssign)
+	if err != nil {
+		t.Fatalf("evalFrontmatterAssignment error = %v", err)
+	}
+
+	// Verify the result value
+	num, ok := result.(*types.Number)
+	if !ok {
+		t.Fatalf("Expected *types.Number, got %T", result)
+	}
+	if num.String() != "0.32" {
+		t.Errorf("Result = %v, want 0.32", num.String())
+	}
+
+	// Verify the variable is accessible
+	id := &ast.Identifier{Name: "tax_rate"}
+	varResult, err := interp.evalIdentifier(id)
+	if err != nil {
+		t.Fatalf("evalIdentifier error = %v", err)
+	}
+	if varResult.String() != "0.32" {
+		t.Errorf("tax_rate = %v, want 0.32", varResult.String())
+	}
+}
+
+// TestFrontmatterExchangeRateAssignment tests @exchange.FROM_TO = rate syntax.
+func TestFrontmatterExchangeRateAssignment(t *testing.T) {
+	interp := NewInterpreter()
+
+	// @exchange.USD_EUR = 0.92
+	fmAssign := &ast.FrontmatterAssignment{
+		Namespace: "exchange",
+		Property:  "USD_EUR",
+		Value:     &ast.NumberLiteral{Value: "0.92"},
+	}
+
+	result, err := interp.evalFrontmatterAssignment(fmAssign)
+	if err != nil {
+		t.Fatalf("evalFrontmatterAssignment error = %v", err)
+	}
+
+	// Verify the result value
+	num, ok := result.(*types.Number)
+	if !ok {
+		t.Fatalf("Expected *types.Number, got %T", result)
+	}
+	if num.String() != "0.92" {
+		t.Errorf("Result = %v, want 0.92", num.String())
+	}
+
+	// Verify the exchange rate is set in environment
+	rate, ok := interp.env.GetExchangeRate("USD", "EUR")
+	if !ok {
+		t.Fatal("Exchange rate USD_EUR not found")
+	}
+	if !rate.Equal(decimal.NewFromFloat(0.92)) {
+		t.Errorf("Exchange rate = %v, want 0.92", rate)
+	}
+}
+
+// TestFrontmatterExchangeRateInvalidFormat tests invalid exchange key formats.
+func TestFrontmatterExchangeRateInvalidFormat(t *testing.T) {
+	interp := NewInterpreter()
+
+	tests := []struct {
+		name     string
+		property string
+	}{
+		{"missing separator", "USDEUR"},
+		{"single currency", "USD"},
+		{"empty to currency", "USD_"},
+		{"empty from currency", "_EUR"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fmAssign := &ast.FrontmatterAssignment{
+				Namespace: "exchange",
+				Property:  tt.property,
+				Value:     &ast.NumberLiteral{Value: "1.0"},
+			}
+
+			_, err := interp.evalFrontmatterAssignment(fmAssign)
+			if err == nil {
+				t.Errorf("Expected error for property %q, got none", tt.property)
+			}
+		})
+	}
+}
+
+// TestFrontmatterUnknownNamespace tests that unknown namespaces are rejected.
+func TestFrontmatterUnknownNamespace(t *testing.T) {
+	interp := NewInterpreter()
+
+	fmAssign := &ast.FrontmatterAssignment{
+		Namespace: "unknown",
+		Property:  "foo",
+		Value:     &ast.NumberLiteral{Value: "42"},
+	}
+
+	_, err := interp.evalFrontmatterAssignment(fmAssign)
+	if err == nil {
+		t.Error("Expected error for unknown namespace, got none")
+	}
+}
+
+// TestParseExchangeKey tests the parseExchangeKey helper function.
+func TestParseExchangeKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		wantFrom string
+		wantTo   string
+		wantErr  bool
+	}{
+		{"valid key", "USD_EUR", "USD", "EUR", false},
+		{"lowercase", "usd_eur", "USD", "EUR", false},
+		{"mixed case", "Usd_Eur", "USD", "EUR", false},
+		{"with spaces", " USD _ EUR ", "USD", "EUR", false},
+		{"missing separator", "USDEUR", "", "", true},
+		{"too many parts", "USD_EUR_GBP", "", "", true},
+		{"empty from", "_EUR", "", "", true},
+		{"empty to", "USD_", "", "", true},
+		{"both empty", "_", "", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			from, to, err := parseExchangeKey(tt.key)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Expected error for %q, got none", tt.key)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error for %q: %v", tt.key, err)
+			}
+			if from != tt.wantFrom {
+				t.Errorf("from = %q, want %q", from, tt.wantFrom)
+			}
+			if to != tt.wantTo {
+				t.Errorf("to = %q, want %q", to, tt.wantTo)
+			}
+		})
+	}
+}

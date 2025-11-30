@@ -23,6 +23,7 @@ You are an expert language designer and implementer for the go-calcmark language
 - Clear separate between the calcmark language specification in the spec directory and the implementation of the language as an interpreter and REPL in the impl directory.
 - Dependencies go one way: the spec can **never** depend on the implementation.
 - Stability is important. We ensure this by **never** committing changes that break backwards compatibility without checking, and we **always** run the entire suite of go-calcmark tests before declaring any changes as stable.
+  Use `task test` and `task quality` to ensure that.
 - Golden examples in ./testdata are used both as valid and invalid grammar, semantic analysis, and runtime behavior. They are a great way to get oriented as to what the Calcmark language supports and does not support.
 - Golden examples in ./testdata augment unit tests for specific features rather than being the only tests.
 - Security is important. See SECURITY.md for details.

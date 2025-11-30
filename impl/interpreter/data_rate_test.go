@@ -161,10 +161,10 @@ func TestDataRateUnitConversions(t *testing.T) {
 // TestDataSizeUnitRegistry verifies the unit registry has correct conversions.
 func TestDataSizeUnitRegistry(t *testing.T) {
 	tests := []struct {
-		name     string
-		unit     string
-		value    float64
-		toBits   float64 // Expected value in bits (base unit)
+		name   string
+		unit   string
+		value  float64
+		toBits float64 // Expected value in bits (base unit)
 	}{
 		// Bytes
 		{"byte", "byte", 1, 8},

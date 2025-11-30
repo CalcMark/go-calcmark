@@ -100,10 +100,88 @@
             background: none;
             padding: 0;
         }
+
+        .frontmatter {
+            margin-bottom: 2em;
+            padding: 1em 1.5em;
+            background: #f0f4f8;
+            border-radius: 6px;
+            border: 1px solid #d0d7de;
+        }
+
+        .frontmatter h3 {
+            margin: 0 0 0.75em 0;
+            font-size: 0.9em;
+            color: #57606a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .frontmatter dl {
+            margin: 0;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.25em 1em;
+        }
+
+        .frontmatter dt {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            font-size: 0.9em;
+            color: #0550ae;
+        }
+
+        .frontmatter dt::before {
+            content: "@";
+            color: #6e7781;
+        }
+
+        .frontmatter dd {
+            margin: 0;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            font-size: 0.9em;
+            color: #24292e;
+        }
+
+        .frontmatter .exchange dt::before {
+            content: "";
+        }
+
+        .frontmatter .exchange dt {
+            color: #6e7781;
+        }
+
+        .frontmatter hr {
+            border: none;
+            border-top: 1px solid #d0d7de;
+            margin: 0.75em 0;
+        }
     </style>
 </head>
 
 <body>
+    {{if .Frontmatter}}
+    <div class="frontmatter">
+        {{if .Frontmatter.Globals}}
+        <h3>Globals</h3>
+        <dl>
+            {{range .Frontmatter.Globals}}
+            <dt>{{.Name}}</dt>
+            <dd>{{.Value}}</dd>
+            {{end}}
+        </dl>
+        {{end}}
+        {{if and .Frontmatter.Globals .Frontmatter.Exchange}}<hr>{{end}}
+        {{if .Frontmatter.Exchange}}
+        <h3>Exchange Rates</h3>
+        <dl class="exchange">
+            {{range .Frontmatter.Exchange}}
+            <dt>{{.From}} → {{.To}}</dt>
+            <dd>{{.Rate}}</dd>
+            {{end}}
+        </dl>
+        {{end}}
+    </div>
+    {{end}}
     {{range .Blocks}}
     {{if eq .Type "calculation"}}
     <div class="calc-block">

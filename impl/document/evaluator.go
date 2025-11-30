@@ -5,9 +5,11 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // Evaluator evaluates CalcMark documents using the interpreter.
@@ -35,11 +37,17 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 	e.env = interpreter.NewEnvironment()
 	e.diagnostics = nil
 
+	// Apply frontmatter (exchange rates, globals) to environment before evaluation
+	if err := doc.ApplyFrontmatter(e.env); err != nil {
+		return fmt.Errorf("frontmatter: %w", err)
+	}
+
 	// Evaluate blocks in document order (top-down)
 	for _, node := range doc.GetBlocks() {
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
-			err := e.evaluateCalcBlock(node.ID, block)
+			// Pass doc so @global/@exchange update frontmatter
+			err := e.evaluateCalcBlockWithDoc(node.ID, block, doc)
 			if err != nil {
 				return err
 			}
@@ -104,8 +112,8 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 
 	for _, node := range doc.GetBlocks() {
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			// Evaluate to collect variable values (ignore errors for now)
-			_ = e.evaluateCalcBlock(node.ID, cb)
+			// Evaluate to collect variable values (pass doc for frontmatter updates)
+			_ = e.evaluateCalcBlockWithDoc(node.ID, cb, doc)
 		}
 	}
 
@@ -176,8 +184,9 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 // for variables where this block is the authoritative (last) definition.
 // This ensures reactive semantics: later assignments "win" over earlier ones.
 func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.CalcBlock, env *interpreter.Environment, lastDefBlock map[string]string) error {
-	// Clear previous error
+	// Clear previous errors and diagnostics
 	block.SetError(nil)
+	block.ClearDiagnostics()
 
 	// 1. Parse source to AST
 	source := strings.Join(block.Source(), "\n")
@@ -188,6 +197,16 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	nodes, err := parser.Parse(source)
 	if err != nil {
 		block.SetError(err)
+		// Convert ParseError to Diagnostic for position info
+		if pe, ok := err.(*parser.ParseError); ok && pe.Line > 0 {
+			block.AddDiagnostic(document.Diagnostic{
+				Severity: "error",
+				Code:     "parse_error",
+				Message:  pe.Message,
+				Line:     pe.Line,
+				Column:   pe.Column,
+			})
+		}
 		return err
 	}
 
@@ -203,6 +222,19 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	diagnostics := checker.Check(nodes)
 	for _, diag := range diagnostics {
 		if diag.Severity == semantic.Error {
+			// Store structured diagnostic with position info
+			blockDiag := document.Diagnostic{
+				Severity: "error",
+				Code:     diag.Code,
+				Message:  diag.Message,
+			}
+			if diag.Range != nil {
+				blockDiag.Line = diag.Range.Start.Line
+				blockDiag.Column = diag.Range.Start.Column
+			}
+			block.AddDiagnostic(blockDiag)
+
+			// Also set legacy error for backwards compatibility
 			err := fmt.Errorf("%s: %s", diag.Code, diag.Message)
 			block.SetError(err)
 			return err
@@ -242,8 +274,15 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 // evaluateCalcBlock evaluates a single CalcBlock.
 // Steps: parse → semantic check → interpret → store results
 func (e *Evaluator) evaluateCalcBlock(blockID string, block *document.CalcBlock) error {
-	// Clear previous error
+	return e.evaluateCalcBlockWithDoc(blockID, block, nil)
+}
+
+// evaluateCalcBlockWithDoc evaluates a CalcBlock and optionally updates document frontmatter.
+// If doc is non-nil, frontmatter assignments (@global, @exchange) update the document.
+func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.CalcBlock, doc *document.Document) error {
+	// Clear previous errors and diagnostics
 	block.SetError(nil)
+	block.ClearDiagnostics()
 
 	// 1. Parse source to AST
 	source := strings.Join(block.Source(), "\n")
@@ -254,6 +293,16 @@ func (e *Evaluator) evaluateCalcBlock(blockID string, block *document.CalcBlock)
 	nodes, err := parser.Parse(source)
 	if err != nil {
 		block.SetError(err)
+		// Convert ParseError to Diagnostic for position info
+		if pe, ok := err.(*parser.ParseError); ok && pe.Line > 0 {
+			block.AddDiagnostic(document.Diagnostic{
+				Severity: "error",
+				Code:     "parse_error",
+				Message:  pe.Message,
+				Line:     pe.Line,
+				Column:   pe.Column,
+			})
+		}
 		return err
 	}
 
@@ -273,6 +322,19 @@ func (e *Evaluator) evaluateCalcBlock(blockID string, block *document.CalcBlock)
 	// Check for errors
 	for _, diag := range diagnostics {
 		if diag.Severity == semantic.Error {
+			// Store structured diagnostic with position info
+			blockDiag := document.Diagnostic{
+				Severity: "error",
+				Code:     diag.Code,
+				Message:  diag.Message,
+			}
+			if diag.Range != nil {
+				blockDiag.Line = diag.Range.Start.Line
+				blockDiag.Column = diag.Range.Start.Column
+			}
+			block.AddDiagnostic(blockDiag)
+
+			// Also set legacy error for backwards compatibility
 			err := fmt.Errorf("%s: %s", diag.Code, diag.Message)
 			block.SetError(err)
 			return err
@@ -294,8 +356,50 @@ func (e *Evaluator) evaluateCalcBlock(blockID string, block *document.CalcBlock)
 		block.SetLastValue(results[len(results)-1])
 	}
 
+	// 5. Update document frontmatter for @global and @exchange assignments
+	if doc != nil {
+		e.updateFrontmatterFromNodes(doc, nodes, results)
+	}
+
 	// Mark as clean (evaluated successfully)
 	block.SetDirty(false)
 
 	return nil
+}
+
+// updateFrontmatterFromNodes updates the document's frontmatter based on
+// FrontmatterAssignment nodes that were just evaluated.
+func (e *Evaluator) updateFrontmatterFromNodes(doc *document.Document, nodes []ast.Node, results []types.Type) {
+	resultIdx := 0
+	for _, node := range nodes {
+		fmAssign, ok := node.(*ast.FrontmatterAssignment)
+		if !ok {
+			// Non-frontmatter nodes also produce results
+			if resultIdx < len(results) {
+				resultIdx++
+			}
+			continue
+		}
+
+		// Get the result value for this assignment
+		if resultIdx >= len(results) {
+			continue
+		}
+		result := results[resultIdx]
+		resultIdx++
+
+		fm := doc.EnsureFrontmatter()
+
+		switch fmAssign.Namespace {
+		case "global":
+			// Store the result's string representation as the expression
+			fm.SetGlobal(fmAssign.Property, result.String())
+
+		case "exchange":
+			// Store the exchange rate
+			if dec, err := types.ToDecimal(result); err == nil {
+				fm.SetExchangeRate(fmAssign.Property, dec)
+			}
+		}
+	}
 }

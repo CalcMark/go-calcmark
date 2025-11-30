@@ -100,9 +100,9 @@ func ComputeLineModel(input LineModelInput) LineModel {
 
 // blockInfo groups consecutive lines with the same block ID.
 type blockInfo struct {
-	blockID      string
-	lineIndices  []int // Original line indices in this block
-	lastLineIdx  int
+	blockID     string
+	lineIndices []int // Original line indices in this block
+	lastLineIdx int
 }
 
 func groupLinesByBlock(input LineModelInput) []blockInfo {

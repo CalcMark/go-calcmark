@@ -54,6 +54,19 @@ func (da *DependencyAnalyzer) AnalyzeBlock(block *CalcBlock) error {
 			}
 		}
 
+		// Find frontmatter variable definitions (@global.name = value)
+		// These define global variables that can be referenced by other calculations
+		if fmAssign, ok := node.(*ast.FrontmatterAssignment); ok {
+			if fmAssign.Namespace == "global" {
+				if !definedSet[fmAssign.Property] {
+					definedSet[fmAssign.Property] = true
+					definedOrder = append(definedOrder, fmAssign.Property)
+				}
+			}
+			// Note: @exchange assignments don't create regular variables
+			// They create exchange rates which are accessed via unit conversion
+		}
+
 		// Find variable references (identifiers)
 		extractIdentifiers(node, referenced)
 	}
@@ -88,6 +101,10 @@ func extractIdentifiers(node ast.Node, identifiers map[string]bool) {
 
 	case *ast.Assignment:
 		// Don't include the assigned variable, but do include RHS
+		extractIdentifiers(n.Value, identifiers)
+
+	case *ast.FrontmatterAssignment:
+		// Include identifiers referenced in the value expression
 		extractIdentifiers(n.Value, identifiers)
 
 	case *ast.BinaryOp:

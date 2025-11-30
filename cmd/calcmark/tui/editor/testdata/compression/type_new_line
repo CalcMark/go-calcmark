@@ -1,0 +1,98 @@
+# Test typing on a newly inserted line
+# Reproduces bug: preview results misalign after typing
+
+# Initial state
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate to line 5 (lz4_compressed)
+run observe=debug
+key j
+key j
+key j
+key j
+key j
+----
+-- debug:
+mode=0 cursorLine=5 cursorCol=0 cursorVisual=6 cursorHighlight=6 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Insert line below with 'o'
+run observe=debug
+key o
+----
+-- debug:
+mode=1 cursorLine=6 cursorCol=0 cursorVisual=8 cursorHighlight=8 scrollOffset=0 totalSource=14 totalVisual=22 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type "This"
+run observe=debug
+type This
+----
+-- debug:
+mode=1 cursorLine=6 cursorCol=4 cursorVisual=8 cursorHighlight=8 scrollOffset=0 totalSource=14 totalVisual=22 editBuf="This" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check alignment - preview should match source
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:4 4:5 5:6 6:8 7:9 8:11 9:13 10:15 11:16 12:17 13:19]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Compression Function - compr..."
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content=""
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="# Compressed size estimates fo..."
+  [3] srcIdx=2 lineNum=0 wrap=true pad=false content="different compression types"
+  [4] srcIdx=3 lineNum=4 wrap=false pad=false content="gzip_compressed = compress(1 G..."
+  [5] srcIdx=4 lineNum=5 wrap=false pad=false content="lz4_compressed = compress(100 ..."
+  [6] srcIdx=5 lineNum=6 wrap=false pad=false content="zstd_compressed = compress(500..."
+  [7] srcIdx=5 lineNum=0 wrap=true pad=false content="zstd)"
+  [8] srcIdx=6 lineNum=7 wrap=false pad=false content="This" <CURSOR>
+  [9] srcIdx=7 lineNum=8 wrap=false pad=false content="bzip2_compressed = compress(10..."
+  [10] srcIdx=7 lineNum=0 wrap=true pad=false content="bzip2)"
+  [11] srcIdx=8 lineNum=9 wrap=false pad=false content="snappy_compressed = compress(3..."
+  [12] srcIdx=8 lineNum=0 wrap=true pad=false content="snappy)"
+  [13] srcIdx=9 lineNum=10 wrap=false pad=false content="no_compression = compress(200 ..."
+  [14] srcIdx=9 lineNum=0 wrap=true pad=false content="none)"
+  [15] srcIdx=10 lineNum=11 wrap=false pad=false content=""
+  [16] srcIdx=11 lineNum=12 wrap=false pad=false content="# Use in calculations"
+  [17] srcIdx=12 lineNum=13 wrap=false pad=false content="storage_savings = 10 GB - comp..."
+  [18] srcIdx=12 lineNum=0 wrap=true pad=false content="GB, gzip)"
+  [19] srcIdx=13 lineNum=14 wrap=false pad=false content="compressed_transfer = "
+  [20] srcIdx=13 lineNum=0 wrap=true pad=false content="transfer_time(compress(1 GB, l..."
+  [21] srcIdx=13 lineNum=0 wrap=true pad=false content="global, gigabit)"
+
+# Exit edit mode
+run observe=debug
+key esc
+----
+-- debug:
+mode=0 cursorLine=6 cursorCol=4 cursorVisual=8 cursorHighlight=8 scrollOffset=0 totalSource=14 totalVisual=22 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check alignment after exit
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:4 4:5 5:6 6:8 7:9 8:11 9:13 10:15 11:16 12:17 13:19]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Compression Function - compr..."
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content=""
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="# Compressed size estimates fo..."
+  [3] srcIdx=2 lineNum=0 wrap=true pad=false content="different compression types"
+  [4] srcIdx=3 lineNum=4 wrap=false pad=false content="gzip_compressed = compress(1 G..."
+  [5] srcIdx=4 lineNum=5 wrap=false pad=false content="lz4_compressed = compress(100 ..."
+  [6] srcIdx=5 lineNum=6 wrap=false pad=false content="zstd_compressed = compress(500..."
+  [7] srcIdx=5 lineNum=0 wrap=true pad=false content="zstd)"
+  [8] srcIdx=6 lineNum=7 wrap=false pad=false content="This" <CURSOR>
+  [9] srcIdx=7 lineNum=8 wrap=false pad=false content="bzip2_compressed = compress(10..."
+  [10] srcIdx=7 lineNum=0 wrap=true pad=false content="bzip2)"
+  [11] srcIdx=8 lineNum=9 wrap=false pad=false content="snappy_compressed = compress(3..."
+  [12] srcIdx=8 lineNum=0 wrap=true pad=false content="snappy)"
+  [13] srcIdx=9 lineNum=10 wrap=false pad=false content="no_compression = compress(200 ..."
+  [14] srcIdx=9 lineNum=0 wrap=true pad=false content="none)"
+  [15] srcIdx=10 lineNum=11 wrap=false pad=false content=""
+  [16] srcIdx=11 lineNum=12 wrap=false pad=false content="# Use in calculations"
+  [17] srcIdx=12 lineNum=13 wrap=false pad=false content="storage_savings = 10 GB - comp..."
+  [18] srcIdx=12 lineNum=0 wrap=true pad=false content="GB, gzip)"
+  [19] srcIdx=13 lineNum=14 wrap=false pad=false content="compressed_transfer = "
+  [20] srcIdx=13 lineNum=0 wrap=true pad=false content="transfer_time(compress(1 GB, l..."
+  [21] srcIdx=13 lineNum=0 wrap=true pad=false content="global, gigabit)"

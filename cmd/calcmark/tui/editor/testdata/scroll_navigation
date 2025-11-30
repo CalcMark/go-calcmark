@@ -1,0 +1,70 @@
+# Test scroll offset with navigation after insert
+# This tests scrolling behavior when lines are added
+
+# Initial state
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down through all lines
+run observe=debug
+key j
+key j
+key j
+----
+-- debug:
+mode=0 cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Insert new line at end
+run observe=debug
+key o
+----
+-- debug:
+mode=1 cursorLine=4 cursorCol=0 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type content
+run observe=debug
+type new line
+----
+-- debug:
+mode=1 cursorLine=4 cursorCol=8 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="new line" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Exit edit mode
+run observe=debug
+key esc
+----
+-- debug:
+mode=0 cursorLine=4 cursorCol=8 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate up to top
+run observe=debug
+key k
+key k
+key k
+key k
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate back down to end
+run observe=debug
+key j
+key j
+key j
+key j
+----
+-- debug:
+mode=0 cursorLine=4 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check final state
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Header"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="z = 30"
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="new line" <CURSOR>

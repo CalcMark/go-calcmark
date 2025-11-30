@@ -1,47 +1,69 @@
 # Project Workback Schedule
 
 Planning a product launch with a fixed deadline.
+Uses CalcMark's date arithmetic and compound durations.
 
 ## Key Dates
 
 launch_date = Mar 15 2025
-start_ref = Jan 15 2025
-total_days = 59
+kickoff = today
+
+Days until launch:
+
+days_to_launch = launch_date - kickoff
 
 ## Phase Durations
 
-We need time for: Development, QA, Staging, and Launch prep.
+Using compound duration syntax:
 
-development_weeks = 4
-qa_weeks = 2
-staging_weeks = 1
-launch_prep_days = 5
+development_time = 4 weeks
+qa_time = 2 weeks
+staging_time = 1 week
+launch_prep = 5 days
 
-total_planned_days = development_weeks * 7 + qa_weeks * 7 + staging_weeks * 7 + launch_prep_days
+Total planned time:
+
+total_planned = development_time + qa_time + staging_time + launch_prep
 
 ## Buffer Calculation
 
-buffer_days = total_days - total_planned_days
-buffer_pct = buffer_days / total_days * 100
+buffer = days_to_launch - total_planned
 
 ## Working Backwards from Launch
 
-launch_prep_start = launch_date - 5 days
-staging_start = launch_prep_start - 1 week
-qa_start = staging_start - 2 weeks
-dev_start = qa_start - 4 weeks
+Using date arithmetic to calculate milestone dates:
+
+launch_prep_start = launch_date - launch_prep
+staging_start = launch_prep_start - staging_time
+qa_start = staging_start - qa_time
+dev_start = qa_start - development_time
 
 ## Sprint Planning
 
-Assuming 2-week sprints during development:
+Assuming 2-week sprints during development (4 weeks = 2 sprints):
 
-sprint_weeks = 2
-num_sprints = development_weeks / sprint_weeks
+num_sprints = 2
+sprint_duration = 2 weeks
 
 Points per sprint (team velocity):
 
 team_velocity = 40
 total_points = num_sprints * team_velocity
+
+## Key Milestones
+
+Using "X from Y" syntax (works with date literals):
+
+one_week_from_now = 1 week from today
+two_weeks_from_now = 2 weeks from today
+next_month = 1 month from today
+
+Milestone dates calculated from schedule:
+
+design_review = dev_start + 1 week
+first_sprint_end = dev_start + 2 weeks
+feature_freeze = dev_start + 3 weeks
+code_complete = qa_start
 
 ## Resource Allocation
 
@@ -49,39 +71,48 @@ developers = 4
 qa_engineers = 2
 devops = 1
 
-dev_person_weeks = developers * development_weeks
-qa_person_weeks = qa_engineers * qa_weeks
-devops_person_weeks = devops * (staging_weeks + 1)
+Person-weeks calculation (4 weeks dev, 2 weeks QA, ~2 weeks devops):
+
+dev_person_weeks = developers * 4
+qa_person_weeks = qa_engineers * 2
+devops_person_weeks = devops * 2
 
 total_person_weeks = dev_person_weeks + qa_person_weeks + devops_person_weeks
 
 ## Risk Assessment
 
-Add contingency for unknowns:
+Add contingency for unknowns (~15% buffer = 8 days):
 
-risk_buffer_pct = 0.15
-risk_buffer_days = total_planned_days * risk_buffer_pct
-adjusted_dev_start = dev_start - 8 days
+risk_buffer = 8 days
+adjusted_dev_start = dev_start - risk_buffer
 
-## Cost Estimate
+## Daily Rate Cost Estimate
 
-avg_daily_rate = 800
-work_days_per_week = 5
-total_work_days = total_person_weeks * work_days_per_week
-total_labor_cost = total_work_days * avg_daily_rate
+Using rate syntax for daily costs:
 
-## Milestones Summary
+dev_daily_rate = $800/day
+qa_daily_rate = $700/day
+devops_daily_rate = $900/day
+
+Team cost over development phase:
+
+dev_cost = dev_daily_rate * developers over development_time
+qa_cost = qa_daily_rate * qa_engineers over qa_time
+devops_cost = devops_daily_rate * devops over (staging_time + launch_prep)
+
+## Calendar Summary
 
 Key dates for your calendar:
 
 project_kickoff = adjusted_dev_start
-code_complete = qa_start
+dev_complete = qa_start
 qa_complete = staging_start
 staging_complete = launch_prep_start
 go_live = launch_date
 
-## Go/No-Go Check
+## Schedule Feasibility
 
-days_available = 59
-days_needed = total_planned_days + risk_buffer_days
-schedule_feasible = days_available > days_needed
+Time comparison:
+
+available_time = days_to_launch
+needed_time = total_planned + risk_buffer

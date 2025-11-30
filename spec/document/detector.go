@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/spec/parser"
 )
 
 // Detector analyzes source text and splits it into blocks.
@@ -28,6 +29,7 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 	currentBlockLines := []string{}
 	currentBlockType := BlockText // Default to text
 	emptyLineCount := 0
+	var pendingEmpties []string // Track trailing empties for TUI line preservation
 
 	for _, line := range lines {
 		isEmpty := isEmptyLine(line) // Unicode-aware empty check
@@ -45,7 +47,9 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 
 				// Reset for next block
 				emptyLineCount = 0
-				// Next non-empty line determines block type
+				// Track this empty line in pendingEmpties - they'll be added to the
+				// next block or preserved at end of document for TUI line tracking
+				pendingEmpties = append(pendingEmpties, line)
 				continue
 			}
 
@@ -56,8 +60,21 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 			// Non-empty line
 			emptyLineCount = 0
 
+			// Append pending empties to the last block (if any) to preserve line count
+			// These are the "extra" empty lines beyond the first block-separator empty
+			if len(pendingEmpties) > 0 && len(blocks) > 0 {
+				lastBlock := blocks[len(blocks)-1]
+				switch b := lastBlock.(type) {
+				case *CalcBlock:
+					b.source = append(b.source, pendingEmpties...)
+				case *TextBlock:
+					b.source = append(b.source, pendingEmpties...)
+				}
+			}
+			pendingEmpties = nil
+
 			// Determine if this line is a calculation
-			isCalc, err := d.isCalculation(line)
+			isCalc, err := d.IsCalculation(line)
 			if err != nil {
 				// Lexer error on calc-like line - propagate immediately
 				return nil, err
@@ -92,6 +109,27 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 	// Flush remaining block (if not empty)
 	if len(currentBlockLines) > 0 && !allEmpty(currentBlockLines) {
 		blocks = append(blocks, d.createBlock(currentBlockType, currentBlockLines))
+	} else if len(currentBlockLines) > 0 {
+		// currentBlockLines is all empty - add to pendingEmpties for preservation
+		pendingEmpties = append(pendingEmpties, currentBlockLines...)
+	}
+
+	// Handle trailing empty lines (pendingEmpties) - these are empties at end of document
+	// that need to be preserved for TUI line tracking
+	if len(pendingEmpties) > 0 {
+		if len(blocks) > 0 {
+			// Append to last block to preserve line count
+			lastBlock := blocks[len(blocks)-1]
+			switch b := lastBlock.(type) {
+			case *CalcBlock:
+				b.source = append(b.source, pendingEmpties...)
+			case *TextBlock:
+				b.source = append(b.source, pendingEmpties...)
+			}
+		} else {
+			// No previous block - create a text block for the empty lines
+			blocks = append(blocks, NewTextBlock(pendingEmpties))
+		}
 	}
 
 	return blocks, nil
@@ -107,13 +145,16 @@ func allEmpty(lines []string) bool {
 	return true
 }
 
-// isCalculation checks if a line is a valid calculation.
+// IsCalculation checks if a line is a valid calculation.
 // The approach: if a line parses successfully as a calculation, it's a calculation.
 // If it fails to parse, it's text (markdown).
 //
 // Returns (true, nil) for valid calculation lines.
 // Returns (false, nil) for text lines (including invalid syntax - treated as markdown).
-func (d *Detector) isCalculation(line string) (bool, error) {
+//
+// This is the public API for determining line type. Used by the TUI to
+// decide how to render lines in the preview pane.
+func (d *Detector) IsCalculation(line string) (bool, error) {
 	trimmed := strings.TrimSpace(line)
 
 	if trimmed == "" {
@@ -125,19 +166,25 @@ func (d *Detector) isCalculation(line string) (bool, error) {
 		return false, nil
 	}
 
-	// Try to tokenize the line
-	lex := lexer.NewLexer(trimmed)
-	tokens, err := lex.Tokenize()
-
+	// Try to parse the line as a CalcMark expression/statement
+	// If parsing fails, it's text (markdown)
+	source := trimmed
+	if !strings.HasSuffix(source, "\n") {
+		source += "\n"
+	}
+	_, err := parser.Parse(source)
 	if err != nil {
-		// Tokenization failed - this is text, not a calculation
-		// Don't propagate the error; just treat it as markdown
+		// Parse error = not valid CalcMark syntax = treat as markdown
 		return false, nil
 	}
 
-	// Successfully tokenized - check if it looks like a meaningful calculation
-	// An empty or trivial token stream isn't a calculation
-	if len(tokens) == 0 {
+	// Successfully parsed - it's a valid calculation
+	// But we still need to check if it LOOKS like a calculation vs prose
+	// (e.g., "Hello" parses as an identifier but is likely prose)
+	// Use lexer-based heuristics for this final check
+	lex := lexer.NewLexer(trimmed)
+	tokens, err := lex.Tokenize()
+	if err != nil {
 		return false, nil
 	}
 
@@ -171,6 +218,12 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 	}
 
 	first := tokens[0]
+
+	// Frontmatter assignment: @namespace.property = ...
+	// Pattern: AT_PREFIX IDENTIFIER DOT IDENTIFIER ASSIGN ...
+	if first.Type == lexer.AT_PREFIX {
+		return true
+	}
 
 	// Assignment: identifier = ...
 	if first.Type == lexer.IDENTIFIER && len(tokens) >= 2 && tokens[1].Type == lexer.ASSIGN {
@@ -214,10 +267,12 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 
 	// Identifier alone or followed by operator/function call = calculation
 	// But multiple consecutive identifiers = prose (like "More text")
+	// Single identifier = ambiguous, treat as prose in document context
 	if first.Type == lexer.IDENTIFIER {
-		// Single identifier is a variable reference
+		// Single identifier is ambiguous - could be variable reference or prose
+		// In document context, treat as prose (text) since undefined vars are common text
 		if len(tokens) == 1 {
-			return true
+			return false
 		}
 		// Identifier followed by operator or paren (function call) = calculation
 		second := tokens[1]
@@ -295,12 +350,18 @@ func isMarkdownPattern(line string) bool {
 		return true
 	}
 
-	// Lists (but *= and -= are calculations)
+	// Unordered lists (but *= and -= are calculations)
 	if strings.HasPrefix(line, "*") && !strings.HasPrefix(line, "*=") {
 		return true
 	}
 	if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "-=") &&
 		len(line) > 1 && line[1] == ' ' {
+		return true
+	}
+
+	// Ordered lists: "1. ", "2. ", "10. " etc.
+	// Pattern: digits followed by ". " (dot and space)
+	if isOrderedListItem(line) {
 		return true
 	}
 
@@ -321,6 +382,27 @@ func isMarkdownPattern(line string) bool {
 	}
 
 	return false
+}
+
+// isOrderedListItem checks if a line is a markdown ordered list item.
+// Pattern: one or more digits, followed by ". " (dot and space).
+// Examples: "1. First", "10. Tenth", "999. Item"
+func isOrderedListItem(line string) bool {
+	// Find the dot position
+	dotIdx := strings.Index(line, ".")
+	if dotIdx <= 0 || dotIdx >= len(line)-1 {
+		return false
+	}
+
+	// Check that everything before the dot is digits
+	for i := 0; i < dotIdx; i++ {
+		if line[i] < '0' || line[i] > '9' {
+			return false
+		}
+	}
+
+	// Check that dot is followed by a space
+	return line[dotIdx+1] == ' '
 }
 
 // hasInlineMarkdownFormatting detects **bold** and *italic* markdown patterns.

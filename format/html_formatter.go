@@ -36,16 +36,72 @@ type TemplateLine struct {
 	Result string // Formatted result for this line
 }
 
+// TemplateFrontmatter represents frontmatter for template rendering
+type TemplateFrontmatter struct {
+	Globals  []TemplateGlobal
+	Exchange []TemplateExchange
+}
+
+// TemplateGlobal represents a global variable for template rendering
+type TemplateGlobal struct {
+	Name  string
+	Value string
+}
+
+// TemplateExchange represents an exchange rate for template rendering
+type TemplateExchange struct {
+	From string
+	To   string
+	Rate string
+}
+
 // Format writes the document as HTML to the writer.
 func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options) error {
-	tmpl, err := template.New("html").Parse(defaultHTMLTemplate)
+	// Use custom template if provided, otherwise use default
+	templateContent := defaultHTMLTemplate
+	if opts.Template != "" {
+		templateContent = opts.Template
+	}
+
+	tmpl, err := template.New("html").Parse(templateContent)
 	if err != nil {
 		return err
 	}
 
 	data := struct {
-		Blocks []TemplateBlock
+		Frontmatter *TemplateFrontmatter
+		Blocks      []TemplateBlock
 	}{}
+
+	// Build frontmatter data if present
+	if fm := doc.GetFrontmatter(); fm != nil {
+		tfm := &TemplateFrontmatter{}
+
+		// Add globals
+		for name, value := range fm.Globals {
+			tfm.Globals = append(tfm.Globals, TemplateGlobal{
+				Name:  name,
+				Value: value,
+			})
+		}
+
+		// Add exchange rates
+		for key, rate := range fm.Exchange {
+			from, to, err := document.ParseExchangeRateKey(key)
+			if err == nil {
+				tfm.Exchange = append(tfm.Exchange, TemplateExchange{
+					From: from,
+					To:   to,
+					Rate: rate.String(),
+				})
+			}
+		}
+
+		// Only set if there's content
+		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 {
+			data.Frontmatter = tfm
+		}
+	}
 
 	blocks := doc.GetBlocks()
 
@@ -56,18 +112,20 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		case *document.CalcBlock:
 			tb.Type = "calculation"
 
-			// Build source lines with inline results
+			// Build source lines with inline results, skipping empty lines
 			sourceLines := block.Source()
 			results := block.Results()
-			tb.SourceLines = make([]TemplateLine, len(sourceLines))
 
 			for i, line := range sourceLines {
+				if line == "" {
+					continue
+				}
 				tl := TemplateLine{Source: line}
 				// Add result if available for this line
 				if i < len(results) && results[i] != nil {
-					tl.Result = display.Format(results[i]) // Use display package for human-readable output
+					tl.Result = display.Format(results[i])
 				}
-				tb.SourceLines[i] = tl
+				tb.SourceLines = append(tb.SourceLines, tl)
 			}
 
 			if block.Error() != nil {

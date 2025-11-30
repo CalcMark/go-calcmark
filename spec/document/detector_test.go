@@ -51,6 +51,18 @@ func TestBlockDetection(t *testing.T) {
 			expectedTypes: []BlockType{BlockText, BlockCalculation, BlockText},
 			expectedCount: 3,
 		},
+		{
+			name:          "ordered list is text not calc",
+			source:        "1. First\n2. Second\n3. Third",
+			expectedTypes: []BlockType{BlockText},
+			expectedCount: 1,
+		},
+		{
+			name:          "ordered list mixed with calc",
+			source:        "1. First item\nx = 10\n2. Second item",
+			expectedTypes: []BlockType{BlockText, BlockCalculation, BlockText},
+			expectedCount: 3,
+		},
 	}
 
 	for _, tt := range tests {

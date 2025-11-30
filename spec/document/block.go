@@ -61,7 +61,8 @@ type CalcBlock struct {
 	results      []types.Type // All statement results (for inline display)
 	variables    []string     // Variables defined in this block
 	dependencies []string     // Variables referenced from other blocks
-	err          error        // Evaluation error
+	err          error        // Evaluation error (legacy, prefer diagnostics)
+	diagnostics  []Diagnostic // Structured errors with position info
 	dirty        bool
 }
 
@@ -150,6 +151,26 @@ func (cb *CalcBlock) Error() error {
 // SetError sets the evaluation error.
 func (cb *CalcBlock) SetError(err error) {
 	cb.err = err
+}
+
+// Diagnostics returns structured errors/warnings with position info.
+func (cb *CalcBlock) Diagnostics() []Diagnostic {
+	return cb.diagnostics
+}
+
+// SetDiagnostics sets the structured diagnostics for this block.
+func (cb *CalcBlock) SetDiagnostics(diags []Diagnostic) {
+	cb.diagnostics = diags
+}
+
+// AddDiagnostic adds a single diagnostic to this block.
+func (cb *CalcBlock) AddDiagnostic(diag Diagnostic) {
+	cb.diagnostics = append(cb.diagnostics, diag)
+}
+
+// ClearDiagnostics removes all diagnostics from this block.
+func (cb *CalcBlock) ClearDiagnostics() {
+	cb.diagnostics = nil
 }
 
 // TextBlock represents markdown text.

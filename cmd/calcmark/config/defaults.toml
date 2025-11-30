@@ -25,6 +25,15 @@ bright = "#FFFFFF"
 # Divider lines
 separator = "#555555"
 
+# Editor colors
+edit_line_bg = "#EEEEEE"    # Background for line being edited (light/faint)
+edit_line_fg = "#333333"    # Foreground for line being edited (dark text)
+cursor_bg = "#666666"       # Cursor background (gray)
+cursor_fg = "#FFFFFF"       # Cursor foreground (white)
+current_line_bg = "#E8E8E8" # Background for current line in normal mode (light)
+current_line_fg = "#333333" # Foreground for current line in normal mode (dark)
+line_number = "#666666"     # Line number color
+
 # Markdown preview colors
 md_text = "#FFFFFF"       # Body text
 md_h1_bg = "#FF9900"      # H1 heading background (orange)

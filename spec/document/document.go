@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // Document represents a CalcMark document with incremental evaluation.
@@ -14,6 +15,7 @@ type Document struct {
 	blockIndex  map[string]*BlockNode    // UUID → Block for fast lookup
 	varToBlocks map[string][]string      // Dependency graph: Variable → Block UUIDs
 	env         *interpreter.Environment // Accumulated environment (top-down)
+	frontmatter *Frontmatter             // Parsed frontmatter (exchange rates, globals)
 }
 
 // BlockNode wraps a Block with metadata for incremental updates.
@@ -24,16 +26,23 @@ type BlockNode struct {
 
 // NewDocument creates a new document from CalcMark source and eagerly parses it.
 func NewDocument(source string) (*Document, error) {
+	// Parse frontmatter first (if present)
+	fm, remaining, err := ParseFrontmatter(source)
+	if err != nil {
+		return nil, fmt.Errorf("frontmatter: %w", err)
+	}
+
 	doc := &Document{
 		blocks:      []*BlockNode{},
 		blockIndex:  make(map[string]*BlockNode),
 		varToBlocks: make(map[string][]string),
 		env:         interpreter.NewEnvironment(),
+		frontmatter: fm,
 	}
 
-	// Detect blocks from source
+	// Detect blocks from remaining source (after frontmatter)
 	detector := NewDetector()
-	blocks, err := detector.DetectBlocks(source)
+	blocks, err := detector.DetectBlocks(remaining)
 	if err != nil {
 		return nil, err
 	}
@@ -78,12 +87,14 @@ type UpdateResult struct {
 	Diagnostics []Diagnostic
 }
 
-// Diagnostic represents a validation issue.
+// Diagnostic represents a validation issue with source position info.
 type Diagnostic struct {
 	BlockID  string
 	Severity string // "error", "warning", "hint"
 	Code     string
 	Message  string
+	Line     int // 1-indexed line number within the block
+	Column   int // 1-indexed column number
 }
 
 // ReplaceBlockSource replaces the source of a block and propagates changes.
@@ -372,4 +383,55 @@ func (d *Document) GetBlocksInDependencyOrder(blockIDs []string) []string {
 		}
 	}
 	return result
+}
+
+// GetFrontmatter returns the document's frontmatter (may be nil).
+func (d *Document) GetFrontmatter() *Frontmatter {
+	return d.frontmatter
+}
+
+// SetFrontmatter replaces the document's frontmatter.
+func (d *Document) SetFrontmatter(fm *Frontmatter) {
+	d.frontmatter = fm
+}
+
+// EnsureFrontmatter returns the frontmatter, creating an empty one if nil.
+func (d *Document) EnsureFrontmatter() *Frontmatter {
+	if d.frontmatter == nil {
+		d.frontmatter = &Frontmatter{
+			Exchange: make(map[string]decimal.Decimal),
+			Globals:  make(map[string]string),
+		}
+	}
+	return d.frontmatter
+}
+
+// ApplyFrontmatter injects frontmatter values (exchange rates, globals) into
+// the given interpreter environment. This should be called before evaluation.
+func (d *Document) ApplyFrontmatter(env *interpreter.Environment) error {
+	if d.frontmatter == nil {
+		return nil
+	}
+
+	// Apply exchange rates
+	for key, rate := range d.frontmatter.Exchange {
+		from, to, err := ParseExchangeRateKey(key)
+		if err != nil {
+			return fmt.Errorf("apply frontmatter: %w", err)
+		}
+		env.SetExchangeRate(from, to, rate)
+	}
+
+	// Apply globals (parse literal values and inject as variables)
+	if len(d.frontmatter.Globals) > 0 {
+		parsed, err := ParseGlobals(d.frontmatter.Globals)
+		if err != nil {
+			return fmt.Errorf("apply frontmatter globals: %w", err)
+		}
+		for name, value := range parsed.Values {
+			env.Set(name, value)
+		}
+	}
+
+	return nil
 }

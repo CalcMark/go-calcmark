@@ -33,12 +33,12 @@ func TestJSONFormatterSimple(t *testing.T) {
 	}
 
 	// Parse JSON to verify it's valid
-	var result []map[string]any
+	var result JSONDocument
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		t.Fatalf("Invalid JSON output: %v", err)
 	}
 
-	if len(result) == 0 {
+	if len(result.Blocks) == 0 {
 		t.Fatal("Expected at least one block in output")
 	}
 
@@ -71,23 +71,23 @@ func TestJSONFormatterStructure(t *testing.T) {
 	}
 
 	// Parse and check structure
-	var result []map[string]any
+	var result JSONDocument
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		t.Fatalf("Invalid JSON: %v", err)
 	}
 
-	if len(result) < 1 {
+	if len(result.Blocks) < 1 {
 		t.Fatal("Expected at least one block")
 	}
 
-	block := result[0]
+	block := result.Blocks[0]
 
 	// Check required fields
-	if _, ok := block["type"]; !ok {
+	if block.Type == "" {
 		t.Error("JSON block should have 'type' field")
 	}
 
-	if _, ok := block["source"]; !ok {
+	if block.Source == nil {
 		t.Error("JSON block should have 'source' field")
 	}
 }
@@ -112,9 +112,57 @@ func TestJSONFormatterError(t *testing.T) {
 	}
 
 	// Should still be valid JSON
-	var result []map[string]any
+	var result JSONDocument
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		t.Fatalf("Invalid JSON: %v", err)
+	}
+}
+
+// TestJSONFormatterWithFrontmatter tests that frontmatter is included in JSON
+func TestJSONFormatterWithFrontmatter(t *testing.T) {
+	source := `---
+exchange:
+  USD_EUR: 0.92
+globals:
+  tax_rate: 0.32
+---
+x = 10
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &JSONFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	var result JSONDocument
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		t.Fatalf("Invalid JSON: %v", err)
+	}
+
+	// Check frontmatter
+	if result.Frontmatter == nil {
+		t.Fatal("Expected frontmatter in JSON output")
+	}
+
+	if result.Frontmatter.Globals == nil || result.Frontmatter.Globals["tax_rate"] != "0.32" {
+		t.Errorf("Expected globals with tax_rate=0.32, got: %v", result.Frontmatter.Globals)
+	}
+
+	if result.Frontmatter.Exchange == nil || result.Frontmatter.Exchange["USD_EUR"] != "0.92" {
+		t.Errorf("Expected exchange with USD_EUR=0.92, got: %v", result.Frontmatter.Exchange)
 	}
 }
 

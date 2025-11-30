@@ -1,0 +1,57 @@
+# Test insert line behavior
+# This tests the 'o' key sequence: insert line below + enter edit mode
+
+# Initial state - cursor at line 0
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down to line 2 (y = 20)
+run observe=debug
+key j
+key j
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press 'o' to insert line below and enter edit mode
+# Cursor should move to new line 3, edit mode should be active
+run observe=debug
+key o
+----
+-- debug:
+mode=1 cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Exit edit mode without saving (Escape)
+run observe=debug
+key esc
+----
+-- debug:
+mode=0 cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down with 'j' - cursor should move correctly
+run observe=debug
+key j
+----
+-- debug:
+mode=0 cursorLine=4 cursorCol=0 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate back up with 'k'
+run observe=debug
+key k
+----
+-- debug:
+mode=0 cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check full visual line structure
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Header"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="" <CURSOR>
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="z = 30"

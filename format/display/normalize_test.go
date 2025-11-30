@@ -332,8 +332,7 @@ func BenchmarkNormalizeForDisplay(b *testing.B) {
 	value := decimal.NewFromInt(23400000)
 	unit := "GB"
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		NormalizeForDisplay(value, unit)
 	}
 }
@@ -342,8 +341,7 @@ func BenchmarkNormalizeForDisplay_SmallValue(b *testing.B) {
 	value := decimal.NewFromInt(500)
 	unit := "m"
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		NormalizeForDisplay(value, unit)
 	}
 }
@@ -352,8 +350,7 @@ func BenchmarkNormalizeForDisplay_UnknownUnit(b *testing.B) {
 	value := decimal.NewFromInt(1000000)
 	unit := "widgets"
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		NormalizeForDisplay(value, unit)
 	}
 }

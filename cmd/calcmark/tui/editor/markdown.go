@@ -50,9 +50,12 @@ func (m *MarkdownRenderer) RenderLine(line string) []string {
 
 	// Filter and clean lines
 	var output []string
-	for _, l := range lines {
+	for i, l := range lines {
 		cleaned := strings.TrimRight(l, " ")
-		// Keep all lines including empty ones for proper spacing
+		// Skip leading empty line (glamour adds this for lists/blockquotes)
+		if i == 0 && cleaned == "" && len(lines) > 1 {
+			continue
+		}
 		output = append(output, cleaned)
 	}
 

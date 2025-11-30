@@ -54,6 +54,8 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 	switch n := node.(type) {
 	case *ast.Assignment:
 		return interp.evalAssignment(n)
+	case *ast.FrontmatterAssignment:
+		return interp.evalFrontmatterAssignment(n)
 	case *ast.Expression:
 		// Unwrap expression and evaluate the inner node
 		return interp.evalNode(n.Expr)

@@ -230,3 +230,74 @@ total = base + rate
 		t.Errorf("Expected HTML to contain total result (115)")
 	}
 }
+
+// TestHTMLFormatterWithFrontmatter tests that frontmatter is rendered in HTML.
+func TestHTMLFormatterWithFrontmatter(t *testing.T) {
+	source := `---
+exchange:
+  USD_EUR: 0.92
+globals:
+  tax_rate: 0.32
+  base_price: 100
+---
+price = base_price * (1 + tax_rate)
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain frontmatter section
+	if !strings.Contains(output, "frontmatter") {
+		t.Errorf("Expected HTML to contain frontmatter section")
+	}
+
+	// Should contain globals with @ prefix styling
+	if !strings.Contains(output, "Globals") {
+		t.Errorf("Expected HTML to contain Globals heading")
+	}
+	if !strings.Contains(output, "tax_rate") {
+		t.Errorf("Expected HTML to contain tax_rate global")
+	}
+	if !strings.Contains(output, "base_price") {
+		t.Errorf("Expected HTML to contain base_price global")
+	}
+
+	// Should contain exchange rates
+	if !strings.Contains(output, "Exchange") {
+		t.Errorf("Expected HTML to contain Exchange heading")
+	}
+	if !strings.Contains(output, "USD") && !strings.Contains(output, "EUR") {
+		t.Errorf("Expected HTML to contain currency codes")
+	}
+	if !strings.Contains(output, "0.92") {
+		t.Errorf("Expected HTML to contain exchange rate value")
+	}
+
+	// Should use dl/dt/dd structure
+	if !strings.Contains(output, "<dl>") {
+		t.Errorf("Expected HTML to use definition list")
+	}
+	if !strings.Contains(output, "<dt>") {
+		t.Errorf("Expected HTML to use definition terms")
+	}
+	if !strings.Contains(output, "<dd>") {
+		t.Errorf("Expected HTML to use definition descriptions")
+	}
+}

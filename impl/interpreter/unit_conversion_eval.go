@@ -55,7 +55,7 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 
 // evalCurrencyConversion converts a currency value to another currency.
 // Requires an exchange rate to be defined in the frontmatter.
-// Example: "100 USD in EUR" with exchange rate USD/EUR: 0.92 → €92.00
+// Example: "100 USD in EUR" with exchange rate USD_EUR: 0.92 → €92.00
 func (interp *Interpreter) evalCurrencyConversion(currency *types.Currency, targetCode string) (types.Type, error) {
 	// Normalize the target currency code
 	normalizedTarget := types.NormalizeCurrencyCode(targetCode)
