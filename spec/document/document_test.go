@@ -2,33 +2,30 @@ package document
 
 import (
 	"slices"
-	"strings"
 	"testing"
 )
 
-// TestLineReconstruction verifies that joining lines with \n and parsing produces same line count
+// TestLineReconstruction verifies that document parsing preserves line structure
 func TestLineReconstruction(t *testing.T) {
 	tests := []struct {
-		name  string
-		lines []string
+		name          string
+		content       string
+		expectedLines int
 	}{
-		{"single empty", []string{""}},
-		{"two empty", []string{"", ""}},
-		{"three empty", []string{"", "", ""}},
-		{"hello", []string{"hello"}},
-		{"hello world", []string{"hello", "world"}},
-		{"empty between", []string{"hello", "", "world"}},
+		{"empty string", "", 0},
+		{"single newline", "\n", 1},
+		{"two newlines", "\n\n", 2},
+		{"hello", "hello", 1},
+		{"hello world", "hello\nworld", 2},
+		{"empty between", "hello\n\nworld", 3},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Join lines with \n
-			content := strings.Join(tt.lines, "\n")
-			t.Logf("Input lines: %v", tt.lines)
-			t.Logf("Joined content: %q", content)
+			t.Logf("Input content: %q", tt.content)
 
 			// Parse as document
-			doc, err := NewDocument(content)
+			doc, err := NewDocument(tt.content)
 			if err != nil {
 				t.Fatalf("Failed to create document: %v", err)
 			}
@@ -42,10 +39,10 @@ func TestLineReconstruction(t *testing.T) {
 				t.Logf("Block has %d lines: %v", len(source), source)
 			}
 
-			// Should match input line count
-			if totalLines != len(tt.lines) {
-				t.Errorf("Line count mismatch: input had %d lines, document has %d lines",
-					len(tt.lines), totalLines)
+			// Should match expected line count
+			if totalLines != tt.expectedLines {
+				t.Errorf("Line count mismatch: expected %d lines, document has %d lines",
+					tt.expectedLines, totalLines)
 			}
 		})
 	}

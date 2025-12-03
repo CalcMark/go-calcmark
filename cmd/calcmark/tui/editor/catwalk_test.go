@@ -42,6 +42,21 @@ z = 30`
 			return
 		}
 
+		// Skip tests that have dedicated test functions with custom documents
+		skipTests := []string{
+			"edit_variable_no_redef",         // TestEditorCatwalkEditVariable
+			"edit_b_value_bug",               // TestEditorCatwalkEditVariable
+			"error_shows_valid_values",       // TestEditorCatwalkValidValues
+			"error_wrong_line_type_mismatch", // TestEditorCatwalkTypeMismatch
+			"wrapping_alignment",             // TestEditorCatwalkWrapping
+			"wrapping_calc_lines",            // TestEditorCatwalkWrapping
+		}
+		for _, skip := range skipTests {
+			if strings.HasSuffix(path, skip) {
+				return
+			}
+		}
+
 		m := New(doc)
 		m.width = 80
 		m.height = 24
@@ -54,6 +69,70 @@ z = 30`
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+			catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				leftWidth, rightWidth := model.GetPaneWidths(model.width)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+
+				var buf strings.Builder
+				buf.WriteString("Source and Preview Alignment:\n")
+				buf.WriteString(fmt.Sprintf("Total visual lines: %d\n", len(aligned.sourceLines)))
+				buf.WriteString(fmt.Sprintf("Source lines count: %d, Preview lines count: %d\n",
+					len(aligned.sourceLines), len(aligned.previewLines)))
+
+				// Show side-by-side alignment
+				maxLines := len(aligned.sourceLines)
+				if len(aligned.previewLines) > maxLines {
+					maxLines = len(aligned.previewLines)
+				}
+
+				for i := 0; i < maxLines; i++ {
+					var srcContent, prvContent string
+					var srcLineNum, prvLineNum int
+					var srcWrapped bool
+
+					if i < len(aligned.sourceLines) {
+						src := aligned.sourceLines[i]
+						srcContent = src.content
+						srcLineNum = src.lineNum
+						srcWrapped = src.isWrapped
+					}
+
+					if i < len(aligned.previewLines) {
+						prv := aligned.previewLines[i]
+						prvContent = prv.content
+						prvLineNum = prv.sourceLineNum
+					}
+
+					// Truncate content for readability
+					if len(srcContent) > 35 {
+						srcContent = srcContent[:35] + "..."
+					}
+					if len(prvContent) > 35 {
+						prvContent = prvContent[:35] + "..."
+					}
+
+					buf.WriteString(fmt.Sprintf("[%d] SRC(ln=%d wrap=%v): %-40s | PRV(ln=%d): %q\n",
+						i, srcLineNum, srcWrapped, fmt.Sprintf("%q", srcContent),
+						prvLineNum, prvContent))
+				}
+
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+				// Custom observer to check line results for errors
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					if r.IsCalc || r.Error != "" {
+						buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n", r.LineNum, r.Source, r.Value, r.Error))
+					}
+				}
+				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
 		)

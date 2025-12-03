@@ -28,15 +28,22 @@ func TestOrderedListFollowedByCalc(t *testing.T) {
 		t.Logf("  Source: %v", block.Source())
 	}
 
-	// With only ONE empty line, this should all be in ONE block
-	// Because block separation requires TWO consecutive empty lines
-	if len(blocks) != 1 {
-		t.Errorf("Expected 1 block (text), got %d", len(blocks))
+	// Type changes cause block splits even with only one empty line
+	// TextBlock (ordered list) -> CalcBlock (calculation)
+	if len(blocks) != 2 {
+		t.Errorf("Expected 2 blocks (text then calc), got %d", len(blocks))
 	}
 
-	// The block should be a TextBlock because it starts with an ordered list
+	// First block should be a TextBlock (ordered list)
 	if _, ok := blocks[0].(*TextBlock); !ok {
-		t.Errorf("Expected TextBlock, got %T", blocks[0])
+		t.Errorf("Block 0: expected TextBlock, got %T", blocks[0])
+	}
+
+	// Second block should be a CalcBlock
+	if len(blocks) > 1 {
+		if _, ok := blocks[1].(*CalcBlock); !ok {
+			t.Errorf("Block 1: expected CalcBlock, got %T", blocks[1])
+		}
 	}
 }
 

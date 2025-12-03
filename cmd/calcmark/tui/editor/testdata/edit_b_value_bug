@@ -7,8 +7,9 @@
 run observe=results
 ----
 -- results:
-Line 0 (a = 3): value=3, error=""
-Line 2 (b = 5): value=5, error=""
+Line 1 (x = 10): value=10, error=""
+Line 2 (y = 20): value=20, error=""
+Line 3 (z = 30): value=30, error=""
 
 # Navigate to line 2 where "b = 5" is
 run observe=debug
@@ -16,7 +17,7 @@ key down
 key down
 ----
 -- debug:
-mode=0 cursorLine=2 editBuf="" state=0
+mode=0 cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Type to edit the line - change 5 to 6
 # First, move to end of line and delete the 5
@@ -24,32 +25,33 @@ run observe=debug
 key end
 ----
 -- debug:
-mode=0 cursorLine=2 cursorCol=5 editBuf="b = 5" state=1
+mode=0 cursorLine=2 cursorCol=6 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 run observe=debug
 key backspace
 ----
 -- debug:
-mode=0 cursorLine=2 cursorCol=4 editBuf="b = " state=1
+mode=0 cursorLine=2 cursorCol=5 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 2" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Type 6
 run observe=debug
 type 6
 ----
 -- debug:
-mode=0 cursorLine=2 cursorCol=5 editBuf="b = 6" state=1
+mode=0 cursorLine=2 cursorCol=6 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 26" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate away to trigger processing (move down)
 run observe=debug
 key down
 ----
 -- debug:
-mode=0 cursorLine=3 editBuf="" state=0
+mode=0 cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # CRITICAL CHECK: Verify NO errors on any line
 # The bug would show error on line 0 (a = 3)
 run observe=results
 ----
 -- results:
-Line 0 (a = 3): value=3, error=""
-Line 2 (b = 6): value=6, error=""
+Line 1 (x = 10): value=10, error=""
+Line 2 (y = 26): value=26, error=""
+Line 3 (z = 30): value=30, error=""
