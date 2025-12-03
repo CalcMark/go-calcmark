@@ -3,7 +3,6 @@ package repl
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
@@ -34,7 +33,6 @@ type Model struct {
 	pinnedVars    map[string]bool       // Variables (kept for /vars command)
 	changedVars   map[string]bool       // Variables changed in last update
 	historyIdx    int                   // Current position in history (-1 = not browsing)
-	lastEscTime   int64                 // For double-ESC detection
 	lastSuggest   []features.Feature    // Cached suggestions
 	slashCommands []shared.SlashCommand // Available commands
 
@@ -161,7 +159,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleKey processes keyboard input.
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
-	case tea.KeyCtrlC, tea.KeyCtrlD:
+	case tea.KeyCtrlC:
+		// Ctrl+C is a standard interrupt signal - quit immediately
+		m.quitting = true
+		return m, tea.Quit
+
+	case tea.KeyCtrlQ:
+		// Ctrl+Q also quits
 		m.quitting = true
 		return m, tea.Quit
 
@@ -215,15 +219,9 @@ func (m Model) handleEscape() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Double-ESC to clear input
-	now := time.Now().UnixNano()
-	if m.lastEscTime > 0 && (now-m.lastEscTime) < 500_000_000 {
-		m.input.SetValue("")
-		m.lastEscTime = 0
-		m.lastSuggest = nil
-		return m, nil
-	}
-	m.lastEscTime = now
+	// Clear input
+	m.input.SetValue("")
+	m.lastSuggest = nil
 	return m, nil
 }
 

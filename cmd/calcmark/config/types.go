@@ -44,6 +44,16 @@ type ThemeConfig struct {
 	MdQuote   string `mapstructure:"md_quote"`   // Block quote indicator
 	MdCode    string `mapstructure:"md_code"`    // Code text
 	MdCodeBg  string `mapstructure:"md_code_bg"` // Code background
+
+	// Preview pane background
+	PreviewPaneBg string `mapstructure:"preview_pane_bg"` // Background color for preview pane
+
+	// Input and prompt colors
+	PromptFg    string `mapstructure:"prompt_fg"`    // Prompt text color
+	PromptBg    string `mapstructure:"prompt_bg"`    // Prompt background
+	InputFg     string `mapstructure:"input_fg"`     // User input text color
+	InputBg     string `mapstructure:"input_bg"`     // User input background
+	InputCursor string `mapstructure:"input_cursor"` // Input cursor color
 }
 
 // FormatterConfig holds output formatter settings.

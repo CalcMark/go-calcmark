@@ -38,3 +38,14 @@ You are an expert language designer and implementer for the go-calcmark language
 - Run tests using `task test`, build the `cm` binary using `task build`.
 - Running a subset of tests using `go test` is OK but we **always** run the entire suite of go-calcmark tests before declaring any changes as stable.
 - Lint, Vet, and performance test the code often using the `task`-s available via `task --list`.
+
+## Testing the TUI Editor
+
+The TUI editor uses **catwalk** for data-driven testing. See `./cmd/calcmark/tui/editor/TESTING.md` for comprehensive documentation on:
+- How to write catwalk tests in `testdata/` directories
+- Available observers (debug, results, lines, view)
+- Key simulation and text input
+- Understanding the non-modal architecture (NO vim-style modes)
+- Running and regenerating test expectations
+
+**Critical for bug fixes**: Every user-facing TUI bug MUST have a catwalk test that reproduces the exact key sequence, proves the bug exists (test fails), then validates the fix (test passes). This prevents regressions and ensures the TUI behaves correctly under real interaction flows.

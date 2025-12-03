@@ -131,16 +131,6 @@ func (m Model) View() string {
 	statusBar := components.RenderStatusBar(statusBarState, totalWidth, statusBarStyle)
 	b.WriteString(statusBar)
 
-	// Render command line if in command mode (overlay)
-	if m.mode == ModeCommand {
-		cmdLine := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("6")).
-			Bold(true).
-			Render("/" + m.cmdInput + "█")
-		b.WriteString("\n")
-		b.WriteString(cmdLine)
-	}
-
 	return b.String()
 }
 
@@ -268,7 +258,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 
 		// In edit mode, skip pre-computed wrapped lines for the cursor line
 		// since we'll render the edit buffer with its own wrapping
-		if m.mode == ModeEditing && sl.isWrapped && sl.sourceLineIdx == m.cursorLine {
+		if m.editBuf != "" && sl.isWrapped && sl.sourceLineIdx == m.cursorLine {
 			continue
 		}
 
@@ -287,7 +277,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 		}
 
 		var content string
-		if m.mode == ModeEditing && sl.isCursorLine {
+		if m.editBuf != "" && sl.isCursorLine {
 			// Show edit buffer with cursor - handle wrapping
 			editLines := m.renderEditLineWrapped(contentWidth)
 			for j, editLine := range editLines {
@@ -309,10 +299,8 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			}
 			continue
 		} else if sl.isCursorLine {
-			// Highlight current line
-			content = m.styles.CurrentLine.
-				Width(contentWidth).
-				Render(padToWidth(sl.content, contentWidth))
+			// Cursor line when NOT typing - show cursor at current column
+			content = m.renderLineWithCursor(sl.content, m.cursorCol, contentWidth, false)
 		} else if sl.isPadding {
 			// Padding line - blank (for alignment with preview wrapping)
 			content = ""
@@ -365,36 +353,83 @@ func wrapStyledLine(line string, maxWidth int) []string {
 		return []string{line}
 	}
 
-	// For styled content, we can't easily split mid-string without breaking ANSI codes.
-	// Best approach: don't wrap styled content, let terminal handle overflow.
-	// This is acceptable because calc results are typically short.
-	// If we need wrapping, we'd need to strip styles, wrap, then re-apply.
-	return []string{line}
+	// For styled content that exceeds maxWidth, we need to wrap it properly.
+	// Strategy: Use lipgloss to extract plain text, wrap it, then let lipgloss handle rendering.
+	// This preserves styles while ensuring proper wrapping.
+
+	// Extract plain text (removes ANSI codes)
+	plainText := stripANSI(line)
+
+	// Wrap the plain text
+	wrappedPlainLines := WrapText(plainText, maxWidth)
+
+	// Return wrapped lines (styles will be handled by caller if needed)
+	// For calc results like "a → 2", the arrow and value are usually short enough
+	// that wrapping preserves the basic format
+	return wrappedPlainLines
 }
 
-// renderEditLine renders the line being edited with cursor (single line, no wrapping).
-func (m Model) renderEditLine(width int) string {
+// stripANSI removes ANSI escape codes from a string, returning plain text.
+// This is needed to calculate actual text length for wrapping.
+func stripANSI(s string) string {
+	// Use lipgloss to render without styles, which strips ANSI codes
+	// Alternative: regex to match ANSI escape sequences
+	// Pattern: \x1b\[[0-9;]*m
+	result := ""
+	inEscape := false
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\x1b' && i+1 < len(s) && s[i+1] == '[' {
+			inEscape = true
+			i++ // skip '['
+			continue
+		}
+		if inEscape {
+			if s[i] == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		result += string(s[i])
+	}
+	return result
+}
+
+// renderLineWithCursor renders a line with cursor at the specified column.
+// If content is empty, uses m.GetCurrentLineText() to get the actual line content.
+// This ensures the cursor is ALWAYS visible, even when not actively typing.
+func (m Model) renderLineWithCursor(content string, col int, width int, useEditStyle bool) string {
 	var line string
 
-	// Text style for non-cursor parts (uses EditLine foreground color)
-	textStyle := m.styles.EditLine.UnsetBackground().UnsetWidth()
+	// Determine which style to use
+	var textStyle, bgStyle lipgloss.Style
+	if useEditStyle {
+		// When typing (editBuf active)
+		textStyle = m.styles.EditLine.UnsetBackground().UnsetWidth()
+		bgStyle = m.styles.EditLine.Width(width)
+	} else {
+		// When not typing (showing document content with cursor)
+		textStyle = m.styles.CurrentLine.UnsetBackground().UnsetWidth()
+		bgStyle = m.styles.CurrentLine.Width(width)
+	}
 
-	if m.cursorCol >= len(m.editBuf) {
+	if col >= len(content) {
 		// Cursor at end - show text followed by cursor
-		line = textStyle.Render(m.editBuf) + m.styles.Cursor.Render(" ")
+		line = textStyle.Render(content) + m.styles.Cursor.Render(" ")
 	} else {
 		// Cursor in middle - highlight the character under cursor
-		before := m.editBuf[:m.cursorCol]
-		charAtCursor := string(m.editBuf[m.cursorCol])
-		after := m.editBuf[m.cursorCol+1:]
+		before := content[:col]
+		charAtCursor := string(content[col])
+		after := content[col+1:]
 
 		line = textStyle.Render(before) + m.styles.Cursor.Render(charAtCursor) + textStyle.Render(after)
 	}
 
-	// Use configured edit line background for the full line
-	return m.styles.EditLine.
-		Width(width).
-		Render(line)
+	return bgStyle.Render(line)
+}
+
+// renderEditLine renders the line being edited with cursor (single line, no wrapping).
+func (m Model) renderEditLine(width int) string {
+	return m.renderLineWithCursor(m.editBuf, m.cursorCol, width, true)
 }
 
 // renderEditLineWrapped renders the edit buffer with wrapping support.
@@ -520,7 +555,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	// 3. Adjust by skipping pre-computed wrapped lines or adding empty lines
 	var editLineCount int
 	var preComputedCursorLineCount int
-	if m.mode == ModeEditing {
+	if m.editBuf != "" {
 		// Count how many lines the edit buffer would produce
 		contentWidth := width // approximate
 		editLines := WrapText(m.editBuf, contentWidth)
@@ -546,7 +581,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		pl := previewLines[j]
 
 		// In edit mode, handle cursor line specially to match source pane's edit rendering
-		if m.mode == ModeEditing && pl.sourceLineNum == m.cursorLine {
+		if m.editBuf != "" && pl.sourceLineNum == m.cursorLine {
 			if !cursorLineProcessed {
 				// First occurrence of cursor line - output editLineCount lines
 				// to match the source pane's edit buffer rendering.
@@ -645,7 +680,7 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
 		arrow := "→ "
-		return changedMarker + valueStyle.Render(arrow + r.Value)
+		return changedMarker + valueStyle.Render(arrow+r.Value)
 	}
 
 	return ""

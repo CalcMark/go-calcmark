@@ -36,6 +36,14 @@ type Styles struct {
 	MdQuote  lipgloss.Style // Block quotes
 	MdCode   lipgloss.Style // Inline code
 	MdCodeBg lipgloss.Style // Code with background
+
+	// Preview pane
+	PreviewPane lipgloss.Style // Preview pane background
+
+	// Input and prompt styles
+	PromptLabel lipgloss.Style // Prompt label style (e.g., "Save as:")
+	InputText   lipgloss.Style // User input text style
+	InputCursor lipgloss.Style // Input cursor style
 }
 
 // BuildStyles creates lipgloss.Style instances from ThemeConfig.
@@ -147,5 +155,24 @@ func (t ThemeConfig) BuildStyles() Styles {
 			Foreground(lipgloss.Color(t.MdCode)).
 			Background(lipgloss.Color(t.MdCodeBg)).
 			Padding(0, 1),
+
+		// Preview pane background
+		PreviewPane: lipgloss.NewStyle().
+			Background(lipgloss.Color(t.PreviewPaneBg)),
+
+		// Input and prompt styles
+		PromptLabel: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.PromptFg)).
+			Background(lipgloss.Color(t.PromptBg)).
+			Bold(true).
+			Padding(0, 1),
+
+		InputText: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.InputFg)).
+			Background(lipgloss.Color(t.InputBg)),
+
+		InputCursor: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.InputCursor)).
+			Bold(true),
 	}
 }

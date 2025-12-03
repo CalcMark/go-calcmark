@@ -107,13 +107,64 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 	}
 
 	// PASS 1: Evaluate all blocks to collect final variable values
-	// This builds the environment with all variable assignments
+	// This builds the environment with all variable assignments.
+	// We track defined variables across all blocks to detect redefinitions.
 	e.env = interpreter.NewEnvironment()
+	allDefinedVars := make(map[string]bool)
 
 	for _, node := range doc.GetBlocks() {
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			// Evaluate to collect variable values (pass doc for frontmatter updates)
-			_ = e.evaluateCalcBlockWithDoc(node.ID, cb, doc)
+			// Before evaluation, check if this block would redefine any variables
+			// Parse to extract variable assignments
+			source := strings.Join(cb.Source(), "\n")
+			if !strings.HasSuffix(source, "\n") {
+				source += "\n"
+			}
+			nodes, err := parser.Parse(source)
+			if err != nil {
+				cb.SetError(err)
+				return err
+			}
+
+			// Extract variables that THIS execution will define
+			currentlyDefining := make([]string, 0)
+			for _, astNode := range nodes {
+				if assign, ok := astNode.(*ast.Assignment); ok {
+					currentlyDefining = append(currentlyDefining, assign.Name)
+				}
+			}
+
+			// Check for redefinitions: if a variable is in allDefinedVars
+			// and this block hasn't been successfully evaluated yet (dirty or no results),
+			// it's a NEW definition that conflicts with a definition in another block.
+			// If the block HAS been evaluated (has results), we allow re-evaluation of
+			// the same variables it defined before.
+			hasBeenEvaluated := len(cb.Results()) > 0 && !cb.IsDirty()
+			previouslyDefined := cb.Variables()
+
+			for _, varName := range currentlyDefining {
+				// Skip if this block previously defined this variable
+				if hasBeenEvaluated && containsString(previouslyDefined, varName) {
+					continue
+				}
+				// Check for conflict with other blocks
+				if allDefinedVars[varName] {
+					err := fmt.Errorf("variable_redefinition: variable '%s' is already defined", varName)
+					cb.SetError(err)
+					return err
+				}
+			}
+
+			// Now evaluate the block
+			err = e.evaluateCalcBlockWithDoc(node.ID, cb, doc)
+			if err != nil {
+				return err
+			}
+
+			// Mark variables as defined
+			for _, varName := range cb.Variables() {
+				allDefinedVars[varName] = true
+			}
 		}
 	}
 
@@ -215,8 +266,17 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 
 	// 2. Semantic check with the provided environment
 	checker := semantic.NewChecker()
+
+	// Pre-populate checker environment with interpreter's environment,
+	// but EXCLUDE variables that were PREVIOUSLY successfully evaluated in THIS block
+	// to avoid false redefinition errors during incremental re-evaluation.
+	// If the block's source has changed to define NEW variables, those WILL be checked.
+	previouslyDefinedVars := block.Variables()
 	for varName, value := range env.GetAllVariables() {
-		checker.GetEnvironment().Set(varName, value)
+		// Skip variables that this block previously defined successfully
+		if !containsString(previouslyDefinedVars, varName) {
+			checker.GetEnvironment().Set(varName, value)
+		}
 	}
 
 	diagnostics := checker.Check(nodes)
@@ -312,8 +372,19 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// 2. Semantic check with current environment
 	checker := semantic.NewChecker()
 
-	// Pre-populate checker environment with interpreter's environment
+	// Pre-populate checker environment with interpreter's environment,
+	// but EXCLUDE variables that were PREVIOUSLY successfully evaluated in THIS block
+	// to avoid false redefinition errors during incremental re-evaluation.
+	// Note: Variables() may be populated by dependency analysis before evaluation,
+	// so we check if the block has Results to determine if it's been evaluated before.
+	hasBeenEvaluated := len(block.Results()) > 0 && !block.IsDirty()
+	previouslyDefinedVars := block.Variables()
+
 	for varName, value := range e.env.GetAllVariables() {
+		// Skip variables that this block previously evaluated successfully
+		if hasBeenEvaluated && containsString(previouslyDefinedVars, varName) {
+			continue
+		}
 		checker.GetEnvironment().Set(varName, value)
 	}
 
@@ -342,21 +413,54 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	}
 
 	// 3. Interpret statements with shared environment
+	// Evaluate statements one by one to collect partial results even if a later statement fails
 	interp := interpreter.NewInterpreterWithEnv(e.env)
+	results := make([]types.Type, 0, len(nodes))
+	var evalErr error
+	var failingNodeIdx = -1
 
-	results, err := interp.Eval(nodes)
-	if err != nil {
-		block.SetError(err)
-		return err
+	for i, node := range nodes {
+		nodeResults, err := interp.Eval([]ast.Node{node})
+		if err != nil {
+			evalErr = err
+			failingNodeIdx = i
+			break
+		}
+		if len(nodeResults) > 0 {
+			results = append(results, nodeResults[0])
+		}
 	}
 
-	// 4. Store all results (for inline display) and last result
-	block.SetResults(results)
+	// Store partial results even if there was an error
 	if len(results) > 0 {
+		block.SetResults(results)
 		block.SetLastValue(results[len(results)-1])
 	}
 
-	// 5. Update document frontmatter for @global and @exchange assignments
+	// If there was an error, create diagnostic and return
+	if evalErr != nil {
+		block.SetError(evalErr)
+
+		// Create diagnostic with line number for the failing node
+		if failingNodeIdx >= 0 && failingNodeIdx < len(nodes) {
+			node := nodes[failingNodeIdx]
+			diag := document.Diagnostic{
+				Severity: "error",
+				Code:     "eval_error",
+				Message:  evalErr.Error(),
+			}
+			// Use node's Range if available to get line number
+			if assignment, ok := node.(*ast.Assignment); ok && assignment.Range != nil {
+				diag.Line = assignment.Range.Start.Line
+				diag.Column = assignment.Range.Start.Column
+			}
+			block.AddDiagnostic(diag)
+		}
+
+		return evalErr
+	}
+
+	// 4. Update document frontmatter for @global and @exchange assignments
 	if doc != nil {
 		e.updateFrontmatterFromNodes(doc, nodes, results)
 	}
@@ -402,4 +506,14 @@ func (e *Evaluator) updateFrontmatterFromNodes(doc *document.Document, nodes []a
 			}
 		}
 	}
+}
+
+// containsString checks if a string slice contains a given string.
+func containsString(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }

@@ -52,16 +52,16 @@ func TestHandleKeyCtrlC(t *testing.T) {
 	}
 }
 
-func TestHandleKeyCtrlD(t *testing.T) {
+func TestHandleKeyCtrlQ(t *testing.T) {
 	m := New(nil)
-	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
 	result := newModel.(Model)
 
 	if !result.quitting {
-		t.Error("Ctrl+D should set quitting=true")
+		t.Error("Ctrl+Q should set quitting=true")
 	}
 	if cmd == nil {
-		t.Error("Ctrl+D should return quit command")
+		t.Error("Ctrl+Q should return quit command")
 	}
 }
 

@@ -59,7 +59,8 @@ const (
 	DiagInvalidLeapYear = "invalid_leap_year"
 
 	// Variable diagnostics
-	DiagUndefinedVariable = "undefined_variable"
+	DiagUndefinedVariable    = "undefined_variable"
+	DiagVariableRedefinition = "variable_redefinition"
 
 	// Arithmetic diagnostics
 	DiagDivisionByZero = "division_by_zero"

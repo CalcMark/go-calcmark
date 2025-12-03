@@ -91,6 +91,11 @@ type AlignedModelInput struct {
 
 	// Preview mode affects how calc results are rendered
 	PreviewMode PreviewMode
+
+	// EditBuf: Text currently being typed (not yet saved to document).
+	// If non-empty, this overrides Lines[EditBufLine] for rendering preview.
+	EditBuf     string
+	EditBufLine int // Which line index EditBuf applies to
 }
 
 // ComputeAlignedModel computes the visual line alignment from the given inputs.
@@ -101,132 +106,237 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 	sourceToVisual := make(map[int]int)
 	visualToSource := make(map[int]int)
 
-	// Process results block by block
-	i := 0
-	for i < len(input.Results) {
-		blockID := input.Results[i].BlockID
-		isCalcBlock := input.Results[i].IsCalc
+	// IMPORTANT: Process results block by block to maintain document structure.
+	// A "block" is either a CalcBlock or TextBlock from the document model.
+	// All LineResults with the same BlockID belong to the same block.
+	blockStartIdx := 0
+	for blockStartIdx < len(input.Results) {
+		// Identify the current block
+		currentBlockID := input.Results[blockStartIdx].BlockID
+		isCalcBlock := input.Results[blockStartIdx].IsCalc
 
-		// Collect all results in this block
+		// Collect all LineResults belonging to this block
 		var blockResults []LineResult
-		for i < len(input.Results) && input.Results[i].BlockID == blockID {
-			blockResults = append(blockResults, input.Results[i])
-			i++
+		blockEndIdx := blockStartIdx
+		for blockEndIdx < len(input.Results) && input.Results[blockEndIdx].BlockID == currentBlockID {
+			blockResults = append(blockResults, input.Results[blockEndIdx])
+			blockEndIdx++
 		}
 
-		// Process each line in the block
-		for _, r := range blockResults {
-			if r.LineNum >= len(input.Lines) {
+		// === CRITICAL SECTION: TextBlock Rendering ===
+		// TextBlocks contain markdown (headers, lists, paragraphs, etc.)
+		// Multi-line markdown constructs (ordered lists, unordered lists) MUST be rendered
+		// as a complete unit, not line-by-line, to preserve semantic meaning.
+		//
+		// Example: This source:
+		//   1. First item
+		//   1. Second item
+		//   1. Third item
+		//
+		// Must be rendered as a single block to produce:
+		//   1. First item
+		//   2. Second item    <- Note: "2." not "1."
+		//   3. Third item     <- Note: "3." not "1."
+		//
+		// If we rendered line-by-line, each line would independently render as "1."
+		//
+		// Strategy:
+		// 1. Join all source lines in the block with newlines
+		// 2. Pass complete block to renderMarkdown() which uses glamour
+		// 3. Glamour correctly handles multi-line markdown semantics
+		// 4. Distribute rendered output back to source lines for alignment
+		//
+		// This map stores the pre-computed preview lines for each source line in the block.
+		// Key: index into blockResults (0-based)
+		// Value: preview lines for that source line (usually 1 line, but could be multiple if wrapped)
+		var textBlockPreviewCache map[int][]string
+
+		if !isCalcBlock && renderMarkdown != nil {
+			// For text blocks, we need to handle two cases:
+			// 1. Multi-line constructs (ordered lists) need block-level rendering
+			// 2. Single-line content (headings, paragraphs) should render per-line for proper wrapping
+			//
+			// Strategy: Render each source line individually to capture its own wrapping behavior.
+			// This ensures that a long heading that wraps to 2 preview lines maintains alignment
+			// with the 2 wrapped source lines.
+
+			textBlockPreviewCache = make(map[int][]string, len(blockResults))
+
+			for blockLineIdx, lineResult := range blockResults {
+				lineText := lineResult.Source
+				// If user is typing on this line, use live editBuf instead
+				if input.EditBuf != "" && lineResult.LineNum == input.EditBufLine {
+					lineText = input.EditBuf
+				}
+
+				// Render this line individually
+				// renderMarkdown returns all visual lines for this source line
+				renderedLines := renderMarkdown(lineText, input.PreviewWidth)
+
+				// Store all rendered lines for this source line
+				// This preserves wrapping: if a heading wraps to 2 lines, we store both
+				textBlockPreviewCache[blockLineIdx] = renderedLines
+			}
+		}
+		// === END CRITICAL SECTION ===
+
+		// Now process each source line in the block to create aligned visual lines
+		for blockLineIdx, lineResult := range blockResults {
+			// Validate line number is in bounds
+			if lineResult.LineNum >= len(input.Lines) {
 				continue
 			}
-			line := input.Lines[r.LineNum]
-			isCursor := r.LineNum == input.CursorLine
 
-			// Wrap source content
-			wrappedSource := WrapText(line, input.SourceContentWidth)
+			// Get the actual source text for this line
+			// CRITICAL: If user is typing (editBuf is active), use editBuf instead of saved content
+			sourceText := input.Lines[lineResult.LineNum]
+			if input.EditBuf != "" && lineResult.LineNum == input.EditBufLine {
+				// User is currently typing on this line - use live editBuf for preview
+				sourceText = input.EditBuf
+			}
+			isCursorOnThisLine := lineResult.LineNum == input.CursorLine
 
-			// Render and wrap preview content
-			var wrappedPreview []string
+			// Wrap source content to fit the source pane width
+			wrappedSourceLines := WrapText(sourceText, input.SourceContentWidth)
+
+			// Determine preview content for this line
+			// THREE CASES:
+			// 1. CalcBlock: Use renderCalcLine to show calculation results
+			// 2. TextBlock with cache: Use pre-rendered markdown from cache (ordered list fix!)
+			// 3. Fallback: Render line-by-line or use plain text
+			var wrappedPreviewLines []string
+
 			if isCalcBlock && renderCalcLine != nil {
-				previewContent := renderCalcLine(r, input.PreviewWidth)
-				wrappedPreview = wrapStyledLine(previewContent, input.PreviewWidth)
+				// CASE 1: Calculation block - render with values/errors
+				calcPreviewContent := renderCalcLine(lineResult, input.PreviewWidth)
+				wrappedPreviewLines = wrapStyledLine(calcPreviewContent, input.PreviewWidth)
+
+			} else if !isCalcBlock && textBlockPreviewCache != nil {
+				// CASE 2: TextBlock with pre-rendered cache (THIS IS THE ORDERED LIST FIX)
+				// Use the pre-computed preview lines from the cache.
+				// These were computed by rendering the entire block at once,
+				// which preserves multi-line markdown semantics like ordered list numbering.
+				wrappedPreviewLines = textBlockPreviewCache[blockLineIdx]
+
 			} else if renderMarkdown != nil {
-				wrappedPreview = renderMarkdown(r.Source, input.PreviewWidth)
+				// CASE 3a: Fallback to line-by-line markdown rendering
+				// This path should rarely be taken - it exists for safety.
+				// Line-by-line rendering breaks ordered lists but is better than nothing.
+				wrappedPreviewLines = renderMarkdown(lineResult.Source, input.PreviewWidth)
+
 			} else {
-				wrappedPreview = WrapText(r.Source, input.PreviewWidth)
+				// CASE 3b: No markdown renderer available - use plain text
+				wrappedPreviewLines = WrapText(lineResult.Source, input.PreviewWidth)
 			}
 
-			// Ensure we have at least one preview line
-			if len(wrappedPreview) == 0 {
-				wrappedPreview = []string{""}
+			// Ensure we have at least one preview line (safety check)
+			if len(wrappedPreviewLines) == 0 {
+				wrappedPreviewLines = []string{""}
 			}
 
-			// Determine max visual lines needed for alignment
-			sourceCount := len(wrappedSource)
-			previewCount := len(wrappedPreview)
-			maxLines := sourceCount
-			if previewCount > maxLines {
-				maxLines = previewCount
+			// === ALIGNMENT COMPUTATION ===
+			// Each source line may wrap into multiple visual lines.
+			// Each preview line may also wrap into multiple visual lines.
+			// We need to align them so both panes have the same number of visual lines.
+			//
+			// Example:
+			//   Source: "short" (1 visual line)
+			//   Preview: "long long long long long" (wraps to 3 visual lines)
+			//   Result: 3 aligned visual line pairs, with source padded with 2 empty lines
+			numSourceVisualLines := len(wrappedSourceLines)
+			numPreviewVisualLines := len(wrappedPreviewLines)
+			numAlignedVisualLines := numSourceVisualLines
+			if numPreviewVisualLines > numAlignedVisualLines {
+				numAlignedVisualLines = numPreviewVisualLines
 			}
 
-			// Record mapping: source line -> first visual line index
-			visualIdx := len(sourceLines)
-			if _, exists := sourceToVisual[r.LineNum]; !exists {
-				sourceToVisual[r.LineNum] = visualIdx
+			// Record mapping: document source line number -> first visual line index
+			firstVisualLineIdx := len(sourceLines)
+			if _, alreadyMapped := sourceToVisual[lineResult.LineNum]; !alreadyMapped {
+				sourceToVisual[lineResult.LineNum] = firstVisualLineIdx
 			}
 
-			// Emit visual lines (source and preview in parallel)
-			for j := 0; j < maxLines; j++ {
-				// Record reverse mapping
-				visualToSource[len(sourceLines)] = r.LineNum
+			// Emit pairs of aligned visual lines (source pane + preview pane)
+			for visualLineOffset := 0; visualLineOffset < numAlignedVisualLines; visualLineOffset++ {
+				// Record reverse mapping: visual line index -> document source line number
+				visualToSource[len(sourceLines)] = lineResult.LineNum
 
-				// Build source visual line
-				var sl AlignedLine
-				if j < sourceCount {
-					sl = AlignedLine{
-						Content:       wrappedSource[j],
-						SourceLineIdx: r.LineNum,
-						BlockID:       blockID,
+				// === BUILD SOURCE PANE VISUAL LINE ===
+				var sourceVisualLine AlignedLine
+				if visualLineOffset < numSourceVisualLines {
+					// This visual line has actual source content
+					sourceVisualLine = AlignedLine{
+						Content:       wrappedSourceLines[visualLineOffset],
+						SourceLineIdx: lineResult.LineNum,
+						BlockID:       currentBlockID,
 						IsCalc:        isCalcBlock,
 					}
-					if j == 0 {
-						sl.LineNum = r.LineNum + 1
-						if isCursor {
-							sl.Kind = AlignedLineCursor
+					if visualLineOffset == 0 {
+						// First visual line for this source line: show line number
+						sourceVisualLine.LineNum = lineResult.LineNum + 1 // 1-indexed for display
+						if isCursorOnThisLine {
+							sourceVisualLine.Kind = AlignedLineCursor
 						} else {
-							sl.Kind = AlignedLineNormal
+							sourceVisualLine.Kind = AlignedLineNormal
 						}
 					} else {
-						sl.LineNum = 0
-						if isCursor {
-							sl.Kind = AlignedLineCursorWrapped
+						// Wrapped continuation line: no line number
+						sourceVisualLine.LineNum = 0
+						if isCursorOnThisLine {
+							sourceVisualLine.Kind = AlignedLineCursorWrapped
 						} else {
-							sl.Kind = AlignedLineWrapped
+							sourceVisualLine.Kind = AlignedLineWrapped
 						}
 					}
 				} else {
-					// Padding line (preview wrapped more than source)
-					sl = AlignedLine{
+					// Padding line: preview wrapped more than source
+					sourceVisualLine = AlignedLine{
 						Content:       "",
-						SourceLineIdx: r.LineNum,
+						SourceLineIdx: lineResult.LineNum,
 						LineNum:       0,
 						Kind:          AlignedLinePadding,
-						BlockID:       blockID,
+						BlockID:       currentBlockID,
 						IsCalc:        isCalcBlock,
 					}
 				}
-				sourceLines = append(sourceLines, sl)
+				sourceLines = append(sourceLines, sourceVisualLine)
 
-				// Build preview visual line
-				var pl AlignedLine
-				if j < previewCount {
-					pl = AlignedLine{
-						Content:       wrappedPreview[j],
-						SourceLineIdx: r.LineNum,
-						BlockID:       blockID,
+				// === BUILD PREVIEW PANE VISUAL LINE ===
+				var previewVisualLine AlignedLine
+				if visualLineOffset < numPreviewVisualLines {
+					// This visual line has actual preview content
+					previewVisualLine = AlignedLine{
+						Content:       wrappedPreviewLines[visualLineOffset],
+						SourceLineIdx: lineResult.LineNum,
+						BlockID:       currentBlockID,
 						IsCalc:        isCalcBlock,
 					}
-					if j == 0 {
-						pl.LineNum = r.LineNum + 1
-						pl.Kind = AlignedLineNormal
+					if visualLineOffset == 0 {
+						// First visual line: show line number
+						previewVisualLine.LineNum = lineResult.LineNum + 1 // 1-indexed for display
+						previewVisualLine.Kind = AlignedLineNormal
 					} else {
-						pl.LineNum = 0
-						pl.Kind = AlignedLineWrapped
+						// Wrapped continuation line: no line number
+						previewVisualLine.LineNum = 0
+						previewVisualLine.Kind = AlignedLineWrapped
 					}
 				} else {
-					// Padding line (source wrapped more than preview)
-					pl = AlignedLine{
+					// Padding line: source wrapped more than preview
+					previewVisualLine = AlignedLine{
 						Content:       "",
-						SourceLineIdx: r.LineNum,
+						SourceLineIdx: lineResult.LineNum,
 						LineNum:       0,
 						Kind:          AlignedLinePadding,
-						BlockID:       blockID,
+						BlockID:       currentBlockID,
 						IsCalc:        isCalcBlock,
 					}
 				}
-				previewLines = append(previewLines, pl)
+				previewLines = append(previewLines, previewVisualLine)
 			}
 		}
+
+		// Move to next block
+		blockStartIdx = blockEndIdx
 	}
 
 	return AlignedModel{

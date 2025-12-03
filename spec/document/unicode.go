@@ -54,8 +54,18 @@ func splitLines(text string) []string {
 		}
 	}
 
-	// Don't forget last line if no trailing newline
-	if currentLine.Len() > 0 || len(runes) > 0 {
+	// Add final line only if there's actual content in currentLine
+	// CRITICAL: Don't add an empty line for trailing newlines!
+	//
+	// Examples:
+	//   "hello" -> ["hello"]      (no newline, add the line)
+	//   "hello\n" -> ["hello"]    (trailing newline, don't add empty line)
+	//   "\n" -> [""]              (single newline, add the empty line)
+	//   "hello\nworld" -> ["hello", "world"]  (no trailing newline, add both)
+	//
+	// The key insight: if currentLine is empty at this point, it means the text
+	// ended with a line terminator, so we don't need to add anything more.
+	if currentLine.Len() > 0 {
 		lines = append(lines, currentLine.String())
 	}
 

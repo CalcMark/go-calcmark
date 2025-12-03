@@ -96,12 +96,8 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 		fmt.Sprintf("L%d/%d | %d calcs", state.Line, state.TotalLines, state.CalcCount),
 	)
 
-	// Build right section: mode + hints
+	// Build right section: hints only (mode is internal implementation detail)
 	var right strings.Builder
-	if state.Mode != "" {
-		right.WriteString(style.Mode.Render(state.Mode))
-		right.WriteString(" ")
-	}
 	if state.Hints != "" {
 		right.WriteString(style.Hints.Render(state.Hints))
 	}

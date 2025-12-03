@@ -44,6 +44,16 @@ md_quote = "#888888"      # Block quote indicator (gray)
 md_code = "#33CC33"       # Inline code text
 md_code_bg = "#333333"    # Code background
 
+# Preview pane background - very pale, subtle distinction from pure white
+preview_pane_bg = "#FDFDFB" # Very pale warm white (barely off-white)
+
+# Input and prompt colors (for save-as, export, etc.)
+prompt_fg = "#FFFFFF"       # Prompt label text (white for good contrast on dark)
+prompt_bg = "#333333"       # Prompt label background (dark gray)
+input_fg = "#FFFFFF"        # User input text (white on dark terminal background)
+input_bg = "#1A1A1A"        # User input background (very dark, slightly lighter than terminal)
+input_cursor = "#7D56F4"    # Input cursor (primary brand color)
+
 [formatter]
 verbose = false
 include_errors = true

@@ -2,8 +2,133 @@ package document
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
+
+// TestLineReconstruction verifies that joining lines with \n and parsing produces same line count
+func TestLineReconstruction(t *testing.T) {
+	tests := []struct {
+		name  string
+		lines []string
+	}{
+		{"single empty", []string{""}},
+		{"two empty", []string{"", ""}},
+		{"three empty", []string{"", "", ""}},
+		{"hello", []string{"hello"}},
+		{"hello world", []string{"hello", "world"}},
+		{"empty between", []string{"hello", "", "world"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Join lines with \n
+			content := strings.Join(tt.lines, "\n")
+			t.Logf("Input lines: %v", tt.lines)
+			t.Logf("Joined content: %q", content)
+
+			// Parse as document
+			doc, err := NewDocument(content)
+			if err != nil {
+				t.Fatalf("Failed to create document: %v", err)
+			}
+
+			// Count lines in result
+			blocks := doc.GetBlocks()
+			totalLines := 0
+			for _, block := range blocks {
+				source := block.Block.Source()
+				totalLines += len(source)
+				t.Logf("Block has %d lines: %v", len(source), source)
+			}
+
+			// Should match input line count
+			if totalLines != len(tt.lines) {
+				t.Errorf("Line count mismatch: input had %d lines, document has %d lines",
+					len(tt.lines), totalLines)
+			}
+		})
+	}
+}
+
+// TestNewDocumentLineCount verifies that document line counting is correct
+func TestNewDocumentLineCount(t *testing.T) {
+	tests := []struct {
+		name           string
+		content        string
+		wantBlocks     int
+		wantTotalLines int // Total lines across all blocks
+	}{
+		{
+			name:           "empty string",
+			content:        "",
+			wantBlocks:     0,
+			wantTotalLines: 0,
+		},
+		{
+			name:           "single newline",
+			content:        "\n",
+			wantBlocks:     1,
+			wantTotalLines: 1, // Should be 1 empty line, not 2
+		},
+		{
+			name:           "two newlines",
+			content:        "\n\n",
+			wantBlocks:     1,
+			wantTotalLines: 2, // Two empty lines
+		},
+		{
+			name:           "single line no newline",
+			content:        "hello",
+			wantBlocks:     1,
+			wantTotalLines: 1,
+		},
+		{
+			name:           "single line with newline",
+			content:        "hello\n",
+			wantBlocks:     1,
+			wantTotalLines: 1, // Trailing newline should not create extra line
+		},
+		{
+			name:           "two lines",
+			content:        "hello\nworld",
+			wantBlocks:     1,
+			wantTotalLines: 2,
+		},
+		{
+			name:           "two lines with trailing newline",
+			content:        "hello\nworld\n",
+			wantBlocks:     1,
+			wantTotalLines: 2, // Trailing newline should not create extra line
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := NewDocument(tt.content)
+			if err != nil {
+				t.Fatalf("Failed to create document: %v", err)
+			}
+
+			blocks := doc.GetBlocks()
+			if len(blocks) != tt.wantBlocks {
+				t.Errorf("Expected %d blocks, got %d", tt.wantBlocks, len(blocks))
+			}
+
+			// Count total lines
+			totalLines := 0
+			for _, block := range blocks {
+				source := block.Block.Source()
+				totalLines += len(source)
+				t.Logf("Block source (%d lines): %#v", len(source), source)
+			}
+
+			if totalLines != tt.wantTotalLines {
+				t.Errorf("Expected %d total lines, got %d", tt.wantTotalLines, totalLines)
+			}
+		})
+	}
+}
 
 func TestDocumentCreation(t *testing.T) {
 	source := `x = 10

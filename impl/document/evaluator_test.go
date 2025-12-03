@@ -211,27 +211,8 @@ y = x + 5`,
 			wantVarValues:  map[string]string{"x": "10", "y": "15"},
 			wantBlockCount: 2,
 		},
-		{
-			name: "variable reassigned in later block",
-			source: `x = 10
-
-
-x = 20`,
-			wantVarValues:  map[string]string{"x": "20"},
-			wantBlockCount: 2,
-		},
-		{
-			name: "reassigned variable used by dependent",
-			source: `x = 10
-
-
-y = x * 2
-
-
-x = 100`,
-			wantVarValues:  map[string]string{"x": "100", "y": "20"},
-			wantBlockCount: 3,
-		},
+		// REMOVED: variable reassignment is not allowed in CalcMark
+		// Variables can only be defined once per document
 		{
 			name: "chain of dependencies across multiple blocks",
 			source: `a = 5
@@ -247,21 +228,7 @@ d = c + a`,
 			wantVarValues:  map[string]string{"a": "5", "b": "15", "c": "30", "d": "35"},
 			wantBlockCount: 4,
 		},
-		{
-			name: "variable reassigned multiple times",
-			source: `x = 1
-
-
-x = 2
-
-
-x = 3
-
-
-y = x`,
-			wantVarValues:  map[string]string{"x": "3", "y": "3"},
-			wantBlockCount: 4,
-		},
+		// REMOVED: variable reassignment is not allowed in CalcMark
 	}
 
 	for _, tt := range tests {
@@ -348,7 +315,8 @@ func TestGlobalScopeEnvironmentPersistence(t *testing.T) {
 		t.Errorf("y = x + 5: expected '15', got %v (ok=%v)", val, ok)
 	}
 
-	// Add another block that modifies x
+	// Variable reassignment is not allowed in CalcMark.
+	// Attempting to redefine 'x' should fail during evaluation.
 	blocks = doc.GetBlocks()
 	lastID = blocks[len(blocks)-1].ID
 	result, err = doc.InsertBlock(lastID, document.BlockCalculation, []string{"x = 100"})
@@ -356,28 +324,18 @@ func TestGlobalScopeEnvironmentPersistence(t *testing.T) {
 		t.Fatalf("InsertBlock 2 failed: %v", err)
 	}
 
+	// This should fail because x is already defined
 	err = eval.EvaluateBlock(doc, result.ModifiedBlockID)
-	if err != nil {
-		t.Fatalf("EvaluateBlock 2 failed: %v", err)
+	if err == nil {
+		t.Fatal("Expected error for variable redefinition, but got nil")
 	}
-
-	// Re-get environment after EvaluateBlock
-	env = eval.GetEnvironment()
-
-	// Check that x was updated to new value
-	if val, ok := env.Get("x"); !ok || val.String() != "100" {
-		t.Errorf("x = 100: expected '100', got %v (ok=%v)", val, ok)
-	}
-
-	// With reactive semantics, y should now be 105 (x + 5 = 100 + 5)
-	// because EvaluateBlock re-evaluates all blocks with final variable values
-	if val, ok := env.Get("y"); !ok || val.String() != "105" {
-		t.Errorf("y after x change: expected '105' (reactive), got %v (ok=%v)", val, ok)
+	if !strings.Contains(err.Error(), "already defined") && !strings.Contains(err.Error(), "redefinition") {
+		t.Errorf("Expected redefinition error, got: %v", err)
 	}
 }
 
 // TestGlobalScopeWithinSingleBlock verifies that multiple assignments
-// within the same block work correctly with global scope.
+// of the same variable within a block are rejected.
 func TestGlobalScopeWithinSingleBlock(t *testing.T) {
 	source := `x = 1
 x = 2
@@ -386,34 +344,18 @@ x = 3
 z = x + y
 `
 
+	// Create and evaluate document - should fail due to variable redefinition
 	doc, err := document.NewDocument(source)
 	if err != nil {
-		t.Fatalf("NewDocument failed: %v", err)
+		t.Fatalf("Failed to create document: %v", err)
 	}
 
-	eval := NewEvaluator()
-	err = eval.Evaluate(doc)
-	if err != nil {
-		t.Fatalf("Evaluate failed: %v", err)
+	// Evaluation should fail
+	err = doc.Evaluate()
+	if err == nil {
+		t.Fatal("Expected error for variable redefinition within single block, got nil")
 	}
-
-	env := eval.GetEnvironment()
-
-	// Final values after all statements execute
-	tests := map[string]string{
-		"x": "3", // x = 3 was last assignment
-		"y": "2", // y = x when x was 2
-		"z": "5", // z = 3 + 2 = 5
-	}
-
-	for varName, wantValue := range tests {
-		val, ok := env.Get(varName)
-		if !ok {
-			t.Errorf("Variable %q not found", varName)
-			continue
-		}
-		if val.String() != wantValue {
-			t.Errorf("Variable %q: expected %q, got %q", varName, wantValue, val.String())
-		}
+	if !strings.Contains(err.Error(), "already defined") && !strings.Contains(err.Error(), "redefinition") {
+		t.Errorf("Expected redefinition error, got: %v", err)
 	}
 }

@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -53,6 +54,58 @@ z = 30`
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkEditVariable tests editing variable values (regression test for false redefinition errors).
+// This reproduces the user's bug: editing "b = 5" to "b = 6" showed error on "a = 3".
+func TestEditorCatwalkEditVariable(t *testing.T) {
+	// User's exact scenario: two variables separated by empty lines, then markdown
+	content := `a = 3
+
+b = 5
+
+# Hello`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		// Only run this test on the specific test file
+		if !strings.HasSuffix(path, "edit_variable_no_redef") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+				// Custom observer to check line results for errors
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					if r.IsCalc || r.Error != "" {
+						buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n", r.LineNum, r.Source, r.Value, r.Error))
+					}
+				}
+				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
 		)

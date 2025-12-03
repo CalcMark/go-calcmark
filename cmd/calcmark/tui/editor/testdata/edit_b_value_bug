@@ -1,0 +1,55 @@
+# Reproduce bug: Editing "b = 5" to "b = 6" shows error on "a = 3"
+# Expected: No errors anywhere
+# Actual (bug): Error appears on line with "a = 3"
+
+# Start with document: a = 3, empty line, b = 5, empty line, # Hello
+# Initial state - verify no errors
+run observe=results
+----
+-- results:
+Line 0 (a = 3): value=3, error=""
+Line 2 (b = 5): value=5, error=""
+
+# Navigate to line 2 where "b = 5" is
+run observe=debug
+key down
+key down
+----
+-- debug:
+mode=0 cursorLine=2 editBuf="" state=0
+
+# Type to edit the line - change 5 to 6
+# First, move to end of line and delete the 5
+run observe=debug
+key end
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=5 editBuf="b = 5" state=1
+
+run observe=debug
+key backspace
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=4 editBuf="b = " state=1
+
+# Type 6
+run observe=debug
+type 6
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=5 editBuf="b = 6" state=1
+
+# Navigate away to trigger processing (move down)
+run observe=debug
+key down
+----
+-- debug:
+mode=0 cursorLine=3 editBuf="" state=0
+
+# CRITICAL CHECK: Verify NO errors on any line
+# The bug would show error on line 0 (a = 3)
+run observe=results
+----
+-- results:
+Line 0 (a = 3): value=3, error=""
+Line 2 (b = 6): value=6, error=""

@@ -1,0 +1,12 @@
+# Bug: When one statement has an error, valid statements show empty values
+# Given: a = 3, b = 10 MB/s, c = a * b (error)
+# Expected: a shows value "3", b shows value "10 MB/s", c shows error
+# Actual (bug): a and b show empty values
+
+# Document with type mismatch on line 3
+run observe=results
+----
+-- results:
+Line 0 (a = 3): value=3, error=""
+Line 1 (b = 10 MB/s): value=10 MB/s, error=""
+Line 2 (c = a * b): value=, error="eval_error: cannot multiply number (3) and rate (10 MB/s)"

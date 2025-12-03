@@ -48,10 +48,10 @@ func TestRenderStatusBar(t *testing.T) {
 			name: "with mode",
 			state: StatusBarState{
 				Filename: "test.cm",
-				Mode:     "EDITING",
+				Mode:     "EDITING", // Mode is set but should not be displayed
 			},
 			width:    80,
-			wantSubs: []string{"EDITING"},
+			wantSubs: []string{"test.cm"}, // Changed: mode should not appear in output
 		},
 	}
 

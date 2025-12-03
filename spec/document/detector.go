@@ -60,15 +60,21 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 			// Non-empty line
 			emptyLineCount = 0
 
-			// Append pending empties to the last block (if any) to preserve line count
-			// These are the "extra" empty lines beyond the first block-separator empty
-			if len(pendingEmpties) > 0 && len(blocks) > 0 {
-				lastBlock := blocks[len(blocks)-1]
-				switch b := lastBlock.(type) {
-				case *CalcBlock:
-					b.source = append(b.source, pendingEmpties...)
-				case *TextBlock:
-					b.source = append(b.source, pendingEmpties...)
+			// Handle pending empties (empty lines beyond block separator)
+			if len(pendingEmpties) > 0 {
+				if len(blocks) > 0 {
+					// Append pending empties to the last block to preserve line count
+					lastBlock := blocks[len(blocks)-1]
+					switch b := lastBlock.(type) {
+					case *CalcBlock:
+						b.source = append(b.source, pendingEmpties...)
+					case *TextBlock:
+						b.source = append(b.source, pendingEmpties...)
+					}
+				} else {
+					// No previous block - these empties are at the start of the document
+					// Add them to current block lines so they become part of the first block
+					currentBlockLines = append(currentBlockLines, pendingEmpties...)
 				}
 			}
 			pendingEmpties = nil
@@ -198,12 +204,12 @@ func (d *Detector) IsCalculation(line string) (bool, error) {
 	return looksLikeCalculation(meaningfulTokens), nil
 }
 
-// filterNonNewlineTokens returns tokens excluding NEWLINE.
+// filterNonNewlineTokens returns tokens excluding NEWLINE and EOF.
 // Pure function: no side effects.
 func filterNonNewlineTokens(tokens []lexer.Token) []lexer.Token {
 	result := make([]lexer.Token, 0, len(tokens))
 	for _, t := range tokens {
-		if t.Type != lexer.NEWLINE {
+		if t.Type != lexer.NEWLINE && t.Type != lexer.EOF {
 			result = append(result, t)
 		}
 	}

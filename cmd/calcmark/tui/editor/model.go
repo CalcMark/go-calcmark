@@ -10,6 +10,7 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/format"
 	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -24,15 +25,23 @@ type evalDebounceMsg struct {
 	editBufSnapshot string // Snapshot of editBuf when timer was started
 }
 
-// EditorMode represents the current editor mode.
-type EditorMode int
+// InputState determines the UI context: what receives input and what auxiliary UI should display.
+// IMPORTANT: This is NOT a modal editing system (like vim's normal/insert modes).
+// The user is ALWAYS editing the document - typing and navigation work continuously.
+// InputState controls:
+//   - Which UI component processes keyboard input
+//   - What auxiliary UI elements are shown (preview pane updates, errors, help)
+//   - What auxiliary UI elements are hidden (irrelevant errors/help for the current context)
+type InputState int
 
 const (
-	ModeNormal  EditorMode = iota // Normal navigation mode
-	ModeEditing                   // Line editing mode
-	ModeCommand                   // Command palette mode
-	ModeGlobals                   // Globals panel focused
-	ModeHelp                      // Help viewer
+	StateDefault      InputState = iota // Normal document editing with live preview and error display
+	StateGlobals                        // Globals panel active, preview shows global values
+	StateHelp                           // Help viewer active, preview shows help content
+	StateExportFormat                   // Export dialog active, normal UI paused
+	StateExportPath                     // Export path input active, normal UI paused
+	StateSavePrompt                     // Save confirmation dialog active, normal UI paused
+	StateSaveAsPath                     // Save-as filename input active, normal UI paused
 )
 
 // PreviewMode represents the preview pane display mode.
@@ -72,7 +81,10 @@ type Model struct {
 	doc      *document.Document
 	eval     *implDoc.Evaluator
 	filepath string
-	modified bool
+	modified bool // True if document has unsaved changes
+
+	// Save state tracking
+	savedContent string // Content as it was at last save (for detecting changes)
 
 	// Cursor and navigation
 	cursorLine   int // Current line (0-indexed)
@@ -80,7 +92,9 @@ type Model struct {
 	scrollOffset int // Vertical scroll offset
 
 	// Editor state
-	mode            EditorMode
+	state           EditorState     // Current editing state (StateReady, StateEditing, StateProcessing)
+	mode            InputState      // Which UI component receives input (NOT a vim-style editing mode)
+	userIsTyping    bool            // True when user is actively typing (for debounce)
 	editBuf         string          // Buffer for line being edited
 	lineWrap        bool            // Whether to wrap long lines
 	changedBlockIDs map[string]bool // Track changed blocks for highlighting
@@ -89,9 +103,13 @@ type Model struct {
 	undoStack []string // Document content snapshots
 	redoStack []string
 
-	// Command palette
-	cmdInput   string
-	cmdHistory []string
+	// Export state
+	exportFormat     string   // Selected export format (text, json, html, md)
+	exportPath       string   // Path being entered for export
+	exportFormatOpts []string // Available export formats
+
+	// Save state
+	saveAsPath string // Path being entered for save-as
 
 	// Globals panel
 	globalsExpanded bool
@@ -104,7 +122,6 @@ type Model struct {
 	// UI state
 	width       int
 	height      int
-	lastEscTime int64 // For double-ESC detection
 	quitting    bool
 	previewMode PreviewMode // Preview pane mode: Full, Minimal, Hidden
 	pendingKey  rune        // For two-key sequences like gg, dd, yy
@@ -129,36 +146,40 @@ type Model struct {
 }
 
 // New creates a new editor model with an optional document.
+// This is the ONLY place where editor state is initialized.
+// After this, the editor is ALWAYS in StateReady with all invariants satisfied.
 func New(doc *document.Document) Model {
-	if doc == nil {
-		doc, _ = document.NewDocument("")
-	}
-
-	eval := implDoc.NewEvaluator()
-	_ = eval.Evaluate(doc)
-
+	// User is ALWAYS able to edit - mode only represents temporary UI overlays
 	m := Model{
-		doc:             doc,
-		eval:            eval,
-		mode:            ModeNormal,
-		pinnedVars:      make(map[string]bool),
-		changedVars:     make(map[string]bool),
-		changedBlockIDs: make(map[string]bool),
-		undoStack:       []string{},
-		redoStack:       []string{},
-		cmdHistory:      []string{},
-		width:           80,
-		height:          24,
-		previewMode:     PreviewFull,
-		lineWrap:        true,
-		styles:          config.GetStyles(),
+		doc:              doc,
+		eval:             nil,
+		mode:             StateDefault,
+		userIsTyping:     false,
+		pinnedVars:       make(map[string]bool),
+		changedVars:      make(map[string]bool),
+		changedBlockIDs:  make(map[string]bool),
+		undoStack:        []string{},
+		redoStack:        []string{},
+		exportFormatOpts: []string{"text", "cm", "json", "html", "md"},
+		width:            80,
+		height:           24,
+		previewMode:      PreviewFull,
+		lineWrap:         true,
+		styles:           config.GetStyles(),
 	}
+
+	// CRITICAL: Transition to StateReady - establishes all invariants
+	// This is the ONLY state transition during initialization
+	m.transitionToReady()
 
 	// Auto-pin all variables
 	m.autoPinVariables()
 
 	// Save initial state for undo
 	m.pushUndoState()
+
+	// Initialize savedContent to current content (new documents start "saved")
+	m.savedContent = m.getDocumentContent()
 
 	return m
 }
@@ -196,6 +217,9 @@ func (m *Model) pushUndoState() {
 }
 
 // getDocumentContent returns the document as a string.
+// CRITICAL: Returns content with trailing newline to preserve line count.
+// See unicode.go fix - trailing newlines no longer create extra lines,
+// so we MUST include them when reconstructing to preserve N lines.
 func (m *Model) getDocumentContent() string {
 	var lines []string
 	for _, node := range m.doc.GetBlocks() {
@@ -206,7 +230,11 @@ func (m *Model) getDocumentContent() string {
 			lines = append(lines, b.Source()...)
 		}
 	}
-	return strings.Join(lines, "\n")
+	if len(lines) == 0 {
+		return ""
+	}
+	// Append trailing newline to preserve last line
+	return strings.Join(lines, "\n") + "\n"
 }
 
 // GetLines returns all lines in the document.
@@ -258,8 +286,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case evalDebounceMsg:
 		// Only evaluate if editBuf hasn't changed since the timer was started
 		// This ensures we don't evaluate stale content
-		if m.mode == ModeEditing && m.editBuf == msg.editBufSnapshot {
-			m.liveUpdateCurrentLine()
+		if m.editBuf == msg.editBufSnapshot {
+			// Transition to processing - this will update the line, re-evaluate, and transition to ready
+			m.transitionToProcessing()
 		}
 	}
 
@@ -277,330 +306,348 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Global quit handlers
 	switch msg.Type {
-	case tea.KeyCtrlC, tea.KeyCtrlD:
+	case tea.KeyCtrlC:
+		// Ctrl+C is a standard Unix interrupt signal - quit immediately without prompts
+		// This is the emergency exit - users expect this to always work
+		m.quitting = true
+		return m, tea.Quit
+	case tea.KeyCtrlQ:
+		// Ctrl+Q is the dedicated quit command
+		// Check for unsaved changes before quitting
+		if m.hasUnsavedChanges() {
+			m.mode = StateSavePrompt
+			m.statusMsg = "Unsaved changes! Save before quit? (y/n/c)"
+			return m, nil
+		}
 		m.quitting = true
 		return m, tea.Quit
 	case tea.KeyCtrlS:
 		// Save (Ctrl+S works in all modes)
+		// If no filename, prompt for one
+		if m.filepath == "" {
+			m.mode = StateSaveAsPath
+			m.saveAsPath = ""
+			m.statusMsg = "Save as (filename):"
+			return m, nil
+		}
 		m.saveFile("")
+		return m, nil
+	case tea.KeyCtrlE:
+		// Export (Ctrl+E works in all modes)
+		m.enterExportMode()
 		return m, nil
 	}
 
-	// Mode-specific handling
+	// Mode-specific handling for UI overlays
 	switch m.mode {
-	case ModeEditing:
-		return m.handleEditKey(msg)
-	case ModeCommand:
-		return m.handleCommandKey(msg)
-	case ModeGlobals:
+	case StateGlobals:
 		return m.handleGlobalsKey(msg)
+	case StateExportFormat:
+		return m.handleExportFormatKey(msg)
+	case StateExportPath:
+		return m.handleExportPathKey(msg)
+	case StateSavePrompt:
+		return m.handleSavePromptKey(msg)
+	case StateSaveAsPath:
+		return m.handleSaveAsPathKey(msg)
 	default:
-		return m.handleNormalKey(msg)
+		// StateDefault - user is always editing
+		return m.handleDefaultKey(msg)
 	}
 }
 
-// handleNormalKey processes keys in normal navigation mode.
-func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+// handleDefaultKey processes keys in the default editing mode.
+// The user is ALWAYS able to type and edit - this is the only mode they experience.
+func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
-		m.moveCursor(-1, 0)
+		return m.handleUpKey()
 	case tea.KeyDown:
-		m.moveCursor(1, 0)
+		return m.handleDownKey()
 	case tea.KeyLeft:
-		m.moveCursor(0, -1)
+		return m.handleLeftKey()
 	case tea.KeyRight:
-		m.moveCursor(0, 1)
+		return m.handleRightKey()
 	case tea.KeyPgUp:
-		m.moveCursor(-(m.height - 4), 0)
+		return m.handlePageUpKey()
 	case tea.KeyPgDown:
-		m.moveCursor(m.height-4, 0)
+		return m.handlePageDownKey()
 	case tea.KeyHome:
-		m.cursorLine = 0
-		m.cursorCol = 0
-		m.scrollOffset = 0
+		return m.handleHomeKey()
 	case tea.KeyEnd:
-		total := m.TotalLines()
-		if total > 0 {
-			m.cursorLine = total - 1
-		}
-	case tea.KeyEnter:
-		m.enterEditMode()
+		return m.handleEndKey()
 	case tea.KeyEsc:
-		return m.handleEscape()
-	case tea.KeyTab:
-		// Tab cycles preview mode: Full → Minimal → Hidden → Full
-		m.cyclePreviewMode()
-	case tea.KeyCtrlD:
-		// Half-page down
-		m.moveCursor(m.height/2, 0)
-	case tea.KeyCtrlU:
-		// Half-page up
-		m.moveCursor(-m.height/2, 0)
+		// ESC does nothing in normal editing mode - it's only for canceling special modes
+		// (like globals panel, export mode, save-as dialog, etc.)
+		return m, nil
+	case tea.KeyEnter:
+		return m.handleEnterKey()
+	case tea.KeyBackspace:
+		return m.handleBackspaceKey()
 	case tea.KeyDelete:
-		// Delete current line (same as dd)
-		m.deleteLine()
+		return m.handleDeleteKey()
+	case tea.KeyCtrlP:
+		return m.handleCtrlP()
+	case tea.KeyCtrlD:
+		return m.handleCtrlD()
+	case tea.KeyCtrlU:
+		return m.handleCtrlU()
+	case tea.KeySpace:
+		return m.handleSpaceKey()
 	case tea.KeyRunes:
-		return m.handleNormalRune(msg.Runes)
+		return m.handleRuneInput(msg.Runes)
 	}
 
 	return m, nil
 }
 
-// handleNormalRune handles character input in normal mode.
-func (m Model) handleNormalRune(runes []rune) (tea.Model, tea.Cmd) {
+// handleRuneInput handles character input - regular typing only.
+// All vim keys have been removed - user is ALWAYS in editing mode.
+func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 	if len(runes) == 0 {
 		return m, nil
 	}
 
-	key := runes[0]
+	// Insert all characters at cursor position
+	m.transitionToEditing()
 
-	// Handle two-key sequences
-	if m.pendingKey != 0 {
-		pending := m.pendingKey
-		m.pendingKey = 0
-
-		switch pending {
-		case 'g':
-			if key == 'g' {
-				// gg: go to top
-				m.cursorLine = 0
-				m.cursorCol = 0
-				m.scrollOffset = 0
-				return m, nil
-			}
-			// g followed by anything else: enter globals mode then process key
-			m.mode = ModeGlobals
-			m.globalsExpanded = true
-			return m, nil
-		case 'd':
-			if key == 'd' {
-				// dd: delete current line
-				m.deleteLine()
-				return m, nil
-			}
-		case 'y':
-			if key == 'y' {
-				// yy: yank (copy) current line
-				m.yankLine()
-				return m, nil
-			}
-		}
-		// Invalid sequence, ignore
-		return m, nil
+	for _, r := range runes {
+		m.insertRune(r)
 	}
 
-	// Check for start of two-key sequence
-	switch key {
-	case 'g':
-		m.pendingKey = 'g'
-		return m, nil
-	case 'd':
-		m.pendingKey = 'd'
-		return m, nil
-	case 'y':
-		m.pendingKey = 'y'
-		return m, nil
-	}
+	return m.debounceUpdate()
+}
 
-	// Single key commands
-	switch key {
-	case 'j': // Down
-		m.moveCursor(1, 0)
-	case 'k': // Up
-		m.moveCursor(-1, 0)
-	case 'h': // Left
-		m.moveCursor(0, -1)
-	case 'l': // Right
-		m.moveCursor(0, 1)
-	case 'G': // Go to bottom
-		total := m.TotalLines()
-		if total > 0 {
-			m.cursorLine = total - 1
-		}
-	case 'e', 'i': // Enter edit mode
-		m.enterEditMode()
-	case 'o': // Insert line below and enter edit mode
-		m.insertLineBelow()
-		m.enterEditMode()
-	case 'O': // Insert line above and enter edit mode
-		m.insertLineAbove()
-		m.enterEditMode()
-	case 'u': // Undo
-		m.undo()
-	case 'r': // Redo
-		m.redo()
-	case '/': // Enter command mode
-		m.mode = ModeCommand
-		m.cmdInput = ""
-	case 'p': // Paste below (if yank buffer has content) OR cycle preview
-		if m.yankBuffer != "" {
-			m.pasteLine()
-		} else {
-			m.cyclePreviewMode()
-		}
-	case 'P': // Paste above
-		m.pasteLineAbove()
-	case 'v': // Toggle preview (alternate to Tab)
-		m.cyclePreviewMode()
-	case 'n': // Next search match
-		m.nextSearchMatch()
-	case 'N': // Previous search match
-		m.prevSearchMatch()
-	case '?': // Help
-		m.mode = ModeHelp
+// ========================================
+// Clean key handler helper functions
+// ========================================
+
+// Navigation keys
+func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorLine > 0 {
+		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
 	}
+	return m, nil
+}
+
+func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorLine < m.TotalLines()-1 {
+		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+	}
+	return m, nil
+}
+
+func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorCol > 0 {
+		m.cursorCol--
+	} else if m.cursorLine > 0 {
+		// At start of line - move to end of previous line
+		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+		m.cursorCol = len(m.editBuf)
+	}
+	return m, nil
+}
+
+func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorCol < len(m.editBuf) {
+		m.cursorCol++
+	} else if m.cursorLine < m.TotalLines()-1 {
+		// At end of line - move to start of next line
+		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+		m.cursorCol = 0
+	}
+	return m, nil
+}
+
+func (m Model) handlePageUpKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.moveCursor(-(m.height - 4), 0)
+	return m, nil
+}
+
+func (m Model) handlePageDownKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.moveCursor(m.height-4, 0)
+	return m, nil
+}
+
+func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.cursorCol = 0
+	return m, nil
+}
+
+func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.cursorCol = len(m.editBuf)
+	return m, nil
+}
+
+// Content modification keys
+func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+
+	// Save current line
+	m.updateCurrentLine(m.editBuf)
+
+	// Insert new line below
+	// insertLineBelow() sets cursor to the new line, so no need to increment
+	m.insertLineBelow()
+	m.editBuf = ""
+	m.cursorCol = 0
+
+	// Process document changes immediately on ESC
+	m.redetectBlockTypes()
+	m.reEvaluate()
+	m.pushUndoState()
+	m.modified = true
+	m.userIsTyping = false
 
 	return m, nil
 }
 
-// handleEditKey processes keys in edit mode.
-func (m Model) handleEditKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	contentChanged := false
+func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
 
-	switch msg.Type {
-	case tea.KeyEsc:
-		m.exitEditMode(true) // Save changes
-	case tea.KeyEnter:
-		// Split line at cursor position (like a normal text editor)
-		// Text before cursor stays on current line, text after goes to new line
-		textBefore := m.editBuf[:m.cursorCol]
-		textAfter := m.editBuf[m.cursorCol:]
+	// Split line at cursor position
+	textBefore := m.editBuf[:m.cursorCol]
+	textAfter := m.editBuf[m.cursorCol:]
 
-		// Update current line with text before cursor
-		m.editBuf = textBefore
-		m.exitEditMode(true) // Save the current line
+	// Save current line with text before cursor
+	m.editBuf = textBefore
+	m.updateCurrentLine(m.editBuf)
 
-		// Insert new line below with text after cursor
-		m.insertLineBelow()
-		m.enterEditMode()
-		m.editBuf = textAfter
-		m.cursorCol = 0
-		contentChanged = true
-	case tea.KeyBackspace:
-		if m.cursorCol > 0 && len(m.editBuf) > 0 {
-			m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
-			m.cursorCol--
-			contentChanged = true
-		} else if len(m.editBuf) == 0 && m.cursorLine > 0 {
-			// Empty line with a previous line - delete this line and move to end of previous
-			m.exitEditMode(false) // Don't save the empty line
-			prevLine := m.cursorLine - 1
-			m.deleteLine()
-			// Move to previous line and enter edit mode at end
-			m.cursorLine = prevLine
-			m.enterEditMode()
+	// Insert new line below with text after cursor
+	// insertLineBelow() sets cursor to the new line, so no need to increment
+	m.insertLineBelow()
+	m.editBuf = textAfter
+	m.cursorCol = 0
+
+	// Process document changes immediately on ENTER
+	m.redetectBlockTypes()
+	m.reEvaluate()
+	m.pushUndoState()
+	m.modified = true
+	m.userIsTyping = false
+
+	return m, nil
+}
+
+func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
+	m.transitionToEditing()
+
+	if m.cursorCol > 0 && len(m.editBuf) > 0 {
+		// Delete character before cursor
+		m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
+		m.cursorCol--
+		return m.debounceUpdate()
+	} else if len(m.editBuf) == 0 && m.cursorLine > 0 {
+		// Empty line - join with previous line
+		prevLine := m.cursorLine - 1
+		m.deleteLine()
+		m.cursorLine = prevLine
+		lines := m.GetLines()
+		if m.cursorLine < len(lines) {
+			m.editBuf = lines[m.cursorLine]
 			m.cursorCol = len(m.editBuf)
 		}
-	case tea.KeyDelete:
-		if m.cursorCol < len(m.editBuf) {
-			// Delete character forward
-			m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
-			contentChanged = true
-		} else if len(m.editBuf) == 0 {
-			// Empty line - delete it and move to next line (or stay if last line)
-			m.exitEditMode(false)
-			m.deleteLine()
-			// After deletion, cursorLine stays the same (now pointing to what was next line)
-			// If we deleted the last line, deleteLine adjusts cursorLine
-			if m.TotalLines() > 0 {
-				// Clamp to valid range
-				if m.cursorLine >= m.TotalLines() {
-					m.cursorLine = m.TotalLines() - 1
-				}
-				m.enterEditMode()
-				m.cursorCol = 0 // Beginning of the (now current) line
+		m.transitionToEditing()
+		return m.debounceUpdate()
+	}
+
+	return m, nil
+}
+
+func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+
+	if m.cursorCol < len(m.editBuf) {
+		// Delete character at cursor
+		m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
+		m.transitionToEditing()
+		return m.debounceUpdate()
+	} else if len(m.editBuf) == 0 {
+		// Empty line - delete it
+		m.deleteLine()
+		if m.TotalLines() > 0 {
+			if m.cursorLine >= m.TotalLines() {
+				m.cursorLine = m.TotalLines() - 1
 			}
+			lines := m.GetLines()
+			if m.cursorLine < len(lines) {
+				m.editBuf = lines[m.cursorLine]
+			} else {
+				m.editBuf = ""
+			}
+			m.cursorCol = 0
 		}
-	case tea.KeyUp:
-		// Move to previous line while staying in edit mode
-		if m.cursorLine > 0 {
-			m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
-		}
-	case tea.KeyDown:
-		// Move to next line while staying in edit mode
-		if m.cursorLine < m.TotalLines()-1 {
-			m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
-		}
-	case tea.KeyLeft:
-		if m.cursorCol > 0 {
-			m.cursorCol--
-		}
-	case tea.KeyRight:
-		if m.cursorCol < len(m.editBuf) {
-			m.cursorCol++
-		}
-	case tea.KeyHome:
-		m.cursorCol = 0
-	case tea.KeyEnd:
-		m.cursorCol = len(m.editBuf)
-	case tea.KeySpace:
-		// Insert space at cursor
-		m.editBuf = m.editBuf[:m.cursorCol] + " " + m.editBuf[m.cursorCol:]
-		m.cursorCol++
-		contentChanged = true
-	case tea.KeyRunes:
-		// Insert character at cursor
-		for _, r := range msg.Runes {
-			m.editBuf = m.editBuf[:m.cursorCol] + string(r) + m.editBuf[m.cursorCol:]
-			m.cursorCol++
-		}
-		contentChanged = true
-	}
-
-	// Schedule debounced re-evaluation on content changes
-	// This prevents re-evaluating on every keystroke (per spec: ~50ms debounce)
-	if contentChanged {
-		snapshot := m.editBuf
-		return m, tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
-			return evalDebounceMsg{editBufSnapshot: snapshot}
-		})
+		m.transitionToEditing()
+		return m.debounceUpdate()
 	}
 
 	return m, nil
 }
 
-// liveUpdateCurrentLine updates the current line and re-evaluates for live preview.
-func (m *Model) liveUpdateCurrentLine() {
-	// Update the line in the document
-	m.updateCurrentLine(m.editBuf)
-	// Re-evaluate to update preview
-	m.reEvaluate()
+func (m Model) handleSpaceKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = m.editBuf[:m.cursorCol] + " " + m.editBuf[m.cursorCol:]
+	m.cursorCol++
+	m.transitionToEditing()
+	return m.debounceUpdate()
 }
 
-// handleCommandKey processes keys in command mode.
-func (m Model) handleCommandKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
-		m.mode = ModeNormal
-		m.cmdInput = ""
-	case tea.KeyEnter:
-		m.executeCommand(m.cmdInput)
-		m.mode = ModeNormal
-		m.cmdInput = ""
-		// Check if command requested quit
-		if m.quitting {
-			return m, tea.Quit
-		}
-	case tea.KeyBackspace:
-		if len(m.cmdInput) > 0 {
-			m.cmdInput = m.cmdInput[:len(m.cmdInput)-1]
-		}
-	case tea.KeySpace:
-		m.cmdInput += " "
-	case tea.KeyRunes:
-		for _, r := range msg.Runes {
-			m.cmdInput += string(r)
+// Control keys
+func (m Model) handleCtrlP() (tea.Model, tea.Cmd) {
+	m.cyclePreviewMode()
+	return m, nil
+}
+
+func (m Model) handleCtrlD() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.moveCursor(m.height/2, 0)
+	return m, nil
+}
+
+func (m Model) handleCtrlU() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.moveCursor(-m.height/2, 0)
+	return m, nil
+}
+
+// insertRune inserts a single character at the cursor position.
+func (m *Model) insertRune(r rune) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = m.editBuf[:m.cursorCol] + string(r) + m.editBuf[m.cursorCol:]
+	m.cursorCol++
+}
+
+func (m Model) debounceUpdate() (tea.Model, tea.Cmd) {
+	snapshot := m.editBuf
+	return m, tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+		return evalDebounceMsg{editBufSnapshot: snapshot}
+	})
+}
+
+// loadCurrentLineIntoEditBuffer ensures editBuf is loaded with current line content.
+// This makes the user ALWAYS able to edit - no mode switching needed.
+func (m *Model) loadCurrentLineIntoEditBuffer() {
+	if m.editBuf == "" {
+		lines := m.GetLines()
+		if m.cursorLine < len(lines) {
+			m.editBuf = lines[m.cursorLine]
 		}
 	}
-
-	return m, nil
 }
 
 // handleGlobalsKey processes keys when globals panel is focused.
 func (m Model) handleGlobalsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
-		m.mode = ModeNormal
+		m.mode = StateDefault
 		m.globalsExpanded = false
 	case tea.KeyUp, tea.KeyRunes:
 		if msg.Type == tea.KeyUp || (len(msg.Runes) > 0 && msg.Runes[0] == 'k') {
@@ -615,7 +662,7 @@ func (m Model) handleGlobalsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		// Could edit focused global
-		m.mode = ModeNormal
+		m.mode = StateDefault
 	}
 
 	// Handle 'j' for down
@@ -629,15 +676,144 @@ func (m Model) handleGlobalsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleEscape processes escape key.
-func (m Model) handleEscape() (tea.Model, tea.Cmd) {
-	now := time.Now().UnixNano()
-	if m.lastEscTime > 0 && (now-m.lastEscTime) < 500_000_000 {
-		// Double ESC - quit
-		m.quitting = true
-		return m, tea.Quit
+// handleExportFormatKey processes keys in export format selection mode.
+func (m Model) handleExportFormatKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = StateDefault
+		m.exportFormat = ""
+		m.statusMsg = "Export cancelled"
+	case tea.KeyEnter:
+		// Move to path input
+		if m.exportFormat != "" {
+			m.mode = StateExportPath
+			m.exportPath = ""
+			m.statusMsg = "Enter filename (without extension):"
+		}
+	case tea.KeyRunes:
+		if len(msg.Runes) > 0 {
+			key := msg.Runes[0]
+			// Select format by number key (1-5)
+			if key >= '1' && key <= '5' {
+				idx := int(key - '1')
+				if idx < len(m.exportFormatOpts) {
+					m.exportFormat = m.exportFormatOpts[idx]
+					// Auto-advance to path input
+					m.mode = StateExportPath
+					m.exportPath = ""
+					m.statusMsg = fmt.Sprintf("Exporting as %s. Enter filename:", m.exportFormat)
+				}
+			}
+		}
 	}
-	m.lastEscTime = now
+	return m, nil
+}
+
+// handleExportPathKey processes keys in export path input mode.
+func (m Model) handleExportPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = StateDefault
+		m.exportFormat = ""
+		m.exportPath = ""
+		m.statusMsg = "Export cancelled"
+	case tea.KeyEnter:
+		if m.exportPath != "" {
+			m.exportFile(m.exportPath, m.exportFormat)
+			m.mode = StateDefault
+			m.exportFormat = ""
+			m.exportPath = ""
+		}
+	case tea.KeyBackspace:
+		if len(m.exportPath) > 0 {
+			m.exportPath = m.exportPath[:len(m.exportPath)-1]
+		}
+	case tea.KeySpace:
+		m.exportPath += " "
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			m.exportPath += string(r)
+		}
+	}
+	return m, nil
+}
+
+// handleSavePromptKey processes keys in save prompt mode (before quit).
+func (m Model) handleSavePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 {
+		switch msg.Runes[0] {
+		case 'y', 'Y':
+			// Save and quit - but if no filename, prompt for one first
+			if m.filepath == "" {
+				m.mode = StateSaveAsPath
+				m.saveAsPath = ""
+				m.statusMsg = "Save as (filename):"
+				return m, nil
+			}
+			m.saveFile("")
+			if !m.statusIsErr {
+				m.quitting = true
+				return m, tea.Quit
+			}
+			// If save failed, stay in prompt mode
+			return m, nil
+		case 'n', 'N':
+			// Quit without saving
+			m.quitting = true
+			return m, tea.Quit
+		case 'c', 'C':
+			// Cancel quit
+			m.mode = StateDefault
+			m.statusMsg = "Quit cancelled"
+		}
+	} else if msg.Type == tea.KeyEsc {
+		// Cancel quit
+		m.mode = StateDefault
+		m.statusMsg = "Quit cancelled"
+	}
+	return m, nil
+}
+
+// handleSaveAsPathKey processes keys in save-as filename input mode.
+func (m Model) handleSaveAsPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.mode = StateDefault
+		m.saveAsPath = ""
+		m.quitting = false // Clear quit flag if canceling save
+		m.statusMsg = "Save cancelled"
+	case tea.KeyEnter:
+		if m.saveAsPath != "" {
+			m.saveFile(m.saveAsPath)
+			if !m.statusIsErr {
+				m.mode = StateDefault
+				// If we were trying to quit, quit now
+				if m.quitting {
+					return m, tea.Quit
+				}
+			}
+			m.saveAsPath = ""
+		}
+	case tea.KeyBackspace:
+		if len(m.saveAsPath) > 0 {
+			m.saveAsPath = m.saveAsPath[:len(m.saveAsPath)-1]
+		}
+	case tea.KeySpace:
+		m.saveAsPath += " "
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			m.saveAsPath += string(r)
+		}
+	}
+	return m, nil
+}
+
+// handleEscape processes escape key.
+// ESC is only for canceling modes, not for quitting the application.
+// Use Ctrl+Q to quit.
+func (m Model) handleEscape() (tea.Model, tea.Cmd) {
+	// ESC does nothing in normal mode - it's just for canceling other modes
+	// The mode-specific handlers will handle ESC appropriately
 	return m, nil
 }
 
@@ -680,63 +856,35 @@ func (m *Model) moveCursor(dLine, dCol int) {
 	}
 }
 
-// enterEditMode enters line editing mode.
-func (m *Model) enterEditMode() {
-	// Clear previous change markers when starting a new edit session
-	m.changedBlockIDs = make(map[string]bool)
-
-	lines := m.GetLines()
-	isNewDocument := len(lines) == 0
-
-	// Handle empty document - create a new document with a placeholder line
-	if isNewDocument {
-		// Create a new document with underscore (minimal valid calc block)
-		newDoc, err := document.NewDocument("_")
-		if err == nil {
-			m.doc = newDoc
-			m.eval = implDoc.NewEvaluator()
-			_ = m.eval.Evaluate(m.doc)
+// saveCurrentLine saves the edit buffer to the current line without changing mode.
+// The user is ALWAYS able to edit - no mode switching needed.
+func (m *Model) saveCurrentLine(save bool) {
+	if save && m.editBuf != "" {
+		// Special case: empty document with content in edit buffer
+		// Create the document from the buffer content
+		if len(m.GetLines()) == 0 {
+			newDoc, err := document.NewDocument(m.editBuf)
+			if err == nil {
+				m.doc = newDoc
+				m.eval = implDoc.NewEvaluator()
+				_ = m.eval.Evaluate(m.doc)
+				m.modified = true
+				m.pushUndoState()
+				m.autoPinVariables()
+			}
+		} else if len(m.GetLines()) > 0 {
+			// Normal case: update existing line
+			m.updateCurrentLine(m.editBuf)
+			m.modified = true
 			m.pushUndoState()
-			lines = m.GetLines()
+
+			// Re-detect block types in case content changed from calc to text or vice versa
+			m.redetectBlockTypes()
+
+			// Re-evaluate affected blocks
+			m.reEvaluate()
 		}
 	}
-
-	if m.cursorLine >= len(lines) {
-		m.cursorLine = len(lines) - 1
-	}
-	if m.cursorLine < 0 {
-		m.cursorLine = 0
-	}
-
-	if m.cursorLine < len(lines) {
-		lineContent := lines[m.cursorLine]
-		// For newly created document, start with empty buffer (not the placeholder)
-		if isNewDocument {
-			m.editBuf = ""
-		} else {
-			m.editBuf = lineContent
-		}
-		m.mode = ModeEditing
-		m.cursorCol = len(m.editBuf) // Position cursor at end
-	}
-}
-
-// exitEditMode exits line editing mode.
-func (m *Model) exitEditMode(save bool) {
-	if save && m.mode == ModeEditing {
-		// Find and update the block containing this line
-		m.updateCurrentLine(m.editBuf)
-		m.modified = true
-		m.pushUndoState()
-
-		// Re-detect block types in case content changed from calc to text or vice versa
-		m.redetectBlockTypes()
-
-		// Re-evaluate affected blocks
-		m.reEvaluate()
-	}
-	m.mode = ModeNormal
-	m.editBuf = ""
 }
 
 // saveCurrentLineAndMoveTo saves the current edit buffer and moves to a new line,
@@ -745,6 +893,12 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 	// Save current line content
 	m.updateCurrentLine(m.editBuf)
 	m.modified = true
+
+	// CRITICAL: Re-evaluate after saving line so preview shows updated results
+	m.redetectBlockTypes()
+	m.reEvaluate()
+	m.pushUndoState()
+	m.userIsTyping = false // Navigation commits the typing
 
 	// Remember cursor column to try to preserve it
 	savedCol := m.cursorCol
@@ -873,9 +1027,15 @@ func (m *Model) insertLine(at int) {
 	newLines = append(newLines, lines[at:]...)
 
 	// Rebuild document with new content
-	content := strings.Join(newLines, "\n")
+	// CRITICAL: strings.Join(lines, "\n") is NOT round-trippable!
+	// To preserve N lines, we need N-1 separators PLUS a trailing newline.
+	// Example: ["", ""] needs "\n\n" not "\n" to preserve 2 lines.
+	content := strings.Join(newLines, "\n") + "\n"
 	newDoc, err := document.NewDocument(content)
 	if err != nil {
+		// DEBUG: log error if document creation fails
+		// In production, this shouldn't happen but helps debug
+		_ = err // Keep for future debugging
 		return
 	}
 
@@ -1007,6 +1167,9 @@ func (m *Model) executeCommand(cmd string) {
 			filename = parts[1]
 		}
 		m.saveFile(filename)
+	case "export", "x":
+		// Enter export mode
+		m.enterExportMode()
 	case "open", "o":
 		if len(parts) > 1 {
 			m.openFile(parts[1])
@@ -1015,7 +1178,13 @@ func (m *Model) executeCommand(cmd string) {
 			m.statusIsErr = true
 		}
 	case "quit", "q":
-		m.quitting = true
+		// Check for unsaved changes
+		if m.hasUnsavedChanges() {
+			m.mode = StateSavePrompt
+			m.statusMsg = "Unsaved changes! Save before quit? (y/n/c)"
+		} else {
+			m.quitting = true
+		}
 	case "wq":
 		// Save and quit
 		m.saveFile("")
@@ -1102,10 +1271,89 @@ func (m *Model) saveFile(filename string) {
 		return
 	}
 
-	// Update state
+	// Update state - record the saved content for change detection
 	m.filepath = absPath
+	m.savedContent = content
 	m.modified = false
 	m.statusMsg = fmt.Sprintf("Saved: %s", filepath.Base(absPath))
+	m.statusIsErr = false
+}
+
+// exportFile exports the document to a file in the specified format.
+func (m *Model) exportFile(filename, formatName string) {
+	if filename == "" {
+		m.statusMsg = "No filename specified"
+		m.statusIsErr = true
+		return
+	}
+
+	// Get absolute path and add appropriate extension
+	absPath, err := filepath.Abs(filename)
+	if err != nil {
+		m.statusMsg = fmt.Sprintf("Invalid path: %v", err)
+		m.statusIsErr = true
+		return
+	}
+
+	// Add extension based on format if not present
+	ext := filepath.Ext(absPath)
+	if ext == "" {
+		switch formatName {
+		case "cm":
+			absPath += ".cm"
+		case "json":
+			absPath += ".json"
+		case "html":
+			absPath += ".html"
+		case "md":
+			absPath += ".md"
+		case "text":
+			absPath += ".txt"
+		default:
+			absPath += ".txt"
+		}
+	}
+
+	// Create file
+	file, err := os.Create(absPath)
+	if err != nil {
+		m.statusMsg = fmt.Sprintf("Export failed: %v", err)
+		m.statusIsErr = true
+		return
+	}
+	defer file.Close()
+
+	// Get formatter from registry
+	formatter := format.GetFormatter(formatName, absPath)
+
+	// Format and write to file
+	opts := format.Options{
+		Verbose:       false,
+		IncludeErrors: true,
+	}
+
+	err = formatter.Format(file, m.doc, opts)
+	if err != nil {
+		m.statusMsg = fmt.Sprintf("Export failed: %v", err)
+		m.statusIsErr = true
+		return
+	}
+
+	m.statusMsg = fmt.Sprintf("Exported to: %s (%s)", filepath.Base(absPath), formatName)
+}
+
+// enterExportMode enters export format selection mode.
+func (m *Model) enterExportMode() {
+	m.mode = StateExportFormat
+	m.exportFormat = ""
+	m.statusMsg = "Select export format: 1)text 2)cm 3)json 4)html 5)md"
+}
+
+// hasUnsavedChanges returns true if there are unsaved changes.
+func (m *Model) hasUnsavedChanges() bool {
+	// Compare current document content with last saved content
+	currentContent := m.getDocumentContent()
+	return currentContent != m.savedContent
 }
 
 // openFile opens a file into the editor.
@@ -1158,6 +1406,9 @@ func (m *Model) openFile(filename string) {
 	m.redoStack = []string{}
 	m.pushUndoState()
 
+	// Record file content as saved state
+	m.savedContent = string(content)
+
 	// Auto-pin variables
 	m.pinnedVars = make(map[string]bool)
 	m.changedVars = make(map[string]bool)
@@ -1175,19 +1426,7 @@ func (m *Model) getGlobalsCount() int {
 
 // GetStatusBarState returns state for the status bar.
 func (m *Model) GetStatusBarState() components.StatusBarState {
-	modeStr := ""
-	switch m.mode {
-	case ModeNormal:
-		modeStr = "NORMAL"
-	case ModeEditing:
-		modeStr = "EDITING"
-	case ModeCommand:
-		modeStr = "COMMAND"
-	case ModeGlobals:
-		modeStr = "GLOBALS"
-	case ModeHelp:
-		modeStr = "HELP"
-	}
+	// Note: mode is an internal implementation detail and not shown to users
 
 	// Build hints with preview mode indicator
 	previewHint := ""
@@ -1202,12 +1441,17 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 
 	hints := ""
 	switch m.mode {
-	case ModeNormal:
-		hints = fmt.Sprintf("e=edit j/k=↑↓ %s /=cmd", previewHint)
-	case ModeEditing:
-		hints = "Esc=done"
-	case ModeCommand:
-		hints = "Enter=run Esc=cancel"
+	case StateDefault:
+		// User is always able to edit - show all available commands
+		hints = fmt.Sprintf("Ctrl+S=save Ctrl+E=export Ctrl+Q=quit Arrows=navigate %s", previewHint)
+	case StateExportFormat:
+		hints = "1-5=select Esc=cancel"
+	case StateExportPath:
+		hints = "Enter=export Esc=cancel"
+	case StateSavePrompt:
+		hints = "y=save&quit n=quit c=cancel"
+	case StateSaveAsPath:
+		hints = "Enter=save Esc=cancel"
 	}
 
 	return components.StatusBarState{
@@ -1216,7 +1460,7 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 		TotalLines:  m.TotalLines(),
 		CalcCount:   m.CalcBlockCount(),
 		Modified:    m.modified,
-		Mode:        modeStr,
+		Mode:        "", // Mode is internal - not shown to users
 		Hints:       hints,
 		StatusMsg:   m.statusMsg,
 		StatusIsErr: m.statusIsErr,
@@ -1302,7 +1546,7 @@ func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 		Globals:    globals,
 		Expanded:   m.globalsExpanded,
 		FocusIndex: m.globalsFocusIdx,
-		Focused:    m.mode == ModeGlobals,
+		Focused:    m.mode == StateGlobals,
 	}
 }
 
@@ -1313,6 +1557,7 @@ type alignedCacheKey struct {
 	cursorLine  int         // Cursor position affects highlighting
 	previewMode PreviewMode // Affects rendering
 	totalLines  int         // Quick check for document changes
+	editBuf     string      // EditBuf changes should invalidate cache
 }
 
 // computeCacheKey computes a cache key from current model state.
@@ -1334,6 +1579,7 @@ func (m *Model) computeCacheKey() alignedCacheKey {
 		cursorLine:  m.cursorLine,
 		previewMode: m.previewMode,
 		totalLines:  len(lines),
+		editBuf:     m.editBuf, // Include editBuf so cache updates while typing
 	}
 }
 
@@ -1366,6 +1612,8 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 		PreviewWidth:       previewWidth,
 		CursorLine:         m.cursorLine,
 		PreviewMode:        m.previewMode,
+		EditBuf:            m.editBuf,
+		EditBufLine:        m.cursorLine, // EditBuf applies to current cursor line
 	}
 
 	// Compute with render functions that match view.go behavior
@@ -1403,7 +1651,7 @@ func (m Model) Document() *document.Document {
 }
 
 // Mode returns the current editor mode.
-func (m Model) Mode() EditorMode {
+func (m Model) Mode() InputState {
 	return m.mode
 }
 
@@ -1455,13 +1703,8 @@ func (m Model) Height() int {
 }
 
 // SetMode sets the editor mode.
-func (m *Model) SetMode(mode EditorMode) {
+func (m *Model) SetMode(mode InputState) {
 	m.mode = mode
-}
-
-// CommandInput returns the current command input.
-func (m Model) CommandInput() string {
-	return m.cmdInput
 }
 
 // IsModified returns whether the document has unsaved changes.

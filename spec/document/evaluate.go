@@ -101,12 +101,59 @@ func (d *Document) evaluateCalcBlock(blockID string, block *CalcBlock) error {
 	// 2. Semantic check with current environment
 	checker := semantic.NewChecker()
 
-	// Pre-populate checker environment with interpreter's environment
+	// Pre-populate checker environment with interpreter's environment,
+	// but EXCLUDE variables that were PREVIOUSLY successfully evaluated in THIS block
+	// to avoid false redefinition errors during incremental re-evaluation.
+	// Note: Variables() may be populated by dependency analysis before evaluation,
+	// so we check if the block has Results to determine if it's been evaluated before.
+	hasBeenEvaluated := len(block.Results()) > 0 && !block.IsDirty()
+	previouslyDefinedVars := block.Variables()
+
 	for varName, value := range d.env.GetAllVariables() {
+		// Skip variables that this block previously evaluated successfully
+		if hasBeenEvaluated && containsString(previouslyDefinedVars, varName) {
+			continue
+		}
 		checker.GetEnvironment().Set(varName, value)
 	}
 
 	diagnostics := checker.Check(nodes)
+
+	// Convert semantic diagnostics to document diagnostics
+	var docDiags []Diagnostic
+	for _, diag := range diagnostics {
+		// Extract line number from Range (if available)
+		line := 0
+		column := 0
+		if diag.Range != nil {
+			line = diag.Range.Start.Line
+			column = diag.Range.Start.Column
+		}
+
+		// Convert severity to string
+		severity := "error"
+		switch diag.Severity {
+		case semantic.Error:
+			severity = "error"
+		case semantic.Warning:
+			severity = "warning"
+		case semantic.Hint:
+			severity = "hint"
+		}
+
+		docDiag := Diagnostic{
+			BlockID:  blockID,
+			Severity: severity,
+			Code:     diag.Code,
+			Message:  diag.Message,
+			Line:     line,
+			Column:   column,
+		}
+		docDiags = append(docDiags, docDiag)
+	}
+
+	// Store diagnostics in block
+	block.SetDiagnostics(docDiags)
 
 	// Check for errors
 	for _, diag := range diagnostics {
@@ -136,4 +183,14 @@ func (d *Document) evaluateCalcBlock(blockID string, block *CalcBlock) error {
 	block.SetDirty(false)
 
 	return nil
+}
+
+// containsString checks if a string slice contains a given string.
+func containsString(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }

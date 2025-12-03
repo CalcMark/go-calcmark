@@ -242,6 +242,16 @@ func (p *RecursiveDescentParser) parseAssignment() (ast.Node, error) {
 	return &ast.Assignment{
 		Name:  string(name.Value),
 		Value: value,
+		Range: &ast.Range{
+			Start: ast.Position{
+				Line:   name.Line,
+				Column: name.Column,
+			},
+			End: ast.Position{
+				Line:   name.Line,
+				Column: name.Column + len(name.Value),
+			},
+		},
 	}, nil
 }
 

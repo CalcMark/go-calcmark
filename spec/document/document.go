@@ -60,6 +60,13 @@ func NewDocument(source string) (*Document, error) {
 	// Build dependency graph for calculation blocks
 	doc.rebuildDependencies()
 
+	// NOTE: We do NOT call Evaluate() here because:
+	// 1. The TUI needs to create documents with semantic errors so users can see/fix them
+	// 2. Evaluation happens incrementally as blocks are edited
+	// 3. Errors are stored in block diagnostics and displayed in the TUI
+	//
+	// For non-TUI use cases (like tests), call doc.Evaluate() explicitly after NewDocument.
+
 	return doc, nil
 }
 
