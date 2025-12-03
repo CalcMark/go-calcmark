@@ -95,6 +95,11 @@ func load() (*Config, error) {
 
 // applyColorMode sets lipgloss's background detection based on config.
 // Priority: color_mode > dark_mode (for backward compatibility).
+//
+// IMPORTANT: For "auto" mode, we default to dark and let lipgloss detect
+// on first render WITHIN the TUI. We do NOT trigger detection here because
+// that would query the terminal BEFORE alternate screen mode is entered,
+// causing terminal artifacts to appear on screen.
 func applyColorMode(colorMode string, darkMode bool) {
 	switch strings.ToLower(colorMode) {
 	case "light":
@@ -102,12 +107,16 @@ func applyColorMode(colorMode string, darkMode bool) {
 	case "dark":
 		lipgloss.SetHasDarkBackground(true)
 	case "auto", "":
-		// Use auto-detection if color_mode is "auto" or empty
-		// If dark_mode is set (legacy), use it as fallback
+		// For auto mode: Default to dark (most common), but allow lipgloss
+		// to auto-detect during first render within the TUI's alternate screen.
+		// This prevents terminal queries before alternate screen is entered.
 		if colorMode == "" {
+			// Legacy fallback: use dark_mode setting
 			lipgloss.SetHasDarkBackground(darkMode)
+		} else {
+			// color_mode="auto": Default to dark, let lipgloss detect within TUI
+			lipgloss.SetHasDarkBackground(true)
 		}
-		// Otherwise, lipgloss will auto-detect on first use
 	default:
 		// Invalid color_mode, fall back to dark_mode
 		lipgloss.SetHasDarkBackground(darkMode)
