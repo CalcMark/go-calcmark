@@ -11,15 +11,16 @@ import (
 	"github.com/muesli/termenv"
 )
 
-func init() {
+// initializeColorProfile sets up lipgloss color settings.
+// MUST be called after alternate screen is entered to avoid terminal artifacts.
+func initializeColorProfile() {
 	// Set color profile and background explicitly to avoid terminal queries.
+	// We set TrueColor without querying the terminal.
 	lipgloss.SetColorProfile(termenv.TrueColor)
-	lipgloss.SetHasDarkBackground(true)
 
-	// Load configuration
-	if _, err := config.Load(); err != nil {
-		// Non-fatal: use defaults
-	}
+	// Use the color mode from config (already loaded at this point)
+	// This avoids any terminal queries for background detection
+	lipgloss.SetHasDarkBackground(config.IsDarkMode())
 }
 
 // App represents the root TUI application.
@@ -59,6 +60,10 @@ func NewEditorApp(doc *document.Document, filepath string) *App {
 
 // Init implements tea.Model.
 func (a *App) Init() tea.Cmd {
+	// Initialize lipgloss color profile AFTER alternate screen is entered
+	// to avoid terminal queries that cause artifacts
+	initializeColorProfile()
+
 	switch a.mode {
 	case shared.ModeREPL:
 		return a.repl.Init()
