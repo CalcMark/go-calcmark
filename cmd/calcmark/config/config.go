@@ -88,6 +88,9 @@ func load() (*Config, error) {
 	}
 
 	// 4. Apply color mode to lipgloss
+	// NOTE: This is called during cobra PersistentPreRunE, which happens
+	// BEFORE alternate screen is entered. We must not trigger any terminal
+	// queries here or they will cause visible artifacts.
 	applyColorMode(c.TUI.ColorMode, c.TUI.DarkMode)
 
 	return &c, nil

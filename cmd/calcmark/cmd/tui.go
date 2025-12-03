@@ -41,6 +41,11 @@ func runEdit(filepath string) {
 
 // runTUIApp starts the TUI with the given app model
 func runTUIApp(app *tui.App) {
+	// CRITICAL: Flush any pending output before entering alternate screen
+	// This prevents terminal history from bleeding through
+	os.Stdout.Sync()
+	os.Stderr.Sync()
+
 	// Configure TUI with:
 	// - tea.WithAltScreen(): Enter alternate screen (clean slate, no terminal history)
 	// - tea.WithMouseCellMotion(): Enable mouse support for better UX

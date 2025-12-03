@@ -8,18 +8,16 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
 )
 
 // initializeColorProfile sets up lipgloss color settings.
 // MUST be called after alternate screen is entered to avoid terminal artifacts.
 func initializeColorProfile() {
-	// Set color profile and background explicitly to avoid terminal queries.
-	// We set TrueColor without querying the terminal.
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	// IMPORTANT: Do NOT call lipgloss.SetColorProfile() here, as it may
+	// trigger terminal queries even after alternate screen is entered.
+	// Lipgloss will use a reasonable default (ANSI256 or TrueColor based on env).
 
-	// Use the color mode from config (already loaded at this point)
-	// This avoids any terminal queries for background detection
+	// Just set the background mode from config without triggering detection
 	lipgloss.SetHasDarkBackground(config.IsDarkMode())
 }
 
