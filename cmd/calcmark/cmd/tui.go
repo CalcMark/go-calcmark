@@ -41,7 +41,13 @@ func runEdit(filepath string) {
 
 // runTUIApp starts the TUI with the given app model
 func runTUIApp(app *tui.App) {
-	p := tea.NewProgram(app, tea.WithAltScreen())
+	// Configure TUI with:
+	// - tea.WithAltScreen(): Enter alternate screen (clean slate, no terminal history)
+	// - tea.WithMouseCellMotion(): Enable mouse support for better UX
+	p := tea.NewProgram(app,
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(),
+	)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 		os.Exit(1)

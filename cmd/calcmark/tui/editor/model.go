@@ -269,6 +269,8 @@ func (m *Model) CalcBlockCount() int {
 
 // Init implements tea.Model.
 func (m Model) Init() tea.Cmd {
+	// Return nil - tea.WithAltScreen() handles screen clearing
+	// The alternate screen mode ensures a clean slate
 	return nil
 }
 
