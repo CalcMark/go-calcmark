@@ -3,6 +3,10 @@
 # User overrides: ~/.config/calcmark/config.toml or ~/.calcmarkrc.toml
 
 [tui]
+# Color mode: "auto" (detect from terminal), "light", or "dark"
+# This controls the semantic theme colors. For manual color overrides, use [tui.theme] section.
+color_mode = "auto"
+# Deprecated: use color_mode instead
 dark_mode = true
 
 [tui.theme]

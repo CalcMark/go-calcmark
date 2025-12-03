@@ -10,8 +10,9 @@ type Config struct {
 
 // TUIConfig holds TUI-specific settings.
 type TUIConfig struct {
-	Theme    ThemeConfig `mapstructure:"theme"`
-	DarkMode bool        `mapstructure:"dark_mode"`
+	Theme     ThemeConfig `mapstructure:"theme"`
+	DarkMode  bool        `mapstructure:"dark_mode"`  // Deprecated: use ColorMode instead
+	ColorMode string      `mapstructure:"color_mode"` // "auto", "light", or "dark"
 }
 
 // ThemeConfig defines all TUI colors as hex strings.

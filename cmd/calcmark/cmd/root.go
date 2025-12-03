@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +42,33 @@ func Execute() {
 	}
 }
 
+var (
+	colorModeFlag string
+)
+
 func init() {
+	// Persistent flags available to all subcommands
+	rootCmd.PersistentFlags().StringVar(&colorModeFlag, "color-mode", "",
+		"Color mode: 'auto' (detect from terminal), 'light', or 'dark'")
+
+	// Load config before any command runs
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// Load config (will apply color mode)
+		cfg, err := config.Load()
+		if err != nil {
+			return fmt.Errorf("failed to load config: %w", err)
+		}
+
+		// Override color mode if flag is set
+		if colorModeFlag != "" {
+			cfg.TUI.ColorMode = colorModeFlag
+			// Re-apply color mode with the override
+			config.ApplyColorModeOverride(colorModeFlag)
+		}
+
+		return nil
+	}
+
 	// Disable default completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

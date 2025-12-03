@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/viper"
 )
 
@@ -86,7 +87,43 @@ func load() (*Config, error) {
 		return nil, err
 	}
 
+	// 4. Apply color mode to lipgloss
+	applyColorMode(c.TUI.ColorMode, c.TUI.DarkMode)
+
 	return &c, nil
+}
+
+// applyColorMode sets lipgloss's background detection based on config.
+// Priority: color_mode > dark_mode (for backward compatibility).
+func applyColorMode(colorMode string, darkMode bool) {
+	switch strings.ToLower(colorMode) {
+	case "light":
+		lipgloss.SetHasDarkBackground(false)
+	case "dark":
+		lipgloss.SetHasDarkBackground(true)
+	case "auto", "":
+		// Use auto-detection if color_mode is "auto" or empty
+		// If dark_mode is set (legacy), use it as fallback
+		if colorMode == "" {
+			lipgloss.SetHasDarkBackground(darkMode)
+		}
+		// Otherwise, lipgloss will auto-detect on first use
+	default:
+		// Invalid color_mode, fall back to dark_mode
+		lipgloss.SetHasDarkBackground(darkMode)
+	}
+}
+
+// IsDarkMode returns whether we're rendering for dark background.
+func IsDarkMode() bool {
+	return lipgloss.HasDarkBackground()
+}
+
+// ApplyColorModeOverride applies a color mode override (from CLI flag or env var).
+// This is used to override the config file setting.
+func ApplyColorModeOverride(colorMode string) {
+	// Use empty darkMode (false) since we're overriding
+	applyColorMode(colorMode, false)
 }
 
 // Reload forces a fresh config load. Use for testing only.
