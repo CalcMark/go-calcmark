@@ -49,9 +49,13 @@ func runTUIApp(app *tui.App) {
 	// Configure TUI with:
 	// - tea.WithAltScreen(): Enter alternate screen (clean slate, no terminal history)
 	// - tea.WithMouseCellMotion(): Enable mouse support for better UX
+	// - tea.WithInput(os.Stdin): Explicitly use stdin
+	// - tea.WithOutput(os.Stderr): Use stderr for TUI output (stdout is for data)
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion(),
+		tea.WithInput(os.Stdin),
+		tea.WithOutput(os.Stderr),
 	)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
