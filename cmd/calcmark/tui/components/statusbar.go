@@ -7,6 +7,20 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// StyledPadding creates styled spaces with the given background color.
+// This is a pure function that prevents terminal default background bleed-through.
+// Use this whenever you need spacing/padding between UI elements.
+func StyledPadding(width int, bg lipgloss.TerminalColor) string {
+	if width <= 0 {
+		return ""
+	}
+	style := lipgloss.NewStyle()
+	if _, ok := bg.(lipgloss.NoColor); !ok {
+		style = style.Background(bg)
+	}
+	return style.Render(strings.Repeat(" ", width))
+}
+
 // StatusBarState holds the data needed to render a status bar.
 type StatusBarState struct {
 	Filename    string // Current file name (empty for new/unsaved)
@@ -33,10 +47,10 @@ type StatusBarStyle struct {
 }
 
 // DefaultStatusBarStyle returns the default status bar styling.
+// Note: The Bar background should be overridden with the themed color.
 func DefaultStatusBarStyle() StatusBarStyle {
 	return StatusBarStyle{
 		Bar: lipgloss.NewStyle().
-			Background(lipgloss.Color("#333333")).
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Padding(0, 1),
 		Filename: lipgloss.NewStyle().
@@ -111,16 +125,20 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 	rightWidth := lipgloss.Width(rightStr)
 	totalContent := leftWidth + centerWidth + rightWidth
 
+	// Get the background from Bar style for padding
+	barBg := style.Bar.GetBackground()
+
 	// If there's room, space things out
 	if totalContent < width-4 {
 		padding := (width - totalContent) / 2
-		leftPad := strings.Repeat(" ", padding)
-		rightPad := strings.Repeat(" ", width-totalContent-padding)
+		leftPad := StyledPadding(padding, barBg)
+		rightPad := StyledPadding(width-totalContent-padding, barBg)
 		return style.Bar.Width(width).Height(statusBarHeight).Render(leftStr + leftPad + center + rightPad + rightStr)
 	}
 
-	// Otherwise, truncate hints first
-	return style.Bar.Width(width).Height(statusBarHeight).Render(leftStr + " " + center + " " + rightStr)
+	// Otherwise, truncate hints first - use styled spaces
+	styledSpace := StyledPadding(1, barBg)
+	return style.Bar.Width(width).Height(statusBarHeight).Render(leftStr + styledSpace + center + styledSpace + rightStr)
 }
 
 // RenderMinimalStatusBar renders a compact status bar for narrow terminals.

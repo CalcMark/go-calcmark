@@ -29,14 +29,20 @@ bright = "#FFFFFF"
 # Divider lines
 separator = "#555555"
 
-# Editor colors
-edit_line_bg = "#EEEEEE"    # Background for line being edited (light/faint)
-edit_line_fg = "#333333"    # Foreground for line being edited (dark text)
-cursor_bg = "#666666"       # Cursor background (gray)
-cursor_fg = "#FFFFFF"       # Cursor foreground (white)
-current_line_bg = "#E8E8E8" # Background for current line in normal mode (light)
-current_line_fg = "#333333" # Foreground for current line in normal mode (dark)
+# Editor colors (dark mode defaults)
+edit_line_bg = "#2E2E2E"    # Background for line being edited (slightly lighter than source pane)
+edit_line_fg = "#FFFFFF"    # Foreground for line being edited (white text for contrast)
+cursor_bg = "#7D56F4"       # Cursor background (primary brand color for high visibility)
+cursor_fg = "#000000"       # Cursor foreground (black text on bright cursor)
+current_line_bg = "#262626" # Background for current line in normal mode (subtle highlight)
+current_line_fg = "#FFFFFF" # Foreground for current line in normal mode (white)
 line_number = "#666666"     # Line number color
+source_text = "#E0E0E0"     # Normal source text color (light gray for readability on dark)
+
+# Calculation result display colors
+calc_var_name = "#BBBBBB"   # Variable name in result (e.g., "x" in "x → 5") - muted gray
+calc_arrow = "#888888"      # Arrow in result ("→") - dimmed
+calc_value = "#4ECDC4"      # Calculated value (bright cyan for emphasis)
 
 # Markdown preview colors
 md_text = "#FFFFFF"       # Body text
@@ -48,8 +54,11 @@ md_quote = "#888888"      # Block quote indicator (gray)
 md_code = "#33CC33"       # Inline code text
 md_code_bg = "#333333"    # Code background
 
-# Preview pane background - very pale, subtle distinction from pure white
-preview_pane_bg = "#FDFDFB" # Very pale warm white (barely off-white)
+# Pane backgrounds
+source_pane_bg = "#1C1C1C"     # Dark gray, slightly lighter than terminal default
+preview_pane_bg = "#FDFDFB"    # Very pale warm white (barely off-white)
+status_bar_bg = "#2A2A2A"      # Slightly lighter than source pane for visual separation
+context_footer_bg = "#252525"  # Subtle gray for context footer (between source pane and status bar)
 
 # Input and prompt colors (for save-as, export, etc.)
 prompt_fg = "#FFFFFF"       # Prompt label text (white for good contrast on dark)

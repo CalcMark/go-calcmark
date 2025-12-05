@@ -46,6 +46,11 @@ func runTUIApp(app *tui.App) {
 	os.Stdout.Sync()
 	os.Stderr.Sync()
 
+	// Ensure terminal colors are reset when we exit
+	defer func() {
+		fmt.Fprint(os.Stderr, "\x1b[0m") // Reset all attributes
+	}()
+
 	// Configure TUI with:
 	// - tea.WithAltScreen(): Enter alternate screen (clean slate, no terminal history)
 	// - tea.WithMouseCellMotion(): Enable mouse support for better UX
@@ -57,6 +62,7 @@ func runTUIApp(app *tui.App) {
 		tea.WithInput(os.Stdin),
 		tea.WithOutput(os.Stderr),
 	)
+
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 		os.Exit(1)

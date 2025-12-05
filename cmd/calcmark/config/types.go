@@ -35,6 +35,12 @@ type ThemeConfig struct {
 	CurrentLineBg string `mapstructure:"current_line_bg"` // Background for current line in normal mode
 	CurrentLineFg string `mapstructure:"current_line_fg"` // Foreground for current line in normal mode
 	LineNumber    string `mapstructure:"line_number"`     // Line number color
+	SourceText    string `mapstructure:"source_text"`     // Normal source text color
+
+	// Calculation result display colors
+	CalcVarName string `mapstructure:"calc_var_name"` // Variable name in result (e.g., "x" in "x → 5")
+	CalcArrow   string `mapstructure:"calc_arrow"`    // Arrow in result ("→")
+	CalcValue   string `mapstructure:"calc_value"`    // Calculated value in result (e.g., "5" in "x → 5")
 
 	// Markdown preview colors
 	MdText    string `mapstructure:"md_text"`    // Markdown body text
@@ -46,8 +52,11 @@ type ThemeConfig struct {
 	MdCode    string `mapstructure:"md_code"`    // Code text
 	MdCodeBg  string `mapstructure:"md_code_bg"` // Code background
 
-	// Preview pane background
-	PreviewPaneBg string `mapstructure:"preview_pane_bg"` // Background color for preview pane
+	// Pane backgrounds
+	SourcePaneBg    string `mapstructure:"source_pane_bg"`    // Background color for source pane
+	PreviewPaneBg   string `mapstructure:"preview_pane_bg"`   // Background color for preview pane
+	StatusBarBg     string `mapstructure:"status_bar_bg"`     // Background color for status bar
+	ContextFooterBg string `mapstructure:"context_footer_bg"` // Background color for context footer (calc detail)
 
 	// Input and prompt colors
 	PromptFg    string `mapstructure:"prompt_fg"`    // Prompt text color

@@ -13,7 +13,7 @@ key j
 key j
 ----
 -- debug:
-mode=0 cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjjjjotest# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=0 cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjjjjotestline 1" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press 'o' to insert line below and enter edit mode
 # Cursor should move to new line 3, edit mode should be active
@@ -21,28 +21,28 @@ run observe=debug
 key o
 ----
 -- debug:
-mode=0 cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojjjotest# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=0 cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojjjotestline 1" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Exit edit mode without saving (Escape)
 run observe=debug
 key esc
 ----
 -- debug:
-mode=0 cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojjjotest# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=0 cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojjjotestline 1" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate down with 'j' - cursor should move correctly
 run observe=debug
 key j
 ----
 -- debug:
-mode=0 cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojjjjotest# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=0 cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojjjjotestline 1" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate back up with 'k'
 run observe=debug
 key k
 ----
 -- debug:
-mode=0 cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojkjjjotest# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=0 cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="jjojkjjjotestline 1" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Check full visual line structure
 run observe=lines
@@ -50,7 +50,7 @@ run observe=lines
 -- lines:
 sourceToVisual: map[0:0 1:1 2:2 3:3]
 Visual lines:
-  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="jjjotest# Header" <CURSOR>
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="jjjotestline 1" <CURSOR>
   [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
   [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
   [3] srcIdx=3 lineNum=4 wrap=false pad=false content="z = 30"

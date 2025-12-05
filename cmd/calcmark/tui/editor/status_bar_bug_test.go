@@ -50,9 +50,9 @@ func TestStatusBarNoShellContamination(t *testing.T) {
 
 	// Status bar should contain legitimate editor commands
 	validPatterns := []string{
-		"Ctrl+S",    // save
-		"Ctrl+Q",    // quit
-		"Arrows",    // navigate
+		"Ctrl+S", // save
+		"Ctrl+Q", // quit
+		"Arrows", // navigate
 	}
 
 	foundValid := false

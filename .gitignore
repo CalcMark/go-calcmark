@@ -35,3 +35,10 @@ go.work
 .DS_Store
 Thumbs.db
 .claude/
+
+# Test artifacts
+test_*.cm
+test_*.tape
+test_*.gif
+test_*.png
+tiny.cm

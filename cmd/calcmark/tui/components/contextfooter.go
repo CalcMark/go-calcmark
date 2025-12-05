@@ -37,18 +37,27 @@ type ContextFooterState struct {
 }
 
 // RenderContextFooter renders the context footer from the given state.
-// Pure function: takes state and width, returns string.
+// Pure function: takes state, width, and background color, returns string.
 // IMPORTANT: Always returns exactly ContextFooterHeight lines.
-func RenderContextFooter(state ContextFooterState, width int) string {
+func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.TerminalColor) string {
 	// Helper to pad output to exactly ContextFooterHeight lines
 	padToHeight := func(content string) string {
 		lines := strings.Split(content, "\n")
 		for len(lines) < ContextFooterHeight {
-			lines = append(lines, lipgloss.NewStyle().Width(width).Render(""))
+			// Add empty lines with background color to prevent terminal bleed-through
+			lines = append(lines, StyledPadding(width, bg))
 		}
 		// Truncate if somehow more than expected (shouldn't happen)
 		if len(lines) > ContextFooterHeight {
 			lines = lines[:ContextFooterHeight]
+		}
+		// Ensure each line has background color by padding to full width
+		for i, line := range lines {
+			currentWidth := lipgloss.Width(line)
+			if currentWidth < width {
+				// Add styled padding to reach full width
+				lines[i] = line + StyledPadding(width-currentWidth, bg)
+			}
 		}
 		return strings.Join(lines, "\n")
 	}
@@ -60,10 +69,10 @@ func RenderContextFooter(state ContextFooterState, width int) string {
 
 	// Priority 1: Show errors with helpful formatting
 	if state.HasError {
-		// Style based on severity
-		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("208")) // amber
-		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))  // light gray
-		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240")) // dim
+		// Style based on severity - include background to prevent terminal bleed
+		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Background(bg) // amber on themed bg
+		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)  // light gray on themed bg
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Background(bg) // dim on themed bg
 
 		// Build error display from structured diagnostic if available
 		var shortMsg, hint string
@@ -92,10 +101,10 @@ func RenderContextFooter(state ContextFooterState, width int) string {
 			line2 := "  " + hintStyle.Render(hint)
 			lines = append(lines, line2)
 		} else {
-			lines = append(lines, lipgloss.NewStyle().Width(width).Render(""))
+			lines = append(lines, StyledPadding(width, bg))
 		}
 
-		// Ensure width constraints
+		// Ensure width constraints - lines already have background from styles above
 		for i, line := range lines {
 			if lipgloss.Width(line) > width {
 				lines[i] = TruncateWithEllipsis(line, width)
@@ -118,9 +127,10 @@ func RenderContextFooter(state ContextFooterState, width int) string {
 
 	content := strings.Join(parts, " │ ")
 
-	// Render variable references on first line
+	// Render variable references on first line with themed background
 	line1 := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).
+		Background(bg).
 		Width(width).
 		MaxWidth(width).
 		Render(content)

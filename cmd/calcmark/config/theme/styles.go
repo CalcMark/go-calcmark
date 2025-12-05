@@ -7,55 +7,55 @@ import "github.com/charmbracelet/lipgloss"
 var (
 	// Text styles
 	TextStyle = lipgloss.NewStyle().
-		Foreground(Text)
+			Foreground(Text)
 
 	MutedStyle = lipgloss.NewStyle().
-		Foreground(TextMuted)
+			Foreground(TextMuted)
 
 	HeaderStyle = lipgloss.NewStyle().
-		Foreground(Header).
-		Bold(true)
+			Foreground(Header).
+			Bold(true)
 
 	// Result styles (preview pane)
 	ResultStyle = lipgloss.NewStyle().
-		Foreground(Result)
+			Foreground(Result)
 
 	ResultNameStyle = lipgloss.NewStyle().
-		Foreground(ResultMuted)
+			Foreground(ResultMuted)
 
 	// Error style
 	ErrorStyle = lipgloss.NewStyle().
-		Foreground(Error)
+			Foreground(Error)
 
 	// Hint style (autosuggestions)
 	HintStyle = lipgloss.NewStyle().
-		Foreground(Hint)
+			Foreground(Hint)
 
 	// Command style (slash commands)
 	CommandStyle = lipgloss.NewStyle().
-		Foreground(Command)
+			Foreground(Command)
 
 	// Success style
 	SuccessStyle = lipgloss.NewStyle().
-		Foreground(Success)
+			Foreground(Success)
 
 	// Cursor line (subtle highlight)
 	CursorLineStyle = lipgloss.NewStyle().
-		Background(Cursor)
+			Background(Cursor)
 
 	// Selection
 	SelectionStyle = lipgloss.NewStyle().
-		Background(Selection)
+			Background(Selection)
 
 	// Borders
 	BorderStyle = lipgloss.NewStyle().
-		BorderForeground(Border)
+			BorderForeground(Border)
 
 	// Status bar
 	StatusBarStyle = lipgloss.NewStyle().
-		Background(StatusBg).
-		Foreground(StatusFg).
-		Padding(0, 1)
+			Background(StatusBg).
+			Foreground(StatusFg).
+			Padding(0, 1)
 )
 
 // PaneBorder returns a border style for panes.

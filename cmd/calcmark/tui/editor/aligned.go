@@ -1,5 +1,7 @@
 package editor
 
+import "strings"
+
 // AlignedModel represents the computed visual line structure for both panes.
 // This is a pure computation result - no methods, just data.
 // It's computed once when inputs change and cached until invalidation.
@@ -156,26 +158,94 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 			// 1. Multi-line constructs (ordered lists) need block-level rendering
 			// 2. Single-line content (headings, paragraphs) should render per-line for proper wrapping
 			//
-			// Strategy: Render each source line individually to capture its own wrapping behavior.
-			// This ensures that a long heading that wraps to 2 preview lines maintains alignment
-			// with the 2 wrapped source lines.
+			// Strategy: Detect ordered lists and render them as a complete block.
+			// For other content, render per-line to maintain wrapping alignment.
 
 			textBlockPreviewCache = make(map[int][]string, len(blockResults))
 
-			for blockLineIdx, lineResult := range blockResults {
-				lineText := lineResult.Source
-				// If user is typing on this line, use live editBuf instead
-				if input.EditBuf != "" && lineResult.LineNum == input.EditBufLine {
-					lineText = input.EditBuf
+			// Detect if this block contains an ordered list
+			// Check all lines in the block, not just the first one
+			isOrderedList := false
+			for _, lineResult := range blockResults {
+				line := lineResult.Source
+				// Ordered list pattern: "1. " or "1) " at start of line
+				if len(line) >= 3 && line[0] >= '0' && line[0] <= '9' {
+					if line[1] == '.' && line[2] == ' ' {
+						isOrderedList = true
+						break
+					} else if line[1] == ')' && line[2] == ' ' {
+						isOrderedList = true
+						break
+					}
+				}
+			}
+
+			if isOrderedList {
+				// Render entire block together to preserve list numbering
+				var blockText strings.Builder
+				for i, lineResult := range blockResults {
+					if i > 0 {
+						blockText.WriteString("\n")
+					}
+					lineText := lineResult.Source
+					// If user is typing on this line, use live editBuf instead
+					if input.EditBuf != "" && lineResult.LineNum == input.EditBufLine {
+						lineText = input.EditBuf
+					}
+					blockText.WriteString(lineText)
 				}
 
-				// Render this line individually
-				// renderMarkdown returns all visual lines for this source line
-				renderedLines := renderMarkdown(lineText, input.PreviewWidth)
+				// Render the complete block
+				allRenderedLines := renderMarkdown(blockText.String(), input.PreviewWidth)
 
-				// Store all rendered lines for this source line
-				// This preserves wrapping: if a heading wraps to 2 lines, we store both
-				textBlockPreviewCache[blockLineIdx] = renderedLines
+				// Distribute rendered lines across source lines to maintain 1:1 alignment
+				// Strategy: distribute as evenly as possible
+				numSourceLines := len(blockResults)
+				numRenderedLines := len(allRenderedLines)
+
+				// Calculate how many rendered lines per source line (base amount)
+				linesPerSource := numRenderedLines / numSourceLines
+				remainder := numRenderedLines % numSourceLines
+
+				renderedIdx := 0
+				for i := 0; i < numSourceLines; i++ {
+					// Some source lines get an extra line to account for remainder
+					count := linesPerSource
+					if i < remainder {
+						count++
+					}
+
+					// Assign rendered lines to this source line
+					var sourceLinesForThis []string
+					for j := 0; j < count && renderedIdx < numRenderedLines; j++ {
+						sourceLinesForThis = append(sourceLinesForThis, allRenderedLines[renderedIdx])
+						renderedIdx++
+					}
+
+					// If no lines assigned, give it an empty line to maintain structure
+					if len(sourceLinesForThis) == 0 {
+						sourceLinesForThis = []string{""}
+					}
+
+					textBlockPreviewCache[i] = sourceLinesForThis
+				}
+			} else {
+				// Render each line individually for proper wrapping alignment
+				for blockLineIdx, lineResult := range blockResults {
+					lineText := lineResult.Source
+					// If user is typing on this line, use live editBuf instead
+					if input.EditBuf != "" && lineResult.LineNum == input.EditBufLine {
+						lineText = input.EditBuf
+					}
+
+					// Render this line individually
+					// renderMarkdown returns all visual lines for this source line
+					renderedLines := renderMarkdown(lineText, input.PreviewWidth)
+
+					// Store all rendered lines for this source line
+					// This preserves wrapping: if a heading wraps to 2 lines, we store both
+					textBlockPreviewCache[blockLineIdx] = renderedLines
+				}
 			}
 		}
 		// === END CRITICAL SECTION ===

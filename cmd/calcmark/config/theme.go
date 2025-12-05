@@ -26,6 +26,12 @@ type Styles struct {
 	Cursor      lipgloss.Style // Cursor style
 	CurrentLine lipgloss.Style // Current line highlight in normal mode
 	LineNumber  lipgloss.Style // Line number style
+	SourceText  lipgloss.Style // Normal source text color
+
+	// Calculation result display styles
+	CalcVarName lipgloss.Style // Variable name in result
+	CalcArrow   lipgloss.Style // Arrow in result
+	CalcValue   lipgloss.Style // Calculated value in result
 
 	// Markdown preview styles
 	MdText   lipgloss.Style // Body text
@@ -37,8 +43,11 @@ type Styles struct {
 	MdCode   lipgloss.Style // Inline code
 	MdCodeBg lipgloss.Style // Code with background
 
-	// Preview pane
-	PreviewPane lipgloss.Style // Preview pane background
+	// Pane backgrounds
+	SourcePane    lipgloss.Style // Source pane background
+	PreviewPane   lipgloss.Style // Preview pane background
+	StatusBar     lipgloss.Style // Status bar background
+	ContextFooter lipgloss.Style // Context footer background
 
 	// Input and prompt styles
 	PromptLabel lipgloss.Style // Prompt label style (e.g., "Save as:")
@@ -120,6 +129,19 @@ func (t ThemeConfig) BuildStyles() Styles {
 		LineNumber: lipgloss.NewStyle().
 			Foreground(lipgloss.Color(t.LineNumber)),
 
+		SourceText: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.SourceText)),
+
+		// Calculation result display styles
+		CalcVarName: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.CalcVarName)),
+
+		CalcArrow: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.CalcArrow)),
+
+		CalcValue: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(t.CalcValue)),
+
 		// Markdown preview styles
 		MdText: lipgloss.NewStyle().
 			Foreground(lipgloss.Color(t.MdText)),
@@ -156,9 +178,15 @@ func (t ThemeConfig) BuildStyles() Styles {
 			Background(lipgloss.Color(t.MdCodeBg)).
 			Padding(0, 1),
 
-		// Preview pane background
+		// Pane backgrounds
+		SourcePane: lipgloss.NewStyle().
+			Background(lipgloss.Color(t.SourcePaneBg)),
 		PreviewPane: lipgloss.NewStyle().
 			Background(lipgloss.Color(t.PreviewPaneBg)),
+		StatusBar: lipgloss.NewStyle().
+			Background(lipgloss.Color(t.StatusBarBg)),
+		ContextFooter: lipgloss.NewStyle().
+			Background(lipgloss.Color(t.ContextFooterBg)),
 
 		// Input and prompt styles
 		PromptLabel: lipgloss.NewStyle().

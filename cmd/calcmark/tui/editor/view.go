@@ -27,8 +27,6 @@ func (m Model) View() string {
 		return "Goodbye!\n"
 	}
 
-	var b strings.Builder
-
 	// Calculate layout
 	totalWidth := m.width
 	totalHeight := m.height
@@ -72,12 +70,15 @@ func (m Model) View() string {
 		Padding(0, 1).
 		Width(leftWidth).
 		Render("Source")
+	// Ensure header is exactly leftWidth
+	sourceHeader = ensureFullWidth(sourceHeader, leftWidth, lipgloss.Color("236"))
 
 	// Source pane needs padding at top to match globals panel height in preview
-	var sourcePadding string
+	var sourcePaddingLines []string
 	if m.previewMode != PreviewHidden {
 		for i := 0; i < globalsHeight; i++ {
-			sourcePadding += "\n"
+			// Each padding line must be full width with background
+			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftWidth, lipgloss.Color("236")))
 		}
 	}
 
@@ -90,7 +91,13 @@ func (m Model) View() string {
 	}
 
 	sourceContent := m.renderSourcePaneAligned(leftWidth, sourceContentHeight, aligned)
-	sourcePane := lipgloss.JoinVertical(lipgloss.Left, sourceHeader, sourcePadding+sourceContent)
+
+	// Assemble source pane with header and padding
+	var sourcePaneLines []string
+	sourcePaneLines = append(sourcePaneLines, sourceHeader)
+	sourcePaneLines = append(sourcePaneLines, sourcePaddingLines...)
+	sourcePaneLines = append(sourcePaneLines, strings.Split(sourceContent, "\n")...)
+	sourcePane := strings.Join(sourcePaneLines, "\n")
 
 	// Render preview pane (if visible)
 	var previewPane string
@@ -102,36 +109,85 @@ func (m Model) View() string {
 			Padding(0, 1).
 			Width(rightWidth).
 			Render("Preview")
+		// Ensure header is exactly rightWidth
+		previewHeader = ensureFullWidth(previewHeader, rightWidth, lipgloss.Color("236"))
 
 		previewContent := m.renderPreviewPaneAligned(rightWidth, paneContentHeight, aligned)
-		previewPane = lipgloss.JoinVertical(lipgloss.Left, previewHeader, previewContent)
+
+		// Assemble without bare newlines
+		var previewPaneLines []string
+		previewPaneLines = append(previewPaneLines, previewHeader)
+		previewPaneLines = append(previewPaneLines, strings.Split(previewContent, "\n")...)
+		previewPane = strings.Join(previewPaneLines, "\n")
 	}
 
-	// Join panes horizontally - MUST align at top
+	// Build complete UI as array of lines to avoid bare newlines
+	var allUILines []string
+
+	// Add panes (source and preview)
 	if m.previewMode != PreviewHidden {
-		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, sourcePane, previewPane))
+		sbs := NewSideBySide(leftWidth, rightWidth, lipgloss.Color("236"), lipgloss.Color("236"))
+		panesOutput := sbs.Render(sourcePane, previewPane)
+		allUILines = append(allUILines, strings.Split(panesOutput, "\n")...)
 	} else {
-		b.WriteString(sourcePane)
+		// Single pane - ensure full width
+		sourcePane = ensureLinesAreFullWidth(sourcePane, leftWidth, lipgloss.Color("236"))
+		allUILines = append(allUILines, strings.Split(sourcePane, "\n")...)
 	}
-	b.WriteString("\n")
 
-	// Render context footer (variables referenced in current line)
+	// Get context footer background once for all footer-related elements
+	contextFooterBg := m.styles.ContextFooter.GetBackground()
+	if _, ok := contextFooterBg.(lipgloss.NoColor); ok {
+		contextFooterBg = m.sourcePaneBg() // Fallback
+	}
+
+	// Empty line with background (use context footer background for transition)
+	emptyLine := components.StyledPadding(totalWidth, contextFooterBg)
+	allUILines = append(allUILines, emptyLine)
+
+	// Context footer (variables referenced in current line)
 	contextFooter := m.renderContextFooter(totalWidth)
-	b.WriteString(contextFooter)
-	b.WriteString("\n")
+	// The context footer is already multiple lines, so we need to handle each line
+	contextFooterLines := strings.Split(contextFooter, "\n")
+	for i, line := range contextFooterLines {
+		contextFooterLines[i] = ensureFullWidth(line, totalWidth, contextFooterBg)
+	}
+	allUILines = append(allUILines, contextFooterLines...)
 
-	// Separator
-	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	b.WriteString(separatorStyle.Render(strings.Repeat("─", totalWidth)))
-	b.WriteString("\n")
+	// Separator - use context footer background for consistency
+	separatorStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Background(contextFooterBg)
+	separatorLine := separatorStyle.Render(strings.Repeat("─", totalWidth))
+	separatorLine = ensureFullWidth(separatorLine, totalWidth, contextFooterBg)
+	allUILines = append(allUILines, separatorLine)
 
-	// Render status bar
+	// Status bar
 	statusBarState := m.GetStatusBarState()
 	statusBarStyle := components.DefaultStatusBarStyle()
+	// Use themed status bar background - apply to ALL sub-components to prevent terminal bleed
+	statusBarBg := m.styles.StatusBar.GetBackground()
+	if _, ok := statusBarBg.(lipgloss.NoColor); ok {
+		statusBarBg = m.sourcePaneBg() // Fallback to source pane background
+	}
+	statusBarStyle.Bar = statusBarStyle.Bar.Background(statusBarBg)
+	statusBarStyle.Filename = statusBarStyle.Filename.Background(statusBarBg)
+	statusBarStyle.Modified = statusBarStyle.Modified.Background(statusBarBg)
+	statusBarStyle.Position = statusBarStyle.Position.Background(statusBarBg)
+	statusBarStyle.Mode = statusBarStyle.Mode.Background(statusBarBg)
+	statusBarStyle.Hints = statusBarStyle.Hints.Background(statusBarBg)
+	statusBarStyle.StatusOK = statusBarStyle.StatusOK.Background(statusBarBg)
+	statusBarStyle.StatusErr = statusBarStyle.StatusErr.Background(statusBarBg)
 	statusBar := components.RenderStatusBar(statusBarState, totalWidth, statusBarStyle)
-	b.WriteString(statusBar)
+	// Ensure status bar lines have backgrounds
+	statusBarLines := strings.Split(statusBar, "\n")
+	for i, line := range statusBarLines {
+		statusBarLines[i] = ensureFullWidth(line, totalWidth, statusBarBg)
+	}
+	allUILines = append(allUILines, statusBarLines...)
 
-	return b.String()
+	// Join all lines - no bare newlines, all fully styled
+	return strings.Join(allUILines, "\n")
 }
 
 // computeAlignedPanes computes both pane line structures once with fixed widths.
@@ -216,9 +272,7 @@ type sourceLine struct {
 // renderSourcePaneAligned renders the source pane using pre-computed aligned lines.
 // This avoids recomputing alignment which could cause cycles.
 func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) string {
-	var b strings.Builder
 	sourceLines := aligned.sourceLines
-
 	visibleLines := height
 
 	// Convert cursor's source line to visual line index for proper scrolling
@@ -248,6 +302,10 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 
 	lineNumWidth := 4
 	contentWidth := width - lineNumWidth - 2
+
+	// Build complete lines first, then join them
+	// This ensures NO bare newlines that could show terminal default color
+	var renderedLines []string
 
 	linesWritten := 0
 	for i := start; i < end && linesWritten < visibleLines; i++ {
@@ -281,21 +339,20 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			// Show edit buffer with cursor - handle wrapping
 			editLines := m.renderEditLineWrapped(contentWidth)
 			for j, editLine := range editLines {
+				var completeLine string
 				if j > 0 {
-					b.WriteString("\n")
 					// Continuation lines have no line number
-					b.WriteString(m.styles.LineNumber.Width(lineNumWidth).Render(""))
-					b.WriteString(" ")
-					linesWritten++
+					emptyLineNum := m.styles.LineNumber.Width(lineNumWidth).Render("")
+					gutterStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
+					completeLine = emptyLineNum + gutterStyle.Render(" ") + editLine
 				} else {
-					b.WriteString(lineNum)
-					b.WriteString(" ")
+					gutterStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
+					completeLine = lineNum + gutterStyle.Render(" ") + editLine
 				}
-				b.WriteString(editLine)
-			}
-			linesWritten++
-			if i < end-1 {
-				b.WriteString("\n")
+				// Ensure complete line is exactly width
+				completeLine = ensureFullWidth(completeLine, width, lipgloss.Color("236"))
+				renderedLines = append(renderedLines, completeLine)
+				linesWritten++
 			}
 			continue
 		} else if sl.isCursorLine {
@@ -303,42 +360,89 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			content = m.renderLineWithCursor(sl.content, m.cursorCol, contentWidth, false)
 		} else if sl.isPadding {
 			// Padding line - blank (for alignment with preview wrapping)
-			content = ""
+			content = padToWidth("", contentWidth, lipgloss.Color("236"))
 		} else if sl.isWrapped {
-			// Wrapped continuation line - no extra indent (line number space provides visual separation)
-			content = padToWidth(sl.content, contentWidth)
+			// Wrapped continuation line - apply source text color and background
+			styledContent := m.styles.SourceText.Render(sl.content)
+			content = padToWidth(styledContent, contentWidth, lipgloss.Color("236"))
 		} else {
-			// Normal source line - already fits within width
-			content = padToWidth(sl.content, contentWidth)
+			// Normal source line - apply source text color and background
+			styledContent := m.styles.SourceText.Render(sl.content)
+			content = padToWidth(styledContent, contentWidth, lipgloss.Color("236"))
 		}
 
-		b.WriteString(lineNum)
-		b.WriteString(" ")
-		b.WriteString(content)
+		// Assemble complete line: lineNum + gutter + content
+		gutterStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
+		completeLine := lineNum + gutterStyle.Render(" ") + content
+		// Ensure complete line is exactly width
+		completeLine = ensureFullWidth(completeLine, width, lipgloss.Color("236"))
+		renderedLines = append(renderedLines, completeLine)
 		linesWritten++
-
-		if i < end-1 {
-			b.WriteString("\n")
-		}
 	}
 
 	// Fill remaining space with tilde indicators
 	for i := linesWritten; i < visibleLines; i++ {
-		b.WriteString("\n")
-		b.WriteString(m.styles.LineNumber.Render("~"))
+		tildeLine := m.styles.LineNumber.Render("~")
+		// Pad tilde line to full width
+		tildeLine = ensureFullWidth(tildeLine, width, lipgloss.Color("236"))
+		renderedLines = append(renderedLines, tildeLine)
 	}
 
-	return b.String()
+	// Join all lines - the newline separators are now between fully-styled lines
+	// so terminal default cannot bleed through
+	return strings.Join(renderedLines, "\n")
+}
+
+// sourcePaneBg returns the background color for the source pane.
+func (m Model) sourcePaneBg() lipgloss.TerminalColor {
+	color := m.styles.SourcePane.GetBackground()
+	if _, ok := color.(lipgloss.NoColor); ok {
+		return lipgloss.Color("236") // Fallback
+	}
+	return color
+}
+
+// previewPaneBg returns the background color for the preview pane.
+func (m Model) previewPaneBg() lipgloss.TerminalColor {
+	color := m.styles.PreviewPane.GetBackground()
+	if _, ok := color.(lipgloss.NoColor); ok {
+		return lipgloss.Color("236") // Fallback
+	}
+	return color
 }
 
 // padToWidth pads a string to exactly width visual columns (no truncation).
 // Uses lipgloss.Width for correct unicode handling.
-func padToWidth(s string, width int) string {
+// Pads with styled spaces using the given background color to prevent terminal bleed-through.
+func padToWidth(s string, width int, bg lipgloss.TerminalColor) string {
 	visualWidth := lipgloss.Width(s)
 	if visualWidth >= width {
 		return s
 	}
-	return s + strings.Repeat(" ", width-visualWidth)
+	padding := width - visualWidth
+	// Use centralized StyledPadding utility
+	return s + components.StyledPadding(padding, bg)
+}
+
+// ensureFullWidth ensures a complete line (with all components) is exactly the target width.
+// This should be called on the FINAL assembled line, not on individual components.
+func ensureFullWidth(line string, width int, bg lipgloss.TerminalColor) string {
+	currentWidth := lipgloss.Width(line)
+	if currentWidth >= width {
+		return line
+	}
+	padding := width - currentWidth
+	// Use centralized StyledPadding utility
+	return line + components.StyledPadding(padding, bg)
+}
+
+// ensureLinesAreFullWidth ensures every line in a multi-line string is exactly the target width.
+func ensureLinesAreFullWidth(content string, width int, bg lipgloss.TerminalColor) string {
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		lines[i] = ensureFullWidth(line, width, bg)
+	}
+	return strings.Join(lines, "\n")
 }
 
 // wrapStyledLine wraps a line containing ANSI escape codes using visual width.
@@ -500,20 +604,24 @@ type previewLine struct {
 // renderPreviewPaneAligned renders the preview pane using pre-computed aligned lines.
 // This avoids recomputing alignment which could cause cycles.
 func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes) string {
-	var b strings.Builder
 	previewLines := aligned.previewLines
 
 	// Globals panel at top (collapsible) - per spec lines 334-339
 	globalsPanel := m.renderGlobalsPanel(width)
 	globalsHeight := strings.Count(globalsPanel, "\n") + 1
 
-	b.WriteString(globalsPanel)
-	b.WriteString("\n")
+	// Build complete lines to avoid bare newlines
+	var allLines []string
+	allLines = append(allLines, strings.Split(globalsPanel, "\n")...)
 
 	// Separator after globals
-	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	b.WriteString(separatorStyle.Render(strings.Repeat("─", width)))
-	b.WriteString("\n")
+	separatorStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Background(lipgloss.Color("236"))
+	separatorLine := separatorStyle.Render(strings.Repeat("─", width))
+	// Ensure separator is exactly width
+	separatorLine = ensureFullWidth(separatorLine, width, lipgloss.Color("236"))
+	allLines = append(allLines, separatorLine)
 
 	// Adjust height for globals panel and separator
 	resultsHeight := height - globalsHeight - 1 // -1 for separator
@@ -593,13 +701,15 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 					}
 				}
 				for k := 0; k < editLineCount && linesWritten < resultsHeight; k++ {
-					if k > 0 || linesWritten > 0 {
-						b.WriteString("\n")
-					}
 					// Show preview content if available, otherwise empty
+					var completeLine string
 					if k < len(cursorPreviewLines) {
-						b.WriteString(cursorPreviewLines[k].content)
+						completeLine = ensureFullWidth(cursorPreviewLines[k].content, width, lipgloss.Color("236"))
+					} else {
+						// Empty line with background
+						completeLine = ensureFullWidth("", width, lipgloss.Color("236"))
 					}
+					allLines = append(allLines, completeLine)
 					linesWritten++
 				}
 				cursorLineProcessed = true
@@ -608,19 +718,19 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 			continue
 		}
 
-		if linesWritten > 0 {
-			b.WriteString("\n")
-		}
-		b.WriteString(pl.content)
+		paddedContent := ensureFullWidth(pl.content, width, lipgloss.Color("236"))
+		allLines = append(allLines, paddedContent)
 		linesWritten++
 	}
 
 	// Fill remaining space to maintain consistent height
 	for i := linesWritten; i < resultsHeight; i++ {
-		b.WriteString("\n")
+		emptyLine := ensureFullWidth("", width, lipgloss.Color("236"))
+		allLines = append(allLines, emptyLine)
 	}
 
-	return b.String()
+	// Join all lines - newlines between fully-styled lines prevent bleed-through
+	return strings.Join(allLines, "\n")
 }
 
 // renderCalcLine renders a single calculation line result.
@@ -655,27 +765,20 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 		return ""
 	}
 
-	valueStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("6"))
+	// Use themed colors for calculation results
+	valueStyle := m.styles.CalcValue
 
 	// Changed indicator: asterisk in yellow for values that were recomputed
 	changedMarker := ""
 	if r.WasChanged {
-		valueStyle = valueStyle.Foreground(lipgloss.Color("3"))
-		changedMarker = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("3")).
-			Bold(true).
-			Render("* ")
+		valueStyle = m.styles.Changed
+		changedMarker = m.styles.Changed.Bold(true).Render("* ")
 	}
 
 	switch m.previewMode {
 	case PreviewFull:
 		// Full mode: left-aligned "varName → value" (with * if changed)
-		varStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240"))
-		arrowStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240"))
-		return changedMarker + varStyle.Render(r.VarName) + " " + arrowStyle.Render("→") + " " + valueStyle.Render(r.Value)
+		return changedMarker + m.styles.CalcVarName.Render(r.VarName) + " " + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
@@ -706,17 +809,19 @@ func (m Model) renderGlobalsPanel(width int) string {
 			Foreground(lipgloss.Color("240")).
 			Render(hint)
 
-		// Space between left and right
-		space := width - lipgloss.Width(left) - lipgloss.Width(right) - 2
+		// Space between left and right with background
+		space := width - lipgloss.Width(left) - lipgloss.Width(right)
 		if space < 0 {
 			space = 0
 		}
 
-		return left + strings.Repeat(" ", space) + right
+		// Use centralized StyledPadding utility
+		header := left + components.StyledPadding(space, lipgloss.Color("236")) + right
+		return ensureFullWidth(header, width, lipgloss.Color("236"))
 	}
 
 	// Expanded: show all globals
-	var b strings.Builder
+	var allLines []string
 
 	indicator := "▾"
 	text := " Globals"
@@ -731,27 +836,27 @@ func (m Model) renderGlobalsPanel(width int) string {
 		Foreground(lipgloss.Color("240")).
 		Render(hint)
 
-	space := width - lipgloss.Width(left) - lipgloss.Width(right) - 2
+	space := width - lipgloss.Width(left) - lipgloss.Width(right)
 	if space < 0 {
 		space = 0
 	}
 
-	b.WriteString(left)
-	b.WriteString(strings.Repeat(" ", space))
-	b.WriteString(right)
+	// Use centralized StyledPadding utility
+	headerLine := left + components.StyledPadding(space, lipgloss.Color("236")) + right
+	headerLine = ensureFullWidth(headerLine, width, lipgloss.Color("236"))
+	allLines = append(allLines, headerLine)
 
 	if globalsCount == 0 {
-		b.WriteString("\n")
-		b.WriteString(lipgloss.NewStyle().
+		noGlobalsLine := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240")).
 			Italic(true).
-			Render("  (no globals defined)"))
-		return b.String()
+			Render("  (no globals defined)")
+		noGlobalsLine = ensureFullWidth(noGlobalsLine, width, lipgloss.Color("236"))
+		allLines = append(allLines, noGlobalsLine)
+		return strings.Join(allLines, "\n")
 	}
 
 	for i, g := range state.Globals {
-		b.WriteString("\n")
-
 		prefix := "  "
 		if state.Focused && i == state.FocusIndex {
 			prefix = "> "
@@ -768,12 +873,12 @@ func (m Model) renderGlobalsPanel(width int) string {
 
 		// Format: "  name          value"
 		name := fmt.Sprintf("%-18s", g.Name)
-		b.WriteString(prefix)
-		b.WriteString(nameStyle.Render(name))
-		b.WriteString(valueStyle.Render(g.Value))
+		globalLine := prefix + nameStyle.Render(name) + valueStyle.Render(g.Value)
+		globalLine = ensureFullWidth(globalLine, width, lipgloss.Color("236"))
+		allLines = append(allLines, globalLine)
 	}
 
-	return b.String()
+	return strings.Join(allLines, "\n")
 }
 
 // renderContextFooter renders the context footer showing errors or referenced variables.
@@ -807,7 +912,13 @@ func (m Model) renderContextFooter(width int) string {
 		}
 	}
 
-	return components.RenderContextFooter(state, width)
+	// Get themed context footer background
+	contextFooterBg := m.styles.ContextFooter.GetBackground()
+	if _, ok := contextFooterBg.(lipgloss.NoColor); ok {
+		contextFooterBg = m.sourcePaneBg() // Fallback to source pane background
+	}
+
+	return components.RenderContextFooter(state, width, contextFooterBg)
 }
 
 // getLineReferences returns variables referenced in the given line.
