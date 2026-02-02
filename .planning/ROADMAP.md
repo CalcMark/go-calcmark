@@ -32,11 +32,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A `geometry` package exists with pure functions that take dimensions and content as input and return row layout data as output, with zero TUI framework dependencies
   3. `CalculateRowGeometry` correctly computes visual line counts for both columns when text wraps, verified by unit tests covering single-line, multi-wrap, and asymmetric wrap scenarios
   4. `task quality` passes with all dependencies at current stable versions (including adrg/frontmatter added to go.mod)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: Update Go version, CI workflow, and dependencies
-- [ ] 01-02: Extract pure geometry package with CalculateRowGeometry and alignment functions
+- [ ] 01-01-PLAN.md -- Fix CI workflow, update Go to 1.24.12, update deps, fix pre-existing test failures
+- [ ] 01-02-PLAN.md -- Extract pure geometry package with WrapText and CalculateRowGeometry, wire into editor
 
 ### Phase 2: TUI Geometry & Layout
 **Goal**: The two-column editor renders source and results side-by-side with correct text wrapping and vertical alignment under all scenarios
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 0/2 | Planned | - |
 | 2. TUI Geometry & Layout | 0/2 | Not started | - |
 | 3. TUI Editor Integration | 0/3 | Not started | - |
 | 4. TUI Test Coverage | 0/1 | Not started | - |
