@@ -12,7 +12,7 @@ CalcMark v1 delivers a polished, distributable calculation notepad for the termi
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Fix CI, update deps, extract pure geometry package
+- [x] **Phase 1: Foundation** - Fix CI, update deps, extract pure geometry package
 - [ ] **Phase 2: TUI Geometry & Layout** - Implement code.sh algorithm for correct two-column rendering
 - [ ] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
 - [ ] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
@@ -35,8 +35,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Fix CI workflow, update Go to 1.24.12, update deps, fix pre-existing test failures
-- [ ] 01-02-PLAN.md -- Extract pure geometry package with WrapText and CalculateRowGeometry, wire into editor
+- [x] 01-01-PLAN.md -- Fix CI workflow, update Go to 1.24.12, update deps, fix pre-existing test failures
+- [x] 01-02-PLAN.md -- Extract pure geometry package with WrapText and CalculateRowGeometry, wire into editor
 
 ### Phase 2: TUI Geometry & Layout
 **Goal**: The two-column editor renders source and results side-by-side with correct text wrapping and vertical alignment under all scenarios
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Planned | - |
+| 1. Foundation | 2/2 | Complete | 2026-02-02 |
 | 2. TUI Geometry & Layout | 0/2 | Not started | - |
 | 3. TUI Editor Integration | 0/3 | Not started | - |
 | 4. TUI Test Coverage | 0/1 | Not started | - |
