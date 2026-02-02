@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -126,7 +127,7 @@ func TestPreviewAlignmentIntegration(t *testing.T) {
 				if mdRenderer != nil {
 					return mdRenderer.RenderLine(line)
 				}
-				return WrapText(line, width)
+				return geometry.WrapText(line, width)
 			})
 
 			t.Logf("AlignedModel has %d visual lines", aligned.TotalVisualLines)
@@ -224,7 +225,7 @@ func TestGlamourEmptyLineCompensation(t *testing.T) {
 		if mdRenderer != nil {
 			return mdRenderer.RenderLine(line)
 		}
-		return WrapText(line, width)
+		return geometry.WrapText(line, width)
 	})
 
 	// AlignedModel should preserve all 4 lines
@@ -327,7 +328,7 @@ func TestGlamourBrittnessMonitoring(t *testing.T) {
 				if mdRenderer != nil {
 					return mdRenderer.RenderLine(line)
 				}
-				return WrapText(line, width)
+				return geometry.WrapText(line, width)
 			})
 
 			t.Logf("AlignedModel has %d visual lines", aligned.TotalVisualLines)

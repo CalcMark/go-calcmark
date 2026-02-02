@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -249,7 +250,7 @@ func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int) AlignedMo
 		if mdRenderer != nil {
 			return mdRenderer.RenderLine(line)
 		}
-		return WrapText(line, width)
+		return geometry.WrapText(line, width)
 	})
 }
 
@@ -459,7 +460,7 @@ func wrapStyledLine(line string, maxWidth int) []string {
 	plainText := stripANSI(line)
 
 	// Wrap the plain text
-	wrappedPlainLines := WrapText(plainText, maxWidth)
+	wrappedPlainLines := geometry.WrapText(plainText, maxWidth)
 
 	// Return wrapped lines (styles will be handled by caller if needed)
 	// For calc results like "a → 2", the arrow and value are usually short enough
@@ -567,7 +568,7 @@ func (m Model) renderEditLineWrapped(width int) []string {
 	}
 
 	// Wrap the edit buffer content
-	wrappedContent := WrapText(m.editBuf, width)
+	wrappedContent := geometry.WrapText(m.editBuf, width)
 	var result []string
 
 	// Track which wrapped line contains the cursor
@@ -718,7 +719,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	if m.editBuf != "" {
 		// Count how many lines the edit buffer would produce
 		contentWidth := width // approximate
-		editLines := WrapText(m.editBuf, contentWidth)
+		editLines := geometry.WrapText(m.editBuf, contentWidth)
 		editLineCount = len(editLines)
 		if editLineCount == 0 {
 			editLineCount = 1

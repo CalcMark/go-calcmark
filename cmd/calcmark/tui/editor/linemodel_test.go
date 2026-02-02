@@ -2,6 +2,8 @@ package editor
 
 import (
 	"testing"
+
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 )
 
 func TestWrapText(t *testing.T) {
@@ -87,16 +89,16 @@ func TestWrapText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WrapText(tt.text, tt.maxWidth)
+			got := geometry.WrapText(tt.text, tt.maxWidth)
 			if len(got) != len(tt.want) {
-				t.Errorf("WrapText() returned %d lines, want %d", len(got), len(tt.want))
+				t.Errorf("geometry.WrapText() returned %d lines, want %d", len(got), len(tt.want))
 				t.Logf("got: %v", got)
 				t.Logf("want: %v", tt.want)
 				return
 			}
 			for i := range got {
 				if got[i] != tt.want[i] {
-					t.Errorf("WrapText()[%d] = %q, want %q", i, got[i], tt.want[i])
+					t.Errorf("geometry.WrapText()[%d] = %q, want %q", i, got[i], tt.want[i])
 				}
 			}
 		})

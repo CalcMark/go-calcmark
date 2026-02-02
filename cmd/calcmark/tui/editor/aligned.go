@@ -1,6 +1,10 @@
 package editor
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+)
 
 // AlignedModel represents the computed visual line structure for both panes.
 // This is a pure computation result - no methods, just data.
@@ -267,7 +271,7 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 			isCursorOnThisLine := lineResult.LineNum == input.CursorLine
 
 			// Wrap source content to fit the source pane width
-			wrappedSourceLines := WrapText(sourceText, input.SourceContentWidth)
+			wrappedSourceLines := geometry.WrapText(sourceText, input.SourceContentWidth)
 
 			// Determine preview content for this line
 			// THREE CASES:
@@ -296,7 +300,7 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 
 			} else {
 				// CASE 3b: No markdown renderer available - use plain text
-				wrappedPreviewLines = WrapText(lineResult.Source, input.PreviewWidth)
+				wrappedPreviewLines = geometry.WrapText(lineResult.Source, input.PreviewWidth)
 			}
 
 			// Ensure we have at least one preview line (safety check)

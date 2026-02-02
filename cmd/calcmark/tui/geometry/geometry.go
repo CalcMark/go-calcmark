@@ -23,10 +23,7 @@ func CalculateRowGeometry(srcLine, resultContent string, leftWidth, rightWidth i
 		rightWrapped = WrapText(resultContent, rightWidth)
 	}
 
-	h := len(leftWrapped)
-	if len(rightWrapped) > h {
-		h = len(rightWrapped)
-	}
+	h := max(len(leftWrapped), len(rightWrapped))
 	if h == 0 {
 		h = 1
 	}

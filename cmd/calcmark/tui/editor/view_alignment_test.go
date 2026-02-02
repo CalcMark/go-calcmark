@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -128,7 +129,7 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 	t.Logf("globalsHeight=%d (expanded=%v)", globalsHeight, m.globalsExpanded)
 	t.Logf("sourceContentHeight=%d (passed to renderSourcePaneAligned)", sourceContentHeight)
 	t.Logf("paneContentHeight=%d (passed to renderPreviewPaneAligned)", paneContentHeight)
-	t.Logf("rightWidth=%d, WrapText(editBuf=%q, rightWidth)=%v", rightWidth, m.editBuf, WrapText(m.editBuf, rightWidth))
+	t.Logf("rightWidth=%d, geometry.WrapText(editBuf=%q, rightWidth)=%v", rightWidth, m.editBuf, geometry.WrapText(m.editBuf, rightWidth))
 
 	sourcePane := m.renderSourcePaneAligned(leftWidth, sourceContentHeight, aligned)
 	previewPane := m.renderPreviewPaneAligned(rightWidth, paneContentHeight, aligned)

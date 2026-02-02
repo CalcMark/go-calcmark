@@ -2,6 +2,8 @@ package editor
 
 import (
 	"testing"
+
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 )
 
 // mockRenderCalcLine returns a simple representation for testing
@@ -14,7 +16,7 @@ func mockRenderCalcLine(r LineResult, width int) string {
 
 // mockRenderMarkdown returns the line as-is for testing
 func mockRenderMarkdown(line string, width int) []string {
-	return WrapText(line, width)
+	return geometry.WrapText(line, width)
 }
 
 func TestComputeAlignedModel_Simple(t *testing.T) {
@@ -309,9 +311,9 @@ func TestAlignedModel_WrapTextBasic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := WrapText(tt.line, tt.maxWidth)
+			got := geometry.WrapText(tt.line, tt.maxWidth)
 			if len(got) != tt.want {
-				t.Errorf("WrapText(%q, %d) = %d lines, want %d", tt.line, tt.maxWidth, len(got), tt.want)
+				t.Errorf("geometry.WrapText(%q, %d) = %d lines, want %d", tt.line, tt.maxWidth, len(got), tt.want)
 			}
 		})
 	}

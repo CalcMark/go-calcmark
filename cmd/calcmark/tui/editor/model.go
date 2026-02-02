@@ -9,6 +9,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
 	"github.com/CalcMark/go-calcmark/format"
 	"github.com/CalcMark/go-calcmark/format/display"
@@ -1622,7 +1623,7 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 		if mdRenderer != nil {
 			return mdRenderer.RenderLine(line)
 		}
-		return WrapText(line, width)
+		return geometry.WrapText(line, width)
 	})
 
 	// Update cache

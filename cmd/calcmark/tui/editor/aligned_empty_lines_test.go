@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -52,7 +53,7 @@ func TestAlignedModelWithEmptyLineAfterHeading(t *testing.T) {
 		if mdRenderer != nil {
 			return mdRenderer.RenderLine(line)
 		}
-		return WrapText(line, width)
+		return geometry.WrapText(line, width)
 	})
 
 	t.Logf("\nComputed aligned model:")

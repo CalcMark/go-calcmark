@@ -1,6 +1,6 @@
 package editor
 
-import "github.com/charmbracelet/lipgloss"
+import "github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 
 // LineModel computes the visual line layout for source and preview panes.
 // This is a pure computation - no rendering, no side effects.
@@ -167,7 +167,7 @@ func computeSourceLinesForLine(lineIdx int, input LineModelInput) []VisualLine {
 	}
 
 	// Wrap the content
-	wrapped := WrapText(content, input.SourceWidth)
+	wrapped := geometry.WrapText(content, input.SourceWidth)
 
 	for i, segment := range wrapped {
 		vl := VisualLine{
@@ -217,7 +217,7 @@ func computePreviewLinesForLine(lineIdx int, input LineModelInput) []VisualLine 
 	}
 
 	// Wrap preview content - NEVER truncate
-	wrapped := WrapText(content, input.PreviewWidth)
+	wrapped := geometry.WrapText(content, input.PreviewWidth)
 
 	for _, segment := range wrapped {
 		result = append(result, VisualLine{
@@ -226,74 +226,6 @@ func computePreviewLinesForLine(lineIdx int, input LineModelInput) []VisualLine 
 			LineNumber:    0,
 			Kind:          LineKindNormal,
 		})
-	}
-
-	return result
-}
-
-// WrapText wraps text to fit within maxWidth, preferring word boundaries.
-// Returns a slice of strings, each fitting within maxWidth.
-// Uses lipgloss.Width for robust unicode width handling (CJK, emoji, etc).
-// This is a pure function suitable for unit testing.
-func WrapText(text string, maxWidth int) []string {
-	if maxWidth <= 0 {
-		return []string{text}
-	}
-
-	if len(text) == 0 {
-		return []string{""}
-	}
-
-	if lipgloss.Width(text) <= maxWidth {
-		return []string{text}
-	}
-
-	var result []string
-	runes := []rune(text)
-	start := 0
-
-	for start < len(runes) {
-		// Find how many runes fit within maxWidth
-		end := start
-		currentWidth := 0
-		lastSpaceIdx := -1
-
-		for end < len(runes) {
-			rw := lipgloss.Width(string(runes[end]))
-			if currentWidth+rw > maxWidth {
-				break
-			}
-			if runes[end] == ' ' {
-				lastSpaceIdx = end
-			}
-			currentWidth += rw
-			end++
-		}
-
-		// If we've consumed all remaining runes, we're done
-		if end >= len(runes) {
-			result = append(result, string(runes[start:]))
-			break
-		}
-
-		// Prefer breaking at word boundary
-		if lastSpaceIdx > start {
-			// Break after the space
-			result = append(result, string(runes[start:lastSpaceIdx+1]))
-			start = lastSpaceIdx + 1
-		} else if end > start {
-			// No space found, hard break
-			result = append(result, string(runes[start:end]))
-			start = end
-		} else {
-			// Single character wider than maxWidth - include it anyway
-			result = append(result, string(runes[start:start+1]))
-			start++
-		}
-	}
-
-	if len(result) == 0 {
-		return []string{text}
 	}
 
 	return result
