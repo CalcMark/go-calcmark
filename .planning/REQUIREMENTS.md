@@ -102,27 +102,80 @@ Deferred to future release.
 
 | Feature | Reason |
 |---------|--------|
-| Live currency exchange rates | Breaks reproducibility (core value) — documents must be verifiable offline |
-| Plugin system | Adds complexity, security concerns — defer until clear use case emerges |
-| GUI desktop application | Terminal-native is the differentiator — CalcMark vs Numi/Soulver/Calca |
-| Syntax highlighting in source | Low value vs complexity — markdown is readable without it |
+| Live currency exchange rates | Breaks reproducibility (core value) -- documents must be verifiable offline |
+| Plugin system | Adds complexity, security concerns -- defer until clear use case emerges |
+| GUI desktop application | Terminal-native is the differentiator -- CalcMark vs Numi/Soulver/Calca |
+| Syntax highlighting in source | Low value vs complexity -- markdown is readable without it |
 | Collaborative editing | Network dependency breaks offline constraint |
-| LSP server | Scope creep — focus on simple editor first |
-| Configuration GUI | CLI tool philosophy — text config files sufficient |
+| LSP server | Scope creep -- focus on simple editor first |
+| Configuration GUI | CLI tool philosophy -- text config files sufficient |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| FOUND-01 | Phase 1: Foundation | Pending |
+| FOUND-02 | Phase 1: Foundation | Pending |
+| FOUND-03 | Phase 1: Foundation | Pending |
+| FOUND-04 | Phase 1: Foundation | Pending |
+| FOUND-05 | Phase 1: Foundation | Pending |
+| EDITOR-01 | Phase 2: TUI Geometry & Layout | Pending |
+| EDITOR-02 | Phase 2: TUI Geometry & Layout | Pending |
+| EDITOR-03 | Phase 2: TUI Geometry & Layout | Pending |
+| EDITOR-04 | Phase 2: TUI Geometry & Layout | Pending |
+| EDITOR-05 | Phase 3: TUI Editor Integration | Pending |
+| EDITOR-06 | Phase 3: TUI Editor Integration | Pending |
+| EDITOR-07 | Phase 3: TUI Editor Integration | Pending |
+| EDITOR-08 | Phase 3: TUI Editor Integration | Pending |
+| EDITOR-09 | Phase 3: TUI Editor Integration | Pending |
+| EDITOR-10 | Phase 3: TUI Editor Integration | Pending |
+| EDITOR-11 | Phase 4: TUI Test Coverage | Pending |
+| EDITOR-12 | Phase 4: TUI Test Coverage | Pending |
+| HELP-01 | Phase 5: Help System | Pending |
+| HELP-02 | Phase 5: Help System | Pending |
+| HELP-03 | Phase 5: Help System | Pending |
+| HELP-04 | Phase 5: Help System | Pending |
+| HELP-05 | Phase 5: Help System | Pending |
+| HELP-06 | Phase 5: Help System | Pending |
+| HELP-07 | Phase 5: Help System | Pending |
+| HELP-08 | Phase 5: Help System | Pending |
+| HELP-09 | Phase 6: Differentiators | Pending |
+| HELP-10 | Phase 6: Differentiators | Pending |
+| HELP-11 | Phase 6: Differentiators | Pending |
+| HELP-12 | Phase 6: Differentiators | Pending |
+| YAML-01 | Phase 6: Differentiators | Pending |
+| YAML-02 | Phase 6: Differentiators | Pending |
+| YAML-03 | Phase 6: Differentiators | Pending |
+| YAML-04 | Phase 6: Differentiators | Pending |
+| YAML-05 | Phase 6: Differentiators | Pending |
+| DIST-01 | Phase 7: Distribution | Pending |
+| DIST-02 | Phase 7: Distribution | Pending |
+| DIST-03 | Phase 7: Distribution | Pending |
+| DIST-04 | Phase 7: Distribution | Pending |
+| DIST-05 | Phase 7: Distribution | Pending |
+| DIST-06 | Phase 7: Distribution | Pending |
+| DIST-07 | Phase 7: Distribution | Pending |
+| DIST-08 | Phase 7: Distribution | Pending |
+| DIST-09 | Phase 7: Distribution | Pending |
+| DIST-10 | Phase 7: Distribution | Pending |
+| DIST-11 | Phase 7: Distribution | Pending |
+| DIST-12 | Phase 7: Distribution | Pending |
+| DOCS-01 | Phase 8: Documentation | Pending |
+| DOCS-02 | Phase 8: Documentation | Pending |
+| DOCS-03 | Phase 8: Documentation | Pending |
+| DOCS-04 | Phase 8: Documentation | Pending |
+| DOCS-05 | Phase 8: Documentation | Pending |
+| DOCS-06 | Phase 8: Documentation | Pending |
+| DOCS-07 | Phase 8: Documentation | Pending |
+| DOCS-08 | Phase 8: Documentation | Pending |
+| DOCS-09 | Phase 8: Documentation | Pending |
+| DOCS-10 | Phase 8: Documentation | Pending |
 
 **Coverage:**
 - v1 requirements: 56 total
-- Mapped to phases: 0
-- Unmapped: 56 ⚠️
+- Mapped to phases: 56
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-02*
-*Last updated: 2026-02-02 after initial definition*
+*Last updated: 2026-02-02 after roadmap creation*
