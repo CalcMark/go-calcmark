@@ -31,20 +31,14 @@ func (m Model) View() string {
 	totalWidth := m.width
 	totalHeight := m.height
 
-	// Reserve space: status bar (2) + context footer (2) + separator (1)
-	contentHeight := totalHeight - 5
-	if contentHeight < 5 {
-		contentHeight = 5
-	}
+	// Reserve space: status bar (2) + context footer (2) + separator (1) + empty line (1)
+	contentHeight := max(totalHeight-6, 5)
 
 	// Calculate pane widths based on preview mode using centralized configuration
 	leftWidth, rightWidth := m.GetPaneWidths(totalWidth)
 
 	// Pane content height (minus header row)
-	paneContentHeight := contentHeight - 1
-	if paneContentHeight < 3 {
-		paneContentHeight = 3
-	}
+	paneContentHeight := max(contentHeight-1, 3)
 
 	// Calculate globals panel height for alignment
 	// (collapsed = 1 line, expanded = 1 + number of globals)
@@ -476,10 +470,9 @@ func wrapStyledLine(line string, maxWidth int) []string {
 // stripANSI removes ANSI escape codes from a string, returning plain text.
 // This is needed to calculate actual text length for wrapping.
 func stripANSI(s string) string {
-	// Use lipgloss to render without styles, which strips ANSI codes
-	// Alternative: regex to match ANSI escape sequences
-	// Pattern: \x1b\[[0-9;]*m
-	result := ""
+	// Strip ANSI escape sequences matching pattern: \x1b\[[0-9;]*m
+	var result strings.Builder
+	result.Grow(len(s))
 	inEscape := false
 	for i := 0; i < len(s); i++ {
 		if s[i] == '\x1b' && i+1 < len(s) && s[i+1] == '[' {
@@ -493,42 +486,71 @@ func stripANSI(s string) string {
 			}
 			continue
 		}
-		result += string(s[i])
+		result.WriteByte(s[i])
 	}
-	return result
+	return result.String()
 }
 
 // renderLineWithCursor renders a line with cursor at the specified column.
 // If content is empty, uses m.GetCurrentLineText() to get the actual line content.
 // This ensures the cursor is ALWAYS visible, even when not actively typing.
 func (m Model) renderLineWithCursor(content string, col int, width int, useEditStyle bool) string {
-	var line string
-
-	// Determine which style to use
-	var textStyle, bgStyle lipgloss.Style
+	// Determine which style to use (includes foreground and background)
+	var lineStyle lipgloss.Style
 	if useEditStyle {
 		// When typing (editBuf active)
-		textStyle = m.styles.EditLine.UnsetBackground().UnsetWidth()
-		bgStyle = m.styles.EditLine.Width(width)
+		lineStyle = m.styles.EditLine.Copy().ColorWhitespace(true).Inline(true)
 	} else {
 		// When not typing (showing document content with cursor)
-		textStyle = m.styles.CurrentLine.UnsetBackground().UnsetWidth()
-		bgStyle = m.styles.CurrentLine.Width(width)
+		lineStyle = m.styles.CurrentLine.Copy().ColorWhitespace(true).Inline(true)
 	}
 
-	if col >= len(content) {
-		// Cursor at end - show text followed by cursor
-		line = textStyle.Render(content) + m.styles.Cursor.Render(" ")
+	// CRITICAL INSIGHT: The issue is that concatenating multiple .Render() calls
+	// creates separate ANSI blocks. We need ONE continuous background.
+	// Solution: Build the ENTIRE content first, THEN render once with padding included
+
+	contentLen := len(content)
+
+	// Determine cursor character
+	var cursorChar string
+	if col >= contentLen {
+		cursorChar = " "
 	} else {
-		// Cursor in middle - highlight the character under cursor
-		before := content[:col]
-		charAtCursor := string(content[col])
-		after := content[col+1:]
-
-		line = textStyle.Render(before) + m.styles.Cursor.Render(charAtCursor) + textStyle.Render(after)
+		cursorChar = string(content[col])
 	}
 
-	return bgStyle.Render(line)
+	// Calculate total padding needed
+	totalPadding := width - contentLen
+	if col >= contentLen {
+		totalPadding -= 1 // Account for cursor space
+	}
+
+	// Build result by rendering segments with inline styles
+	var result strings.Builder
+
+	// Before cursor
+	if col > 0 {
+		result.WriteString(lineStyle.Render(content[:col]))
+	}
+
+	// Cursor
+	result.WriteString(m.styles.Cursor.Inline(true).Render(cursorChar))
+
+	// After cursor
+	if col+1 < contentLen {
+		result.WriteString(lineStyle.Render(content[col+1:]))
+	}
+
+	// Padding - CRITICAL FIX: lipgloss strips background from trailing spaces!
+	// We need to add the padding as part of the CONTENT, not trailing
+	// Solution: Add padding BEFORE the cursor line ends, by using Width() on the style
+	if totalPadding > 0 {
+		bgColor := lineStyle.GetBackground()
+		paddingStyle := lipgloss.NewStyle().Background(bgColor).Width(totalPadding)
+		result.WriteString(paddingStyle.Render(""))
+	}
+
+	return result.String()
 }
 
 // renderEditLine renders the line being edited with cursor (single line, no wrapping).
@@ -567,27 +589,57 @@ func (m Model) renderEditLineWrapped(width int) []string {
 		}
 	}
 
-	textStyle := m.styles.EditLine.UnsetBackground().UnsetWidth()
+	lineStyle := m.styles.EditLine
 
 	for i, seg := range wrappedContent {
-		var line string
+		var s strings.Builder
+
 		if i == cursorLineIdx {
 			// This line has the cursor
-			if cursorColInLine >= len(seg) {
-				line = textStyle.Render(seg) + m.styles.Cursor.Render(" ")
-			} else {
-				before := seg[:cursorColInLine]
-				charAtCursor := string(seg[cursorColInLine])
-				after := seg[cursorColInLine+1:]
-				line = textStyle.Render(before) + m.styles.Cursor.Render(charAtCursor) + textStyle.Render(after)
-			}
-		} else {
-			line = textStyle.Render(seg)
-		}
+			segLen := len(seg)
 
-		// Apply edit line background
-		rendered := m.styles.EditLine.Width(width).Render(line)
-		result = append(result, rendered)
+			// Determine cursor character
+			var cursorChar string
+			if cursorColInLine >= segLen {
+				cursorChar = " "
+			} else {
+				cursorChar = string(seg[cursorColInLine])
+			}
+
+			// Before cursor
+			if cursorColInLine > 0 {
+				s.WriteString(lineStyle.Render(seg[:cursorColInLine]))
+			}
+
+			// Cursor
+			s.WriteString(m.styles.Cursor.Render(cursorChar))
+
+			// After cursor
+			if cursorColInLine+1 < segLen {
+				s.WriteString(lineStyle.Render(seg[cursorColInLine+1:]))
+			}
+
+			// Calculate padding
+			currentWidth := lipgloss.Width(s.String())
+			padding := width - currentWidth
+			if padding > 0 {
+				s.WriteString(lineStyle.Render(strings.Repeat(" ", padding)))
+			}
+
+			result = append(result, s.String())
+		} else {
+			// No cursor on this line
+			s.WriteString(lineStyle.Render(seg))
+
+			// Padding
+			currentWidth := lipgloss.Width(s.String())
+			padding := width - currentWidth
+			if padding > 0 {
+				s.WriteString(lineStyle.Render(strings.Repeat(" ", padding)))
+			}
+
+			result = append(result, s.String())
+		}
 	}
 
 	return result

@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -56,10 +57,11 @@ func TestViewportDoesNotExceedHeight(t *testing.T) {
 // TestViewportHeightWithLargeContent tests with more content
 func TestViewportHeightWithLargeContent(t *testing.T) {
 	// Create document with multiple lines
-	content := ""
+	var b strings.Builder
 	for i := 1; i <= 50; i++ {
-		content += "x" + string(rune('0'+i%10)) + " = " + string(rune('0'+i%10)) + "\n"
+		fmt.Fprintf(&b, "x%c = %c\n", rune('0'+i%10), rune('0'+i%10))
 	}
+	content := b.String()
 
 	doc, err := document.NewDocument(content)
 	if err != nil {
@@ -81,18 +83,4 @@ func TestViewportHeightWithLargeContent(t *testing.T) {
 			len(lines), m.height)
 		t.Errorf("This causes terminal content to bleed through at the bottom")
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
