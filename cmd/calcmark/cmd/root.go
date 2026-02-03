@@ -69,6 +69,4 @@ func init() {
 		return nil
 	}
 
-	// Disable default completion command
-	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

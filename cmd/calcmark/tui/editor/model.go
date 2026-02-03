@@ -16,6 +16,7 @@ import (
 	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -51,6 +52,28 @@ const (
 	StateSavePrompt                     // Save confirmation dialog active, normal UI paused
 	StateSaveAsPath                     // Save-as filename input active, normal UI paused
 )
+
+// String returns the string name of the InputState for debugging.
+func (s InputState) String() string {
+	switch s {
+	case StateDefault:
+		return "StateDefault"
+	case StateGlobals:
+		return "StateGlobals"
+	case StateHelp:
+		return "StateHelp"
+	case StateExportFormat:
+		return "StateExportFormat"
+	case StateExportPath:
+		return "StateExportPath"
+	case StateSavePrompt:
+		return "StateSavePrompt"
+	case StateSaveAsPath:
+		return "StateSaveAsPath"
+	default:
+		return fmt.Sprintf("InputState(%d)", s)
+	}
+}
 
 // PreviewMode represents the preview pane display mode.
 type PreviewMode int
@@ -147,6 +170,9 @@ type Model struct {
 	// Styles
 	styles config.Styles
 
+	// Keybindings
+	keys shared.KeyMap
+
 	// Cached alignment model - computed once and invalidated on changes
 	alignedCache       *AlignedModel
 	alignedCacheKey    alignedCacheKey // Key for cache validation
@@ -174,6 +200,7 @@ func New(doc *document.Document) Model {
 		previewMode:      PreviewFull,
 		lineWrap:         true,
 		styles:           config.GetStyles(),
+		keys:             shared.DefaultKeyMap(),
 	}
 
 	// CRITICAL: Transition to StateReady - establishes all invariants
@@ -343,6 +370,26 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyCtrlE:
 		// Export (Ctrl+E works in all modes)
 		m.enterExportMode()
+		return m, nil
+	}
+
+	// Handle help toggle (F1) - works regardless of mode
+	if key.Matches(msg, m.keys.Help) {
+		if m.mode == StateHelp {
+			m.mode = StateDefault
+		} else {
+			m.mode = StateHelp
+		}
+		return m, nil
+	}
+
+	// If in help mode, only respond to escape to close
+	if m.mode == StateHelp {
+		if key.Matches(msg, m.keys.Escape) {
+			m.mode = StateDefault
+			return m, nil
+		}
+		// Ignore other keys while help is shown
 		return m, nil
 	}
 

@@ -17,14 +17,14 @@ run observe=debug
 key down
 ----
 -- debug:
-mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 1000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 1000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Go to end of line, delete "1000", type "2000"
 run observe=debug
 key end
 ----
 -- debug:
-mode=0 cursorLine=1 cursorCol=16 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 1000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=16 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 1000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Delete 4 characters ("1000")
 run observe=debug
@@ -34,14 +34,14 @@ key backspace
 key backspace
 ----
 -- debug:
-mode=0 cursorLine=1 cursorCol=12 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = " sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=12 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = " sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Type "2000"
 run observe=debug
 type 2000
 ----
 -- debug:
-mode=0 cursorLine=1 cursorCol=16 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 2000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=16 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 2000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate away to trigger save and re-evaluation
 # The dependent "interest" line should update its value
@@ -49,7 +49,7 @@ run observe=debug
 key down
 ----
 -- debug:
-mode=0 cursorLine=2 cursorCol=16 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="interest = principal * rate" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=16 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="interest = principal * rate" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 3: Verify results updated - interest should now be 200 (2000 * 0.1)
 run observe=results

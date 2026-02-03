@@ -11,14 +11,18 @@ type KeyMap struct {
 	Help      key.Binding
 
 	// Navigation keys
-	Up       key.Binding
-	Down     key.Binding
-	Left     key.Binding
-	Right    key.Binding
-	PageUp   key.Binding
-	PageDown key.Binding
-	Home     key.Binding
-	End      key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	Left      key.Binding
+	Right     key.Binding
+	WordLeft  key.Binding
+	WordRight key.Binding
+	LineStart key.Binding
+	LineEnd   key.Binding
+	PageUp    key.Binding
+	PageDown  key.Binding
+	Home      key.Binding
+	End       key.Binding
 
 	// Action keys
 	Enter  key.Binding
@@ -36,6 +40,9 @@ type KeyMap struct {
 	Redo       key.Binding
 	InsertLine key.Binding
 	DeleteLine key.Binding
+	NewLine    key.Binding
+	Backspace  key.Binding
+	DeleteWord key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -43,59 +50,75 @@ func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Quit: key.NewBinding(
 			key.WithKeys("ctrl+c"),
-			key.WithHelp("ctrl+c", "quit"),
+			key.WithHelp("Ctrl+C", "quit"),
 		),
 		ForceQuit: key.NewBinding(
 			key.WithKeys("ctrl+d"),
-			key.WithHelp("ctrl+d", "force quit"),
+			key.WithHelp("Ctrl+D", "force quit"),
 		),
 		Help: key.NewBinding(
-			key.WithKeys("?"),
-			key.WithHelp("?", "help"),
+			key.WithKeys("f1"),
+			key.WithHelp("F1", "help"),
 		),
 		Up: key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "up"),
+			key.WithKeys("up"),
+			key.WithHelp("Up", "up"),
 		),
 		Down: key.NewBinding(
-			key.WithKeys("down", "j"),
-			key.WithHelp("↓/j", "down"),
+			key.WithKeys("down"),
+			key.WithHelp("Down", "down"),
 		),
 		Left: key.NewBinding(
-			key.WithKeys("left", "h"),
-			key.WithHelp("←/h", "left"),
+			key.WithKeys("left"),
+			key.WithHelp("Left", "left"),
 		),
 		Right: key.NewBinding(
-			key.WithKeys("right", "l"),
-			key.WithHelp("→/l", "right"),
+			key.WithKeys("right"),
+			key.WithHelp("Right", "right"),
+		),
+		WordLeft: key.NewBinding(
+			key.WithKeys("ctrl+left"),
+			key.WithHelp("Ctrl+Left", "word left"),
+		),
+		WordRight: key.NewBinding(
+			key.WithKeys("ctrl+right"),
+			key.WithHelp("Ctrl+Right", "word right"),
+		),
+		LineStart: key.NewBinding(
+			key.WithKeys("ctrl+a", "home"),
+			key.WithHelp("Ctrl+A/Home", "line start"),
+		),
+		LineEnd: key.NewBinding(
+			key.WithKeys("ctrl+e", "end"),
+			key.WithHelp("Ctrl+E/End", "line end"),
 		),
 		PageUp: key.NewBinding(
 			key.WithKeys("pgup"),
-			key.WithHelp("pgup", "page up"),
+			key.WithHelp("PgUp", "page up"),
 		),
 		PageDown: key.NewBinding(
 			key.WithKeys("pgdown"),
-			key.WithHelp("pgdn", "page down"),
+			key.WithHelp("PgDn", "page down"),
 		),
 		Home: key.NewBinding(
-			key.WithKeys("home", "g"),
-			key.WithHelp("home/g", "go to top"),
+			key.WithKeys("ctrl+home"),
+			key.WithHelp("Ctrl+Home", "go to top"),
 		),
 		End: key.NewBinding(
-			key.WithKeys("end", "G"),
-			key.WithHelp("end/G", "go to bottom"),
+			key.WithKeys("ctrl+end"),
+			key.WithHelp("Ctrl+End", "go to bottom"),
 		),
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "confirm"),
+			key.WithHelp("Enter", "new line"),
 		),
 		Escape: key.NewBinding(
 			key.WithKeys("esc"),
-			key.WithHelp("esc", "cancel/exit mode"),
+			key.WithHelp("Esc", "close/cancel"),
 		),
 		Tab: key.NewBinding(
 			key.WithKeys("tab"),
-			key.WithHelp("tab", "complete"),
+			key.WithHelp("Tab", "complete"),
 		),
 		SlashCommand: key.NewBinding(
 			key.WithKeys("/"),
@@ -107,27 +130,39 @@ func DefaultKeyMap() KeyMap {
 		),
 		Save: key.NewBinding(
 			key.WithKeys("ctrl+s"),
-			key.WithHelp("ctrl+s", "save"),
+			key.WithHelp("Ctrl+S", "save"),
 		),
 		Open: key.NewBinding(
 			key.WithKeys("ctrl+o"),
-			key.WithHelp("ctrl+o", "open"),
+			key.WithHelp("Ctrl+O", "open"),
 		),
 		Undo: key.NewBinding(
-			key.WithKeys("u", "ctrl+z"),
-			key.WithHelp("u", "undo"),
+			key.WithKeys("ctrl+z"),
+			key.WithHelp("Ctrl+Z", "undo"),
 		),
 		Redo: key.NewBinding(
-			key.WithKeys("ctrl+r"),
-			key.WithHelp("ctrl+r", "redo"),
+			key.WithKeys("ctrl+y"),
+			key.WithHelp("Ctrl+Y", "redo"),
 		),
 		InsertLine: key.NewBinding(
 			key.WithKeys("o"),
 			key.WithHelp("o", "insert line below"),
 		),
 		DeleteLine: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("dd", "delete line"),
+			key.WithKeys("ctrl+k"),
+			key.WithHelp("Ctrl+K", "delete line"),
+		),
+		NewLine: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("Enter", "new line"),
+		),
+		Backspace: key.NewBinding(
+			key.WithKeys("backspace"),
+			key.WithHelp("Backspace", "delete char"),
+		),
+		DeleteWord: key.NewBinding(
+			key.WithKeys("ctrl+backspace"),
+			key.WithHelp("Ctrl+Backspace", "delete word"),
 		),
 	}
 }
@@ -138,11 +173,18 @@ func (k KeyMap) ShortHelp() []key.Binding {
 }
 
 // FullHelp returns key bindings to show in full help.
+// Organized by category: Navigation, Word Navigation, Editing, File, Other.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
+		// Navigation
 		{k.Up, k.Down, k.Left, k.Right},
+		{k.WordLeft, k.WordRight, k.LineStart, k.LineEnd},
 		{k.PageUp, k.PageDown, k.Home, k.End},
-		{k.Enter, k.Escape, k.Tab},
-		{k.Help, k.Quit},
+		// Editing
+		{k.NewLine, k.Backspace, k.DeleteWord, k.DeleteLine},
+		// File
+		{k.Save, k.Undo, k.Redo},
+		// Other
+		{k.Help, k.Escape, k.Quit},
 	}
 }

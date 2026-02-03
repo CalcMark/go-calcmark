@@ -28,6 +28,18 @@ func (m Model) View() string {
 		return "Goodbye!\n"
 	}
 
+	// If help mode is active, render help overlay on top
+	if m.mode == StateHelp {
+		helpView := m.renderHelpOverlay()
+		// Center the help overlay on screen with semi-transparent background
+		return lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			helpView,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+		)
+	}
+
 	// Calculate layout
 	totalWidth := m.width
 	totalHeight := m.height
