@@ -38,6 +38,11 @@ func (m Model) View() string {
 	// Calculate pane widths based on preview mode using centralized configuration
 	leftWidth, rightWidth := m.GetPaneWidths(totalWidth)
 
+	// Account for divider between panes (1 character)
+	// The divider is visually part of the separation, so we subtract it from left pane
+	const dividerWidth = 1
+	leftContentWidth := leftWidth - dividerWidth // Content area width (excludes divider)
+
 	// Pane content height (minus header row)
 	paneContentHeight := max(contentHeight-1, 3)
 
@@ -53,9 +58,10 @@ func (m Model) View() string {
 	globalsHeight++ // +1 for separator line
 
 	// CRITICAL: Compute aligned line structure ONCE to avoid cycles.
+	// Use leftContentWidth (not leftWidth) because divider takes 1 char from left pane
 	// Both widths are fixed, and we compute wrapping/padding based on them.
 	// This prevents: preview reflows → padding changes → width changes → reflow...
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
 
 	// Render source pane with header
 	sourceHeader := lipgloss.NewStyle().
@@ -63,17 +69,17 @@ func (m Model) View() string {
 		Foreground(lipgloss.Color("252")).
 		Background(lipgloss.Color("236")).
 		Padding(0, 1).
-		Width(leftWidth).
+		Width(leftContentWidth).
 		Render("Source")
-	// Ensure header is exactly leftWidth
-	sourceHeader = ensureFullWidth(sourceHeader, leftWidth, lipgloss.Color("236"))
+	// Ensure header is exactly leftContentWidth
+	sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, lipgloss.Color("236"))
 
 	// Source pane needs padding at top to match globals panel height in preview
 	var sourcePaddingLines []string
 	if m.previewMode != PreviewHidden {
 		for i := 0; i < globalsHeight; i++ {
 			// Each padding line must be full width with background
-			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftWidth, lipgloss.Color("236")))
+			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftContentWidth, lipgloss.Color("236")))
 		}
 	}
 
@@ -85,7 +91,7 @@ func (m Model) View() string {
 		sourceContentHeight = 1
 	}
 
-	sourceContent := m.renderSourcePaneAligned(leftWidth, sourceContentHeight, aligned)
+	sourceContent := m.renderSourcePaneAligned(leftContentWidth, sourceContentHeight, aligned)
 
 	// Assemble source pane with header and padding
 	var sourcePaneLines []string
@@ -121,11 +127,13 @@ func (m Model) View() string {
 
 	// Add panes (source and preview)
 	if m.previewMode != PreviewHidden {
-		sbs := NewSideBySide(leftWidth, rightWidth, lipgloss.Color("236"), lipgloss.Color("236"))
+		// SideBySide expects content widths and adds divider
+		// leftContentWidth already accounts for divider (leftWidth - dividerWidth)
+		sbs := NewSideBySide(leftContentWidth, rightWidth, lipgloss.Color("236"), lipgloss.Color("236"))
 		panesOutput := sbs.Render(sourcePane, previewPane)
 		allUILines = append(allUILines, strings.Split(panesOutput, "\n")...)
 	} else {
-		// Single pane - ensure full width
+		// Single pane - use full left width (no divider in single-pane mode)
 		sourcePane = ensureLinesAreFullWidth(sourcePane, leftWidth, lipgloss.Color("236"))
 		allUILines = append(allUILines, strings.Split(sourcePane, "\n")...)
 	}
@@ -830,8 +838,12 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 
 	switch m.previewMode {
 	case PreviewFull:
-		// Full mode: left-aligned "varName → value" (with * if changed)
-		return changedMarker + m.styles.CalcVarName.Render(r.VarName) + " " + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
+		// Full mode: "varName → value" for assignments, just "value" for anonymous calcs
+		if r.VarName != "" {
+			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + " " + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
+		}
+		// Anonymous calculation (no variable assignment) - just show the value
+		return changedMarker + valueStyle.Render(r.Value)
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)

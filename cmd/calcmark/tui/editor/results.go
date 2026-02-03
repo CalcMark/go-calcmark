@@ -32,15 +32,9 @@ func (m *Model) GetLineResults() []LineResult {
 		switch b := node.Block.(type) {
 		case *document.CalcBlock:
 			sourceLines := b.Source()
-			vars := b.Variables()
 			stmtResults := b.Results()   // Per-statement results
 			statements := b.Statements() // Parsed AST nodes
 			blockError := b.Error()
-
-			// Build a map of variable index for lookup
-			// Variables are in definition order, so vars[i] corresponds to the
-			// i-th assignment statement
-			varIndex := 0
 
 			// Build error line map from diagnostics (which have proper position info)
 			// Map from 1-indexed block line to structured diagnostic
@@ -118,14 +112,11 @@ func (m *Model) GetLineResults() []LineResult {
 					lr.Value = display.Format(stmtResults[stmtIdx])
 				}
 
-				// Get variable name if this statement defines one
+				// Get variable name if this statement defines one (assignment)
+				// Anonymous calculations (like "2 + 2") don't have a variable name
 				if stmtIdx < len(statements) {
 					if varName := getAssignmentVarName(statements[stmtIdx]); varName != "" {
 						lr.VarName = varName
-					} else if varIndex < len(vars) {
-						// Fallback: use vars list in order
-						lr.VarName = vars[varIndex]
-						varIndex++
 					}
 				}
 
