@@ -636,16 +636,26 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 		m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
 		m.cursorCol--
 		return m.debounceUpdate()
-	} else if len(m.editBuf) == 0 && m.cursorLine > 0 {
-		// Empty line - join with previous line
+	} else if m.cursorCol == 0 && m.cursorLine > 0 {
+		// At column 0 - join current line with previous line
+		currentContent := m.editBuf
 		prevLine := m.cursorLine - 1
-		m.deleteLine()
-		m.cursorLine = prevLine
+
+		// Get previous line content
 		lines := m.GetLines()
-		if m.cursorLine < len(lines) {
-			m.editBuf = lines[m.cursorLine]
-			m.cursorCol = len(m.editBuf)
+		prevContent := ""
+		if prevLine < len(lines) {
+			prevContent = lines[prevLine]
 		}
+
+		// Delete current line
+		m.deleteLine()
+
+		// Move to previous line and append current content
+		m.cursorLine = prevLine
+		m.cursorCol = len(prevContent)
+		m.editBuf = prevContent + currentContent
+
 		m.transitionToEditing()
 		return m.debounceUpdate()
 	}
@@ -661,21 +671,31 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 		m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
 		m.transitionToEditing()
 		return m.debounceUpdate()
-	} else if len(m.editBuf) == 0 {
-		// Empty line - delete it
-		m.deleteLine()
-		if m.TotalLines() > 0 {
-			if m.cursorLine >= m.TotalLines() {
-				m.cursorLine = m.TotalLines() - 1
-			}
-			lines := m.GetLines()
-			if m.cursorLine < len(lines) {
-				m.editBuf = lines[m.cursorLine]
-			} else {
-				m.editBuf = ""
-			}
-			m.cursorCol = 0
+	} else if m.cursorLine < m.TotalLines()-1 {
+		// At end of line - join with next line
+		nextLine := m.cursorLine + 1
+		lines := m.GetLines()
+		nextContent := ""
+		if nextLine < len(lines) {
+			nextContent = lines[nextLine]
 		}
+
+		// Save current position
+		currentCol := m.cursorCol
+
+		// Save current line content before manipulating
+		m.saveCurrentLine(true)
+		m.cursorLine = nextLine
+		m.deleteLine()
+
+		// Move back and append next line content
+		m.cursorLine = nextLine - 1
+		lines = m.GetLines()
+		if m.cursorLine < len(lines) {
+			m.editBuf = lines[m.cursorLine] + nextContent
+		}
+		m.cursorCol = currentCol
+
 		m.transitionToEditing()
 		return m.debounceUpdate()
 	}
