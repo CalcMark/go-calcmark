@@ -19,8 +19,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Debounce delay for re-evaluation after typing (per spec: ~50ms)
-const evalDebounceDelay = 50 * time.Millisecond
+// evalDebounceDelay is the time to wait after typing stops before re-evaluating.
+// This prevents excessive evaluation during rapid typing while keeping results responsive.
+// Can be tuned lower if interpreter performance allows (100ms is conservative).
+const evalDebounceDelay = 100 * time.Millisecond
 
 // scrollMargin is the number of lines to keep between cursor and viewport edge.
 // This provides visual context around the cursor position.
