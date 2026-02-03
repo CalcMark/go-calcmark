@@ -65,6 +65,7 @@ z = 30`
 			"typing_text",                    // TestEditorCatwalkTypingText
 			"text_wrapping_40col",            // TestEditorCatwalkTextWrapping40Col
 			"long_document_scroll",           // TestEditorCatwalkLongDocumentScroll
+			"help_toggle",                    // TestEditorCatwalkHelpToggle
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -932,6 +933,43 @@ func TestEditorCatwalkLongDocumentScroll(t *testing.T) {
 				buf.WriteString(fmt.Sprintf("cursorInView=%v visibleRange=[%d,%d)\n",
 					inView, visibleStart, visibleEnd))
 				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkHelpToggle tests F1 help overlay toggle behavior.
+// Verifies: F1 opens help, F1 closes help, Esc closes help, editing continues after.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkHelpToggle(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "help_toggle") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
 		)
