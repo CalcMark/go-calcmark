@@ -58,6 +58,10 @@ z = 30`
 			"word_movement",                  // TestEditorCatwalkWordMovement
 			"evaluation_debounce",            // TestEditorCatwalkEvaluationDebounce
 			"dependent_results",              // TestEditorCatwalkDependentResults
+			"insert_at_end",                  // TestEditorCatwalkInsertAtEnd
+			"insert_line",                    // TestEditorCatwalkInsertLine
+			"scroll_navigation",              // TestEditorCatwalkScrollNavigation
+			"delete_empty_line",              // TestEditorCatwalkDeleteEmptyLine
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -586,6 +590,158 @@ total = price * (1 + tax)
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkInsertAtEnd tests inserting text at the end of a document.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkInsertAtEnd(t *testing.T) {
+	// Simple document with multiple lines to navigate through
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "insert_at_end") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkInsertLine tests inserting new lines via 'o' key.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkInsertLine(t *testing.T) {
+	// Simple document with multiple lines
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "insert_line") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkScrollNavigation tests scroll behavior after inserting lines.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkScrollNavigation(t *testing.T) {
+	// Simple document with multiple lines
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "scroll_navigation") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkDeleteEmptyLine tests DELETE key behavior on empty lines.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkDeleteEmptyLine(t *testing.T) {
+	// Simple document with multiple lines
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "delete_empty_line") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+			catwalk.WithObserver("view", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).View()))
 				return err
 			}),
 		)
