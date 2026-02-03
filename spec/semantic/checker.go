@@ -1,6 +1,7 @@
 package semantic
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -85,20 +86,20 @@ func (c *Checker) checkNode(node ast.Node) {
 
 // checkAssignment validates variable assignments.
 func (c *Checker) checkAssignment(a *ast.Assignment) {
-	// CalcMark semantic rule: A variable can only be defined once in a document
+	// CalcMark semantic rule: Variables are immutable - can only be defined once
 	if existing, ok := c.env.GetInfo(a.Name); ok {
 		// Variable already defined - this is a redefinition error
-		msg := "variable '" + a.Name + "' is already defined"
+		msg := "cannot reassign '" + a.Name + "' — variables are immutable"
 		if existing.Range != nil {
 			msg += " (first defined at line " +
-				string(rune(existing.Range.Start.Line)) + ")"
+				strconv.Itoa(existing.Range.Start.Line+1) + ")"
 		}
 
 		c.diagnostics = append(c.diagnostics, Diagnostic{
 			Severity: Error,
 			Code:     DiagVariableRedefinition,
 			Message:  msg,
-			Detailed: "CalcMark does not allow variable redefinition. Each variable can only be assigned once in a document. Use a different variable name.",
+			Detailed: "CalcMark variables are immutable and can only be assigned once per document. This ensures calculations are reproducible and verifiable. Use a different variable name, or edit the original definition.",
 			Range:    a.Range,
 		})
 		return // Don't record the redefinition
