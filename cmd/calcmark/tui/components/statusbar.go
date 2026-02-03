@@ -23,15 +23,17 @@ func StyledPadding(width int, bg lipgloss.TerminalColor) string {
 
 // StatusBarState holds the data needed to render a status bar.
 type StatusBarState struct {
-	Filename    string // Current file name (empty for new/unsaved)
-	Line        int    // Current line number (1-indexed)
-	TotalLines  int    // Total lines in document
-	CalcCount   int    // Number of calc blocks
-	Modified    bool   // Whether the document has unsaved changes
-	Hints       string // Context-sensitive hints
-	Mode        string // Current mode name (e.g., "NORMAL", "EDITING")
-	StatusMsg   string // Status message (e.g., "Saved: file.cm")
-	StatusIsErr bool   // Whether status message is an error
+	Filename       string // Current file name (empty for new/unsaved)
+	Line           int    // Current line number (1-indexed)
+	Column         int    // Current column number (1-indexed)
+	TotalLines     int    // Total lines in document
+	CalcCount      int    // Number of calc blocks
+	Modified       bool   // Whether the document has unsaved changes
+	Hints          string // Context-sensitive hints
+	Mode           string // Current mode name (e.g., "NORMAL", "EDITING")
+	StatusMsg      string // Status message (e.g., "Saved: file.cm")
+	StatusIsErr    bool   // Whether status message is an error
+	EvalInProgress bool   // True during evaluation debounce period
 }
 
 // StatusBarStyle holds styles for rendering the status bar.
@@ -105,10 +107,14 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 		left.WriteString(style.Modified.Render(" [+]"))
 	}
 
-	// Build center section: position info
-	center := style.Position.Render(
-		fmt.Sprintf("L%d/%d | %d calcs", state.Line, state.TotalLines, state.CalcCount),
-	)
+	// Build center section: position info with column and optional EVAL indicator
+	var centerText string
+	if state.EvalInProgress {
+		centerText = fmt.Sprintf("L%d:%d | EVAL...", state.Line, state.Column)
+	} else {
+		centerText = fmt.Sprintf("L%d:%d | %d calcs", state.Line, state.Column, state.CalcCount)
+	}
+	center := style.Position.Render(centerText)
 
 	// Build right section: hints only (mode is internal implementation detail)
 	var right strings.Builder

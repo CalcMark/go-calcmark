@@ -19,11 +19,12 @@ func TestRenderStatusBar(t *testing.T) {
 			state: StatusBarState{
 				Filename:   "test.cm",
 				Line:       5,
+				Column:     3,
 				TotalLines: 100,
 				CalcCount:  10,
 			},
 			width:    80,
-			wantSubs: []string{"test.cm", "L5/100", "10 calcs"},
+			wantSubs: []string{"test.cm", "L5:3", "10 calcs"},
 		},
 		{
 			name: "new file",

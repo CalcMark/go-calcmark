@@ -1601,15 +1601,17 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 	}
 
 	return components.StatusBarState{
-		Filename:    m.filepath,
-		Line:        m.cursorLine + 1,
-		TotalLines:  m.TotalLines(),
-		CalcCount:   m.CalcBlockCount(),
-		Modified:    m.modified,
-		Mode:        "", // Mode is internal - not shown to users
-		Hints:       hints,
-		StatusMsg:   m.statusMsg,
-		StatusIsErr: m.statusIsErr,
+		Filename:       m.filepath,
+		Line:           m.cursorLine + 1,
+		Column:         m.cursorCol + 1, // 1-indexed for user display
+		TotalLines:     m.TotalLines(),
+		CalcCount:      m.CalcBlockCount(),
+		Modified:       m.modified,
+		Mode:           "", // Mode is internal - not shown to users
+		Hints:          hints,
+		StatusMsg:      m.statusMsg,
+		StatusIsErr:    m.statusIsErr,
+		EvalInProgress: m.userIsTyping, // userIsTyping tracks debounce state
 	}
 }
 
