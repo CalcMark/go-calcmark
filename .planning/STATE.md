@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** Phase 5 - Help System (IN PROGRESS)
+**Current focus:** Phase 5 - Help System (COMPLETE)
 
 ## Current Position
 
 Phase: 5 of 8 (Help System)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-03 - Completed 05-01-PLAN.md (CLI help commands and shell completions)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-03 - Completed 05-02-PLAN.md (TUI help overlay and status bar)
 
-Progress: [████████████████░░░░] 80% (16/20 plans)
+Progress: [████████████████░░░░] 85% (17/20 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: 8min
-- Total execution time: ~1.6 hours
+- Total execution time: ~1.8 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [████████████████░░░░] 80% (16
 | 2. TUI Geometry & Layout | 2/2 | 8min | 4min |
 | 3. TUI Editor Integration | 5/5 | 55min | 11min |
 | 4. TUI Test Coverage | 3/3 | 15min | 5min |
-| 5. Help System | 1/2 | 4min | 4min |
+| 5. Help System | 2/2 | 19min | 9.5min |
 
 **Recent Trend:**
-- Last 5 plans: 03-05 (20min), 04-01 (3min), 04-02 (6min), 04-03 (6min), 05-01 (4min)
-- Trend: CLI infrastructure plans complete quickly with established Cobra patterns
+- Last 5 plans: 04-01 (3min), 04-02 (6min), 04-03 (6min), 05-01 (4min), 05-02 (15min)
+- Trend: TUI overlay work takes longer due to UI state management and testing
 
 *Updated after each plan completion*
 
@@ -81,6 +81,9 @@ Recent decisions affecting current work:
 - 05-01: Categories displayed in logical order (Math, Conversion, Network, Storage, Capacity) not alphabetical
 - 05-01: Plain text output (no ANSI codes) ensures compatibility when piping to less/more
 - 05-01: Removed DisableDefaultCmd to enable Cobra built-in completion
+- 05-02: Use F1 for help (not ?) to avoid conflict with calc expressions
+- 05-02: Status bar shows L{line}:{col} format (e.g., L5:12)
+- 05-02: Show EVAL... during typing debounce, calc count when idle
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -105,10 +108,11 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Phase 5 complete
 Resume file: None
 
-### Phase 5 Progress Summary (2026-02-03)
+### Phase 5 Completion Summary (2026-02-03)
 - 05-01: Created function registry with metadata for 12 functions, help commands (cm help functions, cm help constants), shell completions for bash/zsh/fish/powershell
-- Summary: .planning/phases/05-help-system/05-01-SUMMARY.md
-- Next: 05-02 (TUI help overlay and status bar enhancements)
+- 05-02: Implemented F1 help overlay using bubbles/help, enhanced status bar with L{line}:{col} and EVAL... indicator, added catwalk test for help toggle
+- All 8 Success Criteria verified and satisfied
+- Ready for Phase 6 (Autocomplete and YAML Frontmatter)
