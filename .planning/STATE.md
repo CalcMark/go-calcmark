@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** Phase 2 - TUI Geometry & Layout (In progress)
+**Current focus:** Phase 2 - TUI Geometry & Layout (Complete)
 
 ## Current Position
 
 Phase: 2 of 8 (TUI Geometry & Layout)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-03 - Completed 02-01-PLAN.md (layout success criteria tests)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-03 - Completed 02-02-PLAN.md (layout fix and visual verification)
 
-Progress: [███░░░░░░░░░░░░░░░░░] 17% (3/18 plans)
+Progress: [████░░░░░░░░░░░░░░░░] 22% (4/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 6min
-- Total execution time: 0.3 hours
+- Total plans completed: 4
+- Average duration: 5min
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Foundation | 2/2 | 13min | 6.5min |
-| 2. TUI Geometry & Layout | 1/2 | 5min | 5min |
+| 2. TUI Geometry & Layout | 2/2 | 8min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (7min), 01-02 (6min), 02-01 (5min)
-- Trend: Stable/improving
+- Last 5 plans: 01-01 (7min), 01-02 (6min), 02-01 (5min), 02-02 (3min)
+- Trend: Improving
 
 *Updated after each plan completion*
 
@@ -54,6 +54,15 @@ Recent decisions affecting current work:
 - 01-02: Dependency direction: geometry <- editor (geometry has zero TUI framework imports)
 - 02-01: Used dedicated TestEditorCatwalkLayoutAlignment instead of TestEditorCatwalk -- avoids shared document mutation between catwalk test files
 - 02-01: Used ComputeAlignedModel with mock renderers for narrow-width SC tests -- tests alignment algorithm in isolation
+- 02-02: No code changes needed -- all five SC tests pass on existing pipeline
+- 02-02: Visual polish (column headers, divider padding/centering) deferred as out of Phase 2 scope
+
+### Visual Polish Backlog (from Phase 2 visual checkpoint)
+
+These items were identified during 02-02 visual verification and deferred:
+1. Column headers ("Source" / "Preview") not displayed at top of columns
+2. Vertical pipe divider has no padding from source content (cramped appearance)
+3. Divider not visually centered between panes
 
 ### Pending Todos
 
@@ -69,6 +78,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-03T01:20Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-02-03T01:43Z
+Stopped at: Completed 02-02-PLAN.md (Phase 2 complete)
 Resume file: None

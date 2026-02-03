@@ -13,7 +13,7 @@ CalcMark v1 delivers a polished, distributable calculation notepad for the termi
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Fix CI, update deps, extract pure geometry package
-- [ ] **Phase 2: TUI Geometry & Layout** - Implement code.sh algorithm for correct two-column rendering
+- [x] **Phase 2: TUI Geometry & Layout** - Implement code.sh algorithm for correct two-column rendering
 - [ ] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
 - [ ] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
 - [ ] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
@@ -52,7 +52,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md -- Write integration tests proving all five success criteria for the two-column layout
-- [ ] 02-02-PLAN.md -- Fix any layout failures and visually verify two-column rendering
+- [x] 02-02-PLAN.md -- Fix any layout failures and visually verify two-column rendering
 
 ### Phase 3: TUI Editor Integration
 **Goal**: The editor is fully interactive with accurate cursor tracking, smooth scrolling, working evaluation pipeline, and results that update as the user types
