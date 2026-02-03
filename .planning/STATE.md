@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 4 of 8 (TUI Test Coverage)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-03 - Completed 04-01-PLAN.md (Fix shared document mutation)
+Last activity: 2026-02-03 - Completed 04-02-PLAN.md (Add missing catwalk tests)
 
-Progress: [██████████░░░░░░░░░░] 50% (10/20 plans)
+Progress: [███████████░░░░░░░░░] 55% (11/20 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 8min
-- Total execution time: 1.3 hours
+- Total execution time: 1.4 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [██████████░░░░░░░░░░] 50% (10
 | 1. Foundation | 2/2 | 13min | 6.5min |
 | 2. TUI Geometry & Layout | 2/2 | 8min | 4min |
 | 3. TUI Editor Integration | 5/5 | 55min | 11min |
-| 4. TUI Test Coverage | 1/3 | 3min | 3min |
+| 4. TUI Test Coverage | 2/3 | 9min | 4.5min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (5min), 03-03 (8min), 03-04 (7min), 03-05 (20min), 04-01 (3min)
-- Trend: Test coverage fix was fast - existing pattern applied to 4 more tests
+- Last 5 plans: 03-03 (8min), 03-04 (7min), 03-05 (20min), 04-01 (3min), 04-02 (6min)
+- Trend: Test coverage plans are fast - patterns established, just applying them
 
 *Updated after each plan completion*
 
@@ -73,6 +73,8 @@ Recent decisions affecting current work:
 - 03-05: Diagnostic messages use em-dash pattern with specific values and suggestions -- "extremely useful for users"
 - 03-05: Variable redefinition shows original definition line number -- helps users find first assignment
 - 04-01: Dedicated test functions with fresh documents for insert_at_end, insert_line, scroll_navigation, delete_empty_line -- pattern now applied to 16 test scenarios
+- 04-02: Created typing_text, text_wrapping_40col, long_document_scroll tests -- all SC1 interaction types now covered
+- 04-02: VHS tapes archived to branch archive/vhs-tapes and removed from filesystem -- not in CI, reducing clutter
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -97,9 +99,10 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 04-01-PLAN.md - Fixed 4 failing catwalk tests
+Stopped at: Completed 04-02-PLAN.md - Added 3 missing catwalk tests
 Resume file: None
 
 ### Phase 4 Progress Notes
 - 04-01: Fixed 4 failing tests (insert_at_end, insert_line, scroll_navigation, delete_empty_line) by applying dedicated test function pattern
-- Remaining work: 04-02 (new catwalk tests), 04-03 (VHS tape cleanup)
+- 04-02: Added 3 new catwalk tests (typing_text, text_wrapping_40col, long_document_scroll), archived VHS tapes
+- Remaining work: 04-03 (binary-reproducible test harness - may be optional)
