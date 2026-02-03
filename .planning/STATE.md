@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 3 of 8 (TUI Editor Integration)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-03 - Completed 03-01-PLAN.md (cursor navigation)
+Last activity: 2026-02-03 - Completed 03-02-PLAN.md (viewport scrolling)
 
-Progress: [█████░░░░░░░░░░░░░░░] 28% (5/18 plans)
+Progress: [██████░░░░░░░░░░░░░░] 33% (6/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 7min
-- Total execution time: 0.6 hours
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [█████░░░░░░░░░░░░░░░] 28% (5/
 |-------|-------|-------|----------|
 | 1. Foundation | 2/2 | 13min | 6.5min |
 | 2. TUI Geometry & Layout | 2/2 | 8min | 4min |
-| 3. TUI Editor Integration | 1/4 | 15min | 15min |
+| 3. TUI Editor Integration | 2/4 | 20min | 10min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (6min), 02-01 (5min), 02-02 (3min), 03-01 (15min)
-- Trend: 03-01 longer due to new test infrastructure setup
+- Last 5 plans: 02-01 (5min), 02-02 (3min), 03-01 (15min), 03-02 (5min)
+- Trend: Stabilizing after test infrastructure setup
 
 *Updated after each plan completion*
 
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 - 02-02: Visual polish (column headers, divider padding/centering) deferred as out of Phase 2 scope
 - 03-01: Use unicode.IsSpace/IsPunct for word boundaries -- standard word boundaries, not CalcMark expression-aware
 - 03-01: Dedicated test functions for navigation tests avoid shared document pollution between catwalk test walks
+- 03-02: scrollMargin = 3 lines provides good context without excessive scrolling
+- 03-02: adjustScrollForCursor() centralizes all scroll logic for consistency
+- 03-02: Arrow key navigation calls adjustScrollForCursor() via saveCurrentLineAndMoveTo()
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -78,10 +81,9 @@ None.
 - WASM binary size unknown -- must measure early in Phase 7
 - Pre-existing `task quality` modernize warnings (~39 across codebase) -- not blocking but should be addressed eventually
 - TestEditorCatwalk shares document pointer across test files causing mutation -- workaround in place but root fix deferred
-- Untracked `testdata/viewport_scrolling` file from previous session causes `task test` to fail -- needs cleanup or commit
 
 ## Session Continuity
 
-Last session: 2026-02-03T19:48Z
-Stopped at: Completed 03-01-PLAN.md (cursor navigation)
+Last session: 2026-02-03T19:54Z
+Stopped at: Completed 03-02-PLAN.md (viewport scrolling)
 Resume file: None
