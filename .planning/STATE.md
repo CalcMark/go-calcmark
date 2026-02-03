@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 3 of 8 (TUI Editor Integration)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-03 - Completed 03-02-PLAN.md (viewport scrolling)
+Last activity: 2026-02-03 - Completed 03-03-PLAN.md (evaluation debounce)
 
-Progress: [██████░░░░░░░░░░░░░░] 33% (6/18 plans)
+Progress: [███████░░░░░░░░░░░░░] 39% (7/18 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 7min
-- Total execution time: 0.7 hours
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [██████░░░░░░░░░░░░░░] 33% (6/
 |-------|-------|-------|----------|
 | 1. Foundation | 2/2 | 13min | 6.5min |
 | 2. TUI Geometry & Layout | 2/2 | 8min | 4min |
-| 3. TUI Editor Integration | 2/4 | 20min | 10min |
+| 3. TUI Editor Integration | 3/4 | 28min | 9min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (5min), 02-02 (3min), 03-01 (15min), 03-02 (5min)
-- Trend: Stabilizing after test infrastructure setup
+- Last 5 plans: 02-02 (3min), 03-01 (15min), 03-02 (5min), 03-03 (8min)
+- Trend: Consistent execution with test-focused plans
 
 *Updated after each plan completion*
 
@@ -62,6 +62,8 @@ Recent decisions affecting current work:
 - 03-02: scrollMargin = 3 lines provides good context without excessive scrolling
 - 03-02: adjustScrollForCursor() centralizes all scroll logic for consistency
 - 03-02: Arrow key navigation calls adjustScrollForCursor() via saveCurrentLineAndMoveTo()
+- 03-03: evalDebounceDelay = 100ms (conservative default, can tune lower)
+- 03-03: Dedicated test functions with fresh documents for evaluation tests avoid shared state pollution
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -84,6 +86,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-03T19:54Z
-Stopped at: Completed 03-02-PLAN.md (viewport scrolling)
+Last session: 2026-02-03T21:05Z
+Stopped at: Completed 03-03-PLAN.md (evaluation debounce)
 Resume file: None
