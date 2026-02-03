@@ -22,31 +22,34 @@ mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 
 run observe=view
 key delete
 ----
+----
 -- view:
- Source                                      Preview                            ␤
-                                            ▸ Globals (0)                    [g]␤
-                                            ────────────────────────────────────␤
-   1 line 1                                 line 1                              ␤
-   2 line 2# Header                         line 2# Header                      ␤
-   3 x = 10                                 x → 10                              ␤
-   4 y = 20                                 y → 20                              ␤
-   5 z = 30                                 z → 30                              ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-~                                                                               ␤
-                                                                                ␤
-                                                                                ␤
-                                                                                ␤
-────────────────────────────────────────────────────────────────────────────────␤
- [New] [+] L2/5 | 1 calcs Ctrl+S=save Ctrl+E=export Ctrl+Q=quit Arrows=navigate ␤
- Tab:min                                                                        🛇
+ Source                                    │ Preview                            
+                                           │▸ Globals (0)                    [g]
+                                           │────────────────────────────────────
+   1 line 1                                │line 1                              
+   2 line 2# Header                        │                                    
+   3 x = 10                                │x → 10                              
+   4 y = 20                                │y → 20                              
+   5 z = 30                                │z → 30                              
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+~                                          │                                    
+                                                                                
+                                                                                
+                                                                                
+────────────────────────────────────────────────────────────────────────────────
+ [New] [+] L2/5 | 1 calcs Ctrl+S=save Ctrl+E=export Ctrl+Q=quit Arrows=navigate 
+ Tab:min                                                                        
+----
+----
 
 # After DELETE, line 2 should be merged with line 1
 run observe=debug
