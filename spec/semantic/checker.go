@@ -1,11 +1,105 @@
 package semantic
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 )
+
+// findSimilarNames returns variable names similar to the given name.
+// Uses simple heuristics: case-insensitive match, prefix match, or edit distance for typos.
+func findSimilarNames(name string, candidates map[string]struct{}) []string {
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	nameLower := strings.ToLower(name)
+	var matches []string
+
+	for candidate := range candidates {
+		candidateLower := strings.ToLower(candidate)
+
+		// Exact case-insensitive match (different casing) - highest priority
+		if candidateLower == nameLower && candidate != name {
+			return []string{candidate} // Perfect match, return immediately
+		}
+
+		// Skip very short candidates (built-in constants like E, PI) unless name is also short
+		if len(candidate) <= 2 && len(name) > 2 {
+			continue
+		}
+
+		// Prefix match - user typed beginning of variable (at least 2 chars to match)
+		if len(nameLower) >= 2 {
+			if strings.HasPrefix(candidateLower, nameLower) {
+				matches = append(matches, candidate)
+				continue
+			}
+			// Candidate is prefix of what user typed
+			if len(candidateLower) >= 2 && strings.HasPrefix(nameLower, candidateLower) {
+				matches = append(matches, candidate)
+				continue
+			}
+		}
+
+		// Typo detection for reasonably-sized names (3+ chars)
+		// Allow 1 edit for short names, 2 edits for longer names
+		if len(name) >= 3 && len(candidate) >= 3 {
+			maxDist := 1
+			if len(name) >= 5 {
+				maxDist = 2
+			}
+			if abs(len(name)-len(candidate)) <= maxDist && levenshteinClose(nameLower, candidateLower, maxDist) {
+				matches = append(matches, candidate)
+			}
+		}
+	}
+
+	// Sort for consistent output
+	sort.Strings(matches)
+
+	// Limit suggestions
+	if len(matches) > 3 {
+		matches = matches[:3]
+	}
+
+	return matches
+}
+
+// levenshteinClose returns true if edit distance is <= maxDist (quick check, not full algorithm)
+func levenshteinClose(a, b string, maxDist int) bool {
+	if abs(len(a)-len(b)) > maxDist {
+		return false
+	}
+
+	// Simple character diff count for similar-length strings
+	diffs := 0
+	minLen := len(a)
+	if len(b) < minLen {
+		minLen = len(b)
+	}
+
+	for i := 0; i < minLen; i++ {
+		if a[i] != b[i] {
+			diffs++
+			if diffs > maxDist {
+				return false
+			}
+		}
+	}
+
+	diffs += abs(len(a) - len(b))
+	return diffs <= maxDist
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
 
 // Checker performs semantic validation on AST nodes.
 type Checker struct {
@@ -176,10 +270,45 @@ func (c *Checker) checkIdentifier(id *ast.Identifier) {
 	if !c.env.Has(id.Name) {
 		// Check if it's a boolean keyword (true, false, yes, no, etc.)
 		if !isBooleanKeyword(id.Name) {
+			// Build helpful error message
+			msg := `undefined variable "` + id.Name + `"`
+
+			// Find similar variable names to suggest
+			allVars := c.env.GetAllVariables()
+			varNames := make(map[string]struct{}, len(allVars))
+			for name := range allVars {
+				varNames[name] = struct{}{}
+			}
+
+			similar := findSimilarNames(id.Name, varNames)
+			detailed := ""
+
+			if len(similar) == 1 {
+				msg += ` — did you mean "` + similar[0] + `"?`
+			} else if len(similar) > 1 {
+				msg += ` — did you mean one of: ` + strings.Join(similar, ", ") + `?`
+			}
+
+			// Add context about what IS defined
+			if len(allVars) == 0 {
+				detailed = "No variables have been defined yet. Define a variable with: name = value"
+			} else if len(allVars) <= 5 {
+				// List all defined variables if there are few
+				names := make([]string, 0, len(allVars))
+				for name := range allVars {
+					names = append(names, name)
+				}
+				sort.Strings(names)
+				detailed = "Defined variables: " + strings.Join(names, ", ")
+			} else {
+				detailed = "Check variable spelling. Variables must be defined before use."
+			}
+
 			c.addDiagnostic(Diagnostic{
-				Severity: Error, // ERROR: undefined variables block evaluation
+				Severity: Error,
 				Code:     DiagUndefinedVariable,
-				Message:  `Undefined variable "` + id.Name + `"`,
+				Message:  msg,
+				Detailed: detailed,
 				Range:    id.Range,
 			})
 		}
