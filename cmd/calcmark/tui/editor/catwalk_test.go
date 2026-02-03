@@ -63,6 +63,7 @@ z = 30`
 			"scroll_navigation",              // TestEditorCatwalkScrollNavigation
 			"delete_empty_line",              // TestEditorCatwalkDeleteEmptyLine
 			"typing_text",                    // TestEditorCatwalkTypingText
+			"text_wrapping_40col",            // TestEditorCatwalkTextWrapping40Col
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -779,6 +780,63 @@ y = 20`
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkTextWrapping40Col tests text wrapping at narrow width (40 columns).
+// Verifies: Long lines wrap correctly, visual line count increases, alignment is correct.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkTextWrapping40Col(t *testing.T) {
+	// Document with lines that will wrap at 40 columns
+	content := `# Wrapping Test at 40 Columns
+This is a line that is definitely longer than forty columns.
+x = 12345 + 67890 * 2
+Short line
+Another very long line that will certainly wrap when displayed at narrow width.`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "text_wrapping_40col") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 40 // Narrow width to force wrapping
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+			catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				leftWidth, rightWidth := model.GetPaneWidths(model.width)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+
+				var buf strings.Builder
+				buf.WriteString("Source and Preview Alignment:\n")
+				buf.WriteString(fmt.Sprintf("Total visual lines: %d\n", len(aligned.sourceLines)))
+
+				for i := 0; i < len(aligned.sourceLines) && i < 15; i++ {
+					src := aligned.sourceLines[i]
+					buf.WriteString(fmt.Sprintf("[%d] ln=%d wrap=%v: %q\n",
+						i, src.lineNum, src.isWrapped, src.content))
+				}
+
+				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
 		)

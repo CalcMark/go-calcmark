@@ -1,0 +1,55 @@
+# Test: Text wrapping at narrow width (40 columns)
+# Verifies: Long lines wrap correctly, visual line count increases
+
+# Initial state - check wrapping with lines observer
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:2 2:7 3:9 4:10]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Wrapping Test " <CURSOR>
+  [1] srcIdx=0 lineNum=0 wrap=true pad=false content="at 40 Columns"
+  [2] srcIdx=1 lineNum=2 wrap=false pad=false content="This is a line "
+  [3] srcIdx=1 lineNum=0 wrap=true pad=false content="that is "
+  [4] srcIdx=1 lineNum=0 wrap=true pad=false content="definitely "
+  [5] srcIdx=1 lineNum=0 wrap=true pad=false content="longer than "
+  [6] srcIdx=1 lineNum=0 wrap=true pad=false content="forty columns."
+  [7] srcIdx=2 lineNum=3 wrap=false pad=false content="x = 12345 + "
+  [8] srcIdx=2 lineNum=0 wrap=true pad=false content="67890 * 2"
+  [9] srcIdx=3 lineNum=4 wrap=false pad=false content="Short line"
+  [10] srcIdx=4 lineNum=5 wrap=false pad=false content="Another very "
+  [11] srcIdx=4 lineNum=0 wrap=true pad=false content="long line that "
+  [12] srcIdx=4 lineNum=0 wrap=true pad=false content="will certainly "
+  [13] srcIdx=4 lineNum=0 wrap=true pad=false content="wrap when "
+  [14] srcIdx=4 lineNum=0 wrap=true pad=false content="displayed at "
+  [15] srcIdx=4 lineNum=0 wrap=true pad=false content="narrow width."
+
+# Check alignment shows wrapped lines
+run observe=alignment
+----
+-- alignment:
+Source and Preview Alignment:
+Total visual lines: 16
+[0] ln=1 wrap=false: "# Wrapping Test "
+[1] ln=0 wrap=true: "at 40 Columns"
+[2] ln=2 wrap=false: "This is a line "
+[3] ln=0 wrap=true: "that is "
+[4] ln=0 wrap=true: "definitely "
+[5] ln=0 wrap=true: "longer than "
+[6] ln=0 wrap=true: "forty columns."
+[7] ln=3 wrap=false: "x = 12345 + "
+[8] ln=0 wrap=true: "67890 * 2"
+[9] ln=4 wrap=false: "Short line"
+[10] ln=5 wrap=false: "Another very "
+[11] ln=0 wrap=true: "long line that "
+[12] ln=0 wrap=true: "will certainly "
+[13] ln=0 wrap=true: "wrap when "
+[14] ln=0 wrap=true: "displayed at "
+
+# Navigate through wrapped lines
+run observe=debug
+key down
+key down
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=0 cursorVisual=7 cursorHighlight=7 scrollOffset=0 totalSource=5 totalVisual=16 editBuf="x = 12345 + 67890 * 2" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
