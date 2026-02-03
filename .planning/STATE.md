@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** Phase 3 - TUI Editor Integration (In progress)
+**Current focus:** Phase 4 - TUI Test Coverage
 
 ## Current Position
 
-Phase: 3 of 8 (TUI Editor Integration)
-Plan: 4 of 4 in current phase (COMPLETE)
-Status: Phase complete
-Last activity: 2026-02-03 - Completed 03-04-PLAN.md (Model unification)
+Phase: 4 of 8 (TUI Test Coverage)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-03 - Completed 04-01-PLAN.md (Fix shared document mutation)
 
-Progress: [████████░░░░░░░░░░░░] 44% (8/18 plans)
+Progress: [██████████░░░░░░░░░░] 50% (10/20 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 7min
-- Total execution time: 0.9 hours
+- Total plans completed: 10
+- Average duration: 8min
+- Total execution time: 1.3 hours
 
 **By Phase:**
 
@@ -29,11 +29,12 @@ Progress: [████████░░░░░░░░░░░░] 44% (8/
 |-------|-------|-------|----------|
 | 1. Foundation | 2/2 | 13min | 6.5min |
 | 2. TUI Geometry & Layout | 2/2 | 8min | 4min |
-| 3. TUI Editor Integration | 4/4 | 35min | 9min |
+| 3. TUI Editor Integration | 5/5 | 55min | 11min |
+| 4. TUI Test Coverage | 1/3 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (15min), 03-02 (5min), 03-03 (8min), 03-04 (7min)
-- Trend: Consistent execution with cleanup plans faster
+- Last 5 plans: 03-02 (5min), 03-03 (8min), 03-04 (7min), 03-05 (20min), 04-01 (3min)
+- Trend: Test coverage fix was fast - existing pattern applied to 4 more tests
 
 *Updated after each plan completion*
 
@@ -67,6 +68,11 @@ Recent decisions affecting current work:
 - 03-04: Keep Model (model.go), delete ModelV2 (model_v2.go) -- Model is complete (2003 lines), ModelV2 was incomplete (665 lines)
 - 03-04: app.go already used Model, no changes needed -- ModelV2 was experimental code never integrated
 - 03-04: Delete redundant tests that only tested ModelV2 -- visual_layout_test.go already tests same properties for Model
+- 03-05: Backspace at col 0 joins with previous line; delete at end joins with next line -- standard text editor behavior
+- 03-05: Anonymous calculations show only value, not "varName → value" -- only assignments show variable names
+- 03-05: Diagnostic messages use em-dash pattern with specific values and suggestions -- "extremely useful for users"
+- 03-05: Variable redefinition shows original definition line number -- helps users find first assignment
+- 04-01: Dedicated test functions with fresh documents for insert_at_end, insert_line, scroll_navigation, delete_empty_line -- pattern now applied to 16 test scenarios
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -83,13 +89,17 @@ None.
 
 - ~~CI release workflow uses Go 1.21 but go.mod requires 1.24.x~~ RESOLVED in 01-01
 - ~~Two editor implementations in flight (Model vs ModelV2)~~ RESOLVED in 03-04: ModelV2 deleted, Model is the single implementation
+- ~~TestEditorCatwalk test failures (insert_at_end, insert_line, scroll_navigation, delete_empty_line)~~ RESOLVED in 04-01: dedicated test functions with fresh documents
 - WASM binary size unknown -- must measure early in Phase 7
 - Pre-existing `task quality` modernize warnings (~39 across codebase) -- not blocking but should be addressed eventually
-- TestEditorCatwalk shares document pointer across test files causing mutation -- workaround in place but root fix deferred
-- Pre-existing TestEditorCatwalk test failures (insert_at_end, insert_line, scroll_navigation, type_new_line) -- existed before 03-04, not caused by this work
+- TestEditorCatwalkCompression has pre-existing failures (compression/insert_line, compression/type_new_line) -- different issue, not related to document mutation
 
 ## Session Continuity
 
-Last session: 2026-02-03T20:12Z
-Stopped at: Completed 03-04-PLAN.md (Model unification) - Phase 3 COMPLETE
+Last session: 2026-02-03
+Stopped at: Completed 04-01-PLAN.md - Fixed 4 failing catwalk tests
 Resume file: None
+
+### Phase 4 Progress Notes
+- 04-01: Fixed 4 failing tests (insert_at_end, insert_line, scroll_navigation, delete_empty_line) by applying dedicated test function pattern
+- Remaining work: 04-02 (new catwalk tests), 04-03 (VHS tape cleanup)
