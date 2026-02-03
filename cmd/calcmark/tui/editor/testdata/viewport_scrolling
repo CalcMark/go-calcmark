@@ -1,0 +1,131 @@
+# Viewport scrolling tests with scroll margin
+# Document has 22 lines, viewport shows 10 lines (height=16, overhead=6)
+# scrollMargin = 3 lines from edge
+
+# Initial state: cursor at line 0, scrollOffset 0
+run observe=scroll
+----
+-- scroll:
+cursorLine=0 scrollOffset=0 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Navigate down to line 5 - still within margin, no scroll needed
+run observe=scroll
+key down
+key down
+key down
+key down
+key down
+----
+-- scroll:
+cursorLine=5 scrollOffset=0 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Navigate down one more - now at line 6, hitting bottom margin (line 6 >= 10-3=7)
+# Scroll should trigger to maintain margin
+run observe=scroll
+key down
+----
+-- scroll:
+cursorLine=6 scrollOffset=0 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Continue navigating down - scroll should follow cursor with margin
+run observe=scroll
+key down
+key down
+key down
+----
+-- scroll:
+cursorLine=9 scrollOffset=3 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Navigate to near bottom of document
+run observe=scroll
+key down
+key down
+key down
+key down
+key down
+key down
+key down
+key down
+----
+-- scroll:
+cursorLine=17 scrollOffset=11 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Navigate to last line
+run observe=scroll
+key down
+key down
+key down
+key down
+----
+-- scroll:
+cursorLine=21 scrollOffset=12 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Navigate up - scroll should follow cursor back up
+run observe=scroll
+key up
+key up
+key up
+key up
+key up
+----
+-- scroll:
+cursorLine=16 scrollOffset=12 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Continue up toward top
+run observe=scroll
+key up
+key up
+key up
+key up
+key up
+key up
+key up
+key up
+key up
+key up
+----
+-- scroll:
+cursorLine=6 scrollOffset=3 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Navigate to top - scroll should go to 0
+run observe=scroll
+key up
+key up
+key up
+key up
+key up
+key up
+----
+-- scroll:
+cursorLine=0 scrollOffset=0 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Test Page Down (moves by visibleHeight - some margin)
+run observe=scroll
+key pgdown
+----
+-- scroll:
+cursorLine=12 scrollOffset=6 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Test Page Up
+run observe=scroll
+key pgup
+----
+-- scroll:
+cursorLine=0 scrollOffset=0 totalLines=22 visibleHeight=10
+cursorInView=true hasTopMargin=true hasBottomMargin=true
+
+# Final check: verify cursor always stays visible after all navigation
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=22 totalVisual=22 editBuf="# Viewport Scrolling Test" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

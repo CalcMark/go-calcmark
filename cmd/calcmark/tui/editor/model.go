@@ -1004,6 +1004,9 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 		m.cursorCol = savedCol
 	}
 
+	// Adjust scroll to keep cursor visible with margin
+	m.adjustScrollForCursor()
+
 	// Stay in edit mode (don't change m.mode)
 }
 
