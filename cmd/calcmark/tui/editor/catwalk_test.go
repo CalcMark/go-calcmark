@@ -43,6 +43,8 @@ z = 30`
 		}
 
 		// Skip tests that have dedicated test functions with custom documents
+		// Tests that require a fresh document (not polluted by previous tests in the walk)
+		// are added here and have their own test function below.
 		skipTests := []string{
 			"edit_variable_no_redef",         // TestEditorCatwalkEditVariable
 			"edit_b_value_bug",               // TestEditorCatwalkEditVariable
@@ -51,6 +53,9 @@ z = 30`
 			"wrapping_alignment",             // TestEditorCatwalkWrapping
 			"wrapping_calc_lines",            // TestEditorCatwalkWrapping
 			"layout_alignment_at_80",         // TestEditorCatwalkLayoutAlignment
+			"viewport_scrolling",             // TestEditorCatwalkViewportScrolling
+			"cursor_navigation",              // TestEditorCatwalkCursorNavigation
+			"word_movement",                  // TestEditorCatwalkWordMovement
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -325,6 +330,154 @@ z = 30`
 					}
 				}
 				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkViewportScrolling tests viewport scrolling with scroll margin.
+// This uses a 20+ line document and a viewport of 10 lines to test:
+// - Cursor staying visible after navigation
+// - Scroll margin keeping cursor N lines from viewport edge
+// - Page Up/Down scrolling behavior
+func TestEditorCatwalkViewportScrolling(t *testing.T) {
+	// Create a document with 20+ lines to enable scrolling tests
+	content := `# Viewport Scrolling Test
+line 2
+line 3
+line 4
+line 5
+line 6
+line 7
+line 8
+line 9
+line 10
+line 11
+line 12
+line 13
+line 14
+line 15
+line 16
+line 17
+line 18
+line 19
+line 20
+line 21
+line 22`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "viewport_scrolling") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 16 // Small viewport to test scrolling (visibleHeight = 16-6 = 10 lines)
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("scroll", func(out io.Writer, m tea.Model) error {
+				// Custom observer focused on scroll state
+				model := m.(Model)
+				var buf strings.Builder
+				buf.WriteString(fmt.Sprintf("cursorLine=%d scrollOffset=%d totalLines=%d visibleHeight=%d\n",
+					model.cursorLine, model.scrollOffset, model.TotalLines(), model.getVisibleHeight()))
+				// Check if cursor is within visible range with margin
+				visibleStart := model.scrollOffset
+				visibleEnd := model.scrollOffset + model.getVisibleHeight()
+				inView := model.cursorLine >= visibleStart && model.cursorLine < visibleEnd
+				hasTopMargin := model.cursorLine >= model.scrollOffset+scrollMargin || model.cursorLine < scrollMargin
+				hasBottomMargin := model.cursorLine < model.scrollOffset+model.getVisibleHeight()-scrollMargin ||
+					model.cursorLine >= model.TotalLines()-scrollMargin
+				buf.WriteString(fmt.Sprintf("cursorInView=%v hasTopMargin=%v hasBottomMargin=%v\n",
+					inView, hasTopMargin, hasBottomMargin))
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkCursorNavigation tests cursor navigation behaviors.
+// Uses a fresh document to avoid pollution from other tests.
+func TestEditorCatwalkCursorNavigation(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "cursor_navigation") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkWordMovement tests Ctrl+Arrow word movement behaviors.
+// Uses a fresh document to avoid pollution from other tests.
+func TestEditorCatwalkWordMovement(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "word_movement") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
 		)

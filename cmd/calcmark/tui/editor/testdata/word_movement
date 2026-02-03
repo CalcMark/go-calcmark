@@ -1,0 +1,84 @@
+# Test: Ctrl+Arrow word movement behaviors
+# Verifies: Ctrl+Left/Right move by word boundaries
+
+# Initial state - cursor at line 0, col 0
+# Document has "# Header" on line 0, then "x = 10" on line 1
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 1: Ctrl+Right moves to next word boundary
+# Starting at column 0 of "# Header", should skip "# " and stop after "Header"
+run observe=debug
+key ctrl+right
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Continue Ctrl+Right - should move to end of "Header"
+run observe=debug
+key ctrl+right
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 2: Ctrl+Right at end of line wraps to next line
+# We're at end of line 0, Ctrl+Right should move to line 1
+run observe=debug
+key ctrl+right
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 3: Ctrl+Right on "x = 10"
+# Should skip 'x', then whitespace, landing at start of '='
+run observe=debug
+key ctrl+right
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=2 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Continue - should skip '=' and whitespace, landing at start of '10'
+run observe=debug
+key ctrl+right
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=4 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Continue - should move to end of '10'
+run observe=debug
+key ctrl+right
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=6 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 4: Ctrl+Left at end of "x = 10" (col 6)
+# Should skip backwards to start of "10"
+run observe=debug
+key ctrl+left
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=4 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Continue Ctrl+Left - should skip whitespace and stop before '='
+run observe=debug
+key ctrl+left
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=2 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Continue Ctrl+Left - should skip '=' and whitespace to start of 'x'
+run observe=debug
+key ctrl+left
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 5: Ctrl+Left at start of line wraps to previous line
+# We're at start of line 1, Ctrl+Left should move to end of line 0
+run observe=debug
+key ctrl+left
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
