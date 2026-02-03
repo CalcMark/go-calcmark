@@ -62,6 +62,7 @@ z = 30`
 			"insert_line",                    // TestEditorCatwalkInsertLine
 			"scroll_navigation",              // TestEditorCatwalkScrollNavigation
 			"delete_empty_line",              // TestEditorCatwalkDeleteEmptyLine
+			"typing_text",                    // TestEditorCatwalkTypingText
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -742,6 +743,42 @@ z = 30`
 			}),
 			catwalk.WithObserver("view", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).View()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkTypingText tests basic text typing behaviors.
+// Verifies: Characters appear correctly, backspace deletes, delete key works, cursor advances.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkTypingText(t *testing.T) {
+	content := `# Test Document
+x = 10
+y = 20`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "typing_text") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
 		)
