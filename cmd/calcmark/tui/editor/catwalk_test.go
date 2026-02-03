@@ -56,6 +56,8 @@ z = 30`
 			"viewport_scrolling",             // TestEditorCatwalkViewportScrolling
 			"cursor_navigation",              // TestEditorCatwalkCursorNavigation
 			"word_movement",                  // TestEditorCatwalkWordMovement
+			"evaluation_debounce",            // TestEditorCatwalkEvaluationDebounce
+			"dependent_results",              // TestEditorCatwalkDependentResults
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -474,6 +476,59 @@ z = 30`
 		catwalk.RunModel(t, path, m,
 			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkEvaluationDebounce tests the evaluation pipeline and debounce behavior.
+// Verifies that:
+// - Calculations are evaluated and show results
+// - Non-calculation lines show blank in results
+// - Typing new calculations triggers evaluation
+func TestEditorCatwalkEvaluationDebounce(t *testing.T) {
+	// Document with calculations and dependencies
+	content := `rate = 10%
+principal = 1000
+interest = principal * rate
+
+`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "evaluation_debounce") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					if r.IsCalc || r.Error != "" {
+						buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n", r.LineNum, r.Source, r.Value, r.Error))
+					}
+				}
+				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {

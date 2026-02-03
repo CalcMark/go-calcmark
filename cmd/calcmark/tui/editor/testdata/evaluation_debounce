@@ -1,0 +1,65 @@
+# Evaluation Debounce Tests
+# Verifies that evaluation pipeline correctly updates results after typing
+
+# Test 1: Initial state - calculations are evaluated
+# Document has: rate = 10%, principal = 1000, interest = principal * rate, empty line
+run observe=results
+----
+-- results:
+Line 0 (rate = 10%): value=0.1, error=""
+Line 1 (principal = 1000): value=1K, error=""
+Line 2 (interest = principal * rate): value=100, error=""
+Line 3 (): value=, error=""
+
+# Test 2: Editing a calculation value triggers re-evaluation
+# Navigate to line 1 (principal = 1000), edit the value
+run observe=debug
+key down
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 1000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Go to end of line, delete "1000", type "2000"
+run observe=debug
+key end
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=16 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 1000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Delete 4 characters ("1000")
+run observe=debug
+key backspace
+key backspace
+key backspace
+key backspace
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=12 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = " sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type "2000"
+run observe=debug
+type 2000
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=16 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="principal = 2000" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate away to trigger save and re-evaluation
+# The dependent "interest" line should update its value
+run observe=debug
+key down
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=16 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="interest = principal * rate" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 3: Verify results updated - interest should now be 200 (2000 * 0.1)
+run observe=results
+----
+-- results:
+Line 0 (rate = 10%): value=0.1, error=""
+Line 1 (principal = 2000): value=2K, error=""
+Line 2 (interest = principal * rate): value=200, error=""
+Line 3 (): value=, error=""
+
+# Test 4: Non-calculation lines (prose/markdown) show blank in results
+# The empty line (line 3) appears in results but with empty value
+# This is correct behavior - it's part of a CalcBlock but has no calculation
