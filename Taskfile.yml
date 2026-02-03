@@ -19,7 +19,7 @@ tasks:
   test:
     desc: Run all tests (excludes WASM - use test:wasm for those)
     cmds:
-      - go test $(go list ./... | grep -v '/impl/wasm') -v
+      - go test $(go list ./... 2>/dev/null | grep -v '/impl/wasm') -v
 
   test:wasm:
     desc: Run WASM tests (requires wasm build environment)

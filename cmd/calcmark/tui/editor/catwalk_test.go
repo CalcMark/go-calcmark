@@ -206,10 +206,9 @@ b = 5
 	})
 }
 
-// TestEditorCatwalkCompression runs tests with compression.cm-like content
-// that causes wrapping at narrow widths.
-func TestEditorCatwalkCompression(t *testing.T) {
-	content := `# Compression Function - compress()
+// compressionDocumentContent is the shared document content for compression tests.
+// Each test function creates its own fresh document from this content.
+const compressionDocumentContent = `# Compression Function - compress()
 
 # Compressed size estimates for different compression types
 gzip_compressed = compress(1 GB, gzip)
@@ -223,12 +222,50 @@ no_compression = compress(200 MB, none)
 storage_savings = 10 GB - compress(10 GB, gzip)
 compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 
-	doc, err := document.NewDocument(content)
+// TestEditorCatwalkCompressionInsertLine tests insert line behavior with compression document.
+// Uses a fresh document to avoid shared mutation pollution from other tests.
+func TestEditorCatwalkCompressionInsertLine(t *testing.T) {
+	doc, err := document.NewDocument(compressionDocumentContent)
 	if err != nil {
 		t.Fatalf("Failed to create document: %v", err)
 	}
 
 	datadriven.Walk(t, "testdata/compression", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "insert_line") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80 // Narrower width to test wrapping
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkCompressionTypeNewLine tests typing on newly inserted lines with compression document.
+// Uses a fresh document to avoid shared mutation pollution from other tests.
+func TestEditorCatwalkCompressionTypeNewLine(t *testing.T) {
+	doc, err := document.NewDocument(compressionDocumentContent)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata/compression", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "type_new_line") {
+			return
+		}
+
 		m := New(doc)
 		m.width = 80 // Narrower width to test wrapping
 		m.height = 24
@@ -651,6 +688,10 @@ z = 30`
 	}
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		// Skip compression subdirectory (handled by dedicated compression test)
+		if strings.Contains(path, "compression/") {
+			return
+		}
 		if !strings.HasSuffix(path, "insert_line") {
 			return
 		}
