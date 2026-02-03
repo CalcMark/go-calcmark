@@ -1,0 +1,61 @@
+# Test: Cursor navigation behaviors
+# Verifies: arrow keys, Home/End, and line wrapping
+
+# Initial state - cursor at line 0, col 0
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 1: Down arrow moves to next logical line
+run observe=debug
+key down
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 2: Up arrow moves to previous logical line
+run observe=debug
+key up
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 3: Right arrow at end of line wraps to next line
+# First move to end of line 0 (# Header has 8 chars)
+run observe=debug
+key end
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Now press right - should wrap to start of line 1
+run observe=debug
+key right
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 4: Left arrow at column 0 wraps to previous line
+# We're at start of line 1, press left - should go to end of line 0
+run observe=debug
+key left
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 5: Home key goes to column 0
+# cursorCol is 8, press home
+run observe=debug
+key home
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 6: End key goes to end of line content
+# cursorCol is 0, press end - line is "# Header" (8 chars)
+run observe=debug
+key end
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
