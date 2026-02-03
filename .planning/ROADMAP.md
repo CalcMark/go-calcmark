@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Fix CI, update deps, extract pure geometry package
 - [x] **Phase 2: TUI Geometry & Layout** - Implement code.sh algorithm for correct two-column rendering
-- [ ] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
+- [x] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
 - [ ] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
 - [ ] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [ ] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
@@ -67,11 +67,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Cursor movement and Ctrl+Arrow word navigation with catwalk tests
-- [ ] 03-02-PLAN.md -- Viewport scrolling with configurable margin
-- [ ] 03-03-PLAN.md -- Debounced evaluation pipeline (100ms) and dependent variable updates
-- [ ] 03-04-PLAN.md -- Model unification: delete ModelV2, clean up references
-- [ ] 03-05-PLAN.md -- Interactive editor verification checkpoint
+- [x] 03-01-PLAN.md -- Cursor movement and Ctrl+Arrow word navigation with catwalk tests
+- [x] 03-02-PLAN.md -- Viewport scrolling with configurable margin
+- [x] 03-03-PLAN.md -- Debounced evaluation pipeline (100ms) and dependent variable updates
+- [x] 03-04-PLAN.md -- Model unification: delete ModelV2, clean up references
+- [x] 03-05-PLAN.md -- Interactive editor verification checkpoint
 
 ### Phase 4: TUI Test Coverage
 **Goal**: Every editor interaction has a catwalk test, and the CI pipeline contains zero flakey tests
@@ -81,10 +81,12 @@ Plans:
   1. Catwalk tests exist for: typing text, cursor movement (arrows, home/end, page up/down), text wrapping at narrow widths (40 columns), scrolling through long documents, and evaluation results appearing
   2. No VHS tape or video-based tests remain in CI -- all TUI testing uses catwalk data-driven tests
   3. `task test` completes with zero flakey failures across 10 consecutive runs
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04-01: Comprehensive catwalk test suite and flakey test removal
+- [ ] 04-01-PLAN.md -- Fix shared document mutation and regenerate failing test expectations
+- [ ] 04-02-PLAN.md -- Add missing catwalk coverage (typing, narrow wrapping, long scroll) and archive VHS tapes
+- [ ] 04-03-PLAN.md -- Verify 10 consecutive test runs with zero failures
 
 ### Phase 5: Help System
 **Goal**: Users can discover all CalcMark features through CLI help commands, shell completions, an in-TUI help overlay, and an informative status bar
@@ -161,8 +163,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-02-02 |
 | 2. TUI Geometry & Layout | 2/2 | Complete | 2026-02-03 |
-| 3. TUI Editor Integration | 0/5 | Not started | - |
-| 4. TUI Test Coverage | 0/1 | Not started | - |
+| 3. TUI Editor Integration | 5/5 | Complete | 2026-02-03 |
+| 4. TUI Test Coverage | 0/3 | Not started | - |
 | 5. Help System | 0/2 | Not started | - |
 | 6. Differentiators | 0/2 | Not started | - |
 | 7. Distribution | 0/3 | Not started | - |
