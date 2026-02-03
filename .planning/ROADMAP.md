@@ -64,12 +64,14 @@ Plans:
   3. Typing `= 2 + 2` on a new line shows `4` in the corresponding results pane within 200ms
   4. Editing a line that defines a variable causes all dependent results to update (e.g., changing `tax = 10%` updates lines using `tax`)
   5. The model layer (geometry + state management) is unified -- there is one code path for computing layout, not separate paths in model and view
-**Plans**: TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] 03-01: Cursor positioning and visibility in wrapped text
-- [ ] 03-02: Viewport scrolling with two-column synchronization
-- [ ] 03-03: Debounced evaluation and results rendering pipeline
+- [ ] 03-01-PLAN.md -- Cursor movement and Ctrl+Arrow word navigation with catwalk tests
+- [ ] 03-02-PLAN.md -- Viewport scrolling with configurable margin
+- [ ] 03-03-PLAN.md -- Debounced evaluation pipeline (100ms) and dependent variable updates
+- [ ] 03-04-PLAN.md -- Model unification: delete ModelV2, clean up references
+- [ ] 03-05-PLAN.md -- Interactive editor verification checkpoint
 
 ### Phase 4: TUI Test Coverage
 **Goal**: Every editor interaction has a catwalk test, and the CI pipeline contains zero flakey tests
@@ -158,8 +160,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-02-02 |
-| 2. TUI Geometry & Layout | 1/2 | In progress | - |
-| 3. TUI Editor Integration | 0/3 | Not started | - |
+| 2. TUI Geometry & Layout | 2/2 | Complete | 2026-02-03 |
+| 3. TUI Editor Integration | 0/5 | Not started | - |
 | 4. TUI Test Coverage | 0/1 | Not started | - |
 | 5. Help System | 0/2 | Not started | - |
 | 6. Differentiators | 0/2 | Not started | - |
