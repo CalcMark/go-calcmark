@@ -1,0 +1,59 @@
+# Test: Scrolling through long document (50+ lines)
+# Verifies: Cursor stays visible, scroll margin maintained, Page Up/Down work
+
+# Initial state
+run observe=scroll
+----
+-- scroll:
+cursorLine=0 scrollOffset=0 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[0,10)
+
+# Navigate down many lines (trigger scroll)
+run observe=scroll
+key pgdown
+----
+-- scroll:
+cursorLine=12 scrollOffset=6 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[6,16)
+
+# Navigate further
+run observe=scroll
+key pgdown
+key pgdown
+----
+-- scroll:
+cursorLine=36 scrollOffset=30 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[30,40)
+
+# Navigate back up
+run observe=scroll
+key pgup
+----
+-- scroll:
+cursorLine=24 scrollOffset=21 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[21,31)
+
+# Navigate to end (simulate ctrl+end via multiple pgdown)
+run observe=scroll
+key pgdown
+key pgdown
+key pgdown
+key pgdown
+key pgdown
+----
+-- scroll:
+cursorLine=54 scrollOffset=45 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[45,55)
+
+# Navigate to beginning (simulate ctrl+home via multiple pgup)
+run observe=scroll
+key pgup
+key pgup
+key pgup
+key pgup
+key pgup
+key pgup
+----
+-- scroll:
+cursorLine=0 scrollOffset=0 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[0,10)

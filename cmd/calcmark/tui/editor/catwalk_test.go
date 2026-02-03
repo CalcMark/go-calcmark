@@ -64,6 +64,7 @@ z = 30`
 			"delete_empty_line",              // TestEditorCatwalkDeleteEmptyLine
 			"typing_text",                    // TestEditorCatwalkTypingText
 			"text_wrapping_40col",            // TestEditorCatwalkTextWrapping40Col
+			"long_document_scroll",           // TestEditorCatwalkLongDocumentScroll
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -836,6 +837,59 @@ Another very long line that will certainly wrap when displayed at narrow width.`
 						i, src.lineNum, src.isWrapped, src.content))
 				}
 
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkLongDocumentScroll tests scrolling through a long document (50+ lines).
+// Verifies: Cursor stays visible, scroll margin maintained, Page Up/Down work.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkLongDocumentScroll(t *testing.T) {
+	// Create a document with 50+ lines
+	var lines []string
+	lines = append(lines, "# Long Document Scroll Test")
+	for i := 2; i <= 55; i++ {
+		if i%5 == 0 {
+			lines = append(lines, fmt.Sprintf("calc_%d = %d * 2", i, i))
+		} else {
+			lines = append(lines, fmt.Sprintf("line %d content here", i))
+		}
+	}
+	content := strings.Join(lines, "\n")
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "long_document_scroll") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 16 // Small viewport (10 visible lines) to test scrolling
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("scroll", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				var buf strings.Builder
+				buf.WriteString(fmt.Sprintf("cursorLine=%d scrollOffset=%d totalLines=%d visibleHeight=%d\n",
+					model.cursorLine, model.scrollOffset, model.TotalLines(), model.getVisibleHeight()))
+				visibleStart := model.scrollOffset
+				visibleEnd := model.scrollOffset + model.getVisibleHeight()
+				inView := model.cursorLine >= visibleStart && model.cursorLine < visibleEnd
+				buf.WriteString(fmt.Sprintf("cursorInView=%v visibleRange=[%d,%d)\n",
+					inView, visibleStart, visibleEnd))
 				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
