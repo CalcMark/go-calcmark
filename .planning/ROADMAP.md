@@ -51,7 +51,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Write integration tests proving all five success criteria for the two-column layout
+- [x] 02-01-PLAN.md -- Write integration tests proving all five success criteria for the two-column layout
 - [ ] 02-02-PLAN.md -- Fix any layout failures and visually verify two-column rendering
 
 ### Phase 3: TUI Editor Integration
@@ -158,7 +158,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-02-02 |
-| 2. TUI Geometry & Layout | 0/2 | Not started | - |
+| 2. TUI Geometry & Layout | 1/2 | In progress | - |
 | 3. TUI Editor Integration | 0/3 | Not started | - |
 | 4. TUI Test Coverage | 0/1 | Not started | - |
 | 5. Help System | 0/2 | Not started | - |
@@ -168,4 +168,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 ---
 *Roadmap created: 2026-02-02*
-*Last updated: 2026-02-02*
+*Last updated: 2026-02-03*
