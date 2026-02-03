@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Fix CI, update deps, extract pure geometry package
 - [x] **Phase 2: TUI Geometry & Layout** - Implement code.sh algorithm for correct two-column rendering
 - [x] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
-- [ ] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
+- [x] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
 - [ ] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [ ] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
 - [ ] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew, Scoop, WASM
@@ -84,9 +84,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Fix shared document mutation and regenerate failing test expectations
-- [ ] 04-02-PLAN.md -- Add missing catwalk coverage (typing, narrow wrapping, long scroll) and archive VHS tapes
-- [ ] 04-03-PLAN.md -- Verify 10 consecutive test runs with zero failures
+- [x] 04-01-PLAN.md -- Fix shared document mutation and regenerate failing test expectations
+- [x] 04-02-PLAN.md -- Add missing catwalk coverage (typing, narrow wrapping, long scroll) and archive VHS tapes
+- [x] 04-03-PLAN.md -- Verify 10 consecutive test runs with zero failures
 
 ### Phase 5: Help System
 **Goal**: Users can discover all CalcMark features through CLI help commands, shell completions, an in-TUI help overlay, and an informative status bar
@@ -98,11 +98,11 @@ Plans:
   3. Shell completions work: typing `cm ` and pressing Tab in bash/zsh shows available subcommands
   4. Pressing the help key in the TUI editor shows an overlay listing all keybindings, and pressing it again dismisses the overlay
   5. The status bar at the bottom of the TUI shows cursor position (line:col), calculation count, and displays "EVAL..." while evaluation is in progress
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: CLI help commands and shell completions
-- [ ] 05-02: TUI help overlay and status bar
+- [ ] 05-01-PLAN.md -- CLI help commands (functions, constants) and shell completions
+- [ ] 05-02-PLAN.md -- TUI help overlay (F1 toggle) and status bar enhancements (line:col, EVAL...)
 
 ### Phase 6: Differentiators
 **Goal**: Users can define document-level constants via YAML front matter and discover functions/constants/units through TUI autocomplete while typing
@@ -164,8 +164,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation | 2/2 | Complete | 2026-02-02 |
 | 2. TUI Geometry & Layout | 2/2 | Complete | 2026-02-03 |
 | 3. TUI Editor Integration | 5/5 | Complete | 2026-02-03 |
-| 4. TUI Test Coverage | 0/3 | Not started | - |
-| 5. Help System | 0/2 | Not started | - |
+| 4. TUI Test Coverage | 3/3 | Complete | 2026-02-03 |
+| 5. Help System | 0/2 | Planned | - |
 | 6. Differentiators | 0/2 | Not started | - |
 | 7. Distribution | 0/3 | Not started | - |
 | 8. Documentation | 0/3 | Not started | - |
