@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: TUI Geometry & Layout** - Implement code.sh algorithm for correct two-column rendering
 - [x] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
 - [x] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
-- [ ] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
+- [x] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [ ] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
 - [ ] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew, Scoop, WASM
 - [ ] **Phase 8: Documentation** - README, examples, generated references, screenshots
@@ -101,8 +101,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- CLI help commands (functions, constants) and shell completions
-- [ ] 05-02-PLAN.md -- TUI help overlay (F1 toggle) and status bar enhancements (line:col, EVAL...)
+- [x] 05-01-PLAN.md -- CLI help commands (functions, constants) and shell completions
+- [x] 05-02-PLAN.md -- TUI help overlay (F1 toggle) and status bar enhancements (line:col, EVAL...)
 
 ### Phase 6: Differentiators
 **Goal**: Users can define document-level constants via YAML front matter and discover functions/constants/units through TUI autocomplete while typing
@@ -114,11 +114,11 @@ Plans:
   3. Pressing Tab or Ctrl+Space after typing `= av` in the editor shows a dropdown with matching functions (e.g., `average`, `availability`)
   4. The autocomplete dropdown shows English synonyms (e.g., typing `= mean` suggests `average (mean)`)
   5. Selecting an autocomplete suggestion inserts it correctly at the cursor position without disrupting surrounding text
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 06-01: YAML front matter parsing and evaluation integration
-- [ ] 06-02: TUI autocomplete engine and popup rendering
+- [ ] 06-01-PLAN.md -- Function metadata refactor, fix function display bug, YAML error messages
+- [ ] 06-02-PLAN.md -- TUI autocomplete engine (functions, units, variables) and popup rendering
 
 ### Phase 7: Distribution
 **Goal**: Users can install CalcMark on macOS, Linux, and Windows via a single command or prebuilt binary download, with all release artifacts signed and verified
@@ -165,8 +165,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. TUI Geometry & Layout | 2/2 | Complete | 2026-02-03 |
 | 3. TUI Editor Integration | 5/5 | Complete | 2026-02-03 |
 | 4. TUI Test Coverage | 3/3 | Complete | 2026-02-03 |
-| 5. Help System | 0/2 | Planned | - |
-| 6. Differentiators | 0/2 | Not started | - |
+| 5. Help System | 2/2 | Complete | 2026-02-03 |
+| 6. Differentiators | 0/2 | Ready | - |
 | 7. Distribution | 0/3 | Not started | - |
 | 8. Documentation | 0/3 | Not started | - |
 
