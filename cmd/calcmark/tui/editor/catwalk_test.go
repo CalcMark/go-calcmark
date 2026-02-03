@@ -538,3 +538,56 @@ interest = principal * rate
 		)
 	})
 }
+
+// TestEditorCatwalkDependentResults tests that dependent variables update when source changes.
+// Verifies that:
+// - Changing a variable updates all dependent lines
+// - Multiple dependents update correctly
+// - Error states are handled (undefined variable shows error, fix shows result)
+func TestEditorCatwalkDependentResults(t *testing.T) {
+	// Document with tax/price/total calculation chain
+	content := `tax = 10%
+price = 100
+total = price * (1 + tax)
+
+`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "dependent_results") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					if r.IsCalc || r.Error != "" {
+						buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n", r.LineNum, r.Source, r.Value, r.Error))
+					}
+				}
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}

@@ -1,0 +1,93 @@
+# Dependent Variable Update Tests
+# Verifies that changing a source variable updates all dependent results
+
+# Test 1: Initial state - dependent variables are evaluated correctly
+# Document has: tax=10%, price=100, total=price*(1+tax) -> should be 110
+run observe=results
+----
+-- results:
+Line 0 (tax = 10%): value=0.1, error=""
+Line 1 (price = 100): value=100, error=""
+Line 2 (total = price * (1 + tax)): value=110, error=""
+Line 3 (): value=, error=""
+
+# Test 2: Change the source variable (tax) and verify dependent (total) updates
+# Navigate to tax line
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Go to end of line and change "10%" to "20%"
+run observe=debug
+key end
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=9 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="tax = 10%" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Delete "10%" (4 chars including %)
+run observe=debug
+key backspace
+key backspace
+key backspace
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="tax = " sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Backspace again to delete "1" and then type "20%"
+run observe=debug
+key backspace
+type 20%
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="tax =20%" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate away to trigger evaluation
+run observe=debug
+key down
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=8 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="price = 100" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify total is now 120 (100 * 1.2)
+run observe=results
+----
+-- results:
+Line 0 (tax =20%): value=0.2, error=""
+Line 1 (price = 100): value=100, error=""
+Line 2 (total = price * (1 + tax)): value=120, error=""
+Line 3 (): value=, error=""
+
+# Test 3: Multiple dependent lines update
+# Change price to 200, total should become 240 (200 * 1.2)
+run observe=debug
+key end
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=11 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="price = 100" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Delete "100" and type "200"
+run observe=debug
+key backspace
+key backspace
+key backspace
+type 200
+----
+-- debug:
+mode=0 cursorLine=1 cursorCol=11 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="price = 200" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate away
+run observe=debug
+key down
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=11 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="total = price * (1 + tax)" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify updated result
+run observe=results
+----
+-- results:
+Line 0 (tax =20%): value=0.2, error=""
+Line 1 (price = 200): value=200, error=""
+Line 2 (total = price * (1 + tax)): value=240, error=""
+Line 3 (): value=, error=""
