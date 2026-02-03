@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
@@ -369,6 +370,10 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleLeftKey()
 	case tea.KeyRight:
 		return m.handleRightKey()
+	case tea.KeyCtrlLeft:
+		return m.handleCtrlLeftKey()
+	case tea.KeyCtrlRight:
+		return m.handleCtrlRightKey()
 	case tea.KeyPgUp:
 		return m.handlePageUpKey()
 	case tea.KeyPgDown:
@@ -485,6 +490,85 @@ func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
 func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
 	m.loadCurrentLineIntoEditBuffer()
 	m.cursorCol = len(m.editBuf)
+	return m, nil
+}
+
+// handleCtrlLeftKey moves cursor left to previous word boundary.
+// Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
+// If at column 0, wraps to end of previous line first (like handleLeftKey).
+func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+
+	// If at start of line, move to end of previous line first
+	if m.cursorCol == 0 {
+		if m.cursorLine > 0 {
+			m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+			m.cursorCol = len(m.editBuf)
+		}
+		return m, nil
+	}
+
+	// Move backwards to find word boundary
+	runes := []rune(m.editBuf)
+	col := m.cursorCol
+
+	// Skip whitespace backwards
+	for col > 0 && unicode.IsSpace(runes[col-1]) {
+		col--
+	}
+
+	// Skip word characters backwards (non-space, non-punct)
+	for col > 0 && !unicode.IsSpace(runes[col-1]) && !unicode.IsPunct(runes[col-1]) {
+		col--
+	}
+
+	// If we only skipped punctuation, skip it too
+	if col == m.cursorCol {
+		for col > 0 && unicode.IsPunct(runes[col-1]) {
+			col--
+		}
+	}
+
+	m.cursorCol = col
+	return m, nil
+}
+
+// handleCtrlRightKey moves cursor right to next word boundary.
+// Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
+// If at end of line, wraps to start of next line first (like handleRightKey).
+func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+
+	runes := []rune(m.editBuf)
+	lineLen := len(runes)
+
+	// If at end of line, move to start of next line
+	if m.cursorCol >= lineLen {
+		if m.cursorLine < m.TotalLines()-1 {
+			m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+			m.cursorCol = 0
+		}
+		return m, nil
+	}
+
+	col := m.cursorCol
+
+	// Skip current word characters forward (non-space, non-punct)
+	for col < lineLen && !unicode.IsSpace(runes[col]) && !unicode.IsPunct(runes[col]) {
+		col++
+	}
+
+	// Skip punctuation forward
+	for col < lineLen && unicode.IsPunct(runes[col]) {
+		col++
+	}
+
+	// Skip whitespace forward
+	for col < lineLen && unicode.IsSpace(runes[col]) {
+		col++
+	}
+
+	m.cursorCol = col
 	return m, nil
 }
 
