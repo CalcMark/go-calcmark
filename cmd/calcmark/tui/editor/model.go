@@ -22,6 +22,10 @@ import (
 // Debounce delay for re-evaluation after typing (per spec: ~50ms)
 const evalDebounceDelay = 50 * time.Millisecond
 
+// scrollMargin is the number of lines to keep between cursor and viewport edge.
+// This provides visual context around the cursor position.
+const scrollMargin = 3
+
 // evalDebounceMsg is sent after the debounce delay to trigger evaluation.
 type evalDebounceMsg struct {
 	editBufSnapshot string // Snapshot of editBuf when timer was started
