@@ -935,14 +935,8 @@ func (m *Model) moveCursor(dLine, dCol int) {
 		}
 	}
 
-	// Adjust scroll
-	visibleHeight := m.height - 6 // Account for status bar etc
-	if m.cursorLine < m.scrollOffset {
-		m.scrollOffset = m.cursorLine
-	}
-	if m.cursorLine >= m.scrollOffset+visibleHeight {
-		m.scrollOffset = m.cursorLine - visibleHeight + 1
-	}
+	// Adjust scroll with margin
+	m.adjustScrollForCursor()
 }
 
 // saveCurrentLine saves the edit buffer to the current line without changing mode.
@@ -1139,17 +1133,8 @@ func (m *Model) insertLine(at int) {
 	m.modified = true
 	m.pushUndoState()
 
-	// Adjust scroll to keep cursor visible
-	visibleHeight := m.height - 6 // Account for status bar etc
-	if visibleHeight < 1 {
-		visibleHeight = 1
-	}
-	if m.cursorLine < m.scrollOffset {
-		m.scrollOffset = m.cursorLine
-	}
-	if m.cursorLine >= m.scrollOffset+visibleHeight {
-		m.scrollOffset = m.cursorLine - visibleHeight + 1
-	}
+	// Adjust scroll to keep cursor visible with margin
+	m.adjustScrollForCursor()
 
 	// Auto-pin any new variables
 	m.autoPinVariables()
@@ -2078,13 +2063,37 @@ func (m *Model) gotoLine(lineStr string) {
 	m.statusMsg = fmt.Sprintf("Line %d", lineNum+1)
 }
 
-// adjustScroll ensures cursor is visible.
+// getVisibleHeight returns the number of visible content lines in the viewport.
+// This accounts for the 6-line overhead from status bar, title, etc.
+func (m *Model) getVisibleHeight() int {
+	return m.height - 6
+}
+
+// adjustScrollForCursor ensures the cursor is visible within the viewport,
+// maintaining scrollMargin lines of context above/below when possible.
+func (m *Model) adjustScrollForCursor() {
+	visibleHeight := m.getVisibleHeight()
+	if visibleHeight <= 0 {
+		return
+	}
+
+	// Ensure cursor has at least scrollMargin lines above it
+	if m.cursorLine < m.scrollOffset+scrollMargin {
+		m.scrollOffset = max(0, m.cursorLine-scrollMargin)
+	}
+
+	// Ensure cursor has at least scrollMargin lines below it
+	if m.cursorLine >= m.scrollOffset+visibleHeight-scrollMargin {
+		m.scrollOffset = m.cursorLine - visibleHeight + scrollMargin + 1
+	}
+
+	// Clamp scroll offset to valid range
+	maxScroll := max(0, m.TotalLines()-visibleHeight)
+	m.scrollOffset = min(m.scrollOffset, maxScroll)
+}
+
+// adjustScroll ensures cursor is visible (legacy method for compatibility).
+// Use adjustScrollForCursor for new code to get scroll margin behavior.
 func (m *Model) adjustScroll() {
-	visibleHeight := m.height - 6
-	if m.cursorLine < m.scrollOffset {
-		m.scrollOffset = m.cursorLine
-	}
-	if m.cursorLine >= m.scrollOffset+visibleHeight {
-		m.scrollOffset = m.cursorLine - visibleHeight + 1
-	}
+	m.adjustScrollForCursor()
 }
