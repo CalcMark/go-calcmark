@@ -48,11 +48,11 @@ Plans:
   3. A result that is wider than the right pane wraps independently without pushing other rows down
   4. When source line N wraps to 3 visual lines and result line N wraps to 1 visual line, both still start at the same vertical position (padding fills the gap)
   5. Resizing the terminal reflows both columns correctly with no rendering artifacts
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 02-01: Wire geometry package into editor view rendering
-- [ ] 02-02: Implement and test two-column alignment under wrapping scenarios
+- [ ] 02-01-PLAN.md -- Write integration tests proving all five success criteria for the two-column layout
+- [ ] 02-02-PLAN.md -- Fix any layout failures and visually verify two-column rendering
 
 ### Phase 3: TUI Editor Integration
 **Goal**: The editor is fully interactive with accurate cursor tracking, smooth scrolling, working evaluation pipeline, and results that update as the user types
