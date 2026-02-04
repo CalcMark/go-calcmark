@@ -55,16 +55,13 @@
 
 - [ ] **DIST-01**: GoReleaser configuration created and tested
 - [ ] **DIST-02**: Prebuilt binaries for macOS (Intel + Apple Silicon)
-- [ ] **DIST-03**: Prebuilt binaries for Linux (amd64, arm64)
-- [ ] **DIST-04**: Prebuilt binaries for Windows (amd64)
+- [ ] **DIST-03**: Prebuilt binaries for Linux (amd64, arm64, arm 32-bit)
+- [ ] **DIST-04**: Prebuilt binaries for Windows (amd64, arm64)
 - [ ] **DIST-05**: Homebrew tap configured and working
-- [ ] **DIST-06**: Scoop bucket configured and working
-- [ ] **DIST-07**: Man pages generated and bundled
-- [ ] **DIST-08**: Shell completion files bundled in releases
-- [ ] **DIST-09**: WASM build optimized and size monitored
-- [ ] **DIST-10**: WASM binary included in GitHub releases
 - [ ] **DIST-11**: Release workflow runs in CI successfully
 - [ ] **DIST-12**: Checksums and signatures for all release artifacts
+
+Note: Per Phase 7 CONTEXT.md, Scoop, WASM, man pages, and bundled shell completions are out of scope. Users can generate shell completions via `cm completion bash/zsh/fish`.
 
 ### Documentation
 
@@ -153,11 +150,6 @@ Deferred to future release.
 | DIST-03 | Phase 7: Distribution | Pending |
 | DIST-04 | Phase 7: Distribution | Pending |
 | DIST-05 | Phase 7: Distribution | Pending |
-| DIST-06 | Phase 7: Distribution | Pending |
-| DIST-07 | Phase 7: Distribution | Pending |
-| DIST-08 | Phase 7: Distribution | Pending |
-| DIST-09 | Phase 7: Distribution | Pending |
-| DIST-10 | Phase 7: Distribution | Pending |
 | DIST-11 | Phase 7: Distribution | Pending |
 | DIST-12 | Phase 7: Distribution | Pending |
 | DOCS-01 | Phase 8: Documentation | Pending |
@@ -172,8 +164,8 @@ Deferred to future release.
 | DOCS-10 | Phase 8: Documentation | Pending |
 
 **Coverage:**
-- v1 requirements: 56 total
-- Mapped to phases: 56
+- v1 requirements: 51 total (DIST-06 through DIST-10 removed per Phase 7 CONTEXT.md)
+- Mapped to phases: 51
 - Unmapped: 0
 
 ---
