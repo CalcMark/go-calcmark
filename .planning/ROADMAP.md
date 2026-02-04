@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
 - [x] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [x] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
-- [ ] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew, Scoop, WASM
+- [ ] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew tap
 - [ ] **Phase 8: Documentation** - README, examples, generated references, screenshots
 
 ## Phase Details
@@ -121,21 +121,19 @@ Plans:
 - [x] 06-02-PLAN.md -- TUI autocomplete engine (functions, units, variables) and popup rendering
 
 ### Phase 7: Distribution
-**Goal**: Users can install CalcMark on macOS, Linux, and Windows via a single command or prebuilt binary download, with all release artifacts signed and verified
+**Goal**: Users can install CalcMark on macOS and Linux via Homebrew or download prebuilt binaries from GitHub releases for all platforms
 **Depends on**: Phases 1-6 (all features complete)
-**Requirements**: DIST-01, DIST-02, DIST-03, DIST-04, DIST-05, DIST-06, DIST-07, DIST-08, DIST-09, DIST-10, DIST-11, DIST-12
+**Requirements**: DIST-01, DIST-02, DIST-03, DIST-04, DIST-05, DIST-11, DIST-12
 **Success Criteria** (what must be TRUE):
-  1. Running `brew install <tap>/calcmark` on macOS installs a working `cm` binary that can open and evaluate .cm files
+  1. Running `brew install CalcMark/homebrew-tap/calcmark` on macOS installs a working `cm` binary that can open and evaluate .cm files
   2. Downloading the Linux arm64 tarball from GitHub releases, extracting it, and running `./cm --version` prints the correct version
   3. The Windows amd64 zip from GitHub releases contains a working cm.exe
-  4. Every release artifact on GitHub has a corresponding SHA256 checksum file
-  5. The WASM binary is included in GitHub releases and is under 3MB uncompressed
-**Plans**: TBD
+  4. Every release artifact on GitHub has a corresponding SHA256 checksum in checksums.txt
+**Plans:** 2 plans
 
 Plans:
-- [ ] 07-01: GoReleaser configuration and CI release workflow
-- [ ] 07-02: Platform packaging (Homebrew tap, Scoop bucket, man pages, shell completions)
-- [ ] 07-03: WASM build optimization and release inclusion
+- [ ] 07-01-PLAN.md -- Remove WASM infrastructure, create GoReleaser config, update CI workflow
+- [ ] 07-02-PLAN.md -- Validate local build, update planning docs, verify release readiness
 
 ### Phase 8: Documentation
 **Goal**: A new user can understand what CalcMark is, install it, and start using it within 5 minutes by reading the README and exploring example files
@@ -167,9 +165,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. TUI Test Coverage | 3/3 | Complete | 2026-02-03 |
 | 5. Help System | 2/2 | Complete | 2026-02-03 |
 | 6. Differentiators | 2/2 | Complete | 2026-02-04 |
-| 7. Distribution | 0/3 | Not started | - |
+| 7. Distribution | 0/2 | Not started | - |
 | 8. Documentation | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
-*Last updated: 2026-02-03*
+*Last updated: 2026-02-04*
