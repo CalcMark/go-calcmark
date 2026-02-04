@@ -40,6 +40,13 @@ type ContextFooterState struct {
 	AutocompleteName   string // Selected function/unit name
 	AutocompleteSyntax string // Full signature like "avg(values...)"
 	AutocompleteDesc   string // Description
+
+	// Function argument context (shown when typing inside function call)
+	InFunctionCall bool
+	FunctionName   string // Name of function being called
+	ParamName      string // Current parameter name
+	ParamExamples  string // Example values for this parameter
+	ArgIndex       int    // Which argument position (0-based)
 }
 
 // RenderContextFooter renders the context footer from the given state.
@@ -91,6 +98,36 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 		// Line 2: Description
 		if state.AutocompleteDesc != "" {
 			line2 := "  " + descStyle.Render(state.AutocompleteDesc)
+			lines = append(lines, line2)
+		} else {
+			lines = append(lines, StyledPadding(width, bg))
+		}
+
+		// Ensure width constraints
+		for i, line := range lines {
+			if lipgloss.Width(line) > width {
+				lines[i] = TruncateWithEllipsis(line, width)
+			}
+		}
+
+		return padToHeight(strings.Join(lines, "\n"))
+	}
+
+	// Priority 0.5: Show function argument help when inside function call
+	if state.InFunctionCall && state.ParamName != "" {
+		funcStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)    // bright blue
+		paramStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true).Background(bg)  // yellow/gold
+		exampleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)           // white
+
+		var lines []string
+
+		// Line 1: function(arg1, arg2, ►current_arg◄, ...)
+		line1 := funcStyle.Render(state.FunctionName) + "(" + paramStyle.Render("►"+state.ParamName+"◄") + ")"
+		lines = append(lines, line1)
+
+		// Line 2: Examples for this argument type
+		if state.ParamExamples != "" {
+			line2 := "  " + exampleStyle.Render(state.ParamExamples)
 			lines = append(lines, line2)
 		} else {
 			lines = append(lines, StyledPadding(width, bg))

@@ -1015,6 +1015,19 @@ func (m Model) renderContextFooter(width int) string {
 		}
 	}
 
+	// Check for function argument context (when typing inside function call)
+	if !state.AutocompleteActive && !state.HasError {
+		m.loadCurrentLineIntoEditBuffer()
+		cursorCtx := GetCursorContext(m.editBuf, m.cursorCol)
+		if cursorCtx.InFunctionCall && cursorCtx.ParamSpec != nil {
+			state.InFunctionCall = true
+			state.FunctionName = cursorCtx.FunctionName
+			state.ParamName = cursorCtx.ParamSpec.Name
+			state.ParamExamples = FormatParamHelp(cursorCtx.ParamSpec)
+			state.ArgIndex = cursorCtx.ArgIndex
+		}
+	}
+
 	// Get themed context footer background
 	contextFooterBg := m.styles.ContextFooter.GetBackground()
 	if _, ok := contextFooterBg.(lipgloss.NoColor); ok {
