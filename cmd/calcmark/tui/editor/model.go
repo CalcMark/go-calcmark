@@ -45,6 +45,7 @@ type InputState int
 
 const (
 	StateDefault      InputState = iota // Normal document editing with live preview and error display
+	StateAutocomplete                   // Autocomplete dropdown active
 	StateGlobals                        // Globals panel active, preview shows global values
 	StateHelp                           // Help viewer active, preview shows help content
 	StateExportFormat                   // Export dialog active, normal UI paused
@@ -58,6 +59,8 @@ func (s InputState) String() string {
 	switch s {
 	case StateDefault:
 		return "StateDefault"
+	case StateAutocomplete:
+		return "StateAutocomplete"
 	case StateGlobals:
 		return "StateGlobals"
 	case StateHelp:
@@ -177,6 +180,10 @@ type Model struct {
 	alignedCache       *AlignedModel
 	alignedCacheKey    alignedCacheKey // Key for cache validation
 	alignedCacheWidths [2]int          // [sourceWidth, previewWidth] used for cache
+
+	// Autocomplete state
+	autocompleteState  components.AutosuggestState
+	suggestionSource   components.SuggestionSource
 }
 
 // New creates a new editor model with an optional document.
@@ -202,6 +209,24 @@ func New(doc *document.Document) Model {
 		styles:           config.GetStyles(),
 		keys:             shared.DefaultKeyMap(),
 	}
+
+	// Initialize autocomplete suggestion sources
+	funcSource := NewFunctionSuggestionSource()
+	unitSource := NewUnitSuggestionSource()
+	// Variable source captures 'm' by closure to access current environment
+	varSource := NewVariableSuggestionSource(func() map[string]string {
+		if m.eval == nil {
+			return nil
+		}
+		env := m.eval.GetEnvironment()
+		vars := env.GetAllVariables()
+		result := make(map[string]string)
+		for name, val := range vars {
+			result[name] = fmt.Sprintf("%v", val)
+		}
+		return result
+	})
+	m.suggestionSource = NewCombinedSuggestionSource(funcSource, unitSource, varSource)
 
 	// CRITICAL: Transition to StateReady - establishes all invariants
 	// This is the ONLY state transition during initialization
@@ -395,6 +420,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Mode-specific handling for UI overlays
 	switch m.mode {
+	case StateAutocomplete:
+		return m.handleAutocompleteKey(msg)
 	case StateGlobals:
 		return m.handleGlobalsKey(msg)
 	case StateExportFormat:
@@ -415,6 +442,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // The user is ALWAYS able to type and edit - this is the only mode they experience.
 func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
+	case tea.KeyTab:
+		// Tab triggers autocomplete
+		return m.triggerAutocomplete()
 	case tea.KeyUp:
 		return m.handleUpKey()
 	case tea.KeyDown:
@@ -2170,4 +2200,127 @@ func (m *Model) adjustScrollForCursor() {
 // Use adjustScrollForCursor for new code to get scroll margin behavior.
 func (m *Model) adjustScroll() {
 	m.adjustScrollForCursor()
+}
+
+// ========================================
+// Autocomplete functions
+// ========================================
+
+// handleAutocompleteKey processes keys when autocomplete dropdown is active.
+func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.autocompleteState.Selected > 0 {
+			m.autocompleteState.Selected--
+		}
+		return m, nil
+	case tea.KeyDown:
+		if m.autocompleteState.Selected < len(m.autocompleteState.Suggestions)-1 {
+			m.autocompleteState.Selected++
+		}
+		return m, nil
+	case tea.KeyEsc:
+		// Dismiss autocomplete without inserting
+		m.mode = StateDefault
+		m.autocompleteState = components.AutosuggestState{}
+		return m, nil
+	case tea.KeyTab, tea.KeyEnter:
+		// Accept current selection
+		return m.acceptAutocomplete()
+	default:
+		// Any other key dismisses autocomplete and processes normally
+		m.mode = StateDefault
+		m.autocompleteState = components.AutosuggestState{}
+		// Fall through to normal handling
+		return m.handleDefaultKey(msg)
+	}
+}
+
+// triggerAutocomplete initiates autocomplete mode.
+func (m Model) triggerAutocomplete() (tea.Model, tea.Cmd) {
+	// Extract word prefix at cursor position
+	prefix := m.getCurrentWordPrefix()
+	if prefix == "" {
+		return m, nil
+	}
+
+	suggestions := m.suggestionSource.GetSuggestions(prefix)
+	if len(suggestions) == 0 {
+		return m, nil
+	}
+
+	m.mode = StateAutocomplete
+	m.autocompleteState = components.AutosuggestState{
+		Suggestions: suggestions,
+		Selected:    0,
+		Visible:     true,
+		Prefix:      prefix,
+	}
+	return m, nil
+}
+
+// getCurrentWordPrefix extracts the word being typed at cursor.
+func (m *Model) getCurrentWordPrefix() string {
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorCol == 0 {
+		return ""
+	}
+
+	// Walk backwards to find word start
+	start := m.cursorCol
+	for start > 0 {
+		ch := m.editBuf[start-1]
+		if !isWordChar(ch) {
+			break
+		}
+		start--
+	}
+
+	if start >= m.cursorCol {
+		return ""
+	}
+	return m.editBuf[start:m.cursorCol]
+}
+
+// isWordChar returns true if the byte is a valid word character for autocomplete.
+func isWordChar(ch byte) bool {
+	return (ch >= 'a' && ch <= 'z') ||
+		(ch >= 'A' && ch <= 'Z') ||
+		(ch >= '0' && ch <= '9') ||
+		ch == '_'
+}
+
+// acceptAutocomplete inserts the selected suggestion at the cursor.
+func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
+	if m.autocompleteState.Selected < 0 ||
+		m.autocompleteState.Selected >= len(m.autocompleteState.Suggestions) {
+		m.mode = StateDefault
+		return m, nil
+	}
+
+	selected := m.autocompleteState.Suggestions[m.autocompleteState.Selected]
+	insertText := selected.InsertText
+	if insertText == "" {
+		insertText = selected.Name
+	}
+
+	// Replace prefix with selected suggestion
+	prefix := m.autocompleteState.Prefix
+	prefixStart := m.cursorCol - len(prefix)
+	if prefixStart < 0 {
+		prefixStart = 0
+	}
+
+	m.editBuf = m.editBuf[:prefixStart] + insertText + m.editBuf[m.cursorCol:]
+	m.cursorCol = prefixStart + len(insertText)
+
+	m.mode = StateDefault
+	m.autocompleteState = components.AutosuggestState{}
+	m.transitionToEditing()
+	return m.debounceUpdate()
+}
+
+// GetAutocompleteState returns the current autocomplete state for rendering.
+func (m Model) GetAutocompleteState() components.AutosuggestState {
+	return m.autocompleteState
 }
