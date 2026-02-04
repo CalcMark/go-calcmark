@@ -34,6 +34,12 @@ type ContextFooterState struct {
 
 	// Whether this is a calc line (footer only shows for calc lines)
 	IsCalcLine bool
+
+	// Autocomplete hint (shown when autocomplete is active)
+	AutocompleteActive bool
+	AutocompleteName   string // Selected function/unit name
+	AutocompleteSyntax string // Full signature like "avg(values...)"
+	AutocompleteDesc   string // Description
 }
 
 // RenderContextFooter renders the context footer from the given state.
@@ -62,17 +68,50 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 		return strings.Join(lines, "\n")
 	}
 
-	// Empty footer for non-calc lines
-	if !state.IsCalcLine {
+	// Empty footer for non-calc lines (unless autocomplete is showing)
+	if !state.IsCalcLine && !state.AutocompleteActive {
 		return padToHeight("")
+	}
+
+	// Priority 0: Show autocomplete details when active
+	if state.AutocompleteActive && state.AutocompleteName != "" {
+		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)   // bright blue
+		syntaxStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)           // white
+		descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("246")).Italic(true).Background(bg) // gray italic
+
+		var lines []string
+
+		// Line 1: Name + Syntax (function signature)
+		line1 := nameStyle.Render(state.AutocompleteName)
+		if state.AutocompleteSyntax != "" {
+			line1 += " " + syntaxStyle.Render(state.AutocompleteSyntax)
+		}
+		lines = append(lines, line1)
+
+		// Line 2: Description
+		if state.AutocompleteDesc != "" {
+			line2 := "  " + descStyle.Render(state.AutocompleteDesc)
+			lines = append(lines, line2)
+		} else {
+			lines = append(lines, StyledPadding(width, bg))
+		}
+
+		// Ensure width constraints
+		for i, line := range lines {
+			if lipgloss.Width(line) > width {
+				lines[i] = TruncateWithEllipsis(line, width)
+			}
+		}
+
+		return padToHeight(strings.Join(lines, "\n"))
 	}
 
 	// Priority 1: Show errors with helpful formatting
 	if state.HasError {
 		// Style based on severity - include background to prevent terminal bleed
 		// Use bold red for error icon to make it highly visible
-		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Background(bg) // bold red on themed bg
-		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true).Background(bg)  // bold white on themed bg
+		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Background(bg)   // bold red on themed bg
+		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true).Background(bg)    // bold white on themed bg
 		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Italic(true).Background(bg) // italic light gray on themed bg
 
 		// Build error display from structured diagnostic if available

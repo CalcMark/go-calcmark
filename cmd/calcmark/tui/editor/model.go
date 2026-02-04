@@ -2326,20 +2326,24 @@ func (m *Model) updateAutocompleteState() {
 
 // calculatePopupDimensions determines the popup size based on suggestions.
 func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (width, height int) {
-	// Calculate width based on longest suggestion
-	width = 25 // minimum width
+	// Calculate width based on longest suggestion name + syntax
+	width = 30 // minimum width for readability
 	for _, s := range suggestions {
+		// Name + syntax is more important than description for width
 		w := len(s.Name)
-		if s.Description != "" {
-			w += 1 + len(s.Description)
+		if s.Syntax != "" {
+			w += 1 + len(s.Syntax)
 		}
-		if w+4 > width { // +4 for padding and selection indicator
-			width = w + 4
+		if w+6 > width { // +6 for padding, selection indicator, borders
+			width = w + 6
 		}
 	}
 
-	// Cap at reasonable max
-	maxWidth := m.width / 2
+	// Allow up to 70% of screen width for function signatures
+	maxWidth := m.width * 7 / 10
+	if maxWidth < 40 {
+		maxWidth = 40 // minimum usable width
+	}
 	if width > maxWidth {
 		width = maxWidth
 	}

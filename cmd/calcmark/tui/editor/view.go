@@ -1001,6 +1001,20 @@ func (m Model) renderContextFooter(width int) string {
 		}
 	}
 
+	// Add autocomplete details when popup is active
+	if m.mode == StateAutocomplete && m.autocompleteState.Visible {
+		if len(m.autocompleteState.Suggestions) > 0 {
+			selected := m.autocompleteState.Suggestions[m.autocompleteState.Selected]
+			state.AutocompleteActive = true
+			state.AutocompleteName = selected.InsertText
+			if state.AutocompleteName == "" {
+				state.AutocompleteName = selected.Name
+			}
+			state.AutocompleteSyntax = selected.Syntax
+			state.AutocompleteDesc = selected.Description
+		}
+	}
+
 	// Get themed context footer background
 	contextFooterBg := m.styles.ContextFooter.GetBackground()
 	if _, ok := contextFooterBg.(lipgloss.NoColor); ok {

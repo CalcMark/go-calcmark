@@ -131,15 +131,18 @@ func RenderPopup(state AutosuggestState, style PopupStyle) []string {
 	for i := scrollTop; i < scrollTop+maxVisible && i < len(state.Suggestions); i++ {
 		s := state.Suggestions[i]
 
-		// Format: name + description (truncated to fit)
+		// Format: prefer syntax (function signature) over description
+		// Syntax is like "avg(a, b, ...)" which is more useful
 		name := s.Name
-		desc := ""
-		if s.Description != "" {
-			desc = " " + s.Description
+		detail := ""
+		if s.Syntax != "" {
+			detail = " " + s.Syntax
+		} else if s.Description != "" {
+			detail = " " + s.Description
 		}
 
 		// Truncate if needed
-		line := name + desc
+		line := name + detail
 		if len(line) > contentWidth {
 			line = line[:contentWidth-1] + "…"
 		}
