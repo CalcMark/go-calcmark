@@ -225,6 +225,12 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 
 	first := tokens[0]
 
+	// Anonymous calculation: = expression
+	// Pattern: ASSIGN followed by expression tokens
+	if first.Type == lexer.ASSIGN && len(tokens) >= 2 {
+		return true
+	}
+
 	// Frontmatter assignment: @namespace.property = ...
 	// Pattern: AT_PREFIX IDENTIFIER DOT IDENTIFIER ASSIGN ...
 	if first.Type == lexer.AT_PREFIX {

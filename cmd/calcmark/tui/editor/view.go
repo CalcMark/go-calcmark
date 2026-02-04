@@ -819,24 +819,13 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	isActuallyCalc, _ := detector.IsCalculation(r.Source)
 
 	if r.Error != "" && isActuallyCalc {
-		// Show error indicator with truncated message inline
+		// Show brief error indicator inline - details in context footer below
 		errStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("208")) // amber
 
-		// Extract user-friendly message (skip error code prefix like "undefined_variable: ")
-		errMsg := r.Error
-		if idx := strings.Index(errMsg, ": "); idx > 0 && idx < 30 {
-			errMsg = errMsg[idx+2:]
-		}
-		// Truncate to fit in available width, leaving room for "⚠ " prefix
-		maxLen := width - 3
-		if maxLen < 10 {
-			maxLen = 10
-		}
-		if len(errMsg) > maxLen {
-			errMsg = errMsg[:maxLen-3] + "..."
-		}
-		return errStyle.Render("⚠ " + errMsg)
+		// Extract a brief error hint (variable name or short description)
+		errHint := extractErrorHint(r.Error, width-4)
+		return errStyle.Render("⚠ " + errHint)
 	}
 
 	if !isActuallyCalc {
@@ -1081,4 +1070,37 @@ func (m Model) renderAutocompleteDropdown(width int, bg lipgloss.TerminalColor) 
 	result = append(result, ensureFullWidth(hint, width, bg))
 
 	return result
+}
+
+// extractErrorHint extracts a brief hint from an error message for inline display.
+// Returns something like `"var"?` for undefined variables, or a short description.
+func extractErrorHint(errMsg string, maxWidth int) string {
+	// Try to extract a quoted identifier from the error message
+	// Common patterns: `undefined variable "foo"`, `cannot reassign 'bar'`
+	for _, quote := range []string{`"`, `'`} {
+		start := strings.Index(errMsg, quote)
+		if start >= 0 {
+			end := strings.Index(errMsg[start+1:], quote)
+			if end > 0 && end < 30 {
+				identifier := errMsg[start : start+end+2]
+				hint := identifier + "?"
+				if len(hint) <= maxWidth {
+					return hint
+				}
+			}
+		}
+	}
+
+	// Fallback: extract error type from code prefix
+	if idx := strings.Index(errMsg, ": "); idx > 0 && idx < 25 {
+		code := errMsg[:idx]
+		// Convert snake_case to short form
+		code = strings.ReplaceAll(code, "_", " ")
+		if len(code) <= maxWidth {
+			return code
+		}
+	}
+
+	// Last resort: just say "error"
+	return "error"
 }

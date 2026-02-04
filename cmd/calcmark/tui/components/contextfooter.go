@@ -70,9 +70,10 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 	// Priority 1: Show errors with helpful formatting
 	if state.HasError {
 		// Style based on severity - include background to prevent terminal bleed
-		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Background(bg) // amber on themed bg
-		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)  // light gray on themed bg
-		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Background(bg) // dim on themed bg
+		// Use bold red for error icon to make it highly visible
+		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Background(bg) // bold red on themed bg
+		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true).Background(bg)  // bold white on themed bg
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Italic(true).Background(bg) // italic light gray on themed bg
 
 		// Build error display from structured diagnostic if available
 		var shortMsg, hint string
