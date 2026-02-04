@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** Phase 5 - Help System (COMPLETE)
+**Current focus:** Phase 6 - Differentiators (IN PROGRESS)
 
 ## Current Position
 
-Phase: 5 of 8 (Help System)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-03 - Completed 05-02-PLAN.md (TUI help overlay and status bar)
+Phase: 6 of 8 (Differentiators)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-04 - Completed 06-01-PLAN.md
 
-Progress: [████████████████░░░░] 85% (17/20 plans)
+Progress: [█████████████████░░░] 90% (18/20 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 8min
-- Total execution time: ~1.8 hours
+- Total execution time: ~2 hours
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [████████████████░░░░] 85% (17
 | 3. TUI Editor Integration | 5/5 | 55min | 11min |
 | 4. TUI Test Coverage | 3/3 | 15min | 5min |
 | 5. Help System | 2/2 | 19min | 9.5min |
+| 6. Differentiators | 1/2 | 12min | 12min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (3min), 04-02 (6min), 04-03 (6min), 05-01 (4min), 05-02 (15min)
-- Trend: TUI overlay work takes longer due to UI state management and testing
+- Last 5 plans: 04-02 (6min), 04-03 (6min), 05-01 (4min), 05-02 (15min), 06-01 (12min)
+- Trend: Refactoring and bug fixes taking expected time
 
 *Updated after each plan completion*
 
@@ -70,7 +71,7 @@ Recent decisions affecting current work:
 - 03-04: app.go already used Model, no changes needed -- ModelV2 was experimental code never integrated
 - 03-04: Delete redundant tests that only tested ModelV2 -- visual_layout_test.go already tests same properties for Model
 - 03-05: Backspace at col 0 joins with previous line; delete at end joins with next line -- standard text editor behavior
-- 03-05: Anonymous calculations show only value, not "varName → value" -- only assignments show variable names
+- 03-05: Anonymous calculations show only value, not "varName -> value" -- only assignments show variable names
 - 03-05: Diagnostic messages use em-dash pattern with specific values and suggestions -- "extremely useful for users"
 - 03-05: Variable redefinition shows original definition line number -- helps users find first assignment
 - 04-01: Dedicated test functions with fresh documents for insert_at_end, insert_line, scroll_navigation, delete_empty_line -- pattern now applied to 16 test scenarios
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - 05-02: Use F1 for help (not ?) to avoid conflict with calc expressions
 - 05-02: Status bar shows L{line}:{col} format (e.g., L5:12)
 - 05-02: Show EVAL... during typing debounce, calc count when idle
+- 06-01: FunctionDef struct with metadata + Eval field using init() to avoid initialization cycle
+- 06-01: Added isFunctionToken to detector for built-in function recognition
+- 06-01: "mean" added as synonym for avg (needed for SC4 autocomplete)
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -94,7 +98,7 @@ These items were identified during 02-02 visual verification and deferred:
 
 ### Pending Todos
 
-None.
+- ~~**BUG (2026-02-03)**: `avg(2,4,4)` and other function calls not showing results in Preview pane of TUI editor.~~ RESOLVED in 06-01: Added isFunctionToken to detector
 
 ### Blockers/Concerns
 
@@ -102,17 +106,30 @@ None.
 - ~~Two editor implementations in flight (Model vs ModelV2)~~ RESOLVED in 03-04: ModelV2 deleted, Model is the single implementation
 - ~~TestEditorCatwalk test failures (insert_at_end, insert_line, scroll_navigation, delete_empty_line)~~ RESOLVED in 04-01: dedicated test functions with fresh documents
 - ~~TestEditorCatwalkCompression has pre-existing failures (compression/insert_line, compression/type_new_line)~~ RESOLVED in 04-03: dedicated test functions with fresh documents
+- ~~Function result display bug~~ RESOLVED in 06-01: isFunctionToken added to detector
 - WASM binary size unknown -- must measure early in Phase 7
 - Pre-existing `task quality` modernize warnings (~39 across codebase) -- not blocking but should be addressed eventually
 
+### Phase 6 Architecture Context
+
+**Function metadata refactor (COMPLETED 2026-02-04):**
+Implementation: `FunctionDef` struct in `impl/interpreter/functions.go` with:
+- Metadata fields: Name, Synonyms, Description, Signature, Category
+- Eval field: function pointer populated via init() to avoid Go initialization cycle
+- `BuiltinFunctions` slice is single source of truth for all 12 functions
+- Registry helpers derive FunctionInfo from BuiltinFunctions
+
+Benefits achieved:
+1. Adding a function without metadata causes test failure (TestFunctionInfoComplete)
+2. Help docs, autocomplete, and diagnostics all use same source
+3. "mean" synonym available for autocomplete (Plan 02)
+
 ## Session Continuity
 
-Last session: 2026-02-03
-Stopped at: Phase 5 complete
+Last session: 2026-02-04
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
 
-### Phase 5 Completion Summary (2026-02-03)
-- 05-01: Created function registry with metadata for 12 functions, help commands (cm help functions, cm help constants), shell completions for bash/zsh/fish/powershell
-- 05-02: Implemented F1 help overlay using bubbles/help, enhanced status bar with L{line}:{col} and EVAL... indicator, added catwalk test for help toggle
-- All 8 Success Criteria verified and satisfied
-- Ready for Phase 6 (Autocomplete and YAML Frontmatter)
+### Phase 6 Progress (2026-02-04)
+- 06-01: Refactored function metadata to single source of truth, fixed function result display bug, improved YAML error messages
+- Ready for 06-02 (Autocomplete implementation)
