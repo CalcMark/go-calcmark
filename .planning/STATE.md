@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** Phase 7 - Distribution (READY)
+**Current focus:** Phase 7 - Distribution (IN PROGRESS)
 
 ## Current Position
 
 Phase: 7 of 8 (Distribution)
-Plan: 0 of 3 in current phase
-Status: Ready to start
-Last activity: 2026-02-04 - Completed Phase 6
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-04 - Completed 07-01-PLAN.md
 
-Progress: [███████████████████░] 95% (17/20 plans)
+Progress: [████████████████████] 90% (18/20 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 18
 - Average duration: 8min
-- Total execution time: ~2 hours
+- Total execution time: ~2.5 hours
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [███████████████████░] 95% (17
 | 4. TUI Test Coverage | 3/3 | 15min | 5min |
 | 5. Help System | 2/2 | 19min | 9.5min |
 | 6. Differentiators | 2/2 | 57min | 28.5min |
+| 7. Distribution | 1/3 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (6min), 04-03 (6min), 05-01 (4min), 05-02 (15min), 06-01 (12min)
-- Trend: Refactoring and bug fixes taking expected time
+- Last 5 plans: 05-01 (4min), 05-02 (15min), 06-01 (12min), 06-02 (45min), 07-01 (5min)
+- Trend: Infrastructure tasks are fast; feature development takes longer
 
 *Updated after each plan completion*
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - 06-01: FunctionDef struct with metadata + Eval field using init() to avoid initialization cycle
 - 06-01: Added isFunctionToken to detector for built-in function recognition
 - 06-01: "mean" added as synonym for avg (needed for SC4 autocomplete)
+- 07-01: Use GoReleaser v2 with brews section (brews is still correct for CLI formulas; homebrew_casks is for GUI apps)
+- 07-01: WASM infrastructure removed -- no longer needed, simplifies build and CI
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -99,6 +102,7 @@ These items were identified during 02-02 visual verification and deferred:
 ### Pending Todos
 
 - ~~**BUG (2026-02-03)**: `avg(2,4,4)` and other function calls not showing results in Preview pane of TUI editor.~~ RESOLVED in 06-01: Added isFunctionToken to detector
+- **IDEA (2026-02-04)**: Preview pane should only include calculation outputs (not full rendered markdown), while preserving strict vertical alignment. Consider for post-v1 UX enhancement.
 
 ### Blockers/Concerns
 
@@ -107,7 +111,7 @@ These items were identified during 02-02 visual verification and deferred:
 - ~~TestEditorCatwalk test failures (insert_at_end, insert_line, scroll_navigation, delete_empty_line)~~ RESOLVED in 04-01: dedicated test functions with fresh documents
 - ~~TestEditorCatwalkCompression has pre-existing failures (compression/insert_line, compression/type_new_line)~~ RESOLVED in 04-03: dedicated test functions with fresh documents
 - ~~Function result display bug~~ RESOLVED in 06-01: isFunctionToken added to detector
-- WASM binary size unknown -- must measure early in Phase 7
+- ~~WASM binary size unknown~~ RESOLVED in 07-01: WASM infrastructure removed
 - Pre-existing `task quality` modernize warnings (~39 across codebase) -- not blocking but should be addressed eventually
 
 ### Phase 6 Architecture Context
@@ -124,12 +128,23 @@ Benefits achieved:
 2. Help docs, autocomplete, and diagnostics all use same source
 3. "mean" synonym available for autocomplete (Plan 02)
 
+### Phase 7 Architecture Context
+
+**GoReleaser setup (COMPLETED 2026-02-04):**
+- `.goreleaser.yaml` configured for 7 platform builds
+- GitHub Actions workflow uses goreleaser/goreleaser-action@v6
+- Homebrew formula generation configured for CalcMark/homebrew-tap
+- WASM infrastructure removed (impl/wasm/, release.sh, Taskfile tasks)
+
+**Next steps:**
+- Plan 02: Create CalcMark/homebrew-tap repository
+- Plan 03: Create CHANGELOG.md
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed Phase 6, ready for Phase 7
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
 
-### Phase 6 Progress (2026-02-04) - COMPLETE
-- 06-01: Refactored function metadata to single source of truth, fixed function result display bug, improved YAML error messages
-- 06-02: TUI autocomplete engine with popup rendering, function parameter guidance, bug fixes for visual issues
+### Phase 7 Progress (2026-02-04) - IN PROGRESS
+- 07-01: GoReleaser configuration, WASM removal, release workflow update
