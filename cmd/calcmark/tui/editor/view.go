@@ -156,11 +156,7 @@ func (m Model) View() string {
 		contextFooterBg = m.sourcePaneBg() // Fallback
 	}
 
-	// If autocomplete is active, render the dropdown
-	if m.mode == StateAutocomplete && m.autocompleteState.Visible {
-		dropdownLines := m.renderAutocompleteDropdown(totalWidth, contextFooterBg)
-		allUILines = append(allUILines, dropdownLines...)
-	}
+	// NOTE: Autocomplete popup is rendered as an overlay after all lines are built
 
 	// Empty line with background (use context footer background for transition)
 	emptyLine := components.StyledPadding(totalWidth, contextFooterBg)
@@ -206,6 +202,15 @@ func (m Model) View() string {
 		statusBarLines[i] = ensureFullWidth(line, totalWidth, statusBarBg)
 	}
 	allUILines = append(allUILines, statusBarLines...)
+
+	// Overlay autocomplete popup if active
+	if m.mode == StateAutocomplete && m.autocompleteState.Visible {
+		popup := m.renderAutocompletePopup()
+		if popup != "" {
+			row, col := m.calculatePopupScreenPosition(contentHeight)
+			allUILines = overlayPopupOnLines(allUILines, popup, row, col)
+		}
+	}
 
 	// Join all lines - no bare newlines, all fully styled
 	return strings.Join(allUILines, "\n")
@@ -1027,49 +1032,151 @@ func (m Model) getLineReferences(lineNum int) []components.VarReference {
 	return components.FindLineReferences(line, knownVars, 4)
 }
 
-// renderAutocompleteDropdown renders the autocomplete suggestions as styled lines.
-func (m Model) renderAutocompleteDropdown(width int, bg lipgloss.TerminalColor) []string {
+// renderAutocompletePopup renders the autocomplete popup box.
+// Returns the popup as a styled string with border.
+func (m Model) renderAutocompletePopup() string {
 	if !m.autocompleteState.Visible || len(m.autocompleteState.Suggestions) == 0 {
-		return nil
+		return ""
 	}
 
-	style := components.DefaultAutosuggestStyle()
+	style := components.DefaultPopupStyle()
+	return components.RenderPopupBox(m.autocompleteState, style)
+}
 
-	// Show max 8 items to avoid taking too much space
-	maxItems := 8
+// calculatePopupScreenPosition computes where to place the popup on screen.
+// Returns (row, col) as screen coordinates.
+func (m Model) calculatePopupScreenPosition(contentHeight int) (row, col int) {
+	// The cursor visual position in the content area
+	visualCursorRow := m.cursorLine - m.scrollOffset
 
-	// Use the existing RenderDropdownSuggestions from components
-	dropdown := components.RenderDropdownSuggestions(m.autocompleteState, maxItems, style)
+	// Account for headers: source header (1) + globals padding if preview visible
+	headerRows := 1
+	if m.previewMode != PreviewHidden {
+		globalsHeight := 1
+		if m.globalsExpanded {
+			globalsHeight = 1 + m.getGlobalsCount()
+			if m.getGlobalsCount() == 0 {
+				globalsHeight = 2
+			}
+		}
+		globalsHeight++ // separator
+		headerRows += globalsHeight
+	}
 
-	// Split into lines and ensure each has full width with background
-	dropdownLines := strings.Split(dropdown, "\n")
-	result := make([]string, 0, len(dropdownLines)+2)
+	// Screen row for popup (below cursor)
+	row = headerRows + visualCursorRow + 1
 
-	// Add a header line
-	headerStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("252")).
-		Background(bg)
-	header := headerStyle.Render(fmt.Sprintf("Suggestions (%d)", len(m.autocompleteState.Suggestions)))
-	result = append(result, ensureFullWidth(header, width, bg))
+	// Ensure popup fits on screen
+	popupHeight := m.autocompleteState.PopupHeight + 2 // +2 for hint and border
+	if row+popupHeight > contentHeight {
+		// Place above cursor instead
+		row = headerRows + visualCursorRow - popupHeight
+		if row < headerRows {
+			row = headerRows
+		}
+	}
 
-	// Add each dropdown line
-	for _, line := range dropdownLines {
-		if line == "" {
+	// Column: align with cursor, adjusted for line number gutter
+	gutterWidth := 5 // "  N→" format
+	col = gutterWidth + m.cursorCol
+
+	// Ensure popup doesn't go off right edge
+	leftWidth, _ := m.GetPaneWidths(m.width)
+	if col+m.autocompleteState.PopupWidth > leftWidth {
+		col = leftWidth - m.autocompleteState.PopupWidth
+	}
+	if col < gutterWidth {
+		col = gutterWidth
+	}
+
+	return row, col
+}
+
+// overlayPopupOnLines overlays the popup at the given position on the UI lines.
+// This is a pure function that composites the popup onto the rendered output.
+func overlayPopupOnLines(lines []string, popup string, row, col int) []string {
+	if popup == "" {
+		return lines
+	}
+
+	popupLines := strings.Split(popup, "\n")
+	result := make([]string, len(lines))
+	copy(result, lines)
+
+	for i, popupLine := range popupLines {
+		targetRow := row + i
+		if targetRow < 0 || targetRow >= len(result) {
 			continue
 		}
-		result = append(result, ensureFullWidth(line, width, bg))
+
+		// Get the base line and overlay the popup
+		baseLine := result[targetRow]
+		result[targetRow] = overlayStringAt(baseLine, popupLine, col)
 	}
 
-	// Add a hint line
-	hintStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
-		Background(bg).
-		Italic(true)
-	hint := hintStyle.Render("Tab/Enter: accept | Esc: cancel | Up/Down: navigate")
-	result = append(result, ensureFullWidth(hint, width, bg))
-
 	return result
+}
+
+// overlayStringAt overlays overlay on base starting at column col.
+// Handles ANSI escape codes properly.
+func overlayStringAt(base, overlay string, col int) string {
+	// Convert to runes for proper unicode handling
+	baseRunes := []rune(base)
+	overlayRunes := []rune(overlay)
+
+	// Build result: base up to col, then overlay, then rest of base
+	var result []rune
+
+	// Copy base characters up to col
+	visualCol := 0
+	baseIdx := 0
+	for baseIdx < len(baseRunes) && visualCol < col {
+		r := baseRunes[baseIdx]
+		result = append(result, r)
+		// Skip ANSI escape sequences in width calculation
+		if r == '\x1b' {
+			// Find end of escape sequence
+			for baseIdx < len(baseRunes)-1 && baseRunes[baseIdx] != 'm' {
+				baseIdx++
+				result = append(result, baseRunes[baseIdx])
+			}
+		} else {
+			visualCol++
+		}
+		baseIdx++
+	}
+
+	// Pad with spaces if base is shorter than col
+	for visualCol < col {
+		result = append(result, ' ')
+		visualCol++
+	}
+
+	// Append the overlay
+	result = append(result, overlayRunes...)
+
+	// Skip the overlaid portion of base
+	overlayWidth := len(overlayRunes) // Approximate - good enough for now
+	for baseIdx < len(baseRunes) && overlayWidth > 0 {
+		r := baseRunes[baseIdx]
+		if r == '\x1b' {
+			// Keep escape sequences
+			for baseIdx < len(baseRunes) && baseRunes[baseIdx] != 'm' {
+				baseIdx++
+			}
+			baseIdx++
+		} else {
+			overlayWidth--
+			baseIdx++
+		}
+	}
+
+	// Append rest of base
+	if baseIdx < len(baseRunes) {
+		result = append(result, baseRunes[baseIdx:]...)
+	}
+
+	return string(result)
 }
 
 // extractErrorHint extracts a brief hint from an error message for inline display.

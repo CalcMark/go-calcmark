@@ -1,5 +1,5 @@
 # Test autocomplete functionality
-# Verifies: Tab triggers autocomplete, Up/Down navigate, Tab accepts, Esc dismisses
+# New behavior: popup appears automatically as you type, TAB accepts first/selected suggestion
 
 # Initial state - cursor at line 0, col 0, normal mode
 run observe=debug
@@ -7,10 +7,9 @@ run observe=debug
 -- debug:
 mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
-# Type "av" then press Tab to trigger autocomplete
+# Type "av" - autocomplete popup should appear automatically
 run observe=debug
 type av
-key tab
 ----
 -- debug:
 mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
@@ -29,6 +28,23 @@ key up
 -- debug:
 mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
+# Press Tab to accept the selected suggestion
+run observe=debug
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Clear and test Escape to dismiss
+run observe=debug
+key backspace
+key backspace
+key backspace
+type av
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
 # Press Escape to dismiss autocomplete without accepting
 run observe=debug
 key esc
@@ -36,13 +52,9 @@ key esc
 -- debug:
 mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
-# Type more and trigger autocomplete again, then accept with Tab
+# Test typing continues normally while popup is visible
 run observe=debug
-key backspace
-key backspace
-type av
-key tab
-key tab
+type g
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

@@ -182,8 +182,8 @@ type Model struct {
 	alignedCacheWidths [2]int          // [sourceWidth, previewWidth] used for cache
 
 	// Autocomplete state
-	autocompleteState  components.AutosuggestState
-	suggestionSource   components.SuggestionSource
+	autocompleteState components.AutosuggestState
+	suggestionSource  components.SuggestionSource
 }
 
 // New creates a new editor model with an optional document.
@@ -503,6 +503,9 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 	for _, r := range runes {
 		m.insertRune(r)
 	}
+
+	// Check for autocomplete suggestions after typing (use pointer to modify)
+	(&m).updateAutocompleteState()
 
 	return m.debounceUpdate()
 }
@@ -2206,7 +2209,8 @@ func (m *Model) adjustScroll() {
 // Autocomplete functions
 // ========================================
 
-// handleAutocompleteKey processes keys when autocomplete dropdown is active.
+// handleAutocompleteKey processes keys when autocomplete popup is visible.
+// IMPORTANT: Typing continues to work normally - we just update suggestions.
 func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
@@ -2224,39 +2228,129 @@ func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = StateDefault
 		m.autocompleteState = components.AutosuggestState{}
 		return m, nil
-	case tea.KeyTab, tea.KeyEnter:
+	case tea.KeyTab:
 		// Accept current selection
 		return m.acceptAutocomplete()
-	default:
-		// Any other key dismisses autocomplete and processes normally
+	case tea.KeyRunes:
+		// Continue typing - insert characters and update suggestions
+		m.transitionToEditing()
+		for _, r := range msg.Runes {
+			m.insertRune(r)
+		}
+		// Update suggestions with new prefix (use pointer to modify)
+		(&m).updateAutocompleteState()
+		return m.debounceUpdate()
+	case tea.KeyBackspace:
+		// Allow backspace to edit the prefix
+		m.transitionToEditing()
+		if m.cursorCol > 0 {
+			m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
+			m.cursorCol--
+		}
+		// Update suggestions with new prefix (use pointer to modify)
+		(&m).updateAutocompleteState()
+		return m.debounceUpdate()
+	case tea.KeySpace:
+		// Space typically ends a word - dismiss and insert space
 		m.mode = StateDefault
 		m.autocompleteState = components.AutosuggestState{}
-		// Fall through to normal handling
+		return m.handleSpaceKey()
+	case tea.KeyEnter:
+		// Enter accepts if there's a selection, otherwise just inserts newline
+		if len(m.autocompleteState.Suggestions) > 0 {
+			return m.acceptAutocomplete()
+		}
+		m.mode = StateDefault
+		m.autocompleteState = components.AutosuggestState{}
+		return m.handleEnterKey()
+	default:
+		// Navigation and other keys dismiss autocomplete
+		m.mode = StateDefault
+		m.autocompleteState = components.AutosuggestState{}
 		return m.handleDefaultKey(msg)
 	}
 }
 
-// triggerAutocomplete initiates autocomplete mode.
+// triggerAutocomplete initiates autocomplete mode (called explicitly by TAB).
 func (m Model) triggerAutocomplete() (tea.Model, tea.Cmd) {
+	(&m).updateAutocompleteState()
+	return m, nil
+}
+
+// updateAutocompleteState checks for suggestions at current prefix and updates popup state.
+// This is called after every character typed to show/hide the popup automatically.
+// Uses pointer receiver because it modifies mode and autocompleteState.
+func (m *Model) updateAutocompleteState() {
 	// Extract word prefix at cursor position
 	prefix := m.getCurrentWordPrefix()
+
+	// No prefix - dismiss any visible popup
 	if prefix == "" {
-		return m, nil
+		if m.mode == StateAutocomplete {
+			m.mode = StateDefault
+			m.autocompleteState = components.AutosuggestState{}
+		}
+		return
+	}
+
+	// Check if we have a suggestion source
+	if m.suggestionSource == nil {
+		return
 	}
 
 	suggestions := m.suggestionSource.GetSuggestions(prefix)
+
+	// No suggestions - dismiss popup if visible
 	if len(suggestions) == 0 {
-		return m, nil
+		if m.mode == StateAutocomplete {
+			m.mode = StateDefault
+			m.autocompleteState = components.AutosuggestState{}
+		}
+		return
 	}
 
+	// Calculate popup position based on cursor
+	popupWidth, popupHeight := m.calculatePopupDimensions(suggestions)
+
+	// We have suggestions - show/update the popup
 	m.mode = StateAutocomplete
 	m.autocompleteState = components.AutosuggestState{
 		Suggestions: suggestions,
 		Selected:    0,
 		Visible:     true,
 		Prefix:      prefix,
+		PopupWidth:  popupWidth,
+		PopupHeight: popupHeight,
 	}
-	return m, nil
+}
+
+// calculatePopupDimensions determines the popup size based on suggestions.
+func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (width, height int) {
+	// Calculate width based on longest suggestion
+	width = 25 // minimum width
+	for _, s := range suggestions {
+		w := len(s.Name)
+		if s.Description != "" {
+			w += 1 + len(s.Description)
+		}
+		if w+4 > width { // +4 for padding and selection indicator
+			width = w + 4
+		}
+	}
+
+	// Cap at reasonable max
+	maxWidth := m.width / 2
+	if width > maxWidth {
+		width = maxWidth
+	}
+
+	// Height is number of items, capped at 8
+	height = len(suggestions)
+	if height > 8 {
+		height = 8
+	}
+
+	return width, height
 }
 
 // getCurrentWordPrefix extracts the word being typed at cursor.

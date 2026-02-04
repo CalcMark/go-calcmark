@@ -201,16 +201,21 @@ b = 2`
 	m.width = 80
 	m.height = 24
 
-	// Enter edit mode on line 0
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	// Type a character that won't trigger autocomplete (punctuation)
+	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'#'}})
 	m = result.(Model)
 
-	// Navigate down to line 1
+	// Navigate down to line 1 (ensure we're in StateDefault for navigation)
+	if m.mode != StateDefault {
+		// Dismiss any autocomplete that may have been triggered
+		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+		m = result.(Model)
+	}
 	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	m = result.(Model)
 
 	if m.cursorLine != 1 || m.mode != StateDefault {
-		t.Fatalf("Expected line 1 in edit mode, got line %d mode %v", m.cursorLine, m.mode)
+		t.Fatalf("Expected line 1 in default mode, got line %d mode %v", m.cursorLine, m.mode)
 	}
 
 	t.Logf("On line 1: editBuf=%q", m.editBuf)
