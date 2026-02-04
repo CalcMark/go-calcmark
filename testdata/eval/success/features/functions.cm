@@ -18,6 +18,12 @@ square root of 2
 
 ## Functions with Expressions
 
+x = 10
+y = 20
+z = 30
+a = 5
+b = 4
+
 avg(x, y, z)
 avg(10 + 5, 20 * 2, 30 - 10)
 sqrt(x + y)

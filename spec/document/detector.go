@@ -256,6 +256,11 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 		return true
 	}
 
+	// Function call (built-in functions like avg, sqrt)
+	if isFunctionToken(first.Type) {
+		return true
+	}
+
 	// Boolean literal
 	if first.Type == lexer.BOOLEAN {
 		return true
@@ -343,6 +348,16 @@ func isOperatorToken(t lexer.TokenType) bool {
 func isKeywordToken(t lexer.TokenType) bool {
 	switch t {
 	case lexer.AS, lexer.FROM, lexer.IN, lexer.OF, lexer.PER, lexer.OVER, lexer.WITH:
+		return true
+	}
+	return false
+}
+
+// isFunctionToken checks if a token type is a built-in function.
+// Pure function.
+func isFunctionToken(t lexer.TokenType) bool {
+	switch t {
+	case lexer.FUNC_AVG, lexer.FUNC_SQRT, lexer.FUNC_AVERAGE_OF, lexer.FUNC_SQUARE_ROOT_OF:
 		return true
 	}
 	return false
