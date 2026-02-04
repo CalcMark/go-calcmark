@@ -1067,7 +1067,13 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}
 
 		// Otherwise it's just a variable reference
-		return &ast.Identifier{Name: string(name.Value)}, nil
+		return &ast.Identifier{
+			Name: string(name.Value),
+			Range: &ast.Range{
+				Start: ast.Position{Line: name.Line, Column: name.Column},
+				End:   ast.Position{Line: name.Line, Column: name.Column + len(name.Value)},
+			},
+		}, nil
 	}
 
 	// Number followed by identifier/unit: "100 meters", "5 kg"

@@ -819,12 +819,24 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	isActuallyCalc, _ := detector.IsCalculation(r.Source)
 
 	if r.Error != "" && isActuallyCalc {
-		// Show brief error indicator inline - detailed error shown in context footer
+		// Show error indicator with truncated message inline
 		errStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("208")) // amber
 
-		// Just show a brief indicator - the context footer has the details
-		return errStyle.Render("⚠ error")
+		// Extract user-friendly message (skip error code prefix like "undefined_variable: ")
+		errMsg := r.Error
+		if idx := strings.Index(errMsg, ": "); idx > 0 && idx < 30 {
+			errMsg = errMsg[idx+2:]
+		}
+		// Truncate to fit in available width, leaving room for "⚠ " prefix
+		maxLen := width - 3
+		if maxLen < 10 {
+			maxLen = 10
+		}
+		if len(errMsg) > maxLen {
+			errMsg = errMsg[:maxLen-3] + "..."
+		}
+		return errStyle.Render("⚠ " + errMsg)
 	}
 
 	if !isActuallyCalc {
