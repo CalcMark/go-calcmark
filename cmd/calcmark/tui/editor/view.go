@@ -156,6 +156,12 @@ func (m Model) View() string {
 		contextFooterBg = m.sourcePaneBg() // Fallback
 	}
 
+	// If autocomplete is active, render the dropdown
+	if m.mode == StateAutocomplete && m.autocompleteState.Visible {
+		dropdownLines := m.renderAutocompleteDropdown(totalWidth, contextFooterBg)
+		allUILines = append(allUILines, dropdownLines...)
+	}
+
 	// Empty line with background (use context footer background for transition)
 	emptyLine := components.StyledPadding(totalWidth, contextFooterBg)
 	allUILines = append(allUILines, emptyLine)
@@ -1018,4 +1024,49 @@ func (m Model) getLineReferences(lineNum int) []components.VarReference {
 	}
 
 	return components.FindLineReferences(line, knownVars, 4)
+}
+
+// renderAutocompleteDropdown renders the autocomplete suggestions as styled lines.
+func (m Model) renderAutocompleteDropdown(width int, bg lipgloss.TerminalColor) []string {
+	if !m.autocompleteState.Visible || len(m.autocompleteState.Suggestions) == 0 {
+		return nil
+	}
+
+	style := components.DefaultAutosuggestStyle()
+
+	// Show max 8 items to avoid taking too much space
+	maxItems := 8
+
+	// Use the existing RenderDropdownSuggestions from components
+	dropdown := components.RenderDropdownSuggestions(m.autocompleteState, maxItems, style)
+
+	// Split into lines and ensure each has full width with background
+	dropdownLines := strings.Split(dropdown, "\n")
+	result := make([]string, 0, len(dropdownLines)+2)
+
+	// Add a header line
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("252")).
+		Background(bg)
+	header := headerStyle.Render(fmt.Sprintf("Suggestions (%d)", len(m.autocompleteState.Suggestions)))
+	result = append(result, ensureFullWidth(header, width, bg))
+
+	// Add each dropdown line
+	for _, line := range dropdownLines {
+		if line == "" {
+			continue
+		}
+		result = append(result, ensureFullWidth(line, width, bg))
+	}
+
+	// Add a hint line
+	hintStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Background(bg).
+		Italic(true)
+	hint := hintStyle.Render("Tab/Enter: accept | Esc: cancel | Up/Down: navigate")
+	result = append(result, ensureFullWidth(hint, width, bg))
+
+	return result
 }

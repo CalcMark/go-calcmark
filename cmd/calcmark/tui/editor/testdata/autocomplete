@@ -1,0 +1,48 @@
+# Test autocomplete functionality
+# Verifies: Tab triggers autocomplete, Up/Down navigate, Tab accepts, Esc dismisses
+
+# Initial state - cursor at line 0, col 0, normal mode
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type "av" then press Tab to trigger autocomplete
+run observe=debug
+type av
+key tab
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Down to navigate to next suggestion
+run observe=debug
+key down
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Up to navigate back
+run observe=debug
+key up
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Escape to dismiss autocomplete without accepting
+run observe=debug
+key esc
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type more and trigger autocomplete again, then accept with Tab
+run observe=debug
+key backspace
+key backspace
+type av
+key tab
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
