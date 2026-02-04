@@ -1,74 +1,9 @@
 package interpreter
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"sort"
-	"strings"
 	"testing"
 )
-
-// TestRegistryMatchesFunctions verifies that every function name in the
-// evalFunctionCall switch statement has a corresponding registry entry.
-// This prevents registry drift from the implementation.
-func TestRegistryMatchesFunctions(t *testing.T) {
-	// Parse functions.go to extract function names from switch cases
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "functions.go", nil, 0)
-	if err != nil {
-		t.Fatalf("failed to parse functions.go: %v", err)
-	}
-
-	// Find all string literals in case clauses (function names)
-	implementedFuncs := make(map[string]bool)
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.CaseClause:
-			for _, expr := range x.List {
-				if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					// Remove quotes from string literal
-					funcName := strings.Trim(lit.Value, `"`)
-					implementedFuncs[funcName] = true
-				}
-			}
-		}
-		return true
-	})
-
-	// Also check for special case handling at the top of evalFunctionCall
-	// These are handled before the switch: convert_rate, downtime, rtt, throughput, transfer_time, read, seek, compress, capacity
-	specialCases := []string{
-		"convert_rate", "downtime", "rtt", "throughput", "transfer_time",
-		"read", "seek", "compress", "capacity",
-	}
-	for _, name := range specialCases {
-		implementedFuncs[name] = true
-	}
-
-	// Get all registered function names including synonyms
-	registeredFuncs := make(map[string]bool)
-	for _, fn := range FunctionRegistry {
-		registeredFuncs[fn.Name] = true
-		for _, synonym := range fn.Synonyms {
-			registeredFuncs[synonym] = true
-		}
-	}
-
-	// Check that every implemented function is in the registry
-	for funcName := range implementedFuncs {
-		if !registeredFuncs[funcName] {
-			t.Errorf("function %q is implemented but not in registry", funcName)
-		}
-	}
-
-	// Check that every registered function is implemented
-	for funcName := range registeredFuncs {
-		if !implementedFuncs[funcName] {
-			t.Errorf("function %q is in registry but not implemented", funcName)
-		}
-	}
-}
 
 // TestGetAllFunctionsSorted verifies that GetAllFunctions returns
 // functions in alphabetical order by name.
@@ -90,21 +25,24 @@ func TestGetAllFunctionsSorted(t *testing.T) {
 	}
 }
 
-// TestFunctionInfoComplete verifies all FunctionInfo have non-empty
-// Name, Description, and Signature fields.
+// TestFunctionInfoComplete verifies all FunctionDef in BuiltinFunctions have non-empty
+// Name, Description, Signature, Category, and Eval fields.
 func TestFunctionInfoComplete(t *testing.T) {
-	for _, fn := range FunctionRegistry {
+	for _, fn := range BuiltinFunctions {
 		if fn.Name == "" {
-			t.Error("FunctionInfo has empty Name")
+			t.Error("FunctionDef has empty Name")
 		}
 		if fn.Description == "" {
-			t.Errorf("FunctionInfo %q has empty Description", fn.Name)
+			t.Errorf("FunctionDef %q has empty Description", fn.Name)
 		}
 		if fn.Signature == "" {
-			t.Errorf("FunctionInfo %q has empty Signature", fn.Name)
+			t.Errorf("FunctionDef %q has empty Signature", fn.Name)
 		}
 		if fn.Category == "" {
-			t.Errorf("FunctionInfo %q has empty Category", fn.Name)
+			t.Errorf("FunctionDef %q has empty Category", fn.Name)
+		}
+		if fn.Eval == nil {
+			t.Errorf("FunctionDef %q has nil Eval", fn.Name)
 		}
 	}
 }
@@ -148,5 +86,79 @@ func TestRegistryFunctionCount(t *testing.T) {
 	expectedCount := 12
 	if len(functions) != expectedCount {
 		t.Errorf("expected %d functions, got %d", expectedCount, len(functions))
+	}
+}
+
+// TestGetFunctionByName verifies lookup by name and synonym.
+func TestGetFunctionByName(t *testing.T) {
+	tests := []struct {
+		name     string
+		lookup   string
+		found    bool
+		expected string // expected Name field if found
+	}{
+		{"primary name", "avg", true, "avg"},
+		{"synonym average", "average", true, "avg"},
+		{"synonym mean", "mean", true, "avg"},
+		{"sqrt", "sqrt", true, "sqrt"},
+		{"unknown", "unknown", false, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, found := GetFunctionByName(tt.lookup)
+			if found != tt.found {
+				t.Errorf("GetFunctionByName(%q): found = %v, want %v", tt.lookup, found, tt.found)
+			}
+			if tt.found && info.Name != tt.expected {
+				t.Errorf("GetFunctionByName(%q): Name = %q, want %q", tt.lookup, info.Name, tt.expected)
+			}
+		})
+	}
+}
+
+// TestAvgHasMeanSynonym verifies that "mean" is a synonym for avg (required for SC4).
+func TestAvgHasMeanSynonym(t *testing.T) {
+	info, found := GetFunctionByName("mean")
+	if !found {
+		t.Fatal("expected 'mean' to be a synonym for avg, but not found")
+	}
+	if info.Name != "avg" {
+		t.Errorf("expected 'mean' to resolve to 'avg', got %q", info.Name)
+	}
+}
+
+// TestGetFunctionNames verifies all names including synonyms are returned.
+func TestGetFunctionNames(t *testing.T) {
+	names := GetFunctionNames()
+
+	// Should include primary names
+	expectedPrimary := []string{"avg", "sqrt", "accumulate", "convert_rate", "downtime", "rtt", "throughput", "transfer_time", "read", "seek", "compress", "capacity"}
+	for _, name := range expectedPrimary {
+		found := false
+		for _, n := range names {
+			if n == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected primary name %q in GetFunctionNames result", name)
+		}
+	}
+
+	// Should include synonyms
+	expectedSynonyms := []string{"average", "mean"}
+	for _, syn := range expectedSynonyms {
+		found := false
+		for _, n := range names {
+			if n == syn {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected synonym %q in GetFunctionNames result", syn)
+		}
 	}
 }

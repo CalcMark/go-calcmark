@@ -5,127 +5,46 @@ import (
 )
 
 // FunctionInfo contains metadata about a CalcMark function for help output.
+// This is derived from FunctionDef but excludes the Eval function pointer.
 type FunctionInfo struct {
 	Name        string   // Primary function name (e.g., "avg")
-	Synonyms    []string // Alternative names (e.g., ["average"])
+	Synonyms    []string // Alternative names (e.g., ["average", "mean"])
 	Description string   // Human-readable description
 	Signature   string   // Usage pattern (e.g., "avg(value1, value2, ...)")
 	Category    string   // Grouping for help display (e.g., "Math", "Network", "Storage")
 }
 
-// FunctionRegistry contains metadata for all CalcMark functions.
-// This is the single source of truth for help output.
-var FunctionRegistry = []FunctionInfo{
-	// Math functions
-	{
-		Name:        "avg",
-		Synonyms:    []string{"average"},
-		Description: "Calculate the average of numbers",
-		Signature:   "avg(value1, value2, ...)",
-		Category:    "Math",
-	},
-	{
-		Name:        "sqrt",
-		Synonyms:    []string{},
-		Description: "Calculate square root of a number",
-		Signature:   "sqrt(value)",
-		Category:    "Math",
-	},
-	{
-		Name:        "accumulate",
-		Synonyms:    []string{},
-		Description: "Accumulate a rate over time (e.g., requests/sec over 1 day)",
-		Signature:   "accumulate(rate, time_period)",
-		Category:    "Math",
-	},
-
-	// Conversion functions
-	{
-		Name:        "convert_rate",
-		Synonyms:    []string{},
-		Description: "Convert rate to different time unit",
-		Signature:   "convert_rate(rate, time_unit)",
-		Category:    "Conversion",
-	},
-
-	// Network functions
-	{
-		Name:        "downtime",
-		Synonyms:    []string{},
-		Description: "Calculate downtime from availability percentage",
-		Signature:   "downtime(availability_percent, time_period)",
-		Category:    "Network",
-	},
-	{
-		Name:        "rtt",
-		Synonyms:    []string{},
-		Description: "Get round-trip time for network scope",
-		Signature:   "rtt(scope)",
-		Category:    "Network",
-	},
-	{
-		Name:        "throughput",
-		Synonyms:    []string{},
-		Description: "Get throughput for network type",
-		Signature:   "throughput(network_type)",
-		Category:    "Network",
-	},
-	{
-		Name:        "transfer_time",
-		Synonyms:    []string{},
-		Description: "Calculate data transfer time",
-		Signature:   "transfer_time(size, scope, network_type)",
-		Category:    "Network",
-	},
-
-	// Storage functions
-	{
-		Name:        "read",
-		Synonyms:    []string{},
-		Description: "Calculate storage read time",
-		Signature:   "read(size, storage_type)",
-		Category:    "Storage",
-	},
-	{
-		Name:        "seek",
-		Synonyms:    []string{},
-		Description: "Get storage seek latency",
-		Signature:   "seek(storage_type)",
-		Category:    "Storage",
-	},
-	{
-		Name:        "compress",
-		Synonyms:    []string{},
-		Description: "Calculate compression time",
-		Signature:   "compress(size, compression_type)",
-		Category:    "Storage",
-	},
-
-	// Capacity functions
-	{
-		Name:        "capacity",
-		Synonyms:    []string{},
-		Description: "Calculate required capacity for demand",
-		Signature:   "capacity(demand, capacity_per_unit, unit, buffer?)",
-		Category:    "Capacity",
-	},
+// toFunctionInfo converts a FunctionDef to FunctionInfo by excluding the Eval field.
+func toFunctionInfo(fn FunctionDef) FunctionInfo {
+	return FunctionInfo{
+		Name:        fn.Name,
+		Synonyms:    fn.Synonyms,
+		Description: fn.Description,
+		Signature:   fn.Signature,
+		Category:    fn.Category,
+	}
 }
 
 // GetAllFunctions returns all registered functions sorted by name.
+// Reads from BuiltinFunctions (single source of truth).
 func GetAllFunctions() []FunctionInfo {
-	sorted := make([]FunctionInfo, len(FunctionRegistry))
-	copy(sorted, FunctionRegistry)
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Name < sorted[j].Name
+	result := make([]FunctionInfo, len(BuiltinFunctions))
+	for i, fn := range BuiltinFunctions {
+		result[i] = toFunctionInfo(fn)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
 	})
-	return sorted
+	return result
 }
 
 // GetFunctionsByCategory returns functions grouped by category.
+// Reads from BuiltinFunctions (single source of truth).
 func GetFunctionsByCategory() map[string][]FunctionInfo {
 	result := make(map[string][]FunctionInfo)
-	for _, fn := range FunctionRegistry {
-		result[fn.Category] = append(result[fn.Category], fn)
+	for _, fn := range BuiltinFunctions {
+		info := toFunctionInfo(fn)
+		result[info.Category] = append(result[info.Category], info)
 	}
 	// Sort functions within each category
 	for category := range result {
@@ -137,12 +56,28 @@ func GetFunctionsByCategory() map[string][]FunctionInfo {
 }
 
 // GetFunctionNames returns all function names including synonyms.
-// This is used for validation tests to ensure registry matches implementation.
+// Reads from BuiltinFunctions (single source of truth).
 func GetFunctionNames() []string {
-	names := make([]string, 0, len(FunctionRegistry)*2)
-	for _, fn := range FunctionRegistry {
+	names := make([]string, 0, len(BuiltinFunctions)*2)
+	for _, fn := range BuiltinFunctions {
 		names = append(names, fn.Name)
 		names = append(names, fn.Synonyms...)
 	}
 	return names
+}
+
+// GetFunctionByName looks up a function by name or synonym.
+// Returns the FunctionInfo and true if found, or empty FunctionInfo and false if not.
+func GetFunctionByName(name string) (FunctionInfo, bool) {
+	for _, fn := range BuiltinFunctions {
+		if fn.Name == name {
+			return toFunctionInfo(fn), true
+		}
+		for _, syn := range fn.Synonyms {
+			if syn == name {
+				return toFunctionInfo(fn), true
+			}
+		}
+	}
+	return FunctionInfo{}, false
 }
