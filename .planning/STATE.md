@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 7 of 8 (Distribution)
-Plan: 1 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-04 - Completed 07-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 - Completed 07-02-PLAN.md
 
-Progress: [████████████████████] 90% (18/20 plans)
+Progress: [████████████████████] 95% (19/20 plans)
 
 ## Performance Metrics
 
@@ -33,10 +33,10 @@ Progress: [████████████████████] 90% (18
 | 4. TUI Test Coverage | 3/3 | 15min | 5min |
 | 5. Help System | 2/2 | 19min | 9.5min |
 | 6. Differentiators | 2/2 | 57min | 28.5min |
-| 7. Distribution | 1/3 | 5min | 5min |
+| 7. Distribution | 2/2 | 13min | 6.5min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (4min), 05-02 (15min), 06-01 (12min), 06-02 (45min), 07-01 (5min)
+- Last 5 plans: 05-02 (15min), 06-01 (12min), 06-02 (45min), 07-01 (5min), 07-02 (8min)
 - Trend: Infrastructure tasks are fast; feature development takes longer
 
 *Updated after each plan completion*
@@ -91,6 +91,8 @@ Recent decisions affecting current work:
 - 06-01: "mean" added as synonym for avg (needed for SC4 autocomplete)
 - 07-01: Use GoReleaser v2 with brews section (brews is still correct for CLI formulas; homebrew_casks is for GUI apps)
 - 07-01: WASM infrastructure removed -- no longer needed, simplifies build and CI
+- 07-02: Correct Homebrew tap syntax is `calcmark/tap/calcmark` (lowercase org name)
+- 07-02: 7 active DIST requirements after removing WASM/Scoop/man pages/bundled completions (DIST-06 through DIST-10 removed)
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -133,18 +135,22 @@ Benefits achieved:
 **GoReleaser setup (COMPLETED 2026-02-04):**
 - `.goreleaser.yaml` configured for 7 platform builds
 - GitHub Actions workflow uses goreleaser/goreleaser-action@v6
-- Homebrew formula generation configured for CalcMark/homebrew-tap
+- Homebrew formula generation configured for calcmark/homebrew-tap
 - WASM infrastructure removed (impl/wasm/, release.sh, Taskfile tasks)
+- Local snapshot builds validated for all 7 platforms
+- Planning docs updated: ROADMAP.md and REQUIREMENTS.md reflect final scope
 
-**Next steps:**
-- Plan 02: Create CalcMark/homebrew-tap repository
-- Plan 03: Create CHANGELOG.md
+**User setup required before first release:**
+- Create `calcmark/homebrew-tap` repository on GitHub (public)
+- Create PAT with 'repo' scope
+- Add `HOMEBREW_TAP_GITHUB_TOKEN` secret to go-calcmark repo
 
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 07-01-PLAN.md
+Stopped at: Completed 07-02-PLAN.md (Phase 7 complete)
 Resume file: None
 
-### Phase 7 Progress (2026-02-04) - IN PROGRESS
+### Phase 7 Progress (2026-02-04) - COMPLETE
 - 07-01: GoReleaser configuration, WASM removal, release workflow update
+- 07-02: Local validation, ROADMAP/REQUIREMENTS updates, release readiness verified
