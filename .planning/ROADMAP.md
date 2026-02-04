@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: TUI Editor Integration** - Cursor, scrolling, model integration, live evaluation
 - [x] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
 - [x] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
-- [ ] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
+- [x] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
 - [ ] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew, Scoop, WASM
 - [ ] **Phase 8: Documentation** - README, examples, generated references, screenshots
 
@@ -117,8 +117,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Function metadata refactor, fix function display bug, YAML error messages
-- [ ] 06-02-PLAN.md -- TUI autocomplete engine (functions, units, variables) and popup rendering
+- [x] 06-01-PLAN.md -- Function metadata refactor, fix function display bug, YAML error messages
+- [x] 06-02-PLAN.md -- TUI autocomplete engine (functions, units, variables) and popup rendering
 
 ### Phase 7: Distribution
 **Goal**: Users can install CalcMark on macOS, Linux, and Windows via a single command or prebuilt binary download, with all release artifacts signed and verified
@@ -166,7 +166,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. TUI Editor Integration | 5/5 | Complete | 2026-02-03 |
 | 4. TUI Test Coverage | 3/3 | Complete | 2026-02-03 |
 | 5. Help System | 2/2 | Complete | 2026-02-03 |
-| 6. Differentiators | 0/2 | Ready | - |
+| 6. Differentiators | 2/2 | Complete | 2026-02-04 |
 | 7. Distribution | 0/3 | Not started | - |
 | 8. Documentation | 0/3 | Not started | - |
 
