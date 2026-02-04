@@ -2,7 +2,6 @@ version: '3'
 
 vars:
   BINARY_NAME: cm
-  WASM_BINARY: calcmark.wasm
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo "dev"
   BUILD_TIME:
@@ -17,14 +16,9 @@ tasks:
 
   # Testing tasks
   test:
-    desc: Run all tests (excludes WASM - use test:wasm for those)
+    desc: Run all tests
     cmds:
-      - go test $(go list ./... 2>/dev/null | grep -v '/impl/wasm') -v
-
-  test:wasm:
-    desc: Run WASM tests (requires wasm build environment)
-    cmds:
-      - GOOS=js GOARCH=wasm go test ./impl/wasm/... -v
+      - go test ./... -v
 
   test:short:
     desc: Run tests in short mode
@@ -105,24 +99,6 @@ tasks:
       - GOOS=windows GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o dist/{{.BINARY_NAME}}-windows-amd64.exe ./cmd/calcmark
       - echo 'Built Windows binary'
 
-  # WASM build tasks
-  build:wasm:
-    desc: Build WASM binary
-    cmds:
-      - mkdir -p dist
-      - GOOS=js GOARCH=wasm go build -tags wasm -ldflags "{{.LDFLAGS}}" -o dist/{{.WASM_BINARY}} ./cmd/calcmark
-      - cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" dist/
-      - echo 'Built WASM binary'
-      - ls -lh dist/{{.WASM_BINARY}}
-
-  build:wasm:tiny:
-    internal: true
-    cmds:
-      - mkdir -p dist
-      - tinygo build -o dist/{{.WASM_BINARY}} -target wasm -no-debug ./cmd/calcmark
-      - echo 'Built TinyGo WASM binary'
-      - ls -lh dist/{{.WASM_BINARY}}
-
   # Development tasks
   dev:
     desc: Run in development mode
@@ -144,24 +120,24 @@ tasks:
     desc: Run basic linters (fmt, vet)
     cmds:
       - go fmt ./...
-      - go vet $(go list ./... | grep -v '/impl/wasm')
+      - go vet ./...
       - echo '✓ Basic linting passed'
 
   vet:
-    desc: Run go vet with verbose output (excludes WASM)
+    desc: Run go vet with verbose output
     cmds:
-      - go vet -v $(go list ./... | grep -v '/impl/wasm')
+      - go vet -v ./...
 
   modernize:
     desc: Run Go modernize analyzer (suggests modern Go idioms)
     cmds:
-      - go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest $(go list ./... | grep -v '/impl/wasm')
+      - go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest ./...
       - echo '✓ Modernize check passed'
 
   staticcheck:
     desc: Run staticcheck (uses go run, no global install needed)
     cmds:
-      - go run honnef.co/go/tools/cmd/staticcheck@latest $(go list ./... | grep -v '/impl/wasm')
+      - go run honnef.co/go/tools/cmd/staticcheck@latest ./...
       - echo '✓ Staticcheck passed'
 
   lint:strict:
@@ -269,6 +245,5 @@ tasks:
       - security      # Security tests must pass
     cmds:
       - task: build:all
-      - task: build:wasm
       - echo '✓ All quality checks passed'
       - echo 'Release binaries built in dist/'
