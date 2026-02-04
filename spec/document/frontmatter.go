@@ -158,7 +158,7 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	// First, parse into a generic map to check for unknown keys
 	var rawMap map[string]any
 	if err := yaml.Unmarshal([]byte(yamlContent), &rawMap); err != nil {
-		return nil, "", fmt.Errorf("invalid frontmatter YAML: %w", err)
+		return nil, "", formatYAMLError(err)
 	}
 
 	// Validate that all top-level keys are reserved
@@ -171,7 +171,7 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	// Now parse into typed struct
 	var raw frontmatterYAML
 	if err := yaml.Unmarshal([]byte(yamlContent), &raw); err != nil {
-		return nil, "", fmt.Errorf("invalid frontmatter YAML: %w", err)
+		return nil, "", formatYAMLError(err)
 	}
 
 	// Convert to Frontmatter with decimal values
@@ -271,4 +271,34 @@ func (f *Frontmatter) Serialize() string {
 
 	sb.WriteString("---\n\n") // Blank line after frontmatter for CommonMark compatibility
 	return sb.String()
+}
+
+// formatYAMLError extracts line numbers from yaml.v3 errors and formats them clearly.
+// yaml.v3 provides two error types:
+// - *yaml.TypeError: structured errors with line info in Errors slice
+// - Other errors: contain "line N:" in the message string
+func formatYAMLError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check for yaml.TypeError (structured errors from type mismatches)
+	if typeErr, ok := err.(*yaml.TypeError); ok {
+		// TypeError.Errors contains strings like "line 2: cannot unmarshal..."
+		// Join them into a single error message
+		return fmt.Errorf("frontmatter YAML error:\n  %s", strings.Join(typeErr.Errors, "\n  "))
+	}
+
+	// For other yaml errors, the message already includes "yaml: line N: ..."
+	// Extract and reformat for consistency
+	errMsg := err.Error()
+
+	// Check if it contains "yaml: line N:" pattern
+	if strings.Contains(errMsg, "yaml: line ") {
+		// The error already has line info, just reformat prefix
+		return fmt.Errorf("frontmatter YAML error: %s", strings.TrimPrefix(errMsg, "yaml: "))
+	}
+
+	// Generic fallback
+	return fmt.Errorf("invalid frontmatter YAML: %w", err)
 }

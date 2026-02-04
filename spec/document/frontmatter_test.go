@@ -618,3 +618,61 @@ func TestFrontmatter_Serialize_RoundTrip(t *testing.T) {
 		t.Errorf("tax_rate: expected 0.32, got %q", parsed.Globals["tax_rate"])
 	}
 }
+
+func TestParseFrontmatter_ErrorWithLineNumber(t *testing.T) {
+	tests := []struct {
+		name        string
+		source      string
+		wantContain string // Error message should contain this
+	}{
+		{
+			name: "unclosed bracket syntax error",
+			source: `---
+globals:
+  tax_rate: [unclosed
+---
+`,
+			wantContain: "line", // yaml error includes line number
+		},
+		{
+			name: "type mismatch",
+			source: `---
+globals:
+  tax_rate:
+    nested: value
+---
+`,
+			wantContain: "line", // TypeError includes line number
+		},
+		{
+			name: "invalid yaml colon",
+			source: `---
+globals:
+  bad key: value: extra
+---
+`,
+			wantContain: "line", // syntax error includes line number
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := ParseFrontmatter(tt.source)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			errMsg := err.Error()
+			t.Logf("Error message: %s", errMsg)
+
+			if !strings.Contains(errMsg, tt.wantContain) {
+				t.Errorf("error message should contain %q, got %q", tt.wantContain, errMsg)
+			}
+
+			// Verify the error message starts with our prefix
+			if !strings.HasPrefix(errMsg, "frontmatter YAML error") {
+				t.Errorf("error message should start with 'frontmatter YAML error', got %q", errMsg)
+			}
+		})
+	}
+}
