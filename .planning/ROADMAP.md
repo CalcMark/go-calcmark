@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: TUI Test Coverage** - Comprehensive catwalk tests, eliminate flakey video tests
 - [x] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [x] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
-- [ ] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew tap
+- [x] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew tap
 - [ ] **Phase 8: Documentation** - README, examples, generated references, screenshots
 
 ## Phase Details
