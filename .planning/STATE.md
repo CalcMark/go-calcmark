@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 8 of 8 (Documentation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 08-01-PLAN.md
+Last activity: 2026-02-05 - Completed 08-02-PLAN.md
 
-Progress: [████████████████████] 100% (20/20 plans)
+Progress: [████████████████████] 100% (21/21 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 8min
 - Total execution time: ~2.5 hours
 
@@ -95,6 +95,9 @@ Recent decisions affecting current work:
 - 07-02: 7 active DIST requirements after removing WASM/Scoop/man pages/bundled completions (DIST-06 through DIST-10 removed)
 - 08-01: Hero GIF uses cm eval workflow (not TUI) because VHS cannot capture interactive TUI apps
 - 08-01: Engineering example uses YAML front matter to demonstrate constants feature
+- 08-02: Positioned CalcMark as "calculation notepad" not "Jupyter alternative"
+- 08-02: Homebrew installation first in README, binary downloads as fallback table
+- 08-02: README shows all three use cases (TUI editor, CLI eval, convert/export) in Quick Start
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -150,11 +153,12 @@ Benefits achieved:
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
 
 ### Phase 8 Progress (2026-02-05)
 - 08-01: Visual assets and examples - three .cm files, TUI screenshot, hero GIF with VHS tape
+- 08-02: README rewrite - user-focused onboarding with hero GIF, install, quick start, examples
 
 ### Phase 7 Progress (2026-02-04) - COMPLETE
 - 07-01: GoReleaser configuration, WASM removal, release workflow update
