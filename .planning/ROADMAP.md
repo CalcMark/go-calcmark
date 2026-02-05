@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [x] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
 - [x] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew tap
-- [ ] **Phase 8: Documentation** - README, examples, generated references, screenshots
+- [ ] **Phase 8: Documentation** - README, examples, screenshots
 
 ## Phase Details
 
@@ -140,17 +140,16 @@ Plans:
 **Depends on**: Phases 1-7 (features and distribution complete, so documentation reflects final product)
 **Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04, DOCS-05, DOCS-06, DOCS-07, DOCS-08, DOCS-09, DOCS-10
 **Success Criteria** (what must be TRUE):
-  1. The README clearly explains CalcMark as "Jupyter notebooks but simpler -- human-readable .cm files with embedded calculations" with installation instructions for all three platforms
+  1. The README clearly explains CalcMark as a calculation notepad with installation instructions for all platforms
   2. The README includes a quick-start example that a user can copy-paste and run immediately
-  3. At least 3 example .cm files exist in testdata/ with verified correct calculations covering different use cases (budget, unit conversion, engineering)
-  4. Running `cm help functions` and `cm help constants` produces output that matches the generated reference documentation
+  3. At least 3 example .cm files exist in testdata/examples/ with verified correct calculations covering different use cases (budget, unit conversion, engineering)
+  4. Running `cm help functions` and `cm help constants` produces working reference output (implemented in Phase 5)
   5. The README contains at least one screenshot showing the TUI editor with source and results side by side
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 08-01: README with installation, quick start, and screenshots
-- [ ] 08-02: Example .cm files and generated reference documentation
-- [ ] 08-03: Contributing guide and CLI reference
+- [ ] 08-01-PLAN.md -- Create example files in testdata/examples/ and visual assets (screenshot, hero GIF)
+- [ ] 08-02-PLAN.md -- Rewrite README with user-focused structure (what/install/quickstart/examples)
 
 ## Progress
 
@@ -166,8 +165,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Help System | 2/2 | Complete | 2026-02-03 |
 | 6. Differentiators | 2/2 | Complete | 2026-02-04 |
 | 7. Distribution | 2/2 | Complete | 2026-02-04 |
-| 8. Documentation | 0/3 | Not started | - |
+| 8. Documentation | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-05*
