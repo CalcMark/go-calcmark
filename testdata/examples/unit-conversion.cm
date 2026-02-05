@@ -1,0 +1,14 @@
+# Unit Conversions
+
+## Distance
+marathon = 26.2 miles in km
+drive = 100 km in miles
+
+## Weight
+body_weight = 180 lbs in kg
+shipping = 5 kg in lbs
+
+## Temperature
+boiling = 100 celsius in fahrenheit
+freezing = 32 fahrenheit in celsius
+room_temp = 72 fahrenheit in celsius
