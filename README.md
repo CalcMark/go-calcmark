@@ -1,593 +1,107 @@
-# go-calcmark
+# CalcMark
 
-**Go implementation of the CalcMark calculation language.**
+**Calculations embedded in markdown documents.**
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/CalcMark/go-calcmark)](https://github.com/CalcMark/go-calcmark)
-[![Tests](https://img.shields.io/badge/tests-220%2B%20passing-brightgreen)](https://github.com/CalcMark/go-calcmark)
+![CalcMark TUI](docs/images/hero.gif)
 
-## Overview
+CalcMark is a terminal-based calculation notepad. Write your thinking in plain text, add calculations that reference each other, and watch results update as you type.
 
-CalcMark is a calculation language that blends seamlessly with markdown. This library provides the complete Go implementation with:
-
-- **Types** - Number, Currency, Boolean with arbitrary precision decimals
-- **Lexer** - Unicode-aware tokenization with reserved keywords
-- **Parser** - Recursive descent parser with operator precedence
-- **Evaluator** - Expression evaluation with context
-- **Validator** - Semantic validation with diagnostics
-- **Classifier** - Line classification (calculation vs markdown)
-
-**Version:** v0.1.1 (Phase 1 complete - Reserved keywords and multi-token functions)
+Unlike spreadsheets, CalcMark files are human-readable, diffable, and live in your terminal.
 
 ## Installation
 
-```bash
-go get github.com/CalcMark/go-calcmark
-```
-
-### Building the CLI
-
-To build and install the `calcmark` command-line tool:
+**macOS/Linux (Homebrew):**
 
 ```bash
-# From the project root
-go build -o calcmark ./impl/cmd/calcmark
-./calcmark version
-
-# Or install globally
-go install ./impl/cmd/calcmark
-calcmark version
+brew install calcmark/tap/calcmark
 ```
 
-Commands available:
+**Download binary:**
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | [calcmark_darwin_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| macOS (Intel) | [calcmark_darwin_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Linux (x64) | [calcmark_linux_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Linux (arm64) | [calcmark_linux_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Windows (x64) | [calcmark_windows_amd64.zip](https://github.com/CalcMark/go-calcmark/releases/latest) |
+
+After downloading, extract and move `cm` to a directory in your PATH.
+
+## Quick Start
+
+1. Create a file called `budget.cm`:
+
+```
+# Monthly Budget
+
+income = $5000
+rent = $1500
+savings_rate = 20%
+savings = income * savings_rate
+remaining = income - rent - savings
+```
+
+2. Open in the TUI editor:
 
 ```bash
-# Build WASM module and copy to destination
-calcmark wasm [output-directory]
-
-# Output the syntax highlighter spec
-calcmark spec
-
-# Show version
-calcmark version
+cm budget.cm
 ```
 
-## Usage
-
-### Basic Evaluation
-
-```go
-import (
-    "fmt"
-    "github.com/CalcMark/go-calcmark/evaluator"
-)
-
-func main() {
-    content := `salary = $5000
-rent = €1500
-tax_rate = 0.08
-monthly_tax = salary * tax_rate
-net_income = salary - rent - monthly_tax
-circle_area = PI * 5 ^ 2
-average_expense = avg($500, €400, £300)`
-
-    context := evaluator.NewContext()
-    results, err := evaluator.Evaluate(content, context)
-    if err != nil {
-        panic(err)
-    }
-
-    for _, result := range results {
-        fmt.Println(result.String())
-    }
-    // Output:
-    // $5000.00
-    // €1500.00
-    // 0.08
-    // $400.00
-    // $3100.00
-    // 78.539816339744825
-    // 400 (Number - mixed currency units)
-}
-```
-
-### Validation with Diagnostics
-
-```go
-import (
-    "fmt"
-    "github.com/CalcMark/go-calcmark/evaluator"
-    "github.com/CalcMark/go-calcmark/validator"
-)
-
-func main() {
-    content := `x = 5
-y = z + 2
-total = x + y`
-
-    context := evaluator.NewContext()
-    result := validator.ValidateDocument(content, context)
-
-    // Check validation status
-    if result.IsValid() {
-        fmt.Println("Document is valid!")
-    } else {
-        fmt.Printf("Found %d errors\n", len(result.Errors()))
-    }
-
-    // Process all diagnostics
-    for _, diagnostic := range result.Diagnostics {
-        fmt.Printf("[%s] %s: %s\n",
-            diagnostic.Severity,
-            diagnostic.Code,
-            diagnostic.Message)
-
-        if diagnostic.Range != nil {
-            fmt.Printf("  at line %d, column %d\n",
-                diagnostic.Range.Start.Line,
-                diagnostic.Range.Start.Column)
-        }
-    }
-
-    // Filter by severity
-    if result.HasErrors() {
-        fmt.Println("\nErrors:")
-        for _, err := range result.Errors() {
-            fmt.Printf("  - %s\n", err.Message)
-        }
-    }
-
-    if result.HasWarnings() {
-        fmt.Println("\nWarnings:")
-        for _, warn := range result.Warnings() {
-            fmt.Printf("  - %s\n", warn.Message)
-        }
-    }
-
-    if result.HasHints() {
-        fmt.Println("\nHints:")
-        for _, hint := range result.Hints() {
-            fmt.Printf("  - %s\n", hint.Message)
-        }
-    }
-}
-```
-
-### Line Classification
-
-```go
-import (
-    "fmt"
-    "github.com/CalcMark/go-calcmark/classifier"
-    "github.com/CalcMark/go-calcmark/evaluator"
-)
-
-func main() {
-    context := evaluator.NewContext()
-
-    lines := []string{
-        "x = 5",
-        "This is markdown text",
-        "x + 2",
-        "",
-        "- bullet point",
-    }
-
-    for _, line := range lines {
-        lineType := classifier.ClassifyLine(line, context)
-        fmt.Printf("%s: %s\n", lineType, line)
-    }
-}
-```
-
-### Working with Diagnostic Codes
-
-```go
-import (
-    "encoding/json"
-    "fmt"
-    "github.com/CalcMark/go-calcmark/validator"
-)
-
-func main() {
-    content := "result = undefined_var * 2"
-
-    result := validator.ValidateDocument(content, nil)
-
-    for _, diagnostic := range result.Diagnostics {
-        // Access structured data
-        fmt.Printf("Code: %s\n", diagnostic.Code)        // "undefined_variable"
-        fmt.Printf("Severity: %s\n", diagnostic.Severity) // "error"
-
-        // Convert to map for JSON serialization
-        diagMap := diagnostic.ToMap()
-        jsonData, _ := json.MarshalIndent(diagMap, "", "  ")
-        fmt.Println(string(jsonData))
-
-        // Access variable name for undefined variable errors
-        if diagnostic.Code == validator.UndefinedVariable {
-            fmt.Printf("Undefined variable: %s\n", diagnostic.VariableName)
-        }
-    }
-}
-```
-
-### Diagnostic Severity Levels
-
-- **ERROR**: Invalid syntax that prevents parsing (e.g., `x * `)
-  - Code: `syntax_error`
-- **WARNING**: Valid syntax but evaluation failure (e.g., undefined variables)
-  - Codes: `undefined_variable`, `division_by_zero`, `type_mismatch`
-- **HINT**: Style suggestions for valid code (e.g., blank line isolation)
-  - Code: `blank_line_isolation`
-
-See [DIAGNOSTIC_LEVELS.md](DIAGNOSTIC_LEVELS.md) for complete details.
-
-## Development
-
-### Run Tests
-```bash
-go test ./...
-```
-
-### Test with Coverage
-```bash
-go test -cover ./...
-```
-
-### Run Specific Package Tests
-```bash
-go test ./evaluator -v
-go test ./parser -v
-```
-
-## Architecture
-
-CalcMark processes text through a series of stages, each handled by a specialized package. Here's how the components work together:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Input: "sales_tax = 0.08\nsales = 1000 * sales_tax"             │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-                    ┌────────────────┐
-                    │  1. LEXER      │  Breaks text into tokens
-                    │  lexer/        │  "sales_tax" "=" "0.08" "\n" "sales" ...
-                    └────────┬───────┘
-                             │
-                             ▼
-                    ┌────────────────┐
-                    │  2. PARSER     │  Builds Abstract Syntax Tree (AST)
-                    │  parser/       │  Assignment(sales_tax, Literal(0.08))
-                    │  ast/          │  Assignment(sales, BinaryOp(1000, *, sales_tax))
-                    └────────┬───────┘
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-                ▼                         ▼
-       ┌────────────────┐        ┌────────────────┐
-       │  3a. VALIDATOR │        │ 3b. EVALUATOR  │
-       │  validator/    │        │  evaluator/    │
-       │                │        │                │
-       │ Checks AST for │        │ Executes AST   │
-       │ semantic errors│        │ with Context   │
-       │ (undefined vars)│        │                │
-       │                │        │ Line 1:        │
-       │ Returns:       │        │ sales_tax=0.08 │
-       │ Diagnostics    │        │ Context: {     │
-       │                │        │   sales_tax: 0.08 }
-       └────────────────┘        │                │
-                                 │ Line 2:        │
-                                 │ 1000*0.08=80   │
-                                 │ Context: {     │
-                                 │   sales_tax: 0.08,
-                                 │   sales: 80 }  │
-                                 └────────┬───────┘
-                                          │
-                                          ▼
-                                 ┌────────────────┐
-                                 │  4. TYPES      │
-                                 │  types/        │
-                                 │                │
-                                 │ Results stored │
-                                 │ as typed values│
-                                 │ Number, Currency,
-                                 │ Boolean        │
-                                 └────────────────┘
-
-Additional Component:
-
-┌────────────────┐
-│  CLASSIFIER    │  Determines if a line is CALCULATION, MARKDOWN, or BLANK
-│  classifier/   │  Uses parser + context to classify each line
-└────────────────┘  (Used for syntax highlighting and rendering)
-```
-
-### Component Responsibilities
-
-#### 1. **lexer/** - Tokenization
-**Purpose**: Converts raw text into a stream of tokens (lexemes).
-
-**Example**: `sales = 1000 * sales_tax` becomes:
-```
-[IDENTIFIER:"sales", ASSIGN:"=", NUMBER:"1000", MULTIPLY:"*", IDENTIFIER:"sales_tax", EOF]
-```
-
-**Key Features**:
-- Unicode-aware (supports international characters, emojis)
-- Recognizes numbers with thousands separators (`,` or `_`)
-- Currency symbols: `$`, `€`, `£`, `¥`
-- Mathematical constants: `PI`, `E` (case-insensitive, read-only)
-- Booleans: `true`, `false`, `yes`, `no`, `t`, `f`, `y`, `n` (case-insensitive)
-- Tracks line/column positions for error reporting
-
-**Entry Point**: `lexer.Tokenize(string) ([]Token, error)`
-
-#### 2. **parser/** - Syntax Analysis
-**Purpose**: Converts tokens into an Abstract Syntax Tree (AST) that represents the program structure.
-
-**Example**: Tokens become:
-```
-Assignment {
-  Variable: "sales"
-  Value: BinaryOp {
-    Left: Literal(1000)
-    Op: "*"
-    Right: Identifier("sales_tax")
-  }
-}
-```
-
-**Key Features**:
-- Recursive descent parsing with precedence climbing
-- Operator precedence: `()` > `^` > `*/%` > `+-` > comparisons
-- Validates syntax (parentheses matching, valid expressions)
-- Builds AST nodes with position information
-
-**Entry Point**: `parser.Parse(string) ([]ast.Node, error)`
-
-#### 3a. **validator/** - Semantic Analysis
-**Purpose**: Checks if code is semantically valid WITHOUT executing it.
-
-**What it checks**:
-- **Undefined variables**: References to variables not yet defined
-- **Semantic errors**: Issues that would prevent evaluation
-- **Style hints**: Suggestions like blank line isolation
-
-**Example**:
-```go
-sales = 1000 * sales_tax  // ERROR: sales_tax undefined
-```
-
-**Returns**: Diagnostics with severity levels:
-- **ERROR**: Syntax errors (parsing failed)
-- **WARNING**: Semantic errors (undefined variables)
-- **HINT**: Style suggestions (missing blank lines)
-
-**Entry Point**: `validator.ValidateDocument(string, *Context) *ValidationResult`
-
-#### 3b. **evaluator/** - Execution
-**Purpose**: Executes the AST and computes actual values.
-
-**How it works**:
-1. Processes lines sequentially
-2. Maintains a **Context** (variable storage)
-3. Evaluates each expression using the context
-4. Updates context with assignment results
-
-**Example Execution**:
-```
-Line 1: sales_tax = 0.08
-  → Evaluates: 0.08
-  → Context: {sales_tax: 0.08}
-  → Returns: 0.08
-
-Line 2: sales = 1000 * sales_tax
-  → Evaluates: 1000 * 0.08
-  → Context: {sales_tax: 0.08, sales: 80}
-  → Returns: 80
-```
-
-**Key Rules**:
-- Variables must be defined before use (no forward references)
-- Context flows between lines
-- Mathematical constants (`PI`, `E`) are always available and read-only
-- Functions: `avg()`, `sqrt()` with natural language aliases
-  - `avg(1, 2, 3)` or `average of 1, 2, 3`
-  - `sqrt(16)` or `square root of 16`
-- Unit handling:
-  - Binary operations preserve units: `$200 + 0.1` → `$200.10`
-  - Functions drop units when mixed: `avg($100, €200)` → `150` (Number)
-  - Same units preserved: `avg($100, $200)` → `$150.00` (Currency)
-
-**Entry Point**: `evaluator.Evaluate(string, *Context) ([]types.Type, error)`
-
-#### 4. **types/** - Value System
-**Purpose**: Represents CalcMark values with proper types.
-
-**Types**:
-- **Number**: Arbitrary precision decimals (using `shopspring/decimal`)
-  - Supports thousands separators: `1,000` or `1_000_000`
-- **Currency**: Number + symbol (`$`, `€`, `£`, `¥`)
-  - Example: `$1,234.56`, `€500`, `£1,000,000`, `¥10000`
-- **Boolean**: true/false (keywords: `true`, `false`, `yes`, `no`, `t`, `f`, `y`, `n` - case-insensitive)
-
-**Example**:
-```go
-sales_tax := types.NewNumber(0.08)     // Number
-sales := types.NewCurrency(80, "$")    // Currency
-```
-
-#### 5. **classifier/** - Line Classification
-**Purpose**: Determines if a line is a calculation or markdown text.
-
-**Classification Logic**:
-1. Try to parse the line
-2. Check if all variables are defined in context
-3. Return: `CALCULATION`, `MARKDOWN`, or `BLANK`
-
-**Context-Aware Example**:
-```
-// Empty context:
-"sales_tax"  → MARKDOWN (undefined variable)
-
-// With sales_tax defined:
-"sales_tax"  → CALCULATION (valid reference)
-```
-
-**Entry Point**: `classifier.ClassifyLine(string, *Context) LineType`
-
-#### 6. **ast/** - Abstract Syntax Tree
-**Purpose**: Defines the node types that represent parsed code structure.
-
-**Node Types**:
-- `Assignment`: Variable assignment (e.g., `x = 5`)
-- `BinaryOp`: Arithmetic operations (e.g., `+`, `-`, `*`, `/`)
-- `ComparisonOp`: Comparisons (e.g., `>`, `<`, `==`)
-- `UnaryOp`: Unary minus/plus (e.g., `-5`)
-- `Identifier`: Variable reference
-- `Literal`: Number, currency, or boolean value
-
-**All nodes include**:
-- `Range`: Position information (line, column) for error messages
-
-### How Data Flows Through the System
-
-Let's trace `sales = 1000 * sales_tax` through the entire system:
-
-**1. Lexer Input**: `"sales = 1000 * sales_tax"`
-
-**2. Lexer Output** (Tokens):
-```
-[IDENTIFIER:"sales", ASSIGN:"=", NUMBER:"1000", MULTIPLY:"*", IDENTIFIER:"sales_tax"]
-```
-
-**3. Parser Output** (AST):
-```go
-Assignment{
-  Variable: Identifier{Name: "sales", Range: ...}
-  Value: BinaryOp{
-    Op: "*"
-    Left: Literal{Value: Number(1000), Range: ...}
-    Right: Identifier{Name: "sales_tax", Range: ...}
-  }
-}
-```
-
-**4a. Validator** (if sales_tax undefined):
-```go
-ValidationResult{
-  Diagnostics: [
-    {
-      Severity: Warning,
-      Code: "undefined_variable",
-      Message: "Undefined variable: sales_tax",
-      Range: {Line: 1, Column: 14},
-      VariableName: "sales_tax"
-    }
-  ]
-}
-```
-
-**4b. Evaluator** (if sales_tax = 0.08):
-```go
-// Looks up sales_tax in context → 0.08
-// Evaluates: 1000 * 0.08 = 80
-// Stores: context.Set("sales", 80)
-// Returns: Number(80)
-```
-
-**5. Result**:
-```
-sales = 80
-```
-
-## Package Structure
-
-```
-go-calcmark/
-├── types/       # Core types (Number, Currency, Boolean)
-├── lexer/       # Tokenization
-├── ast/         # Abstract syntax tree
-├── parser/      # Recursive descent parser
-├── evaluator/   # Expression evaluation
-├── validator/   # Semantic validation
-├── classifier/  # Line classification
-├── syntax/  # Embedded syntax highlighter spec
-├── cmd/calcmark/# CLI tool
-└── spec/        # Documentation (JSON spec, markdown guides)
-```
-
-## Test Coverage
-
-Comprehensive test coverage across all packages:
-- **lexer**: Number parsing, thousands separators, currency symbols, reserved keywords
-- **parser**: Expression parsing, operator precedence, function calls
-- **evaluator**: Arithmetic, functions, constants, mixed units, type handling
-- **validator**: Undefined variables, semantic errors, diagnostics
-- **classifier**: Line classification, context-aware detection
-- **types**: Number, Currency, Boolean types
-- **spec validation**: Syntax highlighter spec generation
-
-All tests passing ✅
-
-## Dependencies
-
-- `github.com/shopspring/decimal` - Arbitrary precision decimals (only external dependency)
-- Go standard library
-
-## Documentation
-
-### Language Specification
-
-- **[spec/LANGUAGE_SPEC.md](spec/LANGUAGE_SPEC.md)** - Complete, authoritative CalcMark language specification
-- **[spec/SYNTAX_HIGHLIGHTER_SPEC.json](spec/SYNTAX_HIGHLIGHTER_SPEC.json)** - Machine-readable spec for editor integrations (embedded in library)
-- **[spec/SYNTAX_HIGHLIGHTER_README.md](spec/SYNTAX_HIGHLIGHTER_README.md)** - TypeScript/JavaScript integration guide
-
-### Embedded Syntax Spec
-
-The `SYNTAX_HIGHLIGHTER_SPEC.json` is embedded in the library and can be accessed programmatically:
-
-```go
-import "github.com/CalcMark/go-calcmark/syntax"
-
-// Get the JSON spec as a string
-jsonSpec := syntax.SyntaxHighlighterSpec
-
-// Or as bytes (useful for HTTP responses)
-jsonBytes := syntax.SyntaxHighlighterSpecBytes()
-
-// Example: Serve via HTTP endpoint
-http.HandleFunc("/syntax", func(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Content-Type", "application/json")
-    w.Write(syntax.SyntaxHighlighterSpecBytes())
-})
-```
-
-To regenerate the spec from the Go implementation:
+3. Or evaluate from command line:
 
 ```bash
-calcmark generate
-# Or: go generate ./syntax
+cm eval budget.cm
 ```
 
-### Development
+4. Or convert to other formats:
 
-- **[CLAUDE.md](CLAUDE.md)** - Development guide for future Claude Code sessions
+```bash
+cm convert budget.cm --to=html -o budget.html
+```
 
-The `spec/` directory contains the platform-independent language specification. The Go implementation in this repository is one implementation of that spec.
+![CalcMark TUI](docs/images/tui-screenshot.png)
+
+## Examples
+
+Explore example files to see CalcMark in action:
+
+- [Budget planning](testdata/examples/budget.cm) - Monthly budget with income, expenses, savings
+- [Unit conversion](testdata/examples/unit-conversion.cm) - Converting between units
+- [Capacity planning](testdata/examples/engineering.cm) - Engineering calculations with constants
+
+Run any example:
+
+```bash
+cm testdata/examples/budget.cm
+```
+
+## Features
+
+- **Variables flow downward** - Define once, reference anywhere below
+- **Units are first-class** - `5 miles in km`, `20 celsius in fahrenheit`
+- **Currencies** - `$100`, `50 EUR`, automatic formatting
+- **Percentages** - `savings_rate = 20%`, then `income * savings_rate`
+- **Functions** - `avg()`, `sqrt()`, `capacity()`, and more
+- **YAML front matter** - Define document-level constants
+- **Export formats** - Convert to HTML, Markdown, JSON, or plain text
+
+## Help Commands
+
+```bash
+cm help              # General help
+cm help functions    # List all functions with descriptions
+cm help constants    # List built-in constants
+cm convert --help    # Export format options
+```
+
+Press F1 in the TUI editor for keybindings.
+
+## Learn More
+
+- [User Guide](docs/README.md) - Complete documentation with examples
+- [Language Spec](spec/LANGUAGE_SPEC.md) - Formal language specification
 
 ## License
 
-Same as CalcMark/CalcDown project.
-
-## Contributing
-
-This library is used by:
-- [CalcMark Server](https://github.com/CalcMark/server) - HTTP API server
-- [CalcMark Web](https://github.com/CalcMark/calcmark) - Web application
-
-When making changes, ensure all tests pass:
-```bash
-go test ./...
-```
+MIT
