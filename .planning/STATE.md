@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 8 of 8 (Documentation)
-Plan: 0 of 3 in current phase
-Status: Ready to start
-Last activity: 2026-02-04 - Completed Phase 7
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 08-01-PLAN.md
 
-Progress: [████████████████████] 95% (19/20 plans)
+Progress: [████████████████████] 100% (20/20 plans)
 
 ## Performance Metrics
 
@@ -36,7 +36,7 @@ Progress: [████████████████████] 95% (19
 | 7. Distribution | 2/2 | 13min | 6.5min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (15min), 06-01 (12min), 06-02 (45min), 07-01 (5min), 07-02 (8min)
+- Last 5 plans: 06-01 (12min), 06-02 (45min), 07-01 (5min), 07-02 (8min), 08-01 (5min)
 - Trend: Infrastructure tasks are fast; feature development takes longer
 
 *Updated after each plan completion*
@@ -93,6 +93,8 @@ Recent decisions affecting current work:
 - 07-01: WASM infrastructure removed -- no longer needed, simplifies build and CI
 - 07-02: Correct Homebrew tap syntax is `calcmark/tap/calcmark` (lowercase org name)
 - 07-02: 7 active DIST requirements after removing WASM/Scoop/man pages/bundled completions (DIST-06 through DIST-10 removed)
+- 08-01: Hero GIF uses cm eval workflow (not TUI) because VHS cannot capture interactive TUI apps
+- 08-01: Engineering example uses YAML front matter to demonstrate constants feature
 
 ### Visual Polish Backlog (from Phase 2 visual checkpoint)
 
@@ -147,9 +149,12 @@ Benefits achieved:
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Completed 07-02-PLAN.md (Phase 7 complete)
+Last session: 2026-02-05
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
+
+### Phase 8 Progress (2026-02-05)
+- 08-01: Visual assets and examples - three .cm files, TUI screenshot, hero GIF with VHS tape
 
 ### Phase 7 Progress (2026-02-04) - COMPLETE
 - 07-01: GoReleaser configuration, WASM removal, release workflow update
