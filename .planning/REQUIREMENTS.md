@@ -7,74 +7,74 @@
 
 ### Foundation
 
-- [ ] **FOUND-01**: Go version in release workflow matches go.mod (1.24.4, not 1.21)
-- [ ] **FOUND-02**: Pure geometry functions extracted to separate package with comprehensive tests
-- [ ] **FOUND-03**: CalculateRowGeometry function (from code.sh) handles wrapping on both columns
-- [ ] **FOUND-04**: Two-column alignment works correctly when left/right have different wrap heights
-- [ ] **FOUND-05**: Dependencies updated to current stable versions (adrg/frontmatter added)
+- [x] **FOUND-01**: Go version in release workflow matches go.mod (1.24.4, not 1.21)
+- [x] **FOUND-02**: Pure geometry functions extracted to separate package with comprehensive tests
+- [x] **FOUND-03**: CalculateRowGeometry function (from code.sh) handles wrapping on both columns
+- [x] **FOUND-04**: Two-column alignment works correctly when left/right have different wrap heights
+- [x] **FOUND-05**: Dependencies updated to current stable versions (adrg/frontmatter added)
 
 ### TUI Editor
 
-- [ ] **EDITOR-01**: code.sh geometry algorithm implemented for two-column layout
-- [ ] **EDITOR-02**: Left pane (source) wraps text correctly at column boundary
-- [ ] **EDITOR-03**: Right pane (results) wraps text correctly and independently
-- [ ] **EDITOR-04**: Vertical alignment between source and results maintained under all wrapping scenarios
-- [ ] **EDITOR-05**: Cursor positioning works correctly in wrapped text
-- [ ] **EDITOR-06**: Cursor visible and tracks user input accurately
-- [ ] **EDITOR-07**: Scrolling works correctly with viewport
-- [ ] **EDITOR-08**: Model integration (code.sh geometry + model state management) complete
-- [ ] **EDITOR-09**: Debounced evaluation triggers on text changes
-- [ ] **EDITOR-10**: Results update correctly in right pane after evaluation
-- [ ] **EDITOR-11**: Catwalk tests cover all editor interactions (typing, cursor, wrapping, alignment)
-- [ ] **EDITOR-12**: No flakey video-based tests in CI (catwalk only)
+- [x] **EDITOR-01**: code.sh geometry algorithm implemented for two-column layout
+- [x] **EDITOR-02**: Left pane (source) wraps text correctly at column boundary
+- [x] **EDITOR-03**: Right pane (results) wraps text correctly and independently
+- [x] **EDITOR-04**: Vertical alignment between source and results maintained under all wrapping scenarios
+- [x] **EDITOR-05**: Cursor positioning works correctly in wrapped text
+- [x] **EDITOR-06**: Cursor visible and tracks user input accurately
+- [x] **EDITOR-07**: Scrolling works correctly with viewport
+- [x] **EDITOR-08**: Model integration (code.sh geometry + model state management) complete
+- [x] **EDITOR-09**: Debounced evaluation triggers on text changes
+- [x] **EDITOR-10**: Results update correctly in right pane after evaluation
+- [x] **EDITOR-11**: Catwalk tests cover all editor interactions (typing, cursor, wrapping, alignment)
+- [x] **EDITOR-12**: No flakey video-based tests in CI (catwalk only)
 
 ### Help & Discoverability
 
-- [ ] **HELP-01**: Shell completions enabled (remove DisableDefaultCmd from root.go)
-- [ ] **HELP-02**: `cm help` shows general CLI overview with examples
-- [ ] **HELP-03**: `cm help functions` lists all functions with descriptions and English synonyms
-- [ ] **HELP-04**: `cm help constants` lists all built-in constants
-- [ ] **HELP-05**: Help output is pipeable (works with less/more)
-- [ ] **HELP-06**: In-TUI help overlay shows keybindings and commands
-- [ ] **HELP-07**: Status bar displays current mode, cursor position, calculation count
-- [ ] **HELP-08**: Status bar shows "EVAL..." during debounced evaluation
-- [ ] **HELP-09**: TUI autocomplete suggests functions while typing `=`
-- [ ] **HELP-10**: TUI autocomplete suggests constants from canonical units
-- [ ] **HELP-11**: TUI autocomplete shows English synonyms for functions
-- [ ] **HELP-12**: Autocomplete popup positioned correctly in textarea
+- [x] **HELP-01**: Shell completions enabled (remove DisableDefaultCmd from root.go)
+- [x] **HELP-02**: `cm help` shows general CLI overview with examples
+- [x] **HELP-03**: `cm help functions` lists all functions with descriptions and English synonyms
+- [x] **HELP-04**: `cm help constants` lists all built-in constants
+- [x] **HELP-05**: Help output is pipeable (works with less/more)
+- [x] **HELP-06**: In-TUI help overlay shows keybindings and commands
+- [x] **HELP-07**: Status bar displays current mode, cursor position, calculation count
+- [x] **HELP-08**: Status bar shows "EVAL..." during debounced evaluation
+- [x] **HELP-09**: TUI autocomplete suggests functions while typing `=`
+- [x] **HELP-10**: TUI autocomplete suggests constants from canonical units
+- [x] **HELP-11**: TUI autocomplete shows English synonyms for functions
+- [x] **HELP-12**: Autocomplete popup positioned correctly in textarea
 
 ### YAML Front Matter
 
-- [ ] **YAML-01**: YAML front matter parsed from .cm files
-- [ ] **YAML-02**: Constants defined in front matter available in calculations
-- [ ] **YAML-03**: Front matter syntax documented with examples
-- [ ] **YAML-04**: Error messages clear when front matter is malformed
-- [ ] **YAML-05**: Integration between spec/ and impl/ maintains dependency flow (spec never depends on impl)
+- [x] **YAML-01**: YAML front matter parsed from .cm files
+- [x] **YAML-02**: Constants defined in front matter available in calculations
+- [x] **YAML-03**: Front matter syntax documented with examples
+- [x] **YAML-04**: Error messages clear when front matter is malformed
+- [x] **YAML-05**: Integration between spec/ and impl/ maintains dependency flow (spec never depends on impl)
 
 ### Distribution
 
-- [ ] **DIST-01**: GoReleaser configuration created and tested
-- [ ] **DIST-02**: Prebuilt binaries for macOS (Intel + Apple Silicon)
-- [ ] **DIST-03**: Prebuilt binaries for Linux (amd64, arm64, arm 32-bit)
-- [ ] **DIST-04**: Prebuilt binaries for Windows (amd64, arm64)
-- [ ] **DIST-05**: Homebrew tap configured and working
-- [ ] **DIST-11**: Release workflow runs in CI successfully
-- [ ] **DIST-12**: Checksums and signatures for all release artifacts
+- [x] **DIST-01**: GoReleaser configuration created and tested
+- [x] **DIST-02**: Prebuilt binaries for macOS (Intel + Apple Silicon)
+- [x] **DIST-03**: Prebuilt binaries for Linux (amd64, arm64, arm 32-bit)
+- [x] **DIST-04**: Prebuilt binaries for Windows (amd64, arm64)
+- [x] **DIST-05**: Homebrew tap configured and working
+- [x] **DIST-11**: Release workflow runs in CI successfully
+- [x] **DIST-12**: Checksums and signatures for all release artifacts
 
 Note: Per Phase 7 CONTEXT.md, Scoop, WASM, man pages, and bundled shell completions are out of scope. Users can generate shell completions via `cm completion bash/zsh/fish`.
 
 ### Documentation
 
-- [ ] **DOCS-01**: README explains what CalcMark is (Jupyter-like but simpler)
-- [ ] **DOCS-02**: README shows installation instructions (Homebrew, Scoop, prebuilt binaries, from source)
-- [ ] **DOCS-03**: README includes quick start example
-- [ ] **DOCS-04**: README shows all three use cases (TUI editor, CLI eval, convert/export)
-- [ ] **DOCS-05**: Example .cm files with correct calculations in testdata/
-- [ ] **DOCS-06**: CLI reference generated from cobra commands
-- [ ] **DOCS-07**: Function reference generated from interpreter code
-- [ ] **DOCS-08**: Constants reference generated from canonical units
-- [ ] **DOCS-09**: Screenshots of TUI editor in README
-- [ ] **DOCS-10**: Contributing guide exists
+- [x] **DOCS-01**: README explains what CalcMark is (Jupyter-like but simpler)
+- [x] **DOCS-02**: README shows installation instructions (Homebrew, Scoop, prebuilt binaries, from source)
+- [x] **DOCS-03**: README includes quick start example
+- [x] **DOCS-04**: README shows all three use cases (TUI editor, CLI eval, convert/export)
+- [x] **DOCS-05**: Example .cm files with correct calculations in testdata/
+- [x] **DOCS-06**: CLI reference generated from cobra commands
+- [x] **DOCS-07**: Function reference generated from interpreter code
+- [x] **DOCS-08**: Constants reference generated from canonical units
+- [x] **DOCS-09**: Screenshots of TUI editor in README
+- [x] **DOCS-10**: Contributing guide exists
 
 ## v2 Requirements
 
@@ -111,40 +111,40 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1: Foundation | Pending |
-| FOUND-02 | Phase 1: Foundation | Pending |
-| FOUND-03 | Phase 1: Foundation | Pending |
-| FOUND-04 | Phase 1: Foundation | Pending |
-| FOUND-05 | Phase 1: Foundation | Pending |
-| EDITOR-01 | Phase 2: TUI Geometry & Layout | Pending |
-| EDITOR-02 | Phase 2: TUI Geometry & Layout | Pending |
-| EDITOR-03 | Phase 2: TUI Geometry & Layout | Pending |
-| EDITOR-04 | Phase 2: TUI Geometry & Layout | Pending |
-| EDITOR-05 | Phase 3: TUI Editor Integration | Pending |
-| EDITOR-06 | Phase 3: TUI Editor Integration | Pending |
-| EDITOR-07 | Phase 3: TUI Editor Integration | Pending |
-| EDITOR-08 | Phase 3: TUI Editor Integration | Pending |
-| EDITOR-09 | Phase 3: TUI Editor Integration | Pending |
-| EDITOR-10 | Phase 3: TUI Editor Integration | Pending |
-| EDITOR-11 | Phase 4: TUI Test Coverage | Pending |
-| EDITOR-12 | Phase 4: TUI Test Coverage | Pending |
-| HELP-01 | Phase 5: Help System | Pending |
-| HELP-02 | Phase 5: Help System | Pending |
-| HELP-03 | Phase 5: Help System | Pending |
-| HELP-04 | Phase 5: Help System | Pending |
-| HELP-05 | Phase 5: Help System | Pending |
-| HELP-06 | Phase 5: Help System | Pending |
-| HELP-07 | Phase 5: Help System | Pending |
-| HELP-08 | Phase 5: Help System | Pending |
-| HELP-09 | Phase 6: Differentiators | Pending |
-| HELP-10 | Phase 6: Differentiators | Pending |
-| HELP-11 | Phase 6: Differentiators | Pending |
-| HELP-12 | Phase 6: Differentiators | Pending |
-| YAML-01 | Phase 6: Differentiators | Pending |
-| YAML-02 | Phase 6: Differentiators | Pending |
-| YAML-03 | Phase 6: Differentiators | Pending |
-| YAML-04 | Phase 6: Differentiators | Pending |
-| YAML-05 | Phase 6: Differentiators | Pending |
+| FOUND-01 | Phase 1: Foundation | Complete |
+| FOUND-02 | Phase 1: Foundation | Complete |
+| FOUND-03 | Phase 1: Foundation | Complete |
+| FOUND-04 | Phase 1: Foundation | Complete |
+| FOUND-05 | Phase 1: Foundation | Complete |
+| EDITOR-01 | Phase 2: TUI Geometry & Layout | Complete |
+| EDITOR-02 | Phase 2: TUI Geometry & Layout | Complete |
+| EDITOR-03 | Phase 2: TUI Geometry & Layout | Complete |
+| EDITOR-04 | Phase 2: TUI Geometry & Layout | Complete |
+| EDITOR-05 | Phase 3: TUI Editor Integration | Complete |
+| EDITOR-06 | Phase 3: TUI Editor Integration | Complete |
+| EDITOR-07 | Phase 3: TUI Editor Integration | Complete |
+| EDITOR-08 | Phase 3: TUI Editor Integration | Complete |
+| EDITOR-09 | Phase 3: TUI Editor Integration | Complete |
+| EDITOR-10 | Phase 3: TUI Editor Integration | Complete |
+| EDITOR-11 | Phase 4: TUI Test Coverage | Complete |
+| EDITOR-12 | Phase 4: TUI Test Coverage | Complete |
+| HELP-01 | Phase 5: Help System | Complete |
+| HELP-02 | Phase 5: Help System | Complete |
+| HELP-03 | Phase 5: Help System | Complete |
+| HELP-04 | Phase 5: Help System | Complete |
+| HELP-05 | Phase 5: Help System | Complete |
+| HELP-06 | Phase 5: Help System | Complete |
+| HELP-07 | Phase 5: Help System | Complete |
+| HELP-08 | Phase 5: Help System | Complete |
+| HELP-09 | Phase 6: Differentiators | Complete |
+| HELP-10 | Phase 6: Differentiators | Complete |
+| HELP-11 | Phase 6: Differentiators | Complete |
+| HELP-12 | Phase 6: Differentiators | Complete |
+| YAML-01 | Phase 6: Differentiators | Complete |
+| YAML-02 | Phase 6: Differentiators | Complete |
+| YAML-03 | Phase 6: Differentiators | Complete |
+| YAML-04 | Phase 6: Differentiators | Complete |
+| YAML-05 | Phase 6: Differentiators | Complete |
 | DIST-01 | Phase 7: Distribution | Complete |
 | DIST-02 | Phase 7: Distribution | Complete |
 | DIST-03 | Phase 7: Distribution | Complete |
@@ -152,16 +152,16 @@ Deferred to future release.
 | DIST-05 | Phase 7: Distribution | Complete |
 | DIST-11 | Phase 7: Distribution | Complete |
 | DIST-12 | Phase 7: Distribution | Complete |
-| DOCS-01 | Phase 8: Documentation | Pending |
-| DOCS-02 | Phase 8: Documentation | Pending |
-| DOCS-03 | Phase 8: Documentation | Pending |
-| DOCS-04 | Phase 8: Documentation | Pending |
-| DOCS-05 | Phase 8: Documentation | Pending |
-| DOCS-06 | Phase 8: Documentation | Pending |
-| DOCS-07 | Phase 8: Documentation | Pending |
-| DOCS-08 | Phase 8: Documentation | Pending |
-| DOCS-09 | Phase 8: Documentation | Pending |
-| DOCS-10 | Phase 8: Documentation | Pending |
+| DOCS-01 | Phase 8: Documentation | Complete |
+| DOCS-02 | Phase 8: Documentation | Complete |
+| DOCS-03 | Phase 8: Documentation | Complete |
+| DOCS-04 | Phase 8: Documentation | Complete |
+| DOCS-05 | Phase 8: Documentation | Complete |
+| DOCS-06 | Phase 8: Documentation | Complete |
+| DOCS-07 | Phase 8: Documentation | Complete |
+| DOCS-08 | Phase 8: Documentation | Complete |
+| DOCS-09 | Phase 8: Documentation | Complete |
+| DOCS-10 | Phase 8: Documentation | Complete |
 
 **Coverage:**
 - v1 requirements: 51 total (DIST-06 through DIST-10 removed per Phase 7 CONTEXT.md)

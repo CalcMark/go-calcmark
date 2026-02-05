@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Help System** - CLI help commands, shell completions, TUI help overlay and status bar
 - [x] **Phase 6: Differentiators** - TUI autocomplete and YAML front matter for document constants
 - [x] **Phase 7: Distribution** - GoReleaser, cross-platform binaries, Homebrew tap
-- [ ] **Phase 8: Documentation** - README, examples, screenshots
+- [x] **Phase 8: Documentation** - README, examples, screenshots
 
 ## Phase Details
 
@@ -148,8 +148,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Create example files in testdata/examples/ and visual assets (screenshot, hero GIF)
-- [ ] 08-02-PLAN.md -- Rewrite README with user-focused structure (what/install/quickstart/examples)
+- [x] 08-01-PLAN.md -- Create example files in testdata/examples/ and visual assets (screenshot, hero GIF)
+- [x] 08-02-PLAN.md -- Rewrite README with user-focused structure (what/install/quickstart/examples)
 
 ## Progress
 
@@ -165,7 +165,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Help System | 2/2 | Complete | 2026-02-03 |
 | 6. Differentiators | 2/2 | Complete | 2026-02-04 |
 | 7. Distribution | 2/2 | Complete | 2026-02-04 |
-| 8. Documentation | 0/2 | Not started | - |
+| 8. Documentation | 2/2 | Complete | 2026-02-05 |
 
 ---
 *Roadmap created: 2026-02-02*

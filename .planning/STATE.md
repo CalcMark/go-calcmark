@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** Phase 8 - Documentation (READY)
+**Current focus:** Milestone Complete - Ready for Release
 
 ## Current Position
 
-Phase: 8 of 8 (Documentation)
-Plan: 2 of 3 in current phase
-Status: In progress
+Phase: 8 of 8 (Documentation) - COMPLETE
+Plan: 2 of 2 in current phase
+Status: Milestone complete
 Last activity: 2026-02-05 - Completed 08-02-PLAN.md
 
 Progress: [████████████████████] 100% (21/21 plans)
@@ -34,6 +34,7 @@ Progress: [████████████████████] 100% (2
 | 5. Help System | 2/2 | 19min | 9.5min |
 | 6. Differentiators | 2/2 | 57min | 28.5min |
 | 7. Distribution | 2/2 | 13min | 6.5min |
+| 8. Documentation | 2/2 | 7min | 3.5min |
 
 **Recent Trend:**
 - Last 5 plans: 06-01 (12min), 06-02 (45min), 07-01 (5min), 07-02 (8min), 08-01 (5min)
@@ -156,9 +157,12 @@ Last session: 2026-02-05
 Stopped at: Completed 08-02-PLAN.md
 Resume file: None
 
-### Phase 8 Progress (2026-02-05)
+### Phase 8 Progress (2026-02-05) - COMPLETE
 - 08-01: Visual assets and examples - three .cm files, TUI screenshot, hero GIF with VHS tape
 - 08-02: README rewrite - user-focused onboarding with hero GIF, install, quick start, examples
+
+### Milestone v1 Status
+All 8 phases complete. All 51 requirements satisfied. Ready for release.
 
 ### Phase 7 Progress (2026-02-04) - COMPLETE
 - 07-01: GoReleaser configuration, WASM removal, release workflow update
