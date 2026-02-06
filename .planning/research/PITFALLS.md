@@ -1,237 +1,401 @@
 # Pitfalls Research
 
-**Domain:** CLI/TUI editor tool reaching v1 release (CalcMark)
-**Researched:** 2026-02-02
-**Confidence:** MEDIUM-HIGH (mix of project-specific analysis and verified ecosystem patterns)
+**Domain:** Editor undo/redo, unit conversion correctness, file operations
+**Researched:** 2026-02-06
+**Milestone:** v1.1 CalcMark Language (interpreter correctness + editor completion)
+**Confidence:** HIGH (codebase analysis + verified ecosystem patterns)
+
+---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, broken releases, or major user-facing failures.
+Mistakes that cause data loss, incorrect results, or require rewrites.
 
-### Pitfall 1: Two-Pane Alignment Desynchronization Under Wrapping
+### Pitfall 1: Unit Context Lost During Type Transformations
 
-**What goes wrong:**
-The source pane and preview pane lose 1:1 vertical line alignment when text wrapping produces different numbers of visual lines in each pane. The cursor appears to point at the wrong preview result, or padding lines appear in unexpected places. This is already the most complex area of the CalcMark editor -- the entire `aligned.go` architecture exists because of this problem -- and any change to wrapping, pane width ratios, or preview rendering can silently break alignment.
+**What goes wrong:** `accumulate(5mb/s, 1 day) as napkin` returns "430K" instead of ~400GB. The napkin formatter receives a Quantity but loses the unit context when rounding/formatting.
 
-**Why it happens:**
-Both panes wrap independently. Source wraps based on `sourceContentWidth` (accounting for line numbers + gutter), while preview wraps based on `previewWidth`. When a source line wraps to 3 visual lines but its preview result wraps to only 1, padding lines must be inserted. The number of visual lines depends on content width, which depends on pane proportions, which can change with terminal resize or preview mode cycling (`PreviewFull` / `PreviewMinimal` / `PreviewHidden`). Any off-by-one in the padding calculation cascades through all subsequent lines.
+**Why it happens:** Looking at the codebase flow:
+1. `evalAccumulate()` correctly returns a `*types.Quantity` with `Value` and `Unit` (see `/impl/interpreter/rate_functions.go:38-41`)
+2. `evalNapkinConversion()` in napkin_eval.go extracts `numValue = v.Value` from Quantity (line 29)
+3. **BUG:** It then returns `types.NewNumber(decimal.NewFromFloat(roundedFloat))` (line 99) — a plain Number with NO UNIT
 
-The existing `computeAlignedPanes` and `ComputeAlignedModel` functions are the single source of truth, but `view.go` then performs *additional* adjustments for the edit buffer at render time (lines 719-778 in `view.go`), creating a second alignment path that can diverge.
+The napkin formatter explicitly discards the unit type, returning just the rounded number.
 
-**How to avoid:**
-- Never modify alignment logic without running the full catwalk test suite (`go test ./cmd/calcmark/tui/editor -run Catwalk -v`).
-- Add catwalk tests specifically for wrapping scenarios: long calc lines, long markdown headings, narrow terminal widths (40 columns), and edit buffer wrapping.
-- Ensure `AlignedModel` is the ONLY source of truth. If the view layer needs to adjust for the edit buffer, that adjustment should flow through `AlignedModel`, not be patched in render code.
-- Test at boundary widths: exactly where content wraps to 2 lines, where it barely fits on 1 line, and where it requires 3+ wrapped lines.
+**Consequences:**
+- Calculation results are numerically correct but display incorrectly
+- Users see "430K" (the MB value without unit) instead of "~400 GB"
+- Breaks trust in the calculator for the exact use case it's designed for
 
-**Warning signs:**
-- Preview pane shows results shifted one or more lines from their source lines.
-- Tilde (`~`) lines in source pane appear at different positions than tilde lines in preview pane.
-- `sourcePreviewMatch=false` in catwalk debug output.
-- `highlightMatch=false` in catwalk debug output (cursor highlight at wrong visual line).
+**Prevention:** `evalNapkinConversion` must preserve the type hierarchy:
+- If input is Quantity, return Quantity (with rounded value, same unit)
+- If input is Rate, return Rate (with rounded amount, same denominator)
+- If input is Currency, return Currency (with rounded value, same symbol)
+- Only Numbers should return as Numbers
 
-**Phase to address:**
-TUI Editor Rewrite phase -- this is the core architecture change and must be rock-solid before anything else builds on it.
+**Detection:**
+- Test: `accumulate(rate, time) as napkin` should preserve unit
+- Test: `(100 MB * 1000) as napkin` should show "~100 GB" not "~100K"
+- Golden test: napkin.cm should include quantity preservation tests
 
----
+**Which phase should address:** Interpreter correctness (FIRST priority)
 
-### Pitfall 2: ModelV2 Textarea Integration Losing Custom Editing Semantics
-
-**What goes wrong:**
-The `model_v2.go` file shows a transition from a custom editor (Model) to a textarea-based editor (ModelV2). The textarea component from `charmbracelet/bubbles` handles basic editing but does NOT understand CalcMark semantics: block detection, live evaluation, debounced re-evaluation, undo/redo with document snapshots, export dialogs, save prompts, or the alignment architecture. Adopting textarea without carefully preserving these behaviors results in a feature regression where the editor loses its differentiating functionality.
-
-**Why it happens:**
-The textarea component is attractive because it handles cursor movement, text insertion, scrolling, line wrapping, and clipboard out of the box. But it treats content as plain text. CalcMark needs to re-parse and re-evaluate on every content change, show live preview of calculation results, maintain two-pane alignment, and provide domain-specific keybindings. The current `ModelV2.syncDocumentFromTextarea()` does a full document rebuild on every keystroke, which defeats the incremental evaluation that `Model.reEvaluate()` and `EvaluateAffectedBlocks` provide.
-
-**How to avoid:**
-- Decide early: either use textarea as a pure input component and layer all CalcMark semantics on top (keeping the alignment architecture), OR continue with the custom editor and only borrow specific behaviors from textarea (like cursor blinking).
-- If using textarea, implement debounced sync (50ms, matching the existing `evalDebounceDelay`) rather than syncing on every keystroke.
-- Port all existing catwalk tests to work with ModelV2 before declaring it ready. Every test that passes on Model must also pass on ModelV2.
-- Preserve incremental evaluation: track which blocks changed and use `EvaluateAffectedBlocks` rather than full re-evaluation.
-
-**Warning signs:**
-- Keystroke lag in the editor (full document rebuild is O(n) per keystroke instead of O(affected blocks)).
-- Missing features compared to Model (undo/redo, export, save-as, search, preview mode cycling).
-- Catwalk tests cannot be ported because ModelV2 has a different interface.
-- `app.go` already references `editor.ModelV2` -- if the transition is incomplete, the shipped editor may be the less-capable version.
-
-**Phase to address:**
-TUI Editor Rewrite phase -- the v1/v2 decision must be made and fully implemented before any dependent work.
+**Codebase reference:** `/impl/interpreter/napkin_eval.go` lines 24-29, 99
 
 ---
 
-### Pitfall 3: GitHub Actions Release Workflow Go Version Mismatch
+### Pitfall 2: Undo/Redo Cursor Position Not Tracked
 
-**What goes wrong:**
-The release builds fail or produce binaries compiled with the wrong Go version. The project's `go.mod` specifies `go 1.24.4`, but the release workflow (`.github/workflows/release.yml`) pins `go-version: '1.21'`. This means CI cannot compile the project because Go 1.21 does not support language features or standard library APIs available in Go 1.24. Even if the build somehow succeeds, the resulting binaries miss optimizations and runtime improvements from newer Go versions.
+**What goes wrong:** Undoing a text change restores the content but leaves the cursor in a wrong position—possibly pointing at a non-existent location or a completely different line than where the edit occurred.
 
-**Why it happens:**
-The release workflow was written when the project used an earlier Go version and was never updated when `go.mod` was bumped. Go's backward compatibility means the project compiles with newer Go, but CI pins an older version. Additionally, the Taskfile uses `build:all` which cross-compiles for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, and windows/amd64, but the release script may only produce WASM artifacts.
+**Why it happens:** The current undo system only stores document content snapshots (`undoStack []string` in model.go:137-138), not the cursor position that went with each state. When users press undo, they expect to see the cursor jump back to WHERE the change was made.
 
-**How to avoid:**
-- Update `.github/workflows/release.yml` to use `go-version-file: 'go.mod'` instead of a hardcoded version. This ensures CI always uses the version specified in `go.mod`.
-- Add a pre-release check: `go version` output should match `go.mod` requirements.
-- Include ALL platform binaries in the release (the Taskfile has `build:all` but the release workflow only runs `release.sh`; verify that `release.sh` calls `build:all`).
-- Test the release workflow with `--local` flag before every release.
+**Consequences:**
+- Cursor ends up at invalid position causing out-of-bounds errors
+- User disorientation: "I undid, but where am I now?"
+- Breaks the mental model of "undo = go back to exactly how it was"
 
-**Warning signs:**
-- CI build fails immediately on `go mod tidy` or `go build` with syntax/feature errors.
-- Binaries are compiled with Go 1.21 (check `go version -m <binary>`).
-- Missing platform binaries in GitHub Release assets.
+**Prevention:** Store cursor position with each undo state:
+```go
+type UndoState struct {
+    Content    string
+    CursorLine int
+    CursorCol  int
+    ScrollOffset int  // Optional but improves UX
+}
+undoStack []UndoState
+```
 
-**Phase to address:**
-Distribution / Release phase -- must be fixed before the v1 release tag is pushed.
+**Detection:**
+- Cursor goes to line 0, col 0 after every undo
+- Test: undo after editing line 10 should return cursor to line 10
+- User reports: "undo takes me to the wrong place"
 
----
+**Which phase should address:** Undo/redo implementation (early in milestone)
 
-### Pitfall 4: WASM Binary Size Explosion
-
-**What goes wrong:**
-The WASM binary becomes too large for practical web use. A Go WASM binary starts at ~1.3MB for an empty program. CalcMark imports `fmt`, `strings`, `time`, `os`, `path/filepath`, the decimal library, and the entire parser/evaluator stack. Without active management, the WASM binary can easily reach 5-10MB, making it impractical for browser-side use -- CalcMark's stated first-class WASM target.
-
-**Why it happens:**
-Go's standard compiler includes the entire Go runtime in every WASM binary. Each `import` pulls in significant code. The `fmt` package alone adds ~400KB. The Taskfile shows both a `build:wasm` (standard Go compiler) and a `build:wasm:tiny` (TinyGo) target, but TinyGo has compatibility limitations and may not compile the full CalcMark codebase.
-
-**How to avoid:**
-- Measure the current WASM binary size before starting v1 work: `GOOS=js GOARCH=wasm go build -ldflags "-s -w" -o calcmark.wasm ./cmd/calcmark && ls -lh calcmark.wasm`.
-- Set a binary size budget (recommend: under 3MB uncompressed, under 1MB gzip'd for web delivery).
-- Profile what contributes to binary size (use `go tool nm` or specialized WASM tools).
-- If TinyGo is viable, use it for the WASM target. If not, minimize imports in the WASM build path (use build tags to exclude TUI, CLI, and OS-dependent code from WASM builds).
-- Serve with gzip/Brotli compression -- Go WASM compresses well (50%+ reduction).
-
-**Warning signs:**
-- WASM binary exceeds 5MB uncompressed.
-- TinyGo build fails on CalcMark code (check for unsupported language features).
-- `build:wasm:tiny` task has not been run or tested recently.
-- No WASM-specific build tags in the codebase separating TUI code from library code.
-
-**Phase to address:**
-Distribution / Release phase -- binary size must be measured and optimized before declaring WASM support as v1.
+**Sources:**
+- [Undo/Redo Implementations in Text Editors](https://www.mattduck.com/undo-redo-text-editors)
+- [Design Thoughts: Undo Redo - super_editor Wiki](https://github.com/superlistapp/super_editor/wiki/Design-Thoughts:-Undo-Redo)
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 3: File Save Not Atomic (Data Loss Risk)
 
-Shortcuts that seem reasonable but create long-term problems.
+**What goes wrong:** User presses Ctrl+S, save starts writing, power fails mid-write—file is now truncated or corrupted, original content lost.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Full document rebuild on every edit (`redetectBlockTypes` recreates entire document) | Correctness: ensures all block types are accurate | O(n) per keystroke degrades with document size; 100-line documents may feel sluggish | Acceptable in v1 MVP if debounce mitigates; must be optimized before v2 |
-| Hardcoded color values (`lipgloss.Color("236")`) throughout `view.go` | Works immediately | Theme changes require find-and-replace across hundreds of lines; impossible for users to customize | Never -- use `m.styles.*` consistently (partially done, but fallback to "236" is widespread) |
-| Two alignment code paths (AlignedModel + view.go edit-buffer adjustments) | Edit buffer rendering works correctly | Any alignment change must be made in two places; bugs where they diverge are hard to detect | Acceptable only temporarily; unify before v1 |
-| Undo stack stores full document content strings | Simple implementation | 100 undo states * large documents = significant memory; no structural diffing | Acceptable for v1 given 100-entry cap; consider operational transforms post-v1 |
-| `getDocumentContent()` iterates all blocks and joins on every call | Simple, correct | Called frequently (cache key computation, save detection, undo); O(n) per call | Should cache or hash; acceptable for v1 with monitoring |
+**Why it happens:** Current save in model.go:1471 uses `os.WriteFile()` directly, which:
+1. Truncates the file to 0 bytes
+2. Writes new content
+If crash occurs between steps 1 and 2, file is empty.
 
-## Integration Gotchas
+**Consequences:**
+- User loses their document entirely
+- No recovery option exists
+- Trust in the editor destroyed
 
-Common mistakes when connecting components or external services.
+**Prevention:** Implement atomic save pattern:
+```go
+// Write to temp file first
+tmpFile := filename + ".tmp"
+if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+    return err
+}
+// Atomically rename temp to target (atomic on POSIX)
+if err := os.Rename(tmpFile, filename); err != nil {
+    os.Remove(tmpFile) // Clean up on failure
+    return err
+}
+```
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Cobra CLI + TUI | Help text for TUI keybindings documented in Cobra `--help` but not updated when TUI keybindings change | Generate help text from the same `shared.KeyMap` struct used by the TUI; single source of truth |
-| Cobra `--version` + `version.go` | Version constant updated in `version.go` but Cobra root command `Version` field not wired up | Wire `rootCmd.Version = calcmark.Version` in cmd initialization; never hardcode version strings |
-| Textarea (bubbles) + custom evaluator | Textarea fires `Update` on every key; syncing document on each fires full re-evaluation | Debounce document sync; only re-evaluate after typing pauses (existing 50ms pattern) |
-| GitHub Actions + release.sh | Workflow specifies different Go version than `go.mod` | Use `go-version-file: 'go.mod'` in the workflow |
-| WASM build + TUI code | WASM target imports TUI packages that use terminal I/O; fails at runtime in browser | Use build tags (`//go:build !js` on TUI files, `//go:build js` on WASM entry point) |
-| Help content + actual keybindings | Help screen says "Ctrl+P = preview" but keybinding was changed to "Tab" | Generate help content from `shared.KeyMap` rather than hardcoding strings |
+**Platform note:** `os.Rename` is guaranteed atomic on POSIX (Linux, macOS). On Windows, it may or may not be atomic, but is still safer than direct write.
 
-## Performance Traps
+**Detection:**
+- Review: Check for tmp+rename pattern in save code
+- User reports: "My file was empty after crash"
 
-Patterns that work at small scale but fail as usage grows.
+**Which phase should address:** File operations (HIGH priority)
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Full document re-parse on every line edit (`redetectBlockTypes` calls `document.NewDocument`) | Input lag on long documents; keystroke delay exceeds 50ms | Use incremental block detection: only re-parse the block containing the edited line; use `EvaluateAffectedBlocks` for evaluation | ~50+ lines with complex calculations |
-| `GetLines()` allocates new slice on every call | GC pressure during rapid typing; View() calls GetLines() multiple times per render | Cache the lines slice; invalidate on document change | ~100+ lines with fast typing |
-| `computeCacheKey` iterates all lines and XORs character values | Cache key computation is O(n) on total document size | Use a rolling hash or content version counter that increments on each edit | ~500+ lines |
-| `lipgloss.Width()` called per-line in render loop | Style measurement is expensive; called once per visual line per render | Pre-compute widths; cache rendered strings between renders when content hasn't changed | ~50+ visual lines (including wrapped lines) |
-| `AlignedModel` recomputed on every `View()` call (view.go uses value receiver, cache on pointer receiver doesn't persist) | Double computation per render; `computeAlignedModelFresh` runs even if cached version exists on the pointer | Pass `*Model` in View or restructure to persist cache across View calls | Any document size (constant 2x overhead) |
+**Sources:**
+- [File Save Operation Should Be Atomic - fritzing-app Issue](https://github.com/fritzing/fritzing-app/issues/4148)
+- [Towards Atomic File Modifications - DEV Community](https://dev.to/martinhaeusler/towards-atomic-file-modifications-2a9n)
+- [npm/write-file-atomic](https://github.com/npm/write-file-atomic)
 
-## Security Mistakes
+---
 
-Domain-specific security issues relevant to a CLI/TUI tool with file I/O.
+### Pitfall 4: Save Doesn't Flush Pending Edits
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Export path not validated for directory traversal | User could accidentally or maliciously write exported files to arbitrary paths (noted as intentional in SECURITY.md) | Document this behavior clearly; consider a confirmation prompt for paths outside CWD |
-| WASM binary served without CSP headers | Browser consumers could be vulnerable to injection if CalcMark WASM is loaded in an insecure context | Provide documentation for web consumers on proper CSP headers |
-| `saveFile` uses `os.WriteFile` with mode 0644 | Correct for most cases, but on shared systems could expose document content | Document that saved files are world-readable; consider using 0600 for new files |
-| No input sanitization on filenames from save-as dialog | Filenames with special characters could cause issues on some OSes | Validate filenames (no null bytes, control characters, or OS-reserved names) |
+**What goes wrong:** User is typing on a line, presses Ctrl+S immediately. The current line content in `editBuf` hasn't been committed to the document yet, so save writes the old version.
 
-## UX Pitfalls
+**Why it happens:** The debounce mechanism means edits aren't committed until 100ms after typing stops. Ctrl+S might trigger during this window.
 
-Common user experience mistakes specific to TUI editors and CLI tools.
+**Current state:** Looking at model.go `saveFile()`, it calls `getDocumentContent()` which reads from blocks, not from `editBuf`.
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Autocomplete suggestions that fire on every keystroke | Completion popups interrupt typing flow; users feel "fought" by the editor | Only show completions after explicit trigger (e.g., Tab or Ctrl+Space); debounce at minimum 200ms; allow user to dismiss permanently |
-| Help text that shows ALL keybindings at once | Users overwhelmed; cannot find the one binding they need | Show context-sensitive help (editing keybindings when editing, navigation when navigating); group by action not by key |
-| Help content in TUI that differs from CLI `--help` | Users lose trust when two help systems disagree | Generate both from the same source data; test that they match |
-| Status bar showing internal state names | Status bar currently shows `mode=0` style internal state in debug output; if this leaks to production view, users see meaningless numbers | Status bar already hides internal mode (good), but verify no code paths expose it |
-| Terminal resize causes flash of unstyled content | User sees white/default-bg lines briefly during resize | Render a complete frame immediately on `WindowSizeMsg` before returning; use lipgloss `Background` on all empty space |
-| Undo/redo with no visual feedback | User presses undo but cannot tell what changed | Flash changed lines or show a brief "Undid: [summary]" in status bar |
-| Cursor invisible on wrapped lines | When editing a line that wraps, cursor is only visible on the first visual line | Ensure cursor rendering in `renderEditLineWrapped` correctly tracks which wrapped segment contains the cursor (existing implementation does this, but verify under narrow terminals) |
+**Consequences:**
+- User thinks they saved their latest typing
+- File on disk is missing the last few characters
+- Very confusing when file reopens without recent edits
 
-## "Looks Done But Isn't" Checklist
+**Prevention:**
+- Before save, flush editBuf to document: `m.updateCurrentLine(m.editBuf)`
+- Cancel any pending debounce timer
+- Then proceed with save
 
-Things that appear complete but are missing critical pieces.
+**Detection:**
+- Test: Type characters, immediately Ctrl+S, verify file contains typed chars
+- User reports: "My last edits weren't saved"
 
-- [ ] **Help system:** Help text written but not tested against actual keybindings -- verify every documented binding actually works by writing a test that presses the key and checks the result
-- [ ] **Autocomplete:** Completion appears but does not handle edge cases -- test with: empty input, cursor in middle of word, cursor at end of line, variable name that is a prefix of another
-- [ ] **Cross-platform binaries:** Binaries build but are not tested -- download each platform binary on actual hardware or emulator and verify basic operations (open file, edit, save, quit)
-- [ ] **WASM build:** WASM compiles but runtime behavior is untested -- load in a real browser (Chrome, Firefox, Safari) and exercise the evaluator; check for missing `syscall/js` bindings
-- [ ] **Dark theme:** Theme looks correct on the developer's terminal but breaks on others -- test on: macOS Terminal.app (limited color), iTerm2 (truecolor), VS Code terminal, Windows Terminal, tmux (can strip colors)
-- [ ] **Line wrapping:** Wrapping works for ASCII but not for Unicode -- test with: CJK characters (double-width), emoji, combining marks, RTL text
-- [ ] **Save/load roundtrip:** Document saves and loads but content differs subtly -- verify with `diff` that saved content, when loaded and re-saved, produces identical bytes
-- [ ] **Version in binary:** `version.go` updated but `--version` flag shows wrong value -- verify with `./cm --version` after building with release ldflags
-- [ ] **Release notes:** GitHub Release created but notes are auto-generated boilerplate -- write human-readable release notes highlighting what's new for v1 users
+**Which phase should address:** Save implementation (HIGH priority)
 
-## Recovery Strategies
+---
 
-When pitfalls occur despite prevention, how to recover.
+### Pitfall 5: Redo Stack Cleared on Any Edit
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Alignment desync | MEDIUM | Reproduce with catwalk test; fix in `AlignedModel` computation; re-run full test suite |
-| ModelV2 regression | HIGH | If v1 ships with incomplete ModelV2, must either fix forward or revert to Model; reverting requires changing `app.go` back |
-| Wrong Go version in CI | LOW | Update `release.yml`, delete bad tag, re-tag, re-push |
-| WASM too large | MEDIUM | Add build tags to separate TUI from library; audit imports in WASM path; consider TinyGo |
-| Help text stale | LOW | Audit all help strings; add test that compares help output to keybinding definitions |
-| Binary missing for platform | LOW | Add the missing GOOS/GOARCH to Taskfile `build:all`; re-run release |
-| Performance regression in interpreter | HIGH | Requires profiling (`go test -bench`); may need algorithmic changes in evaluator |
-| Autocomplete too aggressive | LOW | Change trigger from automatic to explicit (Tab key); add debounce |
+**What goes wrong:** After undoing 3 times, user makes a small edit, and ALL redo history is lost—even if the edit was unrelated to the undone changes.
 
-## Pitfall-to-Phase Mapping
+**Why it happens:** The current implementation in model.go:276 does `m.redoStack = nil` on any new change. This is the standard "linear history" approach.
 
-How roadmap phases should address these pitfalls.
+**Consequences:**
+- User loses ability to redo after making any change
+- "Undo tree" workflows (explore alternatives then return) become impossible
+- User frustration when they accidentally type and lose redo stack
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Two-pane alignment desync | TUI Editor Rewrite | Catwalk tests with wrapping scenarios pass; `sourcePreviewMatch=true` in all tests |
-| ModelV2 feature regression | TUI Editor Rewrite | All existing Model catwalk tests ported and passing on ModelV2 |
-| Help content drift | Help System | Automated test comparing help output to `shared.KeyMap` definitions |
-| Autocomplete UX annoyance | Autocomplete | User testing or manual review; debounce timing verified via test |
-| Go version mismatch in CI | Distribution/Release | `go version` step in CI outputs version matching `go.mod` |
-| WASM binary size | Distribution/Release | CI step that measures binary size and fails if over budget |
-| Cross-platform binary issues | Distribution/Release | Matrix test job that runs basic smoke test on each platform |
-| Performance regression | Every Phase | Benchmark tests (`task bench`) run before and after each phase; compare results |
-| Documentation/code drift | Documentation | CI check that README examples compile and run |
-| Theme/terminal compatibility | TUI Editor Rewrite | Manual test on at least 3 terminals (macOS Terminal.app, iTerm2/WezTerm, Windows Terminal) |
+**Prevention:**
+- Document this as expected behavior (if linear history is the design choice)
+- OR implement tree-based undo (more complex but preserves all history)
+- At minimum: show visual indicator when redo is available/cleared
+
+**Detection:**
+- Test: Undo 3x, type 1 char, verify redo stack is empty
+- User reports: "I lost my redo history"
+
+**Which phase should address:** Undo/redo implementation (document behavior or enhance)
+
+**Sources:**
+- [You Don't Know Undo/Redo - DEV Community](https://dev.to/isaachagoel/you-dont-know-undoredo-4hol)
+
+---
+
+## Moderate Pitfalls
+
+Mistakes that cause delays, confusion, or technical debt.
+
+### Pitfall 6: Undo Granularity Too Fine (Every Keystroke)
+
+**What goes wrong:** Each typing pause creates an undo state. Pressing undo requires 20+ presses to undo a single sentence.
+
+**Why it happens:** `pushUndoState()` is called after every edit via debounce. The debounce delay is 100ms, which means rapid typing creates separate undo states for each pause.
+
+**Prevention:** Group edits into logical undo units:
+- Whitespace boundaries (word-level undo)
+- Paragraph/line boundaries
+- Time-based grouping (1-2 second window)
+- Navigation breaks an undo group (arrow key = new group)
+
+**Detection:**
+- Test: Type "hello world", count undo operations needed to remove it
+- Should be 1-2 undos, not 11
+
+**Which phase should address:** Undo/redo enhancement (after basic undo works)
+
+---
+
+### Pitfall 7: Unit Prefix Confusion (MB vs MiB vs Mb)
+
+**What goes wrong:** User types "5 mb/s" meaning megabytes, but system interprets differently, off by factor of 8 or ~5%.
+
+**Why it happens:** CalcMark's unit system (canonical.go) handles many aliases but:
+- `mb` could mean: megabytes (MB), mebibytes (MiB), megabits (Mb)
+- Case sensitivity varies by context
+- The lexer/parser must make a choice, users may not know which
+
+**Current state:** Looking at canonical.go, data units aren't explicitly listed (focus is on physical units). The rate parsing handles "MB/s" but case sensitivity is unclear.
+
+**Consequences:**
+- Off by 8x when confusing bits and bytes
+- Off by ~5% when confusing SI (MB) vs binary (MiB)
+- User gets wrong answers without realizing
+
+**Prevention:**
+- Audit all data unit aliases for consistent handling
+- Document the conventions clearly (SI = 1000-based MB, binary = 1024-based MiB)
+- Consider warning on ambiguous units
+- Add explicit case handling
+
+**Detection:**
+- Test: `5 mb/s` should equal `5 MB/s` (if case-insensitive)
+- Test: `5 MiB` should be different from `5 MB` if both supported
+- Golden test: Add unit conversion edge cases
+
+**Which phase should address:** Unit conversion audit
+
+**Sources:**
+- [NIST Metrication Errors](https://www.nist.gov/pml/owm/metrication-errors-and-mishaps)
+- [Unit Conversion Mistakes](https://freeunitconvertertool.com/the-most-common-unit-conversion-mistakes-to-avoid/)
+- [NASA Mars Climate Orbiter](https://sites.google.com/view/onlineunitconversions/four-tragedies-caused-by-erroneous-unit-conversion)
+
+---
+
+### Pitfall 8: Undo Before editBuf Commit Loses Edit
+
+**What goes wrong:** User types "abc", immediately presses Ctrl+Z (undo). The "abc" was never committed to the document, so undo does nothing visible—but the editBuf is also not cleared, leaving the editor in an inconsistent state.
+
+**Why it happens:** Undo operates on committed document states, but editBuf exists as a pending change buffer. The two systems don't communicate.
+
+**Prevention:**
+- Before undo: flush editBuf to document first
+- OR: Cancel editBuf changes on undo (discard uncommitted typing)
+- Document which behavior is chosen
+
+**Detection:**
+- Test: Type characters, immediately undo, verify consistent state
+- editBuf and document should agree after undo
+
+**Which phase should address:** Undo/redo implementation
+
+---
+
+## Minor Pitfalls
+
+Mistakes that cause annoyance but are easily fixable.
+
+### Pitfall 9: Save-As Overwrites Without Warning
+
+**What goes wrong:** User chooses Save-As and enters a filename that already exists. File is overwritten without confirmation.
+
+**Why it happens:** `os.WriteFile()` always overwrites. No pre-check for file existence.
+
+**Prevention:**
+```go
+if _, err := os.Stat(filename); err == nil {
+    // File exists, prompt for confirmation
+    m.mode = StateOverwritePrompt
+    return
+}
+```
+
+**Detection:**
+- Test: Save-As to existing file, verify prompt appears
+- User reports: "It overwrote my file without asking"
+
+**Which phase should address:** Save-As implementation
+
+---
+
+### Pitfall 10: Relative Path Handling in Save
+
+**What goes wrong:** User types "myfile.cm" in Save-As. File is saved relative to... what? Working directory at app start? Current file's directory? Unclear.
+
+**Why it happens:** `filepath.Abs()` uses current working directory, but in a TUI app, users may not know what that is.
+
+**Current state:** model.go:1460 uses `filepath.Abs(filename)` which uses cwd.
+
+**Prevention:**
+- If current file is open, default to its directory
+- Display the full path in status bar after save
+- Consider showing full path preview before saving
+
+**Detection:**
+- Test: Open `/tmp/a.cm`, Save-As "b.cm", verify it goes to `/tmp/b.cm` not cwd
+- User reports: "I can't find where my file was saved"
+
+**Which phase should address:** Save-As implementation
+
+---
+
+### Pitfall 11: Rate Time Unit Normalization Inconsistency
+
+**What goes wrong:** `100 MB/second` and `100 MB/s` should be identical, but might display or compare differently.
+
+**Why it happens:** `NormalizeTimeUnit()` in rate.go handles this, but display uses `abbreviateTimeUnit()` which has its own mapping.
+
+**Current state:** Looking at rate.go, normalization is done in `NewRate()`, which is good. Display abbreviates separately.
+
+**Prevention:**
+- Always normalize at construction time (already done, good)
+- Ensure display and comparison both use canonical forms
+- Test round-trip: parse -> display -> parse should be identical
+
+**Detection:**
+- Test: `100 MB/second == 100 MB/s` should be true
+- Test: Display of both should be identical
+
+**Which phase should address:** Unit conversion audit (low priority)
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Napkin formatter fix | Lose other type metadata (Currency symbol, Rate denominator) | Test ALL types through napkin, not just Quantity |
+| Napkin formatter fix | Edge cases in rounding (negative, very small, very large) | Test: -1.5M, 0.001, 1e15 |
+| Undo/redo | Cursor position not restored | Store cursor with each state from day 1 |
+| Undo/redo | Edit buffer not committed before undo | Flush editBuf before manipulating undo stack |
+| Undo/redo | Redo cleared unexpectedly | Document linear history behavior |
+| File save | Direct write causes corruption on crash | Use temp file + atomic rename pattern |
+| File save | editBuf not flushed | Commit pending edits before save |
+| Save-As | Overwrite without confirmation | Check existence, prompt user |
+| Save-As | Unclear path resolution | Default to current file's directory |
+| Unit audit | Case sensitivity assumptions | Audit all unit aliases for consistent casing |
+| Unit audit | Binary vs SI prefix confusion | Document conventions, add tests |
+
+---
+
+## Codebase-Specific Implementation Notes
+
+### Current Undo/Redo (model.go lines 137-138, 265-277, 1313-1357)
+
+The foundation is good but needs:
+1. `UndoState` struct with cursor position (not just content string)
+2. editBuf flush before `pushUndoState()`
+3. Clear documentation of redo-clearing behavior
+4. Consider grouping edits by word boundaries
+
+### Napkin Bug (napkin_eval.go lines 24-29, 99)
+
+This is a type-erasure problem. The fix must:
+1. Check input type in the switch
+2. Apply rounding to the numeric value
+3. Reconstruct the SAME type with rounded value
+4. Never downgrade Quantity -> Number
+
+```go
+// Current (wrong):
+return types.NewNumber(decimal.NewFromFloat(roundedFloat))
+
+// Fixed:
+switch v := value.(type) {
+case *types.Quantity:
+    return types.NewQuantity(decimal.NewFromFloat(roundedFloat), v.Unit)
+case *types.Rate:
+    // Preserve rate structure with rounded amount
+    ...
+}
+```
+
+### File Operations (model.go lines 1443-1620)
+
+Needs:
+1. Atomic save (temp file + rename)
+2. editBuf flush before save
+3. Existence check for Save-As
+4. Directory resolution for relative paths
+
+---
 
 ## Sources
 
-- [State of Terminal Emulators 2025 - Jeff Quast](https://www.jeffquast.com/post/state-of-terminal-emulation-2025/) -- Unicode width calculation challenges in terminals (HIGH confidence)
-- [Bubbletea Issue #43 - Display issue when content exceeds terminal width](https://github.com/charmbracelet/bubbletea/issues/43) -- Developers must handle wrapping themselves (HIGH confidence, verified via WebFetch)
-- [Bubbletea Issue #1036 - View() hangs on AdaptiveColor](https://github.com/charmbracelet/bubbletea/issues/1036) -- Race condition with lipgloss style rendering (MEDIUM confidence)
-- [Bubbletea Issue #1225 - lipgloss Width() rendering bug](https://github.com/charmbracelet/bubbletea/issues/1225) -- Dynamic width causes incorrect rendering (MEDIUM confidence)
-- [Go Module Release Workflow - Official Go Docs](https://go.dev/doc/modules/release-workflow) -- v1 backward compatibility commitments (HIGH confidence)
-- [GoReleaser CGO Limitations](https://goreleaser.com/limitations/cgo/) -- Cross-compilation requires CGO_ENABLED=0 for pure Go projects (HIGH confidence)
-- [Cobra User Guide](https://github.com/spf13/cobra/blob/main/site/content/user_guide.md) -- Auto-generated help, subcommand grouping (HIGH confidence)
-- [Go WASM Binary Size Analysis](https://dev.bitolog.com/minimizing-go-webassembly-binary-size/) -- fmt adds ~400KB; base binary ~1.3MB (MEDIUM confidence)
-- [Tips for building Bubble Tea programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) -- Best practices for Bubbletea architecture (MEDIUM confidence)
-- [CLI Guidelines](https://news.ycombinator.com/item?id=25304257) -- CLI help best practices discussion (LOW confidence, community source)
-- Project analysis: `go.mod`, `Taskfile.yml`, `release.yml`, `model.go`, `view.go`, `model_v2.go`, `aligned.go`, `state.go`, `RELEASE.md`, `SECURITY.md` -- Direct code inspection (HIGH confidence)
+- [Undo/Redo Implementations in Text Editors](https://www.mattduck.com/undo-redo-text-editors) - Comprehensive overview of undo strategies
+- [You Don't Know Undo/Redo](https://dev.to/isaachagoel/you-dont-know-undoredo-4hol) - Scope, granularity, and reaction handling
+- [Design Thoughts: Undo Redo - super_editor](https://github.com/superlistapp/super_editor/wiki/Design-Thoughts:-Undo-Redo) - Cursor/selection tracking requirements
+- [Towards Atomic File Modifications](https://dev.to/martinhaeusler/towards-atomic-file-modifications-2a9n) - Atomic save patterns
+- [write-file-atomic (npm)](https://github.com/npm/write-file-atomic) - Reference implementation of atomic writes
+- [NIST Metrication Errors](https://www.nist.gov/pml/owm/metrication-errors-and-mishaps) - Real-world unit conversion disasters
+- [Unit Conversion Mistakes](https://freeunitconvertertool.com/the-most-common-unit-conversion-mistakes-to-avoid/) - Common patterns
+- [NASA Mars Climate Orbiter](https://sites.google.com/view/onlineunitconversions/four-tragedies-caused-by-erroneous-unit-conversion) - Famous unit mixup ($327M loss)
+- CalcMark codebase analysis: model.go, napkin_eval.go, rate.go, canonical.go (HIGH confidence)
 
 ---
-*Pitfalls research for: CalcMark CLI/TUI v1 release*
-*Researched: 2026-02-02*
+*Pitfalls research for: CalcMark v1.1 milestone*
+*Researched: 2026-02-06*
+*Focus: Interpreter correctness, undo/redo, file operations*

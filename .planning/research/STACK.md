@@ -1,10 +1,308 @@
 # Stack Research
 
 **Domain:** Go CLI/TUI developer tools (v1 release polish for CalcMark interpreter)
-**Researched:** 2026-02-02
+**Researched:** 2026-02-02, updated 2026-02-06 for v1.1
 **Confidence:** HIGH (existing stack verified against current releases; additions verified via WebSearch + official docs)
 
-## Current Stack Audit
+---
+
+## v1.1 Stack Additions
+
+**Focus:** Undo/redo, file operations, unit correctness testing
+**No new dependencies required.** All needs can be met with existing `bubbletea`, `bubbles`, and standard library.
+
+### 1. Undo/Redo Implementation
+
+#### Current State
+
+The codebase already has a working undo/redo implementation in `model.go`:
+
+```go
+// Undo/redo
+undoStack []string // Document content snapshots
+redoStack []string
+
+func (m *Model) pushUndoState() {
+    content := m.getDocumentContent()
+    if len(m.undoStack) == 0 || m.undoStack[len(m.undoStack)-1] != content {
+        m.undoStack = append(m.undoStack, content)
+        if len(m.undoStack) > 100 {
+            m.undoStack = m.undoStack[1:]
+        }
+        m.redoStack = nil
+    }
+}
+```
+
+**Current limitations:**
+- Only accessible via `/undo` and `/redo` slash commands
+- No keyboard shortcuts (Ctrl+Z, Ctrl+Y are not bound)
+- 100-entry cap is reasonable but memory grows linearly with document size
+- Cursor position is NOT restored on undo
+
+#### Recommended Pattern: Memento with Cursor State
+
+**Keep the current snapshot approach** (simpler than command pattern for text editors) but enhance it:
+
+```go
+// Snapshot captures document state for undo/redo
+type Snapshot struct {
+    Content    string
+    CursorLine int
+    CursorCol  int
+    Timestamp  time.Time // For potential "undo recently" features
+}
+
+// Enhanced model fields
+undoStack []Snapshot
+redoStack []Snapshot
+```
+
+**Why memento over command pattern:**
+- Document edits are character-by-character; command granularity is unclear
+- Memento is simpler: save state before changes, restore on undo
+- [refactoring.guru](https://refactoring.guru/design-patterns/memento/go/example) and [niklabh/undo-redo](https://github.com/niklabh/undo-redo) both recommend memento for this use case
+
+#### Keyboard Binding Implementation
+
+Add to `handleDefaultKey()`:
+
+```go
+case tea.KeyCtrlZ:
+    m.undo()
+    return m, nil
+case tea.KeyCtrlY:
+    m.redo()
+    return m, nil
+```
+
+The key bindings are already defined in `shared/keys.go`:
+```go
+Undo: key.NewBinding(key.WithKeys("ctrl+z"), key.WithHelp("Ctrl+Z", "undo")),
+Redo: key.NewBinding(key.WithKeys("ctrl+y"), key.WithHelp("Ctrl+Y", "redo")),
+```
+
+**Implementation effort:** LOW - wire existing functionality to keyboard shortcuts.
+
+#### Memory Optimization (Post-v1.1)
+
+For large documents, consider:
+1. **Diff-based storage** - Store deltas instead of full content
+2. **Operational transforms** - For collaborative editing (if ever needed)
+3. **LRU with compression** - Compress older snapshots
+
+Current 100-entry cap with full content is acceptable for v1.1 given typical document sizes.
+
+### 2. File Operations
+
+#### Current State
+
+File operations are partially implemented:
+
+| Operation | Status | Access |
+|-----------|--------|--------|
+| Save | Working | Ctrl+S, `/save` |
+| Save As | Working | Prompts if no filename |
+| Quit | Working | Ctrl+Q, `/quit` |
+| Quit with prompt | Working | `StateSavePrompt` state exists |
+| Open | Working | `/open` command only |
+
+#### Implementation Pattern: State Machine
+
+The codebase already uses `InputState` for modal dialogs:
+
+```go
+const (
+    StateDefault      InputState = iota
+    StateAutocomplete
+    StateGlobals
+    StateHelp
+    StateExportFormat
+    StateExportPath
+    StateSavePrompt   // "Unsaved changes! Save before quit? (y/n/c)"
+    StateSaveAsPath   // "Save as (filename):"
+)
+```
+
+**This is the correct pattern.** The save prompt flow is already implemented in `handleSavePromptKey()`.
+
+#### Unsaved Changes Detection
+
+Already implemented via content comparison:
+
+```go
+func (m *Model) hasUnsavedChanges() bool {
+    currentContent := m.getDocumentContent()
+    return currentContent != m.savedContent
+}
+```
+
+#### tea.WithFilter for Quit Interception
+
+Bubbletea supports intercepting quit messages via `tea.WithFilter`:
+
+```go
+func filter(m tea.Model, msg tea.Msg) tea.Msg {
+    if _, ok := msg.(tea.QuitMsg); !ok {
+        return msg
+    }
+    model := m.(Model)
+    if model.hasUnsavedChanges() {
+        return nil // Block quit, let model handle it
+    }
+    return msg
+}
+
+p := tea.NewProgram(model, tea.WithFilter(filter))
+```
+
+**However,** the current implementation already handles this at the key level in Ctrl+Q processing.
+
+**Recommendation:** Current approach is sufficient. No stack changes needed.
+
+### 3. Unit Conversion Correctness Testing
+
+#### Current Testing Approach
+
+The codebase uses table-driven tests effectively:
+
+```go
+// impl/interpreter/unit_conversion_test.go
+func TestUnitConversionAccuracy(t *testing.T) {
+    tests := []struct {
+        name      string
+        input     string
+        expected  float64
+        tolerance float64
+    }{
+        {
+            name:      "10 meters + 5 feet",
+            input:     "10 meters + 5 feet\n",
+            expected:  11.524,
+            tolerance: 0.001,
+        },
+        ...
+    }
+}
+```
+
+And the semantic checker tests unit compatibility:
+
+```go
+// spec/semantic/unit_validation_test.go
+func TestUnitCompatibility_IncompatibleUnits(t *testing.T) {
+    tests := []struct {
+        name  string
+        unit1 string
+        unit2 string
+    }{
+        {"meters + kg", "meters", "kg"},
+        ...
+    }
+}
+```
+
+#### Recommended Testing Strategy
+
+**Three layers of unit testing:**
+
+| Layer | Focus | Location |
+|-------|-------|----------|
+| Semantic | Type compatibility (length vs mass) | `spec/semantic/unit_validation_test.go` |
+| Conversion | Mathematical accuracy | `impl/interpreter/unit_conversion_test.go` |
+| Integration | Full parse-eval pipeline | `testdata/eval/success/features/*.cm` |
+
+#### Property-Based Testing for Conversions
+
+Add property-based tests for conversion invariants:
+
+```go
+// impl/interpreter/unit_conversion_property_test.go
+func TestConversionRoundTrip(t *testing.T) {
+    // Property: Converting A->B->A should return original value (within tolerance)
+    tests := []struct {
+        unitA string
+        unitB string
+    }{
+        {"meters", "feet"},
+        {"kg", "lb"},
+        {"liters", "gallons"},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.unitA+"->"+tt.unitB+"->"+tt.unitA, func(t *testing.T) {
+            for _, value := range []float64{1.0, 10.0, 100.0, 0.5, 0.01} {
+                result := convertAndBack(value, tt.unitA, tt.unitB)
+                if math.Abs(result-value) > 0.0001 {
+                    t.Errorf("Round-trip failed: %f %s -> %s -> %s = %f",
+                        value, tt.unitA, tt.unitB, tt.unitA, result)
+                }
+            }
+        })
+    }
+}
+```
+
+**Conversion correctness invariants to test:**
+
+1. **Round-trip identity:** `A -> B -> A == A` (within floating-point tolerance)
+2. **First-unit-wins:** Result always in first operand's unit
+3. **Incompatible units error:** `meters + kg` must fail
+4. **Arbitrary units preserved:** `10 goats + 5 goats = 15 goats`
+5. **Napkin formatting:** `X as napkin` produces human-readable output
+
+#### Known Bug: "as napkin" Loses Unit Context
+
+From project context: `as napkin` loses unit context. This requires:
+
+1. **Test that captures the bug:**
+   ```go
+   func TestNapkinPreservesUnit(t *testing.T) {
+       input := "bandwidth = 100 MB/s as napkin\n"
+       // Expected: napkin format with unit context preserved
+       // Bug: unit gets dropped
+   }
+   ```
+
+2. **Fix in interpreter** to preserve unit metadata through napkin formatting
+
+#### Recommended Test File Structure
+
+```
+impl/interpreter/
+├── unit_conversion_test.go          # Accuracy tests (existing)
+├── unit_conversion_property_test.go # Property-based tests (new)
+├── napkin_test.go                   # Napkin formatting tests (new)
+spec/semantic/
+├── unit_validation_test.go          # Type compatibility (existing)
+testdata/eval/
+├── errors/features/
+│   └── incompatible_units.cm        # Golden error cases (existing)
+├── success/features/
+│   └── napkin.cm                    # Golden napkin cases (existing)
+```
+
+### v1.1 Implementation Priorities
+
+| Phase | Feature | Effort | Pattern |
+|-------|---------|--------|---------|
+| 1 | Undo/Redo keyboard shortcuts | LOW | Wire existing `undo()`/`redo()` to Ctrl+Z/Y |
+| 1 | Cursor position in snapshots | LOW | Extend snapshot struct |
+| 2 | Unit round-trip property tests | MEDIUM | Table-driven with value arrays |
+| 2 | Napkin unit preservation | MEDIUM | Test-first, fix interpreter |
+| 3 | File operations polish | LOW | Catwalk tests for save/quit flows |
+
+### v1.1 Sources
+
+- [Memento Pattern in Go](https://refactoring.guru/design-patterns/memento/go/example)
+- [niklabh/undo-redo](https://github.com/niklabh/undo-redo) - Go undo/redo library pattern
+- [Bubbletea tea.WithFilter for quit interception](https://github.com/charmbracelet/bubbletea/issues/472)
+- [Go Table-Driven Tests](https://go.dev/wiki/TableDrivenTests)
+- [Dave Cheney on Table-Driven Tests](https://dave.cheney.net/2019/05/07/prefer-table-driven-tests)
+
+---
+
+## Current Stack Audit (v1.0)
 
 CalcMark already has a working interpreter and TUI. This research validates the existing stack and recommends additions for v1 release features: TUI editor rewrite, help system, autocomplete, YAML front matter, documentation, and prebuilt binaries.
 
@@ -262,4 +560,5 @@ Rationale:
 
 ---
 *Stack research for: CalcMark v1 release -- Go CLI/TUI developer tools*
-*Researched: 2026-02-02*
+*Originally researched: 2026-02-02*
+*Updated for v1.1: 2026-02-06*

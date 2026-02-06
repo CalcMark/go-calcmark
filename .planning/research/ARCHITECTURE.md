@@ -1,8 +1,390 @@
 # Architecture Research
 
 **Domain:** TUI Editor + CLI for an Interpreted Language (CalcMark)
-**Researched:** 2026-02-02
+**Researched:** 2026-02-06 (updated for v1.1 milestone)
 **Confidence:** HIGH
+
+## v1.1 Milestone Architecture Additions
+
+This section documents how v1.1 features integrate with the existing architecture.
+
+### Overview: v1.1 Feature Integration Points
+
+| Feature | Location | Integration Complexity |
+|---------|----------|------------------------|
+| Napkin unit bug fix | `impl/interpreter/napkin_eval.go` | LOW - localized fix |
+| Unlimited undo/redo | `cmd/calcmark/tui/editor/model.go` | LOW - remove limit |
+| Ctrl+Z/Ctrl+Y bindings | `cmd/calcmark/tui/editor/model.go` | LOW - add key handlers |
+| Save/Quit prompts | Already implemented | DONE - verify behavior |
+
+---
+
+## Undo/Redo State Architecture
+
+### Current Implementation
+
+Location: `cmd/calcmark/tui/editor/model.go`
+
+```go
+type Model struct {
+    // ...
+
+    // Undo/redo
+    undoStack []string // Document content snapshots
+    redoStack []string
+
+    // ...
+}
+```
+
+**Current behavior:**
+- `undoStack` stores document content as strings
+- Maximum 100 entries (hardcoded in `pushUndoState()`)
+- `redoStack` cleared on new changes
+- Snapshots pushed via `pushUndoState()` after document modifications
+
+**Key methods:**
+- `pushUndoState()` - Called after edit operations (lines 266-277)
+- `undo()` - Pops from undoStack, pushes to redoStack, rebuilds document (lines 1313-1335)
+- `redo()` - Pops from redoStack, pushes to undoStack, rebuilds document (lines 1338-1357)
+
+### v1.1 Enhancement: Unlimited Undo
+
+**Current limit (line 273-275):**
+```go
+// Limit undo stack size
+if len(m.undoStack) > 100 {
+    m.undoStack = m.undoStack[1:]
+}
+```
+
+**Recommendation:** Remove this limit for v1.1. CalcMark documents are typically small (<10KB). Even 1000 undo states = ~10MB memory, which is acceptable for a desktop CLI tool.
+
+**Alternative (if memory becomes an issue):** Implement delta-based undo using content diffs, but defer this complexity until users report actual issues.
+
+### v1.1 Enhancement: Keyboard Bindings
+
+**Current access:** Undo/redo only accessible via `/undo` and `/redo` slash commands.
+
+**Needed:** Add standard keyboard shortcuts in `handleDefaultKey()`:
+- Ctrl+Z for undo
+- Ctrl+Y or Ctrl+Shift+Z for redo
+
+**Implementation location:** `model.go` lines 466-512 (handleDefaultKey switch statement)
+
+### Integration Points
+
+Undo state is pushed in these locations:
+- `handleEnterKey()` line 727 - After line insertion
+- `handleBackspaceKey()` line 762 - After line join
+- `transitionToProcessing()` indirectly via `redetectBlockTypes()`
+- `saveCurrentLineAndMoveTo()` line 1110 - After navigation with save
+- `insertLine()` line 1264 - After new line insertion
+- `deleteLine()` line 2039 - After line deletion
+
+---
+
+## Unit System Architecture
+
+### Three-Layer Unit System
+
+```
+Layer 1: spec/units/canonical.go
+    │
+    │   Defines: Unit names, symbols, aliases, categories
+    │   Purpose: Language specification (what units exist)
+    │   Used by: Parser, autocomplete, validation
+    │   Key types: UnitMapping, StandardUnits map
+    │
+Layer 2: impl/interpreter/unit_library.go
+    │
+    │   Defines: Conversion functions (ToBaseUnit, FromBaseUnit)
+    │   Purpose: Mathematical conversion at evaluation time
+    │   Used by: Interpreter during calculation
+    │   Key types: UnitInfo, QuantityCategory
+    │
+Layer 3: format/display/normalize.go
+    │
+    │   Defines: Display normalization (1000m → 1km)
+    │   Purpose: Human-readable output formatting
+    │   Used by: TUI preview pane, formatters
+    │   Key function: NormalizeForDisplay()
+```
+
+### Unit Conversion Flow
+
+```
+Input: "100 feet in meters"
+        │
+        ▼
+Parser (spec/parser) → AST: InConversion{Quantity{100, "feet"}, "meters"}
+        │
+        ▼
+Interpreter (impl/interpreter/unit_conversion_eval.go)
+        │
+        ├── GetUnitInfo("feet") → UnitInfo{Category: Length, ToBaseUnit: feet→meters}
+        ├── GetUnitInfo("meters") → UnitInfo{Category: Length, FromBaseUnit: meters→meters}
+        ├── Verify same category
+        └── Convert: feet → meters (base) → meters (target)
+        │
+        ▼
+Result: Quantity{30.48, "meters"}
+        │
+        ▼
+Display (format/display/normalize.go)
+        │
+        └── NormalizeForDisplay(30.48, "meters") → (30.48, "m")
+        │
+        ▼
+Output: "30.48 m"
+```
+
+---
+
+## Napkin Formatter Bug Analysis
+
+### The Bug
+
+**Symptom:** `accumulate(5mb/s, 1 day) as napkin` returns "430K" instead of ~400GB
+
+**Root Cause Location:** `impl/interpreter/napkin_eval.go` lines 22-36
+
+```go
+func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.Type, error) {
+    value, err := interp.evalNode(n.Expression)
+    // ...
+
+    switch v := value.(type) {
+    case *types.Number:
+        numValue = v.Value
+    case *types.Quantity:
+        // BUG: Just uses numeric value, DISCARDS the unit
+        numValue = v.Value  // ← Unit lost here!
+    case *types.Rate:
+        // BUG: Also loses unit context
+        numValue = v.Amount.Value
+    // ...
+    }
+
+    // Returns Number only, never preserves unit
+    return types.NewNumber(decimal.NewFromFloat(roundedFloat)), nil
+}
+```
+
+### Fix Required
+
+When input is a Quantity, return a Quantity with the same unit:
+
+```go
+func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.Type, error) {
+    value, err := interp.evalNode(n.Expression)
+    if err != nil {
+        return nil, err
+    }
+
+    var numValue decimal.Decimal
+    var originalUnit string  // NEW: preserve unit
+
+    switch v := value.(type) {
+    case *types.Number:
+        numValue = v.Value
+    case *types.Quantity:
+        numValue = v.Value
+        originalUnit = v.Unit  // NEW: capture unit
+    case *types.Rate:
+        numValue = v.Amount.Value
+        originalUnit = v.Amount.Unit  // NEW: capture unit from rate amount
+    // ... rest of cases
+    }
+
+    // ... rounding logic ...
+
+    // NEW: Return appropriate type based on input
+    roundedValue := decimal.NewFromFloat(roundedFloat)
+    if originalUnit != "" {
+        return &types.Quantity{Value: roundedValue, Unit: originalUnit}, nil
+    }
+    return types.NewNumber(roundedValue), nil
+}
+```
+
+### Files to Modify for Fix
+
+1. `impl/interpreter/napkin_eval.go` - Fix unit preservation
+2. Add test in `impl/interpreter/napkin_unary_test.go` - Test for quantity with unit
+3. Verify `impl/interpreter/napkin.go` - `formatNapkin()` may need updates for display
+
+---
+
+## File Operations Architecture
+
+### Existing Infrastructure (v1.0)
+
+**Save implementation** (model.go lines 1443-1484):
+```go
+func (m *Model) saveFile(filename string) {
+    // Uses filepath or provided filename
+    // Ensures .cm extension
+    // Gets absolute path
+    // Writes via os.WriteFile
+    // Updates: m.filepath, m.savedContent, m.modified, m.statusMsg
+}
+```
+
+**Unsaved changes detection** (model.go lines 1556-1561):
+```go
+func (m *Model) hasUnsavedChanges() bool {
+    currentContent := m.getDocumentContent()
+    return currentContent != m.savedContent
+}
+```
+
+**Quit handling** (model.go lines 376-383):
+```go
+case tea.KeyCtrlQ:
+    if m.hasUnsavedChanges() {
+        m.mode = StateSavePrompt
+        m.statusMsg = "Unsaved changes! Save before quit? (y/n/c)"
+        return m, nil
+    }
+    m.quitting = true
+    return m, tea.Quit
+```
+
+### v1.1 Status
+
+All file operations appear to be implemented:
+- **Ctrl+S**: Save (lines 386-395)
+- **Ctrl+Q**: Quit with unsaved changes prompt (lines 376-383)
+- **StateSaveAsPath**: Save-as dialog (lines 993-1025)
+- **hasUnsavedChanges()**: Dirty state detection (lines 1556-1561)
+
+**Verification needed:** Test edge cases:
+- Save to readonly directory
+- Save with disk full
+- Quit during save operation
+- Save-as with existing filename (overwrite prompt?)
+
+---
+
+## Editor State Machine
+
+Location: `cmd/calcmark/tui/editor/state.go`
+
+### Core States (EditorState)
+
+```
+┌─────────────┐
+│  StateReady │ ←──────────────────────────────┐
+│             │                                │
+│  Invariants:│                                │
+│  - doc != nil                                │
+│  - eval != nil                               │
+│  - userIsTyping = false                      │
+└──────┬──────┘                                │
+       │ User starts typing                    │
+       ▼                                       │
+┌─────────────┐                                │
+│StateEditing │                                │
+│             │                                │
+│  Invariants:│                                │
+│  - editBuf populated                         │
+│  - userIsTyping = true                       │
+└──────┬──────┘                                │
+       │ Debounce fires / ENTER / navigation   │
+       ▼                                       │
+┌─────────────────┐                            │
+│StateProcessing  │────────────────────────────┘
+│                 │
+│  Actions:
+│  - userIsTyping = false
+│  - Save editBuf to document
+│  - Re-detect block types
+│  - Re-evaluate
+│  - Auto-transition to StateReady
+└─────────────────┘
+```
+
+### UI States (InputState)
+
+Separate from core editing states, these control which UI component receives input:
+
+| State | Purpose | Exit Condition |
+|-------|---------|----------------|
+| StateDefault | Normal editing | Modal triggers |
+| StateAutocomplete | Autocomplete popup visible | ESC, Tab, selection |
+| StateGlobals | Globals panel focused | ESC, Enter |
+| StateHelp | Help overlay visible | F1, ESC |
+| StateExportFormat | Export format selection | Number key, ESC |
+| StateExportPath | Export path input | Enter, ESC |
+| StateSavePrompt | Unsaved changes dialog | y/n/c key |
+| StateSaveAsPath | Save-as filename input | Enter, ESC |
+
+---
+
+## Suggested Build Order for v1.1
+
+### Phase 1: Interpreter Correctness (Priority)
+
+1. **Add failing test** for `as napkin` with Quantity input
+   - File: `impl/interpreter/napkin_unary_test.go` (or new file)
+   - Test case: `accumulate(5 mb/s, 1 day) as napkin` should preserve "GB" or "mb" unit
+
+2. **Fix `evalNapkinConversion()`** to preserve units
+   - File: `impl/interpreter/napkin_eval.go`
+   - Change: Track `originalUnit`, return Quantity when unit exists
+
+3. **Verify fix** with `task test`
+
+4. **Add edge case tests**:
+   - Rate with napkin: `100 GB/day as napkin`
+   - Currency with napkin: `$1234567 as napkin`
+   - Duration with napkin: `86400 seconds as napkin`
+
+### Phase 2: Undo/Redo Enhancement
+
+1. **Remove 100-state limit**
+   - File: `cmd/calcmark/tui/editor/model.go`
+   - Line: 273-275 (delete the if block)
+
+2. **Add Ctrl+Z keybinding for undo**
+   - File: `cmd/calcmark/tui/editor/model.go`
+   - Location: `handleKey()` or `handleDefaultKey()` switch statement
+   - Implementation: `case tea.KeyCtrlZ: m.undo(); return m, nil`
+
+3. **Add Ctrl+Y keybinding for redo**
+   - Same location as above
+   - Note: Ctrl+Shift+Z may require special handling for terminals
+
+4. **Optional: Add undo/redo state to status bar**
+   - Show count: "3 undos | 1 redo"
+
+### Phase 3: File Operation Verification
+
+1. **Test existing save/quit/save-as functionality**
+2. **Add catwalk tests** for file operation flows
+3. **Handle edge cases** (readonly, disk full, etc.)
+
+---
+
+## Key Files Reference
+
+| Feature | Primary File | Key Functions/Locations |
+|---------|--------------|-------------------------|
+| Undo/Redo State | model.go lines 137-138 | `undoStack`, `redoStack` fields |
+| Undo/Redo Logic | model.go lines 266-277, 1313-1357 | `pushUndoState()`, `undo()`, `redo()` |
+| State Machine | state.go | `transitionToReady()`, `transitionToEditing()`, `transitionToProcessing()` |
+| Napkin Evaluation | napkin_eval.go | `evalNapkinConversion()` |
+| Napkin Display | napkin.go | `formatNapkin()` |
+| Unit Conversion | unit_conversion.go | `evalQuantityOperation()`, `convertQuantity()` |
+| Unit Registry | unit_library.go | `GetUnitInfo()`, category definitions |
+| Unit Canonical | spec/units/canonical.go | `StandardUnits`, `NormalizeUnitName()` |
+| Display Formatting | format/display/display.go | `Format()`, `FormatQuantity()` |
+| Display Normalization | format/display/normalize.go | `NormalizeForDisplay()` |
+| Save/File Ops | model.go lines 1443-1620 | `saveFile()`, `hasUnsavedChanges()`, `openFile()` |
+| Key Handling | model.go lines 359-513 | `handleKey()`, `handleDefaultKey()` |
+
+---
 
 ## Standard Architecture
 
@@ -66,344 +448,6 @@
 | **impl/** | Interpreter, evaluator, environment, WASM bindings | Depends on spec, never on UI |
 | **format/** | Output formatters (text, JSON, HTML, MD, CM) | Depends on spec, never on UI |
 
-### Current Architecture Issues
-
-The codebase has two editor implementations in flight:
-
-1. **Model (v1)** -- `model.go` (53KB, ~1400 lines). Custom line-by-line rendering with manual cursor tracking, scroll management, and alignment. Well-tested with 50+ test files but architecturally bloated. Has `AlignedModel`, `LineModel`, `EditorState`, and complex block-level rendering logic all in one package.
-
-2. **ModelV2** -- `model_v2.go` (18KB, ~666 lines). Uses `bubbles/textarea` for source editing. Simpler but less feature-complete. Currently wired into `app.go` as the active editor. Missing: undo/redo, slash commands, globals panel, search, most V1 features.
-
-**The core problem:** V1 conflates computation and rendering. The `model.go` file handles cursor tracking, document mutation, evaluation orchestration, undo/redo, state machines, and rendering all in one struct with 40+ fields. This makes it hard to test individual concerns and causes cascading bugs when one area changes.
-
-## Recommended Project Structure
-
-```
-cmd/
-  calcmark/
-    main.go                       # Entry point
-    cmd/                          # Cobra commands (thin routing)
-      root.go                     # REPL or file dispatch
-      eval.go                     # Headless evaluation
-      convert.go                  # Format conversion
-      edit.go                     # Launch editor
-      tui.go                      # Launch TUI
-      version.go                  # Version info
-    config/                       # Configuration loading
-      config.go                   # Config struct and loading
-      theme.go                    # Theme definitions
-      types.go                    # Config types
-    tui/                          # All TUI code
-      app.go                      # Top-level model, mode switching
-      shared/                     # Shared types, key bindings
-        keys.go                   # Key bindings (centralized)
-        state.go                  # Shared mode/state types
-        messages.go               # Cross-component messages
-      components/                 # Reusable pure-render components
-        statusbar.go              # Status bar rendering
-        contextfooter.go          # Context-sensitive footer
-        suggest.go                # Autocomplete rendering
-        globals.go                # Globals panel
-        pinned.go                 # Pinned variables
-        errors.go                 # Error display
-      repl/                       # REPL mode
-        model.go                  # REPL model (self-contained)
-        view.go                   # REPL rendering
-      editor/                     # Editor mode (NEEDS RESTRUCTURING)
-        model.go                  # Core editor state + Update logic
-        view.go                   # View rendering
-        geometry/                 # NEW: Pure geometry computation
-          aligned.go              # Aligned visual line computation
-          linemodel.go            # Source-to-visual line mapping
-          wrap.go                 # Text wrapping
-          sidebyside.go           # Side-by-side pane rendering
-          geometry_test.go        # All geometry is testable pure functions
-        results.go                # Document -> LineResult bridge
-        state.go                  # State machine transitions
-        markdown.go               # Markdown preview rendering
-        testdata/                 # Catwalk test data files
-spec/                             # Language specification (NO impl deps)
-  ast/                            # Abstract syntax tree nodes
-  classifier/                     # Block classification
-  document/                       # Document model (blocks, diagnostics)
-  lexer/                          # Tokenizer
-  parser/                         # Parser
-  semantic/                       # Semantic analysis
-  types/                          # Language type system
-  units/                          # Unit definitions (canonical.go)
-impl/                             # Runtime implementation (NO UI deps)
-  interpreter/                    # Expression evaluator
-  document/                       # Document-level evaluation, Environment
-  types/                          # Runtime type operations
-  wasm/                           # WebAssembly bindings
-format/                           # Output formatters (NO UI deps)
-  display/                        # Display formatting for values
-  text_formatter.go
-  json_formatter.go
-  html_formatter.go
-  markdown_formatter.go
-  calcmark_formatter.go
-```
-
-### Structure Rationale
-
-- **`editor/geometry/`:** The single most important structural change. All pure computation that produces visual line layouts, wrapping, and alignment should live here as pure functions. These functions take inputs (lines, widths, cursor position) and return outputs (visual lines, mappings). No side effects, no lipgloss, no tea.Model. Fully testable with table-driven tests.
-- **`components/`:** Already well-structured. Pure rendering functions that take state structs and return strings. Keep this pattern.
-- **`shared/`:** Cross-cutting types. Keep thin -- only types and messages used by multiple models.
-- **Spec vs Impl separation:** Already correct and working. The `spec/` package defines the language. The `impl/` package executes it. Dependencies flow one way: `impl -> spec`. Never the reverse.
-
-## Architectural Patterns
-
-### Pattern 1: Pure Computation Core (Functional Core, Imperative Shell)
-
-**What:** Separate pure computation from side-effectful Bubble Tea model logic. All geometry, alignment, and wrapping are pure functions. The Bubble Tea model is a thin shell that calls pure functions and wires up state.
-
-**When to use:** Any computation that takes inputs and produces outputs without needing access to the terminal, file system, or Bubble Tea runtime.
-
-**Trade-offs:** Slightly more files and types. Dramatically better testability. Worth it for anything beyond trivial logic.
-
-**Example:**
-```go
-// Pure function -- fully testable, no dependencies on bubbletea/lipgloss
-func CalculateRowGeometry(srcLine string, result string, leftW, rightW int) GeometryResult {
-    leftWrapped := WrapText(srcLine, leftW)
-    rightWrapped := WrapText(result, rightW)
-
-    height := max(len(leftWrapped), len(rightWrapped))
-    if height == 0 {
-        height = 1
-    }
-
-    // Pad shorter side
-    left := make([]string, height)
-    right := make([]string, height)
-    copy(left, leftWrapped)
-    copy(right, rightWrapped)
-
-    return GeometryResult{Height: height, LeftLines: left, RightLines: right}
-}
-
-// Imperative shell -- Bubble Tea model calls pure functions
-func (m *EditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    // ... handle input, update state ...
-    // Recompute geometry from pure functions
-    m.geometry = CalculateRowGeometry(m.currentLine, m.result, m.leftWidth, m.rightWidth)
-    return m, nil
-}
-```
-
-**This pattern already exists in the codebase.** `ComputeAlignedModel()` in `aligned.go` is a pure function. `ComputeLineModel()` in `linemodel.go` is a pure function. `RenderContextFooter()` in `contextfooter.go` is a pure function. The recommendation is to formalize and extend this pattern to cover ALL editor geometry.
-
-### Pattern 2: Data-Driven Testing with Catwalk
-
-**What:** Use `knz/catwalk` on top of `cockroachdb/datadriven` for TUI model testing. Test files contain sequences of key presses and expected model state (via custom observers). Tests run without a terminal.
-
-**When to use:** Every TUI behavior that involves key sequences and state transitions. This is the project's primary testing strategy for the editor.
-
-**Trade-offs:** Test files are text-based and can be verbose. The `-rewrite` flag makes regeneration easy. Observer design determines what you can assert on.
-
-**How CalcMark already uses it:**
-```
-# testdata/delete_empty_line
-run observe=debug
-key j
-key j
-----
--- debug:
-mode=0 cursorLine=2 cursorCol=0 ... editBuf="" ...
-```
-
-**Critical insight:** Catwalk tests the MODEL, not the rendered output. The `debug` observer inspects `Model.Debug()`, which returns structured state. The `results` observer inspects `Model.GetLineResults()`, which returns evaluation results. This is fundamentally different from screenshot testing -- it tests behavior, not pixels.
-
-**Recommendation:** Keep catwalk as the primary testing strategy. Supplement with:
-- **Table-driven unit tests** for pure geometry functions (no catwalk needed)
-- **Golden file tests** for View() output when visual fidelity matters
-- **teatest** only for full-program integration tests (rare, heavy)
-
-### Pattern 3: State Machine for Editor Modes
-
-**What:** Explicit state transitions with invariant checking. The editor has states (Ready, Editing, Processing) with documented invariants and transition functions.
-
-**When to use:** Any UI component with distinct behavioral modes and state that must remain consistent.
-
-**Trade-offs:** More boilerplate for state transitions. Prevents entire classes of bugs where state becomes inconsistent.
-
-**Example from codebase:**
-```go
-// state.go -- explicit transitions with invariant enforcement
-func (m *Model) transitionToReady() {
-    // INVARIANT: Document must exist with at least 1 block
-    if m.doc == nil || len(m.doc.GetBlocks()) == 0 {
-        m.doc, _ = document.NewDocument("\n")
-    }
-    // INVARIANT: Evaluator must exist
-    if m.eval == nil {
-        m.eval = implDoc.NewEvaluator()
-        _ = m.eval.Evaluate(m.doc)
-    }
-    // INVARIANT: Cursor at valid position
-    // ...
-    m.state = StateReady
-}
-```
-
-**Recommendation:** Keep this pattern. Extend it to the V2 model. The current V2 model lacks explicit state management, which will cause bugs as features are added.
-
-### Pattern 4: Message-Passing for Cross-Component Communication
-
-**What:** Components communicate via Bubble Tea messages, not direct method calls. The `SwitchModeMsg` pattern is already used for REPL-to-Editor switching.
-
-**When to use:** Any communication between sibling or parent-child components that live in different packages.
-
-**Trade-offs:** Slightly more indirection. Prevents tight coupling and makes components independently testable.
-
-**Current examples:**
-- `SwitchModeMsg` for mode switching
-- `evalDebounceMsg` for debounced evaluation
-- `saveResultMsg` for async save results
-
-**Recommendation:** Extend to autocomplete, help system, and any new features. Each feature should define its own message types and handle them in its own Update logic.
-
-## Data Flow
-
-### Evaluation Flow (Source Text to Results)
-
-```
-User Types in Source Pane
-    |
-    v
-editBuf updated (immediate, no evaluation)
-    |
-    v (50ms debounce)
-syncDocumentFromTextarea()
-    |
-    v
-specDoc.NewDocument(content)  -->  Parse into blocks (CalcBlock, TextBlock)
-    |
-    v
-implDoc.NewEvaluator().Evaluate(doc)
-    |
-    v
-For each CalcBlock:
-    Lexer -> Parser -> Semantic -> Interpreter
-    Results stored on CalcBlock.results[]
-    Variables stored in Environment
-    |
-    v
-GetLineResults()  -->  Bridge: document blocks -> []LineResult
-    |
-    v
-ComputeAlignedModel(input)  -->  Pure geometry: visual lines for both panes
-    |
-    v
-View()  -->  Render source pane + preview pane side-by-side
-```
-
-### Key Data Types in the Flow
-
-| Stage | Type | Purpose |
-|-------|------|---------|
-| User input | `string` (editBuf) | Raw text being typed |
-| Parsed | `*document.Document` | Structured blocks with AST |
-| Evaluated | `*implDoc.Evaluator` (owns Environment) | Variable bindings, per-statement results |
-| Bridged | `[]LineResult` | Per-line: source, value, error, diagnostics |
-| Geometry | `AlignedModel` | Visual lines with alignment, wrapping, cursor |
-| Rendered | `string` | Final terminal output from View() |
-
-### State Management
-
-```
-EditorModel (single struct, all state)
-    |
-    +-- Document State: doc, eval, filepath, modified, savedContent
-    |
-    +-- Cursor State: cursorLine, cursorCol, scrollOffset
-    |
-    +-- Edit State: state (Ready/Editing/Processing), editBuf, userIsTyping
-    |
-    +-- UI State: width, height, previewMode, quitting
-    |
-    +-- Cache: alignedCache, alignedCacheKey (invalidated on any input change)
-    |
-    +-- Undo/Redo: undoStack, redoStack (content snapshots)
-    |
-    +-- Features: search, export, save, globals, pinnedVars
-```
-
-**The V1 model has ~40 fields.** This is the primary reason for the rewrite. The recommendation is NOT to replicate all 40 fields in V2 but to:
-1. Let `textarea.Model` own cursor, scrolling, undo/redo, and text content
-2. Keep the editor model focused on: document sync, evaluation, and feature state
-3. Move geometry computation to pure functions that take computed inputs
-
-### Key Data Flows
-
-1. **Typing -> Preview:** User types in textarea -> content change detected -> document reparsed -> re-evaluated -> geometry recomputed -> preview pane re-rendered. Debounced at 50ms to avoid excess computation.
-2. **Navigation -> Alignment:** User scrolls/navigates -> textarea updates viewport -> geometry extracts visible range -> preview pane aligns to visible source lines only.
-3. **Mode Switch:** User types `/edit` in REPL -> `SwitchModeMsg` dispatched -> App creates Editor with current document -> Editor opens with same variable state.
-
-## Scaling Considerations
-
-This is a CLI tool, not a server. "Scaling" means handling large documents efficiently.
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-100 lines | Current approach works fine. Full re-evaluation on every change is fast enough. |
-| 100-1000 lines | Need incremental evaluation. Only re-evaluate changed blocks, not entire document. The `DependencyAnalyzer` in spec already tracks cross-block dependencies. |
-| 1000+ lines | Need virtual viewport. Only compute geometry for visible lines (currently ~24 rows). The `AlignedModel` should only compute visible range. Need lazy evaluation for off-screen blocks. |
-
-### Scaling Priorities
-
-1. **First bottleneck: Re-evaluation latency.** Currently the entire document is reparsed and re-evaluated on every keystroke (after debounce). For documents > 100 lines, this will become noticeable. Fix: `EvaluateBlock()` already exists in `impl/document` for incremental evaluation. Wire it up.
-2. **Second bottleneck: Geometry computation.** `ComputeAlignedModel()` iterates all lines to compute visual layout. For large documents, compute only the visible viewport window. Cache alignment for off-screen lines.
-3. **Third bottleneck: Memory for undo.** The V1 model stores full document content snapshots for undo/redo. For large documents, consider operational transform or diff-based undo. The V2 textarea has built-in undo which avoids this.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Monolith Model Struct
-
-**What people do:** Put all state -- cursor, document, evaluation, UI, undo, search, export, save -- in a single struct with 40+ fields.
-**Why it's wrong:** Every feature interacts with every other feature. Adding search affects undo. Adding export affects evaluation. Changes cascade. Tests must construct the full state to test any single feature.
-**Do this instead:** Compose the model from smaller, independent state structs. Each struct owns one concern. The top-level model delegates to sub-structs. The V1 `Model` is a cautionary example with 40+ fields.
-
-### Anti-Pattern 2: Rendering Inside Update
-
-**What people do:** Compute visual layout (lipgloss styling, line wrapping) inside `Update()` or store pre-rendered strings in the model.
-**Why it's wrong:** View computation in Update couples rendering to state management. Pre-rendered strings become stale. Width changes invalidate cached renders but the invalidation logic is scattered.
-**Do this instead:** `Update()` should only update logical state (cursor position, document content). `View()` should call pure geometry functions and apply styling. If geometry is expensive, cache the pure computation result (e.g., `AlignedModel`), not the rendered string.
-
-### Anti-Pattern 3: Testing View Output Directly
-
-**What people do:** Assert on the exact string output of `View()`, including ANSI escape codes and lipgloss styling.
-**Why it's wrong:** View output is fragile -- it changes with terminal width, color profile, lipgloss version, and theme settings. Tests break constantly for cosmetic reasons. Tests are unreadable because they're full of escape codes.
-**Do this instead:** Test the model state through observers (catwalk `debug`, `results`). Test pure geometry functions with table-driven tests. Use `View()` golden tests only for critical visual fidelity checks, and set `lipgloss.SetColorProfile(termenv.Ascii)` to strip ANSI codes.
-
-### Anti-Pattern 4: Custom Cursor Management with textarea
-
-**What people do:** Use `textarea.Model` for editing but also maintain a parallel cursor position in the editor model, leading to synchronization bugs.
-**Why it's wrong:** Two sources of truth for cursor position. The textarea has its own cursor. The editor model has `cursorLine`/`cursorCol`. When they disagree, rendering breaks.
-**Do this instead:** Let textarea be the single source of truth for cursor position. Use `textarea.Line()` and `textarea.CursorPosition()` to read cursor state. Do not store parallel cursor state in the editor model. The V2 model correctly does this.
-
-### Anti-Pattern 5: Synchronous Evaluation in Update
-
-**What people do:** Call `eval.Evaluate(doc)` directly inside `Update()`, blocking the UI until evaluation completes.
-**Why it's wrong:** For complex documents with unit conversions, evaluation can take >50ms, causing visible UI lag.
-**Do this instead:** Use Bubble Tea `Cmd` to run evaluation asynchronously. Send the result back as a message. The debounce pattern already exists (`evalDebounceMsg`). Extend it: debounce -> start async eval Cmd -> receive `EvaluationDoneMsg` -> update results. This is the pattern from `code.sh`.
-
-## Integration Points
-
-### Internal Boundaries
-
-| Boundary | Communication | Key Consideration |
-|----------|---------------|-------------------|
-| **CLI -> TUI** | Direct function call (`NewApp`, `NewEditorApp`) | CLI creates document, passes to TUI. Config loaded before TUI starts. |
-| **App -> REPL/Editor** | Bubble Tea message delegation + `SwitchModeMsg` | App.Update delegates to active model. Document shared via `Document()` method. |
-| **Editor -> Interpreter** | `spec/document.NewDocument()` + `impl/document.Evaluator` | Editor owns the evaluator. Re-creates on content change. Must NOT hold references across re-parses. |
-| **Editor -> Components** | Pure function calls with state structs | Components never hold editor state. They receive state and return rendered strings. |
-| **Editor -> Geometry** | Pure function calls with `AlignedModelInput` | Geometry functions never access editor state directly. All inputs are explicit. |
-| **spec/ -> impl/** | `impl/` imports `spec/` types | One-way dependency. `spec/` defines, `impl/` executes. |
-| **format/ -> spec/** | `format/` imports `spec/` types | One-way dependency. Formatters read document structure. |
-| **WASM -> impl/** | WASM wraps interpreter API | No TUI code in WASM. Shares `spec/` and `impl/` only. |
-
 ### Dependency Flow (Critical Invariant)
 
 ```
@@ -419,181 +463,77 @@ spec/  <--  impl/  <--  format/
 
 **Rule:** `spec/` NEVER imports from `impl/`, `format/`, or `cmd/`. This is enforced by convention and tested by successful compilation. Violating this breaks WASM builds and language spec independence.
 
-## Testing Strategy
+---
 
-### Recommended Testing Pyramid
+## Architectural Patterns
 
-```
-                    +---+
-                   /     \
-                  / VHS   \        <- Visual smoke tests (manual, rare)
-                 / tapes   \
-                +-----------+
-               /             \
-              /   Catwalk     \    <- Behavioral integration tests (primary for TUI)
-             /  (data-driven)  \
-            +-------------------+
-           /                     \
-          /    Table-driven       \  <- Unit tests for pure functions (fast, many)
-         /   geometry, wrapping,   \
-        /    alignment, results     \
-       +-----------------------------+
-      /                               \
-     /         spec/ + impl/           \ <- Language tests (separate concern)
-    /    lexer, parser, interpreter     \
-   +-------------------------------------+
-```
+### Pattern 1: Pure Computation Core (Functional Core, Imperative Shell)
 
-### Layer 1: Pure Function Unit Tests (Fastest, Most Numerous)
+**What:** Separate pure computation from side-effectful Bubble Tea model logic. All geometry, alignment, and wrapping are pure functions. The Bubble Tea model is a thin shell that calls pure functions and wires up state.
 
-Test geometry, wrapping, alignment as pure functions with table-driven tests.
-
+**Example:**
 ```go
-func TestCalculateRowGeometry(t *testing.T) {
-    tests := []struct {
-        name     string
-        srcLine  string
-        result   string
-        leftW    int
-        rightW   int
-        wantH    int
-        wantLeft []string
-        wantRight []string
-    }{
-        {
-            name:      "short source, long result wraps",
-            srcLine:   "Short",
-            result:    "1234567890",
-            leftW:     10,
-            rightW:    5,
-            wantH:     2,
-            wantLeft:  []string{"Short", ""},
-            wantRight: []string{"12345", "67890"},
-        },
-        // ... more cases
-    }
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            got := CalculateRowGeometry(tt.srcLine, tt.result, tt.leftW, tt.rightW)
-            // assertions
-        })
-    }
+// Pure function -- fully testable, no dependencies on bubbletea/lipgloss
+func ComputeAlignedModel(input AlignedModelInput, ...) AlignedModel { ... }
+
+// Imperative shell -- Bubble Tea model calls pure functions
+func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
+    // ... compute cache key, call pure function, cache result ...
 }
 ```
 
-**What to test this way:**
-- `WrapText()` -- all edge cases (empty, exact width, unicode, ANSI codes)
-- `ComputeAlignedModel()` -- alignment correctness for various document structures
-- `ComputeLineModel()` -- visual line layout
-- `GetLineResults()` -- document-to-result bridging
-- `FilterSuggestions()` -- autocomplete matching
-- Any new geometry function
+### Pattern 2: State Machine for Editor Modes
 
-### Layer 2: Catwalk Behavioral Tests (Primary for TUI)
+**What:** Explicit state transitions with invariant checking. The editor has states (Ready, Editing, Processing) with documented invariants and transition functions.
 
-Test editor behavior through key sequences and state observation. Confidence: HIGH -- this is already proven in the codebase with 12+ test data files.
-
-**When to use catwalk:**
-- Navigation behavior (arrow keys, page up/down, home/end)
-- Editing behavior (typing, backspace, enter, delete line)
-- Evaluation correctness after editing (results observer)
-- State transitions (mode switching, slash commands)
-- Regression tests for every user-reported bug
-
-**When NOT to use catwalk:**
-- Pure geometry computation (use table-driven tests)
-- Visual styling (use golden files or manual VHS)
-- Performance (use benchmarks)
-
-### Layer 3: Golden File Tests (For Visual Fidelity)
-
-The existing `golden_e2e_test.go` tests CLI output against golden files in `testdata/`. This pattern works well for:
-- `eval` command output format
-- `convert` command output format
-- Document serialization round-tripping
-
-**Not recommended for:** Editor View() output. Terminal rendering is too fragile for golden files.
-
-### Layer 4: VHS Tapes (Manual Visual Smoke Tests)
-
-VHS tapes in `testdata/vhs_tapes/` produce screenshots. These are:
-- Run manually (`task test:vhs`)
-- Not part of CI (too slow, requires VHS installation)
-- Useful for verifying visual themes and layout
-
-**Recommendation:** Keep VHS tapes for manual verification. Do NOT make them part of the automated test suite. They are inherently flaky across terminal emulators and screen sizes.
-
-### Why NOT teatest
-
-`teatest` (from `charmbracelet/x/exp/teatest`) runs a full `tea.Program` in a headless terminal. It is useful for testing program-level behavior (startup, shutdown, full rendering pipeline). However:
-
-- It is experimental (lives in `x/exp`)
-- It is heavier than catwalk (spins up the full event loop)
-- It tests rendered output (fragile) rather than model state (stable)
-- Catwalk already covers the model-testing niche better
-
-**Use teatest only if:** You need to test something that catwalk cannot, such as Cmd execution or full program lifecycle. For CalcMark, catwalk is sufficient and preferred.
-
-## Build Order Implications
-
-The following dependency chain dictates build order for new features:
-
-```
-1. Pure geometry functions (no dependencies, test immediately)
-   |
-2. Editor model (depends on geometry, spec, impl)
-   |
-3. Components (depend on model state types, not model itself)
-   |
-4. View rendering (depends on geometry + components + lipgloss)
-   |
-5. Integration (wire into app.go, cobra commands)
+**Example from codebase:**
+```go
+// state.go -- explicit transitions with invariant enforcement
+func (m *Model) transitionToReady() {
+    // INVARIANT: Document must exist with at least 1 block
+    if m.doc == nil || len(m.doc.GetBlocks()) == 0 {
+        m.doc, _ = document.NewDocument("\n")
+    }
+    // ...
+    m.state = StateReady
+}
 ```
 
-**For the TUI editor rewrite:**
-1. Extract geometry into pure functions with comprehensive tests
-2. Build the new editor model on top of textarea + geometry
-3. Add features incrementally (evaluation, alignment, slash commands, undo, search)
-4. Each feature: pure function first, wire into model, add catwalk test
+### Pattern 3: Document Rebuild for Content Changes
 
-**For the help system:**
-1. Define help content storage (static strings or embedded files)
-2. Build help rendering as a pure component (like ContextFooter)
-3. Add help navigation model (simple list/tree with viewport)
-4. Wire into app.go as a new mode
+When document content changes:
+1. Get content as string
+2. Create new document via `document.NewDocument(content)`
+3. Create new evaluator
+4. Re-evaluate
+5. Restore cursor position
 
-**For autocomplete:**
-1. Build suggestion engine as a pure function (takes prefix + available names, returns matches)
-2. The `SuggestionSource` interface already exists in `components/suggest.go`
-3. Add suggestion rendering component (already exists: `RenderSuggestions`, `RenderDropdownSuggestions`)
-4. Wire into editor model: detect context, query suggestion engine, render dropdown
+**This is why undo/redo is simple:** Just store content string, rebuild on restore.
 
-## Bubble Tea v2 Consideration
+---
 
-Bubble Tea v2 is in RC stage as of late 2025. Key changes:
+## Confidence Assessment
 
-| Change | Impact on CalcMark |
-|--------|--------------------|
-| `View()` returns `tea.View` struct instead of `string` | Major refactor of all View methods |
-| New module path (`charm.land/bubbletea/v2`) | Import path changes everywhere |
-| New mouse API (split into Click/Release/Wheel/Motion) | Minor -- CalcMark has minimal mouse support |
-| Declarative view API | Potentially simplifies alt-screen management |
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Undo/Redo Integration | HIGH | Current implementation clearly documented, enhancement path clear |
+| Napkin Bug Location | HIGH | Root cause identified in napkin_eval.go line 28 |
+| Unit System Architecture | HIGH | Three-layer design well-documented in source |
+| File Operations | HIGH | Infrastructure exists, just needs verification |
+| State Machine | HIGH | Explicit, well-documented in state.go |
 
-**Recommendation:** Stay on Bubble Tea v1 (`v0.21.0+` / `v1.3.10`) for the v1 milestone. The v2 API is not yet stable (RC, not final). Migrating mid-rewrite adds risk. Plan a dedicated v2 migration as a separate milestone after the editor rewrite is stable.
+---
 
 ## Sources
 
+- `/Users/bitsbyme/projects/go-calcmark/cmd/calcmark/tui/editor/model.go` - TUI editor state
+- `/Users/bitsbyme/projects/go-calcmark/cmd/calcmark/tui/editor/state.go` - State machine
+- `/Users/bitsbyme/projects/go-calcmark/impl/interpreter/napkin_eval.go` - Bug location
+- `/Users/bitsbyme/projects/go-calcmark/impl/interpreter/unit_library.go` - Unit registry
+- `/Users/bitsbyme/projects/go-calcmark/format/display/normalize.go` - Display normalization
+- `/Users/bitsbyme/projects/go-calcmark/.planning/PROJECT.md` - v1.1 requirements
 - CalcMark codebase analysis (HIGH confidence -- direct code reading)
-- [Bubble Tea GitHub](https://github.com/charmbracelet/bubbletea) (HIGH confidence)
-- [knz/catwalk](https://github.com/knz/catwalk) -- Test library for Bubbletea TUI models (HIGH confidence)
-- [Tips for building Bubble Tea programs](https://leg100.github.io/en/posts/building-bubbletea-programs/) (MEDIUM confidence)
-- [Bubble Tea State Machine pattern](https://zackproser.com/blog/bubbletea-state-machine) (MEDIUM confidence)
-- [Writing Bubble Tea Tests (teatest)](https://charm.land/blog/teatest/) (MEDIUM confidence)
-- [Bubble Tea v2 Migration Guide](https://github.com/charmbracelet/bubbletea/discussions/1374) (HIGH confidence)
-- [Bubble Tea Component Architecture Discussion](https://github.com/charmbracelet/bubbletea/discussions/286) (MEDIUM confidence)
-- [Testing Bubble Tea Interfaces](https://patternmatched.substack.com/p/testing-bubble-tea-interfaces) (LOW confidence -- single blog post)
-- code.sh prototype in repository (HIGH confidence -- direct code reading)
 
 ---
-*Architecture research for: CalcMark TUI Editor and CLI*
-*Researched: 2026-02-02*
+*Architecture research for: CalcMark v1.1 Milestone*
+*Updated: 2026-02-06*
