@@ -95,7 +95,7 @@ cm help constants    # List built-in constants
 cm convert --help    # Export format options
 ```
 
-Press F1 in the TUI editor for keybindings.
+Press Ctrl+H (or F1) in the TUI editor for keybindings.
 
 ## Learn More
 

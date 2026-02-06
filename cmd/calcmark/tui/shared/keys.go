@@ -57,8 +57,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("Ctrl+D", "force quit"),
 		),
 		Help: key.NewBinding(
-			key.WithKeys("f1"),
-			key.WithHelp("F1", "help"),
+			key.WithKeys("f1", "ctrl+h"),
+			key.WithHelp("Ctrl+H/F1", "help"),
 		),
 		Up: key.NewBinding(
 			key.WithKeys("up"),

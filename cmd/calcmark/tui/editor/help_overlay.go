@@ -7,7 +7,7 @@ import (
 )
 
 // renderHelpOverlay renders a centered help panel showing all keybindings.
-// The overlay is displayed when the user presses F1 to toggle help mode.
+// The overlay is displayed when the user presses Ctrl+H or F1 to toggle help mode.
 func (m Model) renderHelpOverlay() string {
 	// Create help model with full keybindings shown
 	h := help.New()
@@ -37,7 +37,7 @@ func (m Model) renderHelpOverlay() string {
 	footerStyle := lipgloss.NewStyle().
 		Faint(true)
 
-	footer := footerStyle.Render("Press F1 or Esc to close")
+	footer := footerStyle.Render("Press Ctrl+H, F1, or Esc to close")
 
 	// Assemble content vertically
 	content := lipgloss.JoinVertical(lipgloss.Left,
