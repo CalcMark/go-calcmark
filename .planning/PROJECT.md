@@ -28,7 +28,16 @@ Fast, offline, verifiable calculations in markdown documents with a simple edito
 
 ### Active
 
-(No active requirements — v1.0 complete)
+<!-- v1.1 CalcMark Language -->
+
+- [ ] Interpreter correctness: fix quantity/unit conversion bugs (e.g., `as napkin` loses unit context)
+- [ ] Audit all unit conversion paths for similar issues
+- [ ] Test functions in both `func()` and natural language `average of...` forms
+- [ ] Comprehensive real-world document test suite
+- [ ] Full undo/redo history (unlimited)
+- [ ] Save (Ctrl+S)
+- [ ] Quit with unsaved changes prompt
+- [ ] Save As functionality
 
 ### Out of Scope
 
@@ -39,6 +48,19 @@ Fast, offline, verifiable calculations in markdown documents with a simple edito
 - GUI desktop application — terminal-native is the differentiator
 - Collaborative editing — network dependency breaks offline constraint
 - LSP server — scope creep, focus on simple editor first
+
+## Current Milestone: v1.1 CalcMark Language
+
+**Goal:** Make the interpreter bulletproof and the editor experience complete.
+
+**Target features:**
+- Fix interpreter bugs in quantity/unit calculations and conversions
+- Audit all functions for correctness in standard and natural language forms
+- Comprehensive real-world document testing
+- Full undo/redo, save, quit-without-save, save-as
+
+**Known bugs:**
+- `accumulate(5mb/s, 1 day) as napkin` returns "430K" instead of ~400GB — napkin formatter loses unit context
 
 ## Context
 
@@ -82,4 +104,4 @@ Fast, offline, verifiable calculations in markdown documents with a simple edito
 | Alt+b/f for word navigation | Works on macOS where Ctrl+Arrow is captured | ✓ Good |
 
 ---
-*Last updated: 2026-02-06 after v1.0 milestone*
+*Last updated: 2026-02-06 after v1.1 milestone started*

@@ -5,50 +5,42 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Fast, offline, verifiable calculations in markdown documents with a simple editor
-**Current focus:** v1.0 complete — ready for release
+**Current focus:** v1.1 CalcMark Language — interpreter correctness and editor completion
 
 ## Current Position
 
-Phase: Milestone complete
-Plan: All 21 plans executed
-Status: Ready for release
-Last activity: 2026-02-06 — v1.0 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-06 — Milestone v1.1 started
 
-Progress: [████████████████████] 100% (21/21 plans)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
-## Milestone v1.0 Summary
+## Milestone v1.1 Goals
 
-**Shipped:** 2026-02-06
-**Phases:** 8
-**Plans:** 21
-**Requirements:** 51/51 complete
+**Interpreter Correctness:**
+- Fix `as napkin` bug (loses unit context)
+- Audit all unit conversion paths
+- Test all functions in standard and natural language forms
+- Comprehensive real-world document testing
 
-**Key Accomplishments:**
-- Pure geometry package with correct two-column layout
-- TUI editor with cursor, scrolling, debounced evaluation
-- Comprehensive catwalk test coverage
-- Help system with CLI commands and F1 overlay
-- TUI autocomplete for functions, units, variables
-- YAML front matter for document constants
-- GoReleaser distribution for 7 platforms
-- User-focused documentation
+**Editor UX Completion:**
+- Full undo/redo history
+- Save (Ctrl+S)
+- Quit with unsaved changes prompt
+- Save As
 
-## Release Checklist
+## Known Bugs
 
-To publish v1.0:
-
-1. [ ] Create `calcmark/homebrew-tap` repository on GitHub
-2. [ ] Create PAT with 'repo' scope
-3. [ ] Add `HOMEBREW_TAP_GITHUB_TOKEN` secret to go-calcmark repo
-4. [ ] Push tag: `git tag v1.0.0 && git push origin v1.0.0`
-
-See: .planning/phases/07-distribution/RELEASE_CHECKLIST.md
+1. `accumulate(5mb/s, 1 day) as napkin` → "430K" (wrong)
+   - Expected: ~400GB or similar napkin-friendly quantity
+   - Issue: napkin formatter loses unit context
 
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: v1.0 milestone complete
+Stopped at: Milestone v1.1 initialization
 Resume file: None
 
 ---
-*Updated: 2026-02-06 after v1.0 milestone*
+*Updated: 2026-02-06 — v1.1 milestone started*
