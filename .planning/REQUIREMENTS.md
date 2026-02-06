@@ -110,61 +110,61 @@ Deferred to v1.2 or later.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INTERP-01 | TBD | Pending |
-| INTERP-02 | TBD | Pending |
-| INTERP-03 | TBD | Pending |
-| INTERP-04 | TBD | Pending |
-| INTERP-05 | TBD | Pending |
-| INTERP-06 | TBD | Pending |
-| PREVIEW-01 | TBD | Pending |
-| PREVIEW-02 | TBD | Pending |
-| PREVIEW-03 | TBD | Pending |
-| PREVIEW-04 | TBD | Pending |
-| PREVIEW-05 | TBD | Pending |
-| FILE-01 | TBD | Pending |
-| FILE-02 | TBD | Pending |
-| FILE-03 | TBD | Pending |
-| FILE-04 | TBD | Pending |
-| FILE-05 | TBD | Pending |
-| FILE-06 | TBD | Pending |
-| FILE-07 | TBD | Pending |
-| FILE-08 | TBD | Pending |
-| UNDO-01 | TBD | Pending |
-| UNDO-02 | TBD | Pending |
-| UNDO-03 | TBD | Pending |
-| UNDO-04 | TBD | Pending |
-| UNDO-05 | TBD | Pending |
-| CLIP-01 | TBD | Pending |
-| CLIP-02 | TBD | Pending |
-| CLIP-03 | TBD | Pending |
-| CLIP-04 | TBD | Pending |
-| NAV-01 | TBD | Pending |
-| NAV-02 | TBD | Pending |
-| NAV-03 | TBD | Pending |
-| NAV-04 | TBD | Pending |
-| NAV-05 | TBD | Pending |
-| NAV-06 | TBD | Pending |
-| HELP-01 | TBD | Pending |
-| HELP-02 | TBD | Pending |
-| THEME-01 | TBD | Pending |
-| THEME-02 | TBD | Pending |
-| THEME-03 | TBD | Pending |
-| THEME-04 | TBD | Pending |
-| THEME-05 | TBD | Pending |
-| THEME-06 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| TEST-04 | TBD | Pending |
-| TEST-05 | TBD | Pending |
-| TEST-06 | TBD | Pending |
-| TEST-07 | TBD | Pending |
+| INTERP-01 | Phase 9 | Pending |
+| INTERP-02 | Phase 9 | Pending |
+| INTERP-03 | Phase 9 | Pending |
+| INTERP-04 | Phase 9 | Pending |
+| INTERP-05 | Phase 9 | Pending |
+| INTERP-06 | Phase 9 | Pending |
+| PREVIEW-01 | Phase 10 | Pending |
+| PREVIEW-02 | Phase 10 | Pending |
+| PREVIEW-03 | Phase 10 | Pending |
+| PREVIEW-04 | Phase 10 | Pending |
+| PREVIEW-05 | Phase 10 | Pending |
+| NAV-01 | Phase 11 | Pending |
+| NAV-02 | Phase 11 | Pending |
+| NAV-03 | Phase 11 | Pending |
+| NAV-04 | Phase 11 | Pending |
+| NAV-05 | Phase 11 | Pending |
+| NAV-06 | Phase 11 | Pending |
+| UNDO-01 | Phase 12 | Pending |
+| UNDO-02 | Phase 12 | Pending |
+| UNDO-03 | Phase 12 | Pending |
+| UNDO-04 | Phase 12 | Pending |
+| UNDO-05 | Phase 12 | Pending |
+| CLIP-01 | Phase 13 | Pending |
+| CLIP-02 | Phase 13 | Pending |
+| CLIP-03 | Phase 13 | Pending |
+| CLIP-04 | Phase 13 | Pending |
+| FILE-01 | Phase 14 | Pending |
+| FILE-02 | Phase 14 | Pending |
+| FILE-03 | Phase 14 | Pending |
+| FILE-04 | Phase 14 | Pending |
+| FILE-05 | Phase 14 | Pending |
+| FILE-06 | Phase 14 | Pending |
+| FILE-07 | Phase 14 | Pending |
+| FILE-08 | Phase 14 | Pending |
+| HELP-01 | Phase 15 | Pending |
+| HELP-02 | Phase 15 | Pending |
+| THEME-01 | Phase 16 | Pending |
+| THEME-02 | Phase 16 | Pending |
+| THEME-03 | Phase 16 | Pending |
+| THEME-04 | Phase 16 | Pending |
+| THEME-05 | Phase 16 | Pending |
+| THEME-06 | Phase 16 | Pending |
+| TEST-01 | Phase 17 | Pending |
+| TEST-02 | Phase 17 | Pending |
+| TEST-03 | Phase 17 | Pending |
+| TEST-04 | Phase 17 | Pending |
+| TEST-05 | Phase 17 | Pending |
+| TEST-06 | Phase 17 | Pending |
+| TEST-07 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 48 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 48
+- Mapped to phases: 48
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after UX review*
+*Last updated: 2026-02-06 — phase mappings added*
