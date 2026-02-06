@@ -77,12 +77,12 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("Right", "right"),
 		),
 		WordLeft: key.NewBinding(
-			key.WithKeys("ctrl+left"),
-			key.WithHelp("Ctrl+Left", "word left"),
+			key.WithKeys("ctrl+left", "alt+left"),
+			key.WithHelp("Ctrl/Alt+←", "word left"),
 		),
 		WordRight: key.NewBinding(
-			key.WithKeys("ctrl+right"),
-			key.WithHelp("Ctrl+Right", "word right"),
+			key.WithKeys("ctrl+right", "alt+right"),
+			key.WithHelp("Ctrl/Alt+→", "word right"),
 		),
 		LineStart: key.NewBinding(
 			key.WithKeys("ctrl+a", "home"),

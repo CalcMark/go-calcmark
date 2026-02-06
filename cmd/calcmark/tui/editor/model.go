@@ -441,6 +441,28 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // handleDefaultKey processes keys in the default editing mode.
 // The user is ALWAYS able to type and edit - this is the only mode they experience.
 func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle Alt+Arrow for word navigation (Option+Arrow on macOS)
+	// This is an alternative to Ctrl+Arrow which is often captured by macOS
+	if msg.Alt {
+		switch msg.Type {
+		case tea.KeyLeft:
+			return m.handleCtrlLeftKey()
+		case tea.KeyRight:
+			return m.handleCtrlRightKey()
+		case tea.KeyRunes:
+			// On macOS terminals, Option+Arrow often sends ESC+b or ESC+f
+			// These appear as Alt+b and Alt+f (standard readline/emacs bindings)
+			if len(msg.Runes) == 1 {
+				switch msg.Runes[0] {
+				case 'b', 'B':
+					return m.handleCtrlLeftKey() // backward word
+				case 'f', 'F':
+					return m.handleCtrlRightKey() // forward word
+				}
+			}
+		}
+	}
+
 	switch msg.Type {
 	case tea.KeyTab:
 		// Tab triggers autocomplete
@@ -744,12 +766,15 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
-	m.loadCurrentLineIntoEditBuffer()
+	// Transition to editing state BEFORE modifying editBuf.
+	// This ensures editBuf is loaded and state is set correctly.
+	// CRITICAL: Must be called first, because transitionToEditing reloads
+	// editBuf if it's empty, which would undo any deletion.
+	m.transitionToEditing()
 
 	if m.cursorCol < len(m.editBuf) {
 		// Delete character at cursor
 		m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
-		m.transitionToEditing()
 		return m.debounceUpdate()
 	} else if m.cursorLine < m.TotalLines()-1 {
 		// At end of line - join with next line
@@ -776,7 +801,7 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 		}
 		m.cursorCol = currentCol
 
-		m.transitionToEditing()
+		// transitionToEditing was already called at function start
 		return m.debounceUpdate()
 	}
 
@@ -2400,6 +2425,13 @@ func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 	insertText := selected.InsertText
 	if insertText == "" {
 		insertText = selected.Name
+	}
+
+	// For functions (identified by having a Syntax like "func(...)"), add opening paren
+	// This positions the cursor inside the function call so parameter help is shown.
+	isFunction := strings.Contains(selected.Syntax, "(")
+	if isFunction {
+		insertText += "("
 	}
 
 	// Replace prefix with selected suggestion
