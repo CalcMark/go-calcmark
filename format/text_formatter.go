@@ -23,45 +23,49 @@ func (f *TextFormatter) Extensions() []string {
 func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options) error {
 	blocks := doc.GetBlocks()
 
-	for i, node := range blocks {
-		switch block := node.Block.(type) {
-		case *document.CalcBlock:
-			if opts.Verbose {
-				// Show source with inline results for each line
-				sourceLines := block.Source()
-				results := block.Results()
-
-				for j, line := range sourceLines {
-					if line == "" {
-						continue
-					}
-					fmt.Fprint(w, line)
-					// Add result if available for this line
-					if j < len(results) && results[j] != nil {
-						fmt.Fprintf(w, " → %s", display.Format(results[j]))
-					}
-					fmt.Fprintln(w)
-				}
-			} else {
-				// Non-verbose: just show final result
+	// In non-verbose mode, only output calc block results (one per line, no extra spacing)
+	if !opts.Verbose {
+		for _, node := range blocks {
+			if block, ok := node.Block.(*document.CalcBlock); ok {
 				if block.Error() != nil {
 					fmt.Fprintf(w, "Error: %v\n", block.Error())
 				} else if block.LastValue() != nil {
 					fmt.Fprintln(w, display.Format(block.LastValue()))
 				}
 			}
+		}
+		return nil
+	}
+
+	// Verbose mode: show source with results and spacing between blocks
+	for i, node := range blocks {
+		switch block := node.Block.(type) {
+		case *document.CalcBlock:
+			// Show source with inline results for each line
+			sourceLines := block.Source()
+			results := block.Results()
+
+			for j, line := range sourceLines {
+				if line == "" {
+					continue
+				}
+				fmt.Fprint(w, line)
+				// Add result if available for this line
+				if j < len(results) && results[j] != nil {
+					fmt.Fprintf(w, " → %s", display.Format(results[j]))
+				}
+				fmt.Fprintln(w)
+			}
 
 			// Show error in verbose mode too
-			if opts.Verbose && block.Error() != nil {
+			if block.Error() != nil {
 				fmt.Fprintf(w, "Error: %v\n", block.Error())
 			}
 
 		case *document.TextBlock:
-			// For text blocks, show markdown content in verbose mode
-			if opts.Verbose {
-				for _, line := range block.Source() {
-					fmt.Fprintln(w, line)
-				}
+			// For text blocks, show markdown content
+			for _, line := range block.Source() {
+				fmt.Fprintln(w, line)
 			}
 		}
 
