@@ -96,7 +96,7 @@ type PaneWidthConfig struct {
 
 // DefaultPaneWidths returns the default pane width configurations for each preview mode.
 var DefaultPaneWidths = map[PreviewMode]PaneWidthConfig{
-	PreviewFull:    {SourcePercent: 55, PreviewPercent: 45},
+	PreviewFull:    {SourcePercent: 60, PreviewPercent: 40},
 	PreviewMinimal: {SourcePercent: 75, PreviewPercent: 25},
 	PreviewHidden:  {SourcePercent: 100, PreviewPercent: 0},
 }
