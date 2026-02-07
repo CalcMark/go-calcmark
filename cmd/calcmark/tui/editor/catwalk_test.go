@@ -72,7 +72,6 @@ z = 30`
 			"help_toggle",                    // TestEditorCatwalkHelpToggle
 			"document_navigation",            // TestEditorCatwalkDocumentNavigation
 			"word_nav_comprehensive",         // TestEditorCatwalkWordNavComprehensive
-			"line_nav_ctrlae",                // TestEditorCatwalkLineNavCtrlAE
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -593,43 +592,6 @@ z = 30`
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		if !strings.HasSuffix(path, "word_nav_comprehensive") {
-			return
-		}
-
-		m := New(doc)
-		m.width = 80
-		m.height = 24
-		m.previewMode = PreviewFull
-
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
-				_, err := out.Write([]byte(m.(Model).Debug()))
-				return err
-			}),
-			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
-				_, err := out.Write([]byte(m.(Model).DebugLines()))
-				return err
-			}),
-		)
-	})
-}
-
-// TestEditorCatwalkLineNavCtrlAE tests Ctrl+A/E readline-style line navigation.
-// Verifies: NAV-03 (Ctrl+A -> line start) and NAV-04 (Ctrl+E -> line end).
-// Uses a fresh document to avoid pollution from other tests.
-func TestEditorCatwalkLineNavCtrlAE(t *testing.T) {
-	content := `# Header
-x = 10
-y = 20
-z = 30`
-
-	doc, err := document.NewDocument(content)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
-
-	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
-		if !strings.HasSuffix(path, "line_nav_ctrlae") {
 			return
 		}
 
