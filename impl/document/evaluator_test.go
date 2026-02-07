@@ -351,7 +351,8 @@ z = x + y
 	}
 
 	// Evaluation should fail
-	err = doc.Evaluate()
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
 	if err == nil {
 		t.Fatal("Expected error for variable redefinition within single block, got nil")
 	}
