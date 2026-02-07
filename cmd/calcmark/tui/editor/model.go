@@ -213,9 +213,9 @@ type Model struct {
 	commandMenuState CommandMenuState
 
 	// File picker state
-	filePicker     filepicker.Model
-	filePickerMode FilePickerMode // ModePickerBrowse or ModePickerNewFile
-	newFileName    string         // Filename being typed in new-file mode
+	filePicker      filepicker.Model
+	filePickerFocus FilePickerFocus // Which part of save dialog has focus
+	newFileName     string          // Filename being typed
 }
 
 // New creates a new editor model with an optional document.
@@ -436,7 +436,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// If no filename, show file picker
 		if m.filepath == "" {
 			m.filePicker = initFilePicker()
-			m.filePickerMode = ModePickerBrowse
+			m.filePickerFocus = FocusFilename
 			m.mode = StateFilePicker
 			m.statusMsg = ""
 			return m, m.filePicker.Init()
@@ -1112,16 +1112,27 @@ func (m Model) handleSaveAsPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleFilePickerKey processes keys when file picker is visible.
 func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// In new-file input mode (typing a filename)
-	if m.filePickerMode == ModePickerNewFile {
-		switch msg.Type {
-		case tea.KeyEsc:
-			// Back to browse mode
-			m.filePickerMode = ModePickerBrowse
-			m.newFileName = ""
-			return m, nil
-		case tea.KeyEnter:
-			// Save with new filename
+	// Global keys that work in both modes
+	switch msg.Type {
+	case tea.KeyEsc:
+		// Cancel and return to editing
+		m.mode = StateDefault
+		m.statusMsg = ""
+		m.newFileName = ""
+		return m, nil
+
+	case tea.KeyTab:
+		// Toggle focus between filename and browser
+		if m.filePickerFocus == FocusFilename {
+			m.filePickerFocus = FocusFileBrowser
+		} else {
+			m.filePickerFocus = FocusFilename
+		}
+		return m, nil
+
+	case tea.KeyEnter:
+		// Enter saves the file (using current filename)
+		if m.filePickerFocus == FocusFilename {
 			if m.newFileName != "" {
 				filename := addExtensionIfMissing(m.newFileName)
 				path := filepath.Join(m.filePicker.CurrentDirectory, filename)
@@ -1130,6 +1141,13 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.newFileName = ""
 			}
 			return m, nil
+		}
+		// If browser has focus, let filepicker handle Enter (navigate/select)
+	}
+
+	// Filename input focus - handle typing
+	if m.filePickerFocus == FocusFilename {
+		switch msg.Type {
 		case tea.KeyBackspace:
 			if len(m.newFileName) > 0 {
 				m.newFileName = m.newFileName[:len(m.newFileName)-1]
@@ -1142,44 +1160,16 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// In browse mode
-	switch msg.Type {
-	case tea.KeyEsc:
-		// Cancel and return to editing
-		m.mode = StateDefault
-		m.statusMsg = ""
-		return m, nil
-
-	case tea.KeyRunes:
-		if len(msg.Runes) > 0 && (msg.Runes[0] == 'n' || msg.Runes[0] == 'N') {
-			// Enter new-file mode to type filename
-			m.filePickerMode = ModePickerNewFile
-			m.newFileName = ""
-			return m, nil
-		}
-
-	case tea.KeyTab:
-		// Tab also enters new-file mode
-		m.filePickerMode = ModePickerNewFile
-		m.newFileName = ""
-		return m, nil
-	}
-
-	// Pass to filepicker for navigation
+	// Browser focus - pass to filepicker for navigation
 	var cmd tea.Cmd
 	m.filePicker, cmd = m.filePicker.Update(msg)
 
 	// Check if file was selected (existing file to overwrite)
 	if didSelect, path := m.filePicker.DidSelectFile(msg); didSelect {
-		m.saveFile(path)
-		m.mode = StateDefault
-		return m, nil
-	}
-
-	// Check if directory was selected (navigate into it)
-	if didSelect, path := m.filePicker.DidSelectDisabledFile(msg); didSelect {
-		// This means user selected a directory - filepicker handles navigation
-		_ = path // filepicker already navigated
+		// When selecting an existing file, put its name in the filename field
+		m.newFileName = filepath.Base(path)
+		// Don't auto-save - let user confirm with Enter
+		return m, cmd
 	}
 
 	return m, cmd
@@ -1808,7 +1798,7 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 	case StateCommandMenu:
 		hints = "Enter select | Esc close"
 	case StateFilePicker:
-		if m.filePickerMode == ModePickerNewFile {
+		if m.filePickerFocus == FocusFilename {
 			hints = "Enter save | Esc back"
 		} else {
 			hints = "up/down navigate | n new | Esc cancel"

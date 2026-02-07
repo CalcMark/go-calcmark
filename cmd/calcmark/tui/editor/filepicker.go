@@ -8,12 +8,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// FilePickerMode distinguishes between browsing and typing a new filename.
-type FilePickerMode int
+// FilePickerFocus indicates which part of the Save dialog has focus.
+type FilePickerFocus int
 
 const (
-	ModePickerBrowse  FilePickerMode = iota // Browsing directories/files
-	ModePickerNewFile                       // Typing new filename
+	FocusFileBrowser FilePickerFocus = iota // Arrow keys navigate directory
+	FocusFilename                           // Typing updates filename
 )
 
 // initFilePicker creates and configures a new filepicker for the editor.

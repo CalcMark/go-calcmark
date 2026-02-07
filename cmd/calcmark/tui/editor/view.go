@@ -1388,23 +1388,48 @@ func (m Model) renderFilePickerOverlay() string {
 	lines = append(lines, header)
 	lines = append(lines, "") // spacing
 
-	// File picker view
+	// File picker view (dim if filename input has focus)
 	pickerView := m.filePicker.View()
+	if m.filePickerFocus == FocusFilename {
+		// Dim the picker when filename has focus
+		dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+		pickerView = dimStyle.Render(pickerView)
+	}
 	lines = append(lines, strings.Split(pickerView, "\n")...)
 
-	// Footer with hints based on mode
-	var hint string
-	if m.filePickerMode == ModePickerNewFile {
-		// Show filename being typed with cursor
-		hint = fmt.Sprintf("  Filename: %s|   [Enter] save  [Esc] back", m.newFileName)
+	lines = append(lines, "") // spacing before filename
+
+	// Filename input field (always visible)
+	var filenameField string
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	if m.filePickerFocus == FocusFilename {
+		// Focused: show cursor
+		inputStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("252")).
+			Background(lipgloss.Color("238")).
+			Padding(0, 1)
+		cursor := "█"
+		filenameField = labelStyle.Render("  Filename: ") + inputStyle.Render(m.newFileName+cursor)
 	} else {
-		hint = "  [↑↓] navigate  [Enter] open  [h/←] back  [n] new file  [Esc] cancel"
+		// Not focused: just show the filename
+		inputStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("245")).
+			Padding(0, 1)
+		display := m.newFileName
+		if display == "" {
+			display = "(type filename)"
+		}
+		filenameField = labelStyle.Render("  Filename: ") + inputStyle.Render(display)
 	}
-	footerStyle := lipgloss.NewStyle().
+	lines = append(lines, filenameField)
+
+	// Hints
+	lines = append(lines, "")
+	hintStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).
 		Italic(true)
-	lines = append(lines, "")
-	lines = append(lines, footerStyle.Render(hint))
+	hint := "  [Tab] switch focus  [Enter] save  [Esc] cancel"
+	lines = append(lines, hintStyle.Render(hint))
 
 	content := strings.Join(lines, "\n")
 
