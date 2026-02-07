@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 10 (Preview Pane)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 10-01-PLAN.md (Preview Pane Visual Layout)
+Last activity: 2026-02-07 — Completed 10-02-PLAN.md (Napkin Tilde and Separators)
 
-Progress: [█████░░░░░░░░░░░░░░░] 20%
+Progress: [██████░░░░░░░░░░░░░░] 22%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
-- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (1/5)
+- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (2/5)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -60,6 +60,8 @@ Progress: [█████░░░░░░░░░░░░░░░] 20%
 
 Recent decisions affecting current work:
 
+- [10-02]: IsNapkin field on Quantity struct (not separate type)
+- [10-02]: Tilde applied in FormatQuantity, not during evaluation
 - [10-01]: Preview pane header is "Results" (not "Preview")
 - [10-01]: Anonymous calculations display as "-> result" with arrow prefix
 - [10-01]: Source/preview pane ratio is fixed at 60/40
@@ -99,8 +101,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 10-01-PLAN.md, ready for 10-02
+Stopped at: Completed 10-02-PLAN.md, ready for 10-03
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Completed 10-01-PLAN.md (Preview Pane Visual Layout)*
+*Updated: 2026-02-07 — Completed 10-02-PLAN.md (Napkin Tilde and Separators)*
