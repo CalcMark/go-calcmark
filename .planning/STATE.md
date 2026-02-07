@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 10 of 17 (Preview Pane)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-07 — Completed Phase 9 (Interpreter Correctness) ✓
+Phase: 9.1 (Separate Validation from Execution)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-07 — Completed 09.1-01-PLAN.md
 
-Progress: [██░░░░░░░░░░░░░░░░░░] 11%
+Progress: [██░░░░░░░░░░░░░░░░░░] 12%
 
 ## Milestone v1.1 Scope
 
@@ -47,6 +47,7 @@ Progress: [██░░░░░░░░░░░░░░░░░░] 11%
 
 Recent decisions affecting current work:
 
+- [09.1-01]: EnvironmentWriter interface with Set() and SetExchangeRate() for dependency inversion
 - [09-02]: All types.NewNumber usages in interpreter are intentional (no type erasure bugs)
 - [09-02]: Currency / Number division is a language limitation, not a bug
 - [09-02]: avg() and sqrt() correctly return Number (aggregate/transform functions)
@@ -64,15 +65,22 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Roadmap Evolution
+
+- Phase 9.1 inserted after Phase 9: Separate Validation from Execution (URGENT)
+  - Discovered while fixing error line display bug
+  - spec/document/evaluate.go violates architecture rule (imports impl/)
+  - Need clean separation: spec=validation, impl=execution
+
 ### Blockers/Concerns
 
-None yet.
+- spec/classifier/classifier.go also imports impl/interpreter (discovered in 09.1-01, not fixed - out of scope)
 
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Phase 9 complete, ready for Phase 10
+Stopped at: Completed 09.1-01-PLAN.md
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Phase 9 (Interpreter Correctness) complete*
+*Updated: 2026-02-07 — Plan 09.1-01 complete, test migration next*
