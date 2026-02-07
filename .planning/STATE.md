@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 11.1 (Bug Fixes)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-07 — Phase 11 complete (verified)
+Phase: 11.2 (UX Redesign)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-07 — Completed 11.2-01-PLAN.md
 
-Progress: [█████████░░░░░░░░░░░] 35%
+Progress: [█████████░░░░░░░░░░░] 36%
 
 ## Milestone v1.1 Scope
 
@@ -24,7 +24,7 @@ Progress: [█████████░░░░░░░░░░░] 35%
 - Phase 10: Preview Pane (5 requirements) - COMPLETE
 - Phase 11: Navigation (6 requirements) - COMPLETE
 - Phase 11.1: Bug Fixes (0 requirements) - pending
-- Phase 11.2: UX Redesign (0 requirements) - pending
+- Phase 11.2: UX Redesign (3 plans) - IN PROGRESS (1/3)
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
 - Phase 14: File Operations (8 requirements)
@@ -52,7 +52,7 @@ Progress: [█████████░░░░░░░░░░░] 35%
 
 ## Performance Metrics
 
-**Velocity:** 4 min per plan (sample size: 4)
+**Velocity:** 4 min per plan (sample size: 5)
 
 *Updated after each plan completion*
 
@@ -62,6 +62,9 @@ Progress: [█████████░░░░░░░░░░░] 35%
 
 Recent decisions affecting current work:
 
+- [11.2-01]: StateCommandMenu inserted after StateHelp in InputState enum
+- [11.2-01]: Command menu captures arrow keys but dismisses on typing (like autocomplete)
+- [11.2-01]: Help binding description updated to 'help/commands' to reflect dual purpose
 - [11.2]: Ctrl+E restored to export mode (reverted readline navigation)
 - [11.2]: Ctrl+A not used for line-start (reserved for select-all in Phase 13)
 - [11.2]: No slash commands in app (/ is divide operator in CalcMark)
@@ -131,9 +134,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Created Phase 11.2 (UX Redesign), reverted Ctrl+A/E changes
+Stopped at: Completed 11.2-01-PLAN.md
 Resume file: None
-Next phase: Phase 11.1 (Bug Fixes)
+Next: 11.2-02-PLAN.md (command menu rendering)
 
 ---
-*Updated: 2026-02-07 — Created Phase 11.2, reverted Ctrl+A/E to restore export*
+*Updated: 2026-02-07 — Completed 11.2-01 (command infrastructure)*
