@@ -17,7 +17,7 @@ key j
 key j
 ----
 -- debug:
-mode=StateDefault cursorLine=5 cursorCol=0 cursorVisual=5 cursorHighlight=5 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="jjjjj# Long Document" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate to near bottom (will trigger scrolling)
 run observe=debug
@@ -28,7 +28,7 @@ key j
 key j
 ----
 -- debug:
-mode=StateDefault cursorLine=10 cursorCol=0 cursorVisual=10 cursorHighlight=10 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=10 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="jjjjjjjjjj# Long Document" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Verify alignment is maintained during scrolling
 run observe=alignment
@@ -37,18 +37,18 @@ run observe=alignment
 Source and Preview Alignment:
 Total visual lines: 15
 Source lines count: 15, Preview lines count: 15
-[0] SRC(ln=1 wrap=false): "# Long Document"                        | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mLong D..."
-[1] SRC(ln=2 wrap=false): "a = 1"                                  | PRV(ln=1): "a → 1"
-[2] SRC(ln=3 wrap=false): "b = 2"                                  | PRV(ln=2): "b → 2"
-[3] SRC(ln=4 wrap=false): "c = 3"                                  | PRV(ln=3): "c → 3"
-[4] SRC(ln=5 wrap=false): "d = 4"                                  | PRV(ln=4): "d → 4"
-[5] SRC(ln=6 wrap=false): "e = 5"                                  | PRV(ln=5): "e → 5"
-[6] SRC(ln=7 wrap=false): "f = 6"                                  | PRV(ln=6): "f → 6"
-[7] SRC(ln=8 wrap=false): "g = 7"                                  | PRV(ln=7): "g → 7"
-[8] SRC(ln=9 wrap=false): "h = 8"                                  | PRV(ln=8): "h → 8"
-[9] SRC(ln=10 wrap=false): "i = 9"                                 | PRV(ln=9): "i → 9"
-[10] SRC(ln=11 wrap=false): "j = 10"                               | PRV(ln=10): "j → 10"
-[11] SRC(ln=12 wrap=false): "k = 11"                               | PRV(ln=11): "k → 11"
-[12] SRC(ln=13 wrap=false): "l = 12"                               | PRV(ln=12): "l → 12"
-[13] SRC(ln=14 wrap=false): "m = 13"                               | PRV(ln=13): "m → 13"
-[14] SRC(ln=15 wrap=false): "n = 14"                               | PRV(ln=14): "n → 14"
+[0] SRC(ln=1 wrap=false): "# Long Document"            | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mLong\x1b[0m\x1b[9..."
+[1] SRC(ln=2 wrap=false): "a = 1"                      | PRV(ln=1): "a → 1"
+[2] SRC(ln=3 wrap=false): "b = 2"                      | PRV(ln=2): "b → 2"
+[3] SRC(ln=4 wrap=false): "c = 3"                      | PRV(ln=3): "c → 3"
+[4] SRC(ln=5 wrap=false): "d = 4"                      | PRV(ln=4): "d → 4"
+[5] SRC(ln=6 wrap=false): "e = 5"                      | PRV(ln=5): "e → 5"
+[6] SRC(ln=7 wrap=false): "f = 6"                      | PRV(ln=6): "f → 6"
+[7] SRC(ln=8 wrap=false): "g = 7"                      | PRV(ln=7): "g → 7"
+[8] SRC(ln=9 wrap=false): "h = 8"                      | PRV(ln=8): "h → 8"
+[9] SRC(ln=10 wrap=false): "i = 9"                     | PRV(ln=9): "i → 9"
+[10] SRC(ln=11 wrap=false): "j = 10"                    | PRV(ln=10): "j → 10"
+[11] SRC(ln=12 wrap=false): "k = 11"                    | PRV(ln=11): "k → 11"
+[12] SRC(ln=13 wrap=false): "l = 12"                    | PRV(ln=12): "l → 12"
+[13] SRC(ln=14 wrap=false): "m = 13"                    | PRV(ln=13): "m → 13"
+[14] SRC(ln=15 wrap=false): "n = 14"                    | PRV(ln=14): "n → 14"

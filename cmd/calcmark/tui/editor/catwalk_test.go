@@ -41,6 +41,10 @@ z = 30`
 		if strings.HasPrefix(path, "testdata/compression/") {
 			return
 		}
+		// Skip preview_pane subdirectory (handled by TestEditorCatwalkPreviewPane)
+		if strings.HasPrefix(path, "testdata/preview_pane/") {
+			return
+		}
 
 		// Skip tests that have dedicated test functions with custom documents
 		// Tests that require a fresh document (not polluted by previous tests in the walk)
@@ -970,6 +974,154 @@ z = 30`
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkPreviewPane tests Phase 10 preview pane requirements.
+// Each test file in testdata/preview_pane uses a specific document to test
+// different preview pane behaviors.
+func TestEditorCatwalkPreviewPane(t *testing.T) {
+	// Define test-specific documents
+	testDocs := map[string]string{
+		"pane_ratio": `# Header
+x = 10
+y = 20
+z = 30`,
+		"vertical_alignment": `# Header
+
+x = 10
+
+
+y = x + 5
+
+
+z = y * 2`,
+		"anonymous_calc_format": `# Math Examples
+2 + 2
+total = 100
+100 * 2`,
+		"results_header": `# Header
+x = 10
+y = 20
+z = 30`,
+		"non_calc_lines_blank": `# Budget Calculator
+
+This is some explanatory text.
+
+income = 5000
+expenses = 3000
+
+## Summary
+
+savings = income - expenses`,
+		"scroll_sync": `# Long Document
+a = 1
+b = 2
+c = 3
+d = 4
+e = 5
+f = 6
+g = 7
+h = 8
+i = 9
+j = 10
+k = 11
+l = 12
+m = 13
+n = 14`,
+		"napkin_tilde": `# Data Transfer
+rate = 5 MB/s
+time = 1 day
+total = accumulate(rate, time) as napkin`,
+		"cascading_errors": `a = undefined_var
+b = a + 1
+c = b * 2`,
+		"currency_formatting": `# Budget
+price = 100 USD
+tax = price * 10%
+total = price + tax
+large = 1500 USD`,
+	}
+
+	datadriven.Walk(t, "testdata/preview_pane", func(t *testing.T, path string) {
+		// Extract test name from path
+		testName := strings.TrimPrefix(path, "testdata/preview_pane/")
+
+		docContent, ok := testDocs[testName]
+		if !ok {
+			t.Fatalf("No test document defined for %s", testName)
+		}
+
+		doc, err := document.NewDocument(docContent)
+		if err != nil {
+			t.Fatalf("Failed to create document for %s: %v", testName, err)
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		// Evaluate to get results
+		m.eval.Evaluate(m.doc)
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n",
+						r.LineNum, r.Source, r.Value, r.Error))
+				}
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+			catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				leftWidth, rightWidth := model.GetPaneWidths(model.width)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+
+				var buf strings.Builder
+				buf.WriteString("Source and Preview Alignment:\n")
+				buf.WriteString(fmt.Sprintf("Total visual lines: %d\n", len(aligned.sourceLines)))
+				buf.WriteString(fmt.Sprintf("Source lines count: %d, Preview lines count: %d\n",
+					len(aligned.sourceLines), len(aligned.previewLines)))
+
+				// Show side-by-side alignment
+				maxLines := len(aligned.sourceLines)
+				if len(aligned.previewLines) > maxLines {
+					maxLines = len(aligned.previewLines)
+				}
+
+				for i := 0; i < maxLines; i++ {
+					var srcInfo, prvInfo string
+					if i < len(aligned.sourceLines) {
+						sl := aligned.sourceLines[i]
+						srcContent := sl.content
+						if len(srcContent) > 40 {
+							srcContent = srcContent[:40]
+						}
+						srcInfo = fmt.Sprintf("SRC(ln=%d wrap=%v): %q", sl.lineNum, sl.isWrapped, srcContent)
+					}
+					if i < len(aligned.previewLines) {
+						pl := aligned.previewLines[i]
+						prvContent := pl.content
+						if len(prvContent) > 40 {
+							prvContent = prvContent[:40] + "..."
+						}
+						prvInfo = fmt.Sprintf("PRV(ln=%d): %q", pl.sourceLineNum, prvContent)
+					}
+					buf.WriteString(fmt.Sprintf("[%d] %-50s | %s\n", i, srcInfo, prvInfo))
+				}
+				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
 		)

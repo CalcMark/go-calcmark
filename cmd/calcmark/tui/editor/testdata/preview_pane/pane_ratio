@@ -10,10 +10,10 @@ run observe=alignment
 Source and Preview Alignment:
 Total visual lines: 4
 Source lines count: 4, Preview lines count: 4
-[0] SRC(ln=1 wrap=false): "# Header"                               | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mHeader..."
-[1] SRC(ln=2 wrap=false): "x = 10"                                 | PRV(ln=1): "x → 10"
-[2] SRC(ln=3 wrap=false): "y = 20"                                 | PRV(ln=2): "y → 20"
-[3] SRC(ln=4 wrap=false): "z = 30"                                 | PRV(ln=3): "z → 30"
+[0] SRC(ln=1 wrap=false): "# Header"                   | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mHeader\x1b[0m"
+[1] SRC(ln=2 wrap=false): "x = 10"                     | PRV(ln=1): "x → 10"
+[2] SRC(ln=3 wrap=false): "y = 20"                     | PRV(ln=2): "y → 20"
+[3] SRC(ln=4 wrap=false): "z = 30"                     | PRV(ln=3): "z → 30"
 
 # Verify results show in preview
 run observe=results

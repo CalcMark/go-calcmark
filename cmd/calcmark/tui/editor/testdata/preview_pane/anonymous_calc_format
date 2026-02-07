@@ -23,7 +23,7 @@ run observe=alignment
 Source and Preview Alignment:
 Total visual lines: 4
 Source lines count: 4, Preview lines count: 4
-[0] SRC(ln=1 wrap=false): "# Math Examples"                        | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mMath E..."
-[1] SRC(ln=2 wrap=false): "2 + 2"                                  | PRV(ln=1): "→ 4"
-[2] SRC(ln=3 wrap=false): "total = 100"                            | PRV(ln=2): "total → 100"
-[3] SRC(ln=4 wrap=false): "100 * 2"                                | PRV(ln=3): "→ 200"
+[0] SRC(ln=1 wrap=false): "# Math Examples"            | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mMath\x1b[0m\x1b[9..."
+[1] SRC(ln=2 wrap=false): "2 + 2"                      | PRV(ln=1): "→ 4"
+[2] SRC(ln=3 wrap=false): "total = 100"                | PRV(ln=2): "total → 100"
+[3] SRC(ln=4 wrap=false): "100 * 2"                    | PRV(ln=3): "→ 200"

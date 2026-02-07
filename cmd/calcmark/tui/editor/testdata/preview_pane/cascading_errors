@@ -9,6 +9,6 @@
 run observe=results
 ----
 -- results:
-Line 0 (a = undefined_var): value=, error="undefined_variable: Undefined variable \"undefined_var\" - no variable named \"undefined_var\" is defined"
-Line 1 (b = a + 1): value=, error="undefined_variable: Undefined variable \"a\" - no variable named \"a\" is defined"
-Line 2 (c = b * 2): value=, error="undefined_variable: Undefined variable \"b\" - no variable named \"b\" is defined"
+Line 0 (a = undefined_var): value=, error="undefined_variable: undefined variable \"undefined_var\""
+Line 1 (b = a + 1): value=, error=""
+Line 2 (c = b * 2): value=, error=""

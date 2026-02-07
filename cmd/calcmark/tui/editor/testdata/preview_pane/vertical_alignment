@@ -15,15 +15,15 @@ run observe=alignment
 Source and Preview Alignment:
 Total visual lines: 9
 Source lines count: 9, Preview lines count: 9
-[0] SRC(ln=1 wrap=false): "# Header"                               | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mHeader..."
-[1] SRC(ln=2 wrap=false): ""                                       | PRV(ln=1): ""
-[2] SRC(ln=3 wrap=false): "x = 10"                                 | PRV(ln=2): "x → 10"
-[3] SRC(ln=4 wrap=false): ""                                       | PRV(ln=3): ""
-[4] SRC(ln=5 wrap=false): ""                                       | PRV(ln=4): ""
-[5] SRC(ln=6 wrap=false): "y = x + 5"                              | PRV(ln=5): "y → 15"
-[6] SRC(ln=7 wrap=false): ""                                       | PRV(ln=6): ""
-[7] SRC(ln=8 wrap=false): ""                                       | PRV(ln=7): ""
-[8] SRC(ln=9 wrap=false): "z = y * 2"                              | PRV(ln=8): "z → 30"
+[0] SRC(ln=1 wrap=false): "# Header"                   | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mHeader\x1b[0m"
+[1] SRC(ln=2 wrap=false): ""                           | PRV(ln=1): ""
+[2] SRC(ln=3 wrap=false): "x = 10"                     | PRV(ln=2): "x → 10"
+[3] SRC(ln=4 wrap=false): ""                           | PRV(ln=3): ""
+[4] SRC(ln=5 wrap=false): ""                           | PRV(ln=4): ""
+[5] SRC(ln=6 wrap=false): "y = x + 5"                  | PRV(ln=5): "y → 15"
+[6] SRC(ln=7 wrap=false): ""                           | PRV(ln=6): ""
+[7] SRC(ln=8 wrap=false): ""                           | PRV(ln=7): ""
+[8] SRC(ln=9 wrap=false): "z = y * 2"                  | PRV(ln=8): "z → 30"
 
 # Verify all results at correct line positions
 run observe=results
