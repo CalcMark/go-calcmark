@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 11 (Navigation)
-Plan: 1 of TBD in current phase
+Plan: 2 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 11-01-PLAN.md
+Last activity: 2026-02-07 — Completed 11-02-PLAN.md
 
-Progress: [████████░░░░░░░░░░░░] 30%
+Progress: [████████░░░░░░░░░░░░] 32%
 
 ## Milestone v1.1 Scope
 
@@ -60,6 +60,8 @@ Progress: [████████░░░░░░░░░░░░] 30%
 
 Recent decisions affecting current work:
 
+- [11-02]: Use saveCurrentLineAndMoveTo() for scroll adjustment in Ctrl+Home/End
+- [11-02]: Ctrl+End moves to last line and end of that line (not just last line)
 - [11-01]: Ctrl+E repurposed from export to line-end navigation (readline-style)
 - [11-01]: Export available via /export command only
 - [10-05]: TestEditorCatwalkPreviewPane uses per-test documents (not shared document)
@@ -113,9 +115,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 11-01-PLAN.md
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
-Next plan: 11-02-PLAN.md (if exists)
+Next plan: 11-03-PLAN.md (if exists)
 
 ---
-*Updated: 2026-02-07 — Completed 11-01-PLAN.md (Ctrl+A/E Line Navigation)*
+*Updated: 2026-02-07 — Completed 11-02-PLAN.md (Document Navigation)*
