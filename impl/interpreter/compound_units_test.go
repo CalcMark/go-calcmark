@@ -322,3 +322,112 @@ func TestRateAccumulation(t *testing.T) {
 		})
 	}
 }
+
+// TestRateTypePreservation verifies that Rate type is preserved or correctly
+// transformed through various operations.
+//
+// Type rules for Rate:
+// - Rate literal -> Rate
+// - Rate in variable -> Rate
+// - Rate * scalar -> Rate
+// - Rate accumulation (rate over duration) -> Quantity
+func TestRateTypePreservation(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		expectType string // "Rate", "Quantity", "Currency"
+	}{
+		// Rate stays Rate
+		{
+			name:       "rate literal stays Rate",
+			input:      "100 MB/s\n",
+			expectType: "Rate",
+		},
+		{
+			name:       "rate in variable stays Rate",
+			input:      "speed = 100 MB/s\nspeed\n",
+			expectType: "Rate",
+		},
+		{
+			name:       "rate with per keyword stays Rate",
+			input:      "5 GB per day\n",
+			expectType: "Rate",
+		},
+
+		// Rate * scalar = Rate
+		// Note: Only rate * scalar is supported, not scalar * rate (not commutative)
+		{
+			name:       "rate times scalar stays Rate",
+			input:      "(100 MB/s) * 2\n",
+			expectType: "Rate",
+		},
+
+		// Rate accumulation = Quantity (rate over duration)
+		{
+			name:       "accumulate produces Quantity",
+			input:      "100 MB/s over 1 hour\n",
+			expectType: "Quantity",
+		},
+		{
+			name:       "data rate over day produces Quantity",
+			input:      "5 GB/day over 1 week\n",
+			expectType: "Quantity",
+		},
+
+		// Request rate accumulation
+		{
+			name:       "req/s over hour produces Quantity",
+			input:      "1000 req/s over 1 hour\n",
+			expectType: "Quantity",
+		},
+
+		// Cost rate accumulation preserves currency in Quantity
+		{
+			name:       "cost rate over duration produces Quantity",
+			input:      "$0.10 per hour over 24 hours\n",
+			expectType: "Quantity",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[len(results)-1]
+			var actualType string
+
+			switch result.(type) {
+			case *types.Rate:
+				actualType = "Rate"
+			case *types.Quantity:
+				actualType = "Quantity"
+			case *types.Currency:
+				actualType = "Currency"
+			case *types.Number:
+				actualType = "Number"
+			default:
+				actualType = "Unknown"
+			}
+
+			if actualType != tt.expectType {
+				t.Errorf("Expected type %s, got %s (value: %v)",
+					tt.expectType, actualType, result)
+			}
+
+			t.Logf("%s -> %s (type: %s)", tt.name, result.String(), actualType)
+		})
+	}
+}
