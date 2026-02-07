@@ -7,6 +7,7 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/semantic"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -121,7 +122,7 @@ func (m Model) View() string {
 			Background(lipgloss.Color("236")).
 			Padding(0, 1).
 			Width(rightWidth).
-			Render("Preview")
+			Render("Results")
 		// Ensure header is exactly rightWidth
 		previewHeader = ensureFullWidth(previewHeader, rightWidth, lipgloss.Color("236"))
 
@@ -862,12 +863,12 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 
 	switch m.previewMode {
 	case PreviewFull:
-		// Full mode: "varName → value" for assignments, just "value" for anonymous calcs
+		// Full mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
 			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + " " + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
 		}
-		// Anonymous calculation (no variable assignment) - just show the value
-		return changedMarker + valueStyle.Render(r.Value)
+		// Anonymous calculation (no variable assignment) - show arrow without placeholder
+		return changedMarker + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
@@ -1011,12 +1012,28 @@ func (m Model) renderContextFooter(width int) string {
 				state.AutocompleteName = selected.Name
 			}
 			state.AutocompleteSyntax = selected.Syntax
-			state.AutocompleteDesc = selected.Description
+
+			// For functions, show parameter examples instead of/in addition to description
+			// This helps users understand what format to use for each parameter
+			funcName := selected.InsertText
+			if funcName == "" {
+				funcName = selected.Name
+			}
+			paramHint := formatFunctionParamHint(funcName)
+			if paramHint != "" {
+				state.AutocompleteDesc = paramHint
+			} else {
+				state.AutocompleteDesc = selected.Description
+			}
 		}
 	}
 
 	// Check for function argument context (when typing inside function call)
-	if !state.AutocompleteActive && !state.HasError {
+	// NOTE: We check this even when there's an error because incomplete function
+	// calls (like "accumulate(") will have parse errors but should still show
+	// parameter help. The function context takes priority over error display
+	// in RenderContextFooter (Priority 0.5 vs Priority 1).
+	if !state.AutocompleteActive {
 		m.loadCurrentLineIntoEditBuffer()
 		cursorCtx := GetCursorContext(m.editBuf, m.cursorCol)
 		if cursorCtx.InFunctionCall && cursorCtx.ParamSpec != nil {
@@ -1145,7 +1162,7 @@ func overlayPopupOnLines(lines []string, popup string, row, col int) []string {
 }
 
 // overlayStringAt overlays overlay on base starting at column col.
-// Handles ANSI escape codes properly.
+// Handles ANSI escape codes properly using lipgloss.Width for visual width.
 func overlayStringAt(base, overlay string, col int) string {
 	// Convert to runes for proper unicode handling
 	baseRunes := []rune(base)
@@ -1182,18 +1199,24 @@ func overlayStringAt(base, overlay string, col int) string {
 	// Append the overlay
 	result = append(result, overlayRunes...)
 
-	// Skip the overlaid portion of base
-	overlayWidth := len(overlayRunes) // Approximate - good enough for now
-	for baseIdx < len(baseRunes) && overlayWidth > 0 {
+	// CRITICAL: Add explicit ANSI reset after overlay to prevent background bleeding.
+	// Lipgloss may set background colors that would otherwise affect subsequent text.
+	result = append(result, []rune("\x1b[0m")...)
+
+	// Skip the overlaid portion of base using VISUAL width of overlay
+	// CRITICAL: Use lipgloss.Width() to get visual width, not len(overlayRunes)
+	// which includes ANSI escape codes and would skip too many characters.
+	overlayVisualWidth := lipgloss.Width(overlay)
+	for baseIdx < len(baseRunes) && overlayVisualWidth > 0 {
 		r := baseRunes[baseIdx]
 		if r == '\x1b' {
-			// Keep escape sequences
+			// Keep escape sequences (they have zero visual width)
 			for baseIdx < len(baseRunes) && baseRunes[baseIdx] != 'm' {
 				baseIdx++
 			}
 			baseIdx++
 		} else {
-			overlayWidth--
+			overlayVisualWidth--
 			baseIdx++
 		}
 	}
@@ -1237,4 +1260,40 @@ func extractErrorHint(errMsg string, maxWidth int) string {
 
 	// Last resort: just say "error"
 	return "error"
+}
+
+// formatFunctionParamHint looks up a function's parameter specs and formats
+// a helpful hint showing examples for each parameter type.
+// Returns empty string if the function has no parameter specs.
+func formatFunctionParamHint(funcName string) string {
+	spec := semantic.GetFunctionSpec(funcName)
+	if spec == nil || len(spec.Params) == 0 {
+		return ""
+	}
+
+	// Format: "param1: example | param2: example"
+	var parts []string
+	for _, param := range spec.Params {
+		example := ""
+		if len(param.Examples) > 0 {
+			// Show first example as it's usually most representative
+			example = param.Examples[0]
+		} else {
+			// Fall back to type examples
+			typeExamples := semantic.GetExamplesForType(param.Type)
+			if len(typeExamples) > 0 {
+				example = typeExamples[0]
+			}
+		}
+
+		if example != "" {
+			parts = append(parts, param.Name+": "+example)
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.Join(parts, " | ")
 }
