@@ -12,10 +12,11 @@ run observe=alignment
 ----
 -- alignment:
 Source and Preview Alignment:
-Total visual lines: 5
-Source lines count: 5, Preview lines count: 5
-[0] SRC(ln=1 wrap=false): "very_long_variable_name_that_will_d..." | PRV(ln=0): "very_long_variable_name_that_will_d..."
-[1] SRC(ln=0 wrap=true): "nitely_wrap_in_narrow_pane = 42"        | PRV(ln=0): "finitely_wrap_in_narrow_pane → 42"
-[2] SRC(ln=2 wrap=false): "result = "                              | PRV(ln=1): "result → 84"
-[3] SRC(ln=0 wrap=true): "very_long_variable_name_that_will_d..." | PRV(ln=1): ""
-[4] SRC(ln=0 wrap=true): "nitely_wrap_in_narrow_pane * 2"         | PRV(ln=1): ""
+Total visual lines: 6
+Source lines count: 6, Preview lines count: 6
+[0] SRC(ln=1 wrap=false): "very_long_variable_name_that_will_d..." | PRV(ln=0): "very_long_variable_name_that_wil"
+[1] SRC(ln=0 wrap=true): "ly_wrap_in_narrow_pane = 42"            | PRV(ln=0): "l_definitely_wrap_in_narrow_pane"
+[2] SRC(ln=0 wrap=false): ""                                       | PRV(ln=0): " → 42"
+[3] SRC(ln=2 wrap=false): "result = "                              | PRV(ln=1): "result → 84"
+[4] SRC(ln=0 wrap=true): "very_long_variable_name_that_will_d..." | PRV(ln=1): ""
+[5] SRC(ln=0 wrap=true): "ly_wrap_in_narrow_pane * 2"             | PRV(ln=1): ""

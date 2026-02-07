@@ -5,7 +5,7 @@
 run observe=debug
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=20 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate down to line 4 (gzip_compressed line)
 run observe=debug
@@ -15,60 +15,59 @@ key j
 key j
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="jjjj# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=20 editBuf="jjjj# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press 'o' to insert line below and enter edit mode
 run observe=debug
 key o
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="jjjjo# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=20 editBuf="jjjjo# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Exit edit mode without saving (Escape)
 run observe=debug
 key esc
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="jjjjo# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=20 editBuf="jjjjo# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate down with 'j' - cursor should move correctly
 run observe=debug
 key j
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="jjjjoj# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=20 editBuf="jjjjoj# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate back up with 'k'
 run observe=debug
 key k
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=7 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=21 editBuf="jjjjojk# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=7 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=13 totalVisual=20 editBuf="jjjjojk# Compression Function - compress()" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Check full visual line structure
 run observe=lines
 ----
 -- lines:
-sourceToVisual: map[0:0 1:1 2:2 3:4 4:5 5:6 6:8 7:10 8:12 9:14 10:15 11:16 12:18]
+sourceToVisual: map[0:0 1:2 2:3 3:5 4:6 5:7 6:8 7:10 8:12 9:13 10:14 11:15 12:17]
 Visual lines:
   [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Compression Function - compr..." <CURSOR>
-  [1] srcIdx=1 lineNum=2 wrap=false pad=false content=""
-  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="# Compressed size estimates fo..."
-  [3] srcIdx=2 lineNum=0 wrap=true pad=false content="different compression types"
-  [4] srcIdx=3 lineNum=4 wrap=false pad=false content="gzip_compressed = compress(1 G..."
-  [5] srcIdx=4 lineNum=5 wrap=false pad=false content="lz4_compressed = compress(100 ..."
-  [6] srcIdx=5 lineNum=6 wrap=false pad=false content="zstd_compressed = compress(500..."
-  [7] srcIdx=5 lineNum=0 wrap=true pad=false content="zstd)"
+  [1] srcIdx=0 lineNum=0 wrap=false pad=true content=""
+  [2] srcIdx=1 lineNum=2 wrap=false pad=false content=""
+  [3] srcIdx=2 lineNum=3 wrap=false pad=false content="# Compressed size estimates fo..."
+  [4] srcIdx=2 lineNum=0 wrap=true pad=false content="compression types"
+  [5] srcIdx=3 lineNum=4 wrap=false pad=false content="gzip_compressed = compress(1 G..."
+  [6] srcIdx=4 lineNum=5 wrap=false pad=false content="lz4_compressed = compress(100 ..."
+  [7] srcIdx=5 lineNum=6 wrap=false pad=false content="zstd_compressed = compress(500..."
   [8] srcIdx=6 lineNum=7 wrap=false pad=false content="bzip2_compressed = compress(10..."
   [9] srcIdx=6 lineNum=0 wrap=true pad=false content="bzip2)"
   [10] srcIdx=7 lineNum=8 wrap=false pad=false content="snappy_compressed = compress(3..."
   [11] srcIdx=7 lineNum=0 wrap=true pad=false content="snappy)"
   [12] srcIdx=8 lineNum=9 wrap=false pad=false content="no_compression = compress(200 ..."
-  [13] srcIdx=8 lineNum=0 wrap=true pad=false content="none)"
-  [14] srcIdx=9 lineNum=10 wrap=false pad=false content=""
-  [15] srcIdx=10 lineNum=11 wrap=false pad=false content="# Use in calculations"
-  [16] srcIdx=11 lineNum=12 wrap=false pad=false content="storage_savings = 10 GB - comp..."
-  [17] srcIdx=11 lineNum=0 wrap=true pad=false content="GB, gzip)"
-  [18] srcIdx=12 lineNum=13 wrap=false pad=false content="compressed_transfer = "
-  [19] srcIdx=12 lineNum=0 wrap=true pad=false content="transfer_time(compress(1 GB, l..."
-  [20] srcIdx=12 lineNum=0 wrap=true pad=false content="global, gigabit)"
+  [13] srcIdx=9 lineNum=10 wrap=false pad=false content=""
+  [14] srcIdx=10 lineNum=11 wrap=false pad=false content="# Use in calculations"
+  [15] srcIdx=11 lineNum=12 wrap=false pad=false content="storage_savings = 10 GB - comp..."
+  [16] srcIdx=11 lineNum=0 wrap=true pad=false content="gzip)"
+  [17] srcIdx=12 lineNum=13 wrap=false pad=false content="compressed_transfer = "
+  [18] srcIdx=12 lineNum=0 wrap=true pad=false content="transfer_time(compress(1 GB, l..."
+  [19] srcIdx=12 lineNum=0 wrap=true pad=false content="global, gigabit)"

@@ -29,14 +29,16 @@ key up
 mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press Tab to accept the selected suggestion
+# NOTE: Functions now get "(" appended so cursor is inside for parameter help
 run observe=debug
 key tab
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg(# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Clear and test Escape to dismiss
 run observe=debug
+key backspace
 key backspace
 key backspace
 key backspace

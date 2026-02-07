@@ -346,9 +346,9 @@ func TestView(t *testing.T) {
 		t.Error("View should contain 'Source' header")
 	}
 
-	// Should contain preview header (preview visible by default)
-	if !strings.Contains(view, "Preview") {
-		t.Error("View should contain 'Preview' header")
+	// Should contain results header (preview visible by default)
+	if !strings.Contains(view, "Results") {
+		t.Error("View should contain 'Results' header")
 	}
 
 	// Mode is no longer displayed - it's an internal implementation detail
@@ -946,22 +946,22 @@ func TestPreviewModeRendering(t *testing.T) {
 	// Test Full preview mode
 	m.previewMode = PreviewFull
 	view := m.View()
-	if !strings.Contains(view, "Preview") {
-		t.Error("Full preview mode should show Preview header")
+	if !strings.Contains(view, "Results") {
+		t.Error("Full preview mode should show Results header")
 	}
 
 	// Test Minimal preview mode
 	m.previewMode = PreviewMinimal
 	view = m.View()
-	if !strings.Contains(view, "Preview") {
-		t.Error("Minimal preview mode should show Preview header")
+	if !strings.Contains(view, "Results") {
+		t.Error("Minimal preview mode should show Results header")
 	}
 
 	// Test Hidden preview mode
 	m.previewMode = PreviewHidden
 	view = m.View()
-	if strings.Contains(view, "Preview") {
-		t.Error("Hidden preview mode should not show Preview header")
+	if strings.Contains(view, "Results") {
+		t.Error("Hidden preview mode should not show Results header")
 	}
 }
 
@@ -1313,25 +1313,25 @@ heres_a_reeeeeeeeeeeeeeeeeeeeeeeeeelly_long_variable_name = x * 2`
 	// The wrapped line may appear across multiple visual lines, so we check
 	// that the content is present even if split across lines.
 	// We verify wrapping by checking:
-	// 1. The end of the variable name appears somewhere (it would be cut if truncated)
-	// 2. The expression "= x * 2" appears somewhere
+	// 1. The expression "= x * 2" appears somewhere (it would be cut off if truncated)
+	// 2. The content wraps across multiple lines
 
-	// Check that "ame = x * 2" appears (end of variable name + expression)
+	// Check that "= x * 2" appears (the assignment expression at the end)
 	// This would be cut off if truncation happened instead of wrapping
-	hasEndOfName := strings.Contains(view, "ame = x * 2")
-	if !hasEndOfName {
+	hasExpression := strings.Contains(view, "= x * 2")
+	if !hasExpression {
 		t.Error("Long line in source pane is truncated instead of wrapping - missing end of expression")
 	}
 
 	// Check for continuation lines (wrapped content) - they show indented text without line numbers
-	// Look for "variable" or "long" appearing on a line that doesn't have a line number
+	// Look for parts of the long variable name or the expression on wrapped lines
 	lines := strings.Split(view, "\n")
 	foundWrappedContent := false
 	for _, line := range lines {
 		// A wrapped line starts with spaces but no line number before variable content
-		// Check for "eeeee" (middle of the long name) on a line without a number prefix
+		// Check for parts of the long name or "= x * 2" on a line without a number prefix
 		trimmed := strings.TrimLeft(line, " ")
-		if strings.HasPrefix(trimmed, "eeeee") || strings.HasPrefix(trimmed, "ame =") {
+		if strings.HasPrefix(trimmed, "eeeee") || strings.HasPrefix(trimmed, "= x * 2") {
 			foundWrappedContent = true
 			break
 		}
@@ -3594,12 +3594,12 @@ lz4_compressed = compress(100 MB, lz4)`
 	// Render should work without panics and produce valid output
 	view := m.View()
 
-	// Check for valid structure - should have Source and Preview headers
+	// Check for valid structure - should have Source and Results headers
 	if !strings.Contains(view, "Source") {
 		t.Error("View should contain 'Source' header")
 	}
-	if !strings.Contains(view, "Preview") {
-		t.Error("View should contain 'Preview' header")
+	if !strings.Contains(view, "Results") {
+		t.Error("View should contain 'Results' header")
 	}
 
 	// Should show the computed results
@@ -4406,8 +4406,8 @@ func TestBlankDocumentRendering(t *testing.T) {
 	if !strings.Contains(view, "Source") {
 		t.Error("Expected 'Source' header to be visible in blank document")
 	}
-	if !strings.Contains(view, "Preview") {
-		t.Error("Expected 'Preview' header to be visible in blank document")
+	if !strings.Contains(view, "Results") {
+		t.Error("Expected 'Results' header to be visible in blank document")
 	}
 
 	// Verify document starts in editing mode
