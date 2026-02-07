@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 9.1 (Separate Validation from Execution)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-07 — Completed 09.1-02-PLAN.md
+Phase: 9.1 (Separate Validation from Execution) - COMPLETE
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-07 — Completed 09.1-03-PLAN.md
 
-Progress: [███░░░░░░░░░░░░░░░░░] 15%
+Progress: [████░░░░░░░░░░░░░░░░] 18%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
-- Phase 9.1: Separate Validation from Execution (3 plans) - IN PROGRESS (2/3)
+- Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
 - Phase 10: Preview Pane (5 requirements)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
@@ -38,7 +38,7 @@ Progress: [███░░░░░░░░░░░░░░░░░] 15%
 
 ## Performance Metrics
 
-**Velocity:** 5 min per plan (sample size: 2)
+**Velocity:** 4 min per plan (sample size: 3)
 
 *Updated after each plan completion*
 
@@ -48,6 +48,7 @@ Progress: [███░░░░░░░░░░░░░░░░░] 15%
 
 Recent decisions affecting current work:
 
+- [09.1-03]: Use impldoc alias for impl/document import in TUI editor tests
 - [09.1-02]: External test package (document_test) to avoid spec/impl import cycle
 - [09.1-02]: impldoc alias for impl/document import in tests
 - [09.1-01]: EnvironmentWriter interface with Set() and SetExchangeRate() for dependency inversion
@@ -70,10 +71,11 @@ None yet.
 
 ### Roadmap Evolution
 
-- Phase 9.1 inserted after Phase 9: Separate Validation from Execution (URGENT)
+- Phase 9.1 inserted after Phase 9: Separate Validation from Execution (URGENT) - NOW COMPLETE
   - Discovered while fixing error line display bug
   - spec/document/evaluate.go violates architecture rule (imports impl/)
   - Need clean separation: spec=validation, impl=execution
+  - Resolution: Deleted spec/document/evaluate.go, all evaluation uses impl/document.Evaluator
 
 ### Blockers/Concerns
 
@@ -82,8 +84,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 09.1-02-PLAN.md
+Stopped at: Completed 09.1-03-PLAN.md (Phase 9.1 COMPLETE)
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Plan 09.1-02 complete, TUI test migration next*
+*Updated: 2026-02-07 — Phase 9.1 complete, ready for Phase 10*
