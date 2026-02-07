@@ -123,7 +123,12 @@ Plans:
 4. End and Ctrl+E move cursor to end of line
 5. Ctrl+Home moves to document start; Ctrl+End moves to document end
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Add Ctrl+A/E line navigation and resolve export conflict
+- [ ] 11-02-PLAN.md — Implement Ctrl+Home/End document navigation
+- [ ] 11-03-PLAN.md — Comprehensive Alt+B/F word navigation tests
 
 ---
 
@@ -246,7 +251,7 @@ Plans:
 | 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
 | 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
-| 11. Navigation | v1.1 | 0/TBD | Not started | - |
+| 11. Navigation | v1.1 | 0/3 | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
