@@ -1,0 +1,11 @@
+# Test: Currency formatting with symbols and thousand separators
+# Phase 10 requirement (10-03): Unified currency display with code-to-symbol conversion
+
+run observe=results
+----
+-- results:
+Line 0 (# Budget): value=, error=""
+Line 1 (price = 100 USD): value=$100.00, error=""
+Line 2 (tax = price * 10%): value=$10.00, error=""
+Line 3 (total = price + tax): value=$110.00, error=""
+Line 4 (large = 1500 USD): value=$1,500.00, error=""

@@ -1,0 +1,12 @@
+# Test: Napkin estimates display with tilde prefix
+# Phase 10 requirement (10-02): Napkin estimates use tilde prefix (~400 GB)
+# When a calculation uses "as napkin", the result should show "~" prefix
+
+# This test verifies that napkin conversions are marked appropriately
+run observe=results
+----
+-- results:
+Line 0 (# Data Transfer): value=, error=""
+Line 1 (rate = 5 MB/s): value=5 MB/s, error=""
+Line 2 (time = 1 day): value=1 day, error=""
+Line 3 (total = accumulate(rate, time) as napkin): value=~420 GB, error=""

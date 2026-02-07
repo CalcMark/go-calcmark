@@ -1,0 +1,19 @@
+# Test: Preview pane has "Results" header
+# Phase 10 requirement: Preview pane header is "Results" (not "Preview")
+
+# The header is rendered in View() and should say "Results"
+# This is verified at the UI level by checking the rendered output
+
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify calculations are evaluated correctly
+run observe=results
+----
+-- results:
+Line 0 (# Header): value=, error=""
+Line 1 (x = 10): value=10, error=""
+Line 2 (y = 20): value=20, error=""
+Line 3 (z = 30): value=30, error=""

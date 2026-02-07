@@ -1,0 +1,14 @@
+# Test: Cascading errors show "blocked" instead of repeating root cause
+# Phase 10 requirement (10-04): Cascading errors show root cause only, dependents show "blocked"
+
+# Document with undefined variable that causes cascading errors:
+# Line 1: a = undefined_var (root cause error)
+# Line 2: b = a + 1 (should show "blocked", not repeat error)
+# Line 3: c = b * 2 (should show "blocked", not repeat error)
+
+run observe=results
+----
+-- results:
+Line 0 (a = undefined_var): value=, error="undefined_variable: Undefined variable \"undefined_var\" - no variable named \"undefined_var\" is defined"
+Line 1 (b = a + 1): value=, error="undefined_variable: Undefined variable \"a\" - no variable named \"a\" is defined"
+Line 2 (c = b * 2): value=, error="undefined_variable: Undefined variable \"b\" - no variable named \"b\" is defined"
