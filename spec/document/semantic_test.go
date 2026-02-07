@@ -1,7 +1,10 @@
-package document
+package document_test
 
 import (
 	"testing"
+
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestVariableRedefinitionRejectedInDocument tests that the document
@@ -29,13 +32,14 @@ func TestVariableRedefinitionRejectedInDocument(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create document and evaluate - should return error for redefinition
-			doc, err := NewDocument(tt.source)
+			doc, err := document.NewDocument(tt.source)
 			if err != nil {
 				t.Fatalf("Failed to create document: %v", err)
 			}
 
 			// Evaluate the document - this is where semantic errors are caught
-			err = doc.Evaluate()
+			eval := impldoc.NewEvaluator()
+			err = eval.Evaluate(doc)
 			if err == nil {
 				t.Errorf("Expected error for variable redefinition, got nil")
 				t.Logf("Source: %q", tt.source)
@@ -66,14 +70,15 @@ func TestVariableDefinitionAllowedInDocument(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc, err := NewDocument(tt.source)
+			doc, err := document.NewDocument(tt.source)
 			if err != nil {
 				t.Errorf("Failed to create document: %v", err)
 				return
 			}
 
 			// Evaluate to ensure it works without errors
-			err = doc.Evaluate()
+			eval := impldoc.NewEvaluator()
+			err = eval.Evaluate(doc)
 			if err != nil {
 				t.Errorf("Expected no error for valid definitions, got: %v", err)
 			}

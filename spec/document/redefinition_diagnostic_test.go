@@ -1,7 +1,10 @@
-package document
+package document_test
 
 import (
 	"testing"
+
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestRedefinitionDiagnosticLineNumber verifies that redefinition diagnostics
@@ -40,7 +43,7 @@ a = 2`,
 			// We need to test the diagnostic location before the error is returned
 
 			// Parse blocks manually to inspect
-			detector := NewDetector()
+			detector := document.NewDetector()
 			blocks, err := detector.DetectBlocks(tt.source)
 			if err != nil {
 				t.Fatalf("Failed to detect blocks: %v", err)
@@ -52,13 +55,14 @@ a = 2`,
 			}
 
 			// Now try to create the document and evaluate it
-			doc, docErr := NewDocument(tt.source)
+			doc, docErr := document.NewDocument(tt.source)
 			if docErr != nil {
 				t.Fatalf("NewDocument failed: %v", docErr)
 			}
 
 			// Evaluate should catch the redefinition error
-			evalErr := doc.Evaluate()
+			eval := impldoc.NewEvaluator()
+			evalErr := eval.Evaluate(doc)
 			if evalErr == nil {
 				t.Fatal("Expected error for variable redefinition, got nil")
 			}
@@ -83,7 +87,7 @@ func TestRedefinitionDiagnosticStorage(t *testing.T) {
 y = x + 5
 x = 20`
 
-	detector := NewDetector()
+	detector := document.NewDetector()
 	blocks, err := detector.DetectBlocks(source)
 	if err != nil {
 		t.Fatalf("Failed to detect blocks: %v", err)
@@ -93,7 +97,7 @@ x = 20`
 		t.Fatalf("Expected 1 block, got %d", len(blocks))
 	}
 
-	calcBlock, ok := blocks[0].(*CalcBlock)
+	calcBlock, ok := blocks[0].(*document.CalcBlock)
 	if !ok {
 		t.Fatalf("Expected CalcBlock, got %T", blocks[0])
 	}

@@ -1,8 +1,11 @@
-package document
+package document_test
 
 import (
 	"strings"
 	"testing"
+
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestDiagnosticLineNumberDebug helps debug where the error line number comes from.
@@ -11,7 +14,7 @@ func TestDiagnosticLineNumberDebug(t *testing.T) {
 	source := "a = 3\n\nb = a * 2\n\na = 3"
 
 	// Detect blocks
-	detector := NewDetector()
+	detector := document.NewDetector()
 	blocks, err := detector.DetectBlocks(source)
 	if err != nil {
 		t.Fatalf("Failed to detect blocks: %v", err)
@@ -25,13 +28,14 @@ func TestDiagnosticLineNumberDebug(t *testing.T) {
 	}
 
 	// Create document and evaluate
-	doc, docErr := NewDocument(source)
+	doc, docErr := document.NewDocument(source)
 	if docErr != nil {
 		t.Fatalf("NewDocument failed: %v", docErr)
 	}
 
 	// Evaluate - this is when redefinition check happens
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	t.Logf("\nEvaluate error: %v", evalErr)
 	if evalErr == nil {
 		t.Fatal("Expected error for redefinition")
@@ -39,10 +43,10 @@ func TestDiagnosticLineNumberDebug(t *testing.T) {
 
 	// If doc was created (even partially), check diagnostics
 	if doc != nil {
-		blocks := doc.GetBlocks()
-		t.Logf("\nDocument has %d blocks", len(blocks))
-		for i, node := range blocks {
-			if cb, ok := node.Block.(*CalcBlock); ok {
+		docBlocks := doc.GetBlocks()
+		t.Logf("\nDocument has %d blocks", len(docBlocks))
+		for i, node := range docBlocks {
+			if cb, ok := node.Block.(*document.CalcBlock); ok {
 				diags := cb.Diagnostics()
 				t.Logf("Block %d diagnostics (%d):", i, len(diags))
 				for j, diag := range diags {
@@ -59,7 +63,7 @@ func TestDiagnosticWithSeparateBlocks(t *testing.T) {
 	// Two blocks separated by 2 empty lines
 	source := "a = 3\n\n\na = 3"
 
-	detector := NewDetector()
+	detector := document.NewDetector()
 	blocks, err := detector.DetectBlocks(source)
 	if err != nil {
 		t.Fatalf("Failed to detect blocks: %v", err)
@@ -79,23 +83,24 @@ func TestDiagnosticWithSeparateBlocks(t *testing.T) {
 		t.Logf("  Line %d: %q", i, line)
 	}
 
-	doc, docErr := NewDocument(source)
+	doc, docErr := document.NewDocument(source)
 	if docErr != nil {
 		t.Fatalf("NewDocument failed: %v", docErr)
 	}
 
 	// Evaluate - redefinition check happens here
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	t.Logf("\nEvaluate error: %v", evalErr)
 	if evalErr == nil {
 		t.Fatal("Expected error for redefinition")
 	}
 
 	if doc != nil {
-		blocks := doc.GetBlocks()
-		t.Logf("\nDocument has %d blocks", len(blocks))
-		for i, node := range blocks {
-			if cb, ok := node.Block.(*CalcBlock); ok {
+		docBlocks := doc.GetBlocks()
+		t.Logf("\nDocument has %d blocks", len(docBlocks))
+		for i, node := range docBlocks {
+			if cb, ok := node.Block.(*document.CalcBlock); ok {
 				diags := cb.Diagnostics()
 				t.Logf("Block %d diagnostics (%d):", i, len(diags))
 				for j, diag := range diags {

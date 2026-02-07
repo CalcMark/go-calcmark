@@ -1,8 +1,11 @@
-package document
+package document_test
 
 import (
 	"strings"
 	"testing"
+
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestRedefinitionAcrossBlocks tests that redefinition is detected even when
@@ -11,7 +14,7 @@ func TestRedefinitionAcrossBlocks(t *testing.T) {
 	// Two blocks separated by 2 empty lines
 	source := "a = 3\n\n\na = 3"
 
-	doc, err := NewDocument(source)
+	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
@@ -21,7 +24,8 @@ func TestRedefinitionAcrossBlocks(t *testing.T) {
 	}
 
 	// Evaluate the document - this is when semantic checking happens
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr != nil {
 		t.Logf("Evaluate error (expected for redefinition): %v", evalErr)
 		// Error is expected for redefinition, but we want to check the diagnostics
@@ -31,7 +35,7 @@ func TestRedefinitionAcrossBlocks(t *testing.T) {
 	t.Logf("Document has %d blocks", len(blocks))
 
 	// Block 0 should have no diagnostics (first definition is valid)
-	if cb0, ok := blocks[0].Block.(*CalcBlock); ok {
+	if cb0, ok := blocks[0].Block.(*document.CalcBlock); ok {
 		diags0 := cb0.Diagnostics()
 		t.Logf("Block 0 has %d diagnostics", len(diags0))
 		for i, diag := range diags0 {
@@ -44,7 +48,7 @@ func TestRedefinitionAcrossBlocks(t *testing.T) {
 
 	// Block 1 should have a redefinition diagnostic
 	if len(blocks) > 1 {
-		if cb1, ok := blocks[1].Block.(*CalcBlock); ok {
+		if cb1, ok := blocks[1].Block.(*document.CalcBlock); ok {
 			diags1 := cb1.Diagnostics()
 			t.Logf("Block 1 has %d diagnostics", len(diags1))
 			for i, diag := range diags1 {
@@ -82,7 +86,7 @@ func TestRedefinitionInSameBlockWithEmptyLine(t *testing.T) {
 	// One empty line - stays in same block
 	source := "a = 2\n\nb = a * 2\n\na = 3"
 
-	doc, err := NewDocument(source)
+	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
@@ -92,7 +96,8 @@ func TestRedefinitionInSameBlockWithEmptyLine(t *testing.T) {
 	}
 
 	// Evaluate to trigger semantic checking
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr != nil {
 		t.Logf("Evaluate error (expected): %v", evalErr)
 	}
@@ -105,7 +110,7 @@ func TestRedefinitionInSameBlockWithEmptyLine(t *testing.T) {
 		t.Errorf("Expected 1 block, got %d", len(blocks))
 	}
 
-	if cb, ok := blocks[0].Block.(*CalcBlock); ok {
+	if cb, ok := blocks[0].Block.(*document.CalcBlock); ok {
 		diags := cb.Diagnostics()
 		t.Logf("Block has %d diagnostics", len(diags))
 		for i, diag := range diags {

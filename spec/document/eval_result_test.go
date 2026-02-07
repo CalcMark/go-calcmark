@@ -3,6 +3,7 @@ package document_test
 import (
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -26,7 +27,8 @@ func TestDocumentEvaluationStoresResults(t *testing.T) {
 				t.Fatalf("NewDocument error: %v", err)
 			}
 
-			err = doc.Evaluate()
+			eval := impldoc.NewEvaluator()
+			err = eval.Evaluate(doc)
 			if err != nil {
 				t.Fatalf("Evaluate error: %v", err)
 			}
