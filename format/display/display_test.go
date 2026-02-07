@@ -221,6 +221,54 @@ func TestThousandSeparators(t *testing.T) {
 	}
 }
 
+func TestUnifiedCurrencyFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		symbol   string
+		expected string
+	}{
+		// Small values - 2 decimal places
+		{"small dollar", "42.50", "$", "$42.50"},
+		{"small cents", "0.99", "$", "$0.99"},
+		{"small whole number", "100", "$", "$100.00"},
+
+		// Mid-range - thousand separators (1000-9999)
+		{"mid dollar", "1500", "$", "$1,500.00"},
+		{"mid dollar decimal", "1500.50", "$", "$1,500.50"},
+		{"exactly 1000", "1000", "$", "$1,000.00"},
+		{"upper mid-range", "9999", "$", "$9,999.00"},
+
+		// Large values - K/M/B suffixes (10000+)
+		{"large dollar K", "15000", "$", "$15K"},
+		{"large dollar M", "1500000", "$", "$1.5M"},
+		{"large dollar B", "1500000000", "$", "$1.5B"},
+
+		// Code to symbol conversion
+		{"USD to dollar", "100", "USD", "$100.00"},
+		{"EUR keeps EUR", "100", "EUR", "EUR100.00"},
+		{"GBP to pound", "100", "GBP", "GBP100.00"},
+		{"JPY to yen", "100", "JPY", "JPY100"},
+
+		// Edge cases
+		{"zero", "0", "$", "$0.00"},
+		{"negative small", "-50.00", "$", "-$50.00"},
+		{"negative mid", "-1500", "$", "-$1,500.00"},
+		{"negative large", "-15000", "$", "-$15K"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value, _ := decimal.NewFromString(tt.value)
+			c := types.NewCurrency(value, tt.symbol)
+			got := FormatCurrency(c)
+			if got != tt.expected {
+				t.Errorf("FormatCurrency(%s%s) = %q, want %q", tt.symbol, tt.value, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestFormat(t *testing.T) {
 	tests := []struct {
 		name     string
