@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 10 (Preview Pane)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-08 — Phase 9.1 complete (verified)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-07 — Completed 10-01-PLAN.md (Preview Pane Visual Layout)
 
-Progress: [████░░░░░░░░░░░░░░░░] 18%
+Progress: [█████░░░░░░░░░░░░░░░] 20%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
-- Phase 10: Preview Pane (5 requirements)
+- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (1/5)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -36,9 +36,21 @@ Progress: [████░░░░░░░░░░░░░░░░] 18%
    - Root cause: impl/interpreter/napkin_eval.go line 29 strips units
    - Fix: 52af9f3 - type-preserving napkin conversion
 
+2. `request_data = 50kb` displays as `48.8 KB` instead of `50 KB`
+   - Reported: 2026-02-06
+   - Expected: 50 KB (user assigned 50 kilobytes)
+   - Actual: 48.8 KB (unexpected conversion)
+   - Investigate: Is `kb` being interpreted differently than expected? Check unit parsing for kb/KB/Kb
+
+3. `daily_load * request_data` fails with "eval error" when multiplying dimensionless count by data quantity
+   - Reported: 2026-02-06
+   - Context: `rps = 1.2K`, `daily_load = accumulate(rps/s, 1 day)` -> 103.68M, then `daily_load * request_data` fails
+   - Expected: Should multiply count (103.68M) by data size (50 KB) to get total data
+   - Investigate: Type system may not allow Number * Quantity multiplication
+
 ## Performance Metrics
 
-**Velocity:** 4 min per plan (sample size: 3)
+**Velocity:** 4 min per plan (sample size: 4)
 
 *Updated after each plan completion*
 
@@ -48,6 +60,9 @@ Progress: [████░░░░░░░░░░░░░░░░] 18%
 
 Recent decisions affecting current work:
 
+- [10-01]: Preview pane header is "Results" (not "Preview")
+- [10-01]: Anonymous calculations display as "-> result" with arrow prefix
+- [10-01]: Source/preview pane ratio is fixed at 60/40
 - [09.1-03]: Use impldoc alias for impl/document import in TUI editor tests
 - [09.1-02]: External test package (document_test) to avoid spec/impl import cycle
 - [09.1-02]: impldoc alias for impl/document import in tests
@@ -83,9 +98,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Phase 9.1 complete, ready for Phase 10
+Last session: 2026-02-07
+Stopped at: Completed 10-01-PLAN.md, ready for 10-02
 Resume file: None
 
 ---
-*Updated: 2026-02-08 — Phase 9.1 (Separate Validation from Execution) complete*
+*Updated: 2026-02-07 — Completed 10-01-PLAN.md (Preview Pane Visual Layout)*
