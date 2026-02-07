@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -77,7 +78,8 @@ a = 4`,
 			}
 
 			// Evaluate the document - this is when semantic checking happens and diagnostics are generated
-			evalErr := doc.Evaluate()
+			eval := impldoc.NewEvaluator()
+			evalErr := eval.Evaluate(doc)
 			if evalErr != nil {
 				t.Logf("Evaluate returned error (expected for redefinition): %v", evalErr)
 			}

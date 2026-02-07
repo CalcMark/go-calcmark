@@ -3,6 +3,7 @@ package editor
 import (
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -21,7 +22,8 @@ b = 5
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr != nil {
 		t.Fatalf("Initial document should have no errors, got: %v", evalErr)
 	}

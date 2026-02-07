@@ -3,6 +3,7 @@ package editor
 import (
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -21,7 +22,8 @@ a = 3`
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr == nil {
 		t.Fatal("Expected error for variable redefinition, got nil")
 	}
@@ -47,7 +49,8 @@ a = 3`
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr == nil {
 		t.Fatal("Expected error for variable redefinition, got nil")
 	}
@@ -62,7 +65,8 @@ a = 3`
 		t.Fatalf("NewDocument failed: %v", err2)
 	}
 
-	evalErr2 := doc2.Evaluate()
+	eval2 := impldoc.NewEvaluator()
+	evalErr2 := eval2.Evaluate(doc2)
 	if evalErr2 == nil {
 		t.Fatal("Expected error for variable redefinition across blocks, got nil")
 	}

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -111,7 +112,8 @@ func TestRedefinitionInSingleBlock(t *testing.T) {
 		t.Fatalf("NewDocument failed: %v", docErr)
 	}
 
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr == nil {
 		t.Fatal("Expected error for redefinition")
 	}

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -33,7 +34,8 @@ c = b * a
 	}
 
 	// Evaluate to trigger type checking
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	t.Logf("Evaluation error (expected for type mismatch): %v", evalErr)
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
@@ -89,7 +91,8 @@ c = a * b
 	}
 
 	// Evaluate to trigger type checking
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	t.Logf("Evaluation error (expected for type mismatch): %v", evalErr)
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {

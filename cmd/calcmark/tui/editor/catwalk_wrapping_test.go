@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -51,7 +52,8 @@ result = very_long_variable_name_that_will_definitely_wrap_in_narrow_pane * 2
 		}
 
 		// Evaluate
-		evalErr := doc.Evaluate()
+		eval := impldoc.NewEvaluator()
+		evalErr := eval.Evaluate(doc)
 		t.Logf("Evaluation error for %s: %v", path, evalErr)
 
 		m := New(doc)

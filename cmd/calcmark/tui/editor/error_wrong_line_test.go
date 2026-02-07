@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -22,7 +23,8 @@ b = 6`
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	// This SHOULD have an error (b is redefined)
 	if evalErr == nil {
 		t.Error("Expected redefinition error, got nil")
@@ -78,7 +80,8 @@ b = 6`
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	evalErr := doc.Evaluate()
+	eval := impldoc.NewEvaluator()
+	evalErr := eval.Evaluate(doc)
 	if evalErr != nil {
 		t.Errorf("Document should have no errors, got: %v", evalErr)
 	}

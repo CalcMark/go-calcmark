@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -22,7 +23,8 @@ func TestFunctionResultDisplay(t *testing.T) {
 	}
 
 	// Evaluate the document
-	if err := doc.Evaluate(); err != nil {
+	eval := impldoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		t.Fatalf("Failed to evaluate document: %v", err)
 	}
 
@@ -69,7 +71,8 @@ func TestAssignedFunctionResultDisplay(t *testing.T) {
 		t.Fatalf("Failed to create document: %v", err)
 	}
 
-	if err := doc.Evaluate(); err != nil {
+	eval := impldoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		t.Fatalf("Failed to evaluate document: %v", err)
 	}
 
@@ -113,7 +116,8 @@ func TestSqrtFunctionResultDisplay(t *testing.T) {
 		t.Fatalf("Failed to create document: %v", err)
 	}
 
-	if err := doc.Evaluate(); err != nil {
+	eval := impldoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		t.Fatalf("Failed to evaluate document: %v", err)
 	}
 
@@ -149,7 +153,8 @@ func TestAnonymousExpressionResultDisplay(t *testing.T) {
 		t.Fatalf("Failed to create document: %v", err)
 	}
 
-	if err := doc.Evaluate(); err != nil {
+	eval := impldoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
 		t.Fatalf("Failed to evaluate document: %v", err)
 	}
 
