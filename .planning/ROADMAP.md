@@ -172,10 +172,11 @@ Plans:
 5. Help overlay provides comprehensive command reference
 6. Command menu is keyboard-navigable with clear visual feedback
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 11.2 to break down)
+- [ ] 11.2-01-PLAN.md — Command infrastructure and StateCommandMenu
+- [ ] 11.2-02-PLAN.md — Command menu popup rendering and status bar simplification
 
 ---
 
@@ -300,7 +301,7 @@ Plans:
 | 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
 | 11. Navigation | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 11.1 Bug Fixes | v1.1 | 0/TBD | Not started | - |
-| 11.2 UX Redesign | v1.1 | 0/TBD | Not started | - |
+| 11.2 UX Redesign | v1.1 | 0/2 | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
@@ -311,4 +312,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*
