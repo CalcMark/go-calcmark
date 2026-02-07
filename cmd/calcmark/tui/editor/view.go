@@ -1398,7 +1398,7 @@ func (m Model) renderFilePickerOverlay() string {
 		// Show filename being typed with cursor
 		hint = fmt.Sprintf("  Filename: %s|   [Enter] save  [Esc] back", m.newFileName)
 	} else {
-		hint = "  [up/down] navigate  [Enter] open/select  [n] new file  [Esc] cancel"
+		hint = "  [↑↓] navigate  [Enter] open  [h/←] back  [n] new file  [Esc] cancel"
 	}
 	footerStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).

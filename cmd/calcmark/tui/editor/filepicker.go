@@ -28,12 +28,14 @@ func initFilePicker() filepicker.Model {
 		fp.CurrentDirectory = home
 	}
 
-	// Configuration
-	fp.AllowedTypes = []string{".cm"} // Highlight .cm files
-	fp.DirAllowed = true              // Allow entering directories
-	fp.FileAllowed = true             // Allow selecting files (for overwrite)
+	// Configuration - show ALL files and directories for navigation
+	// Don't filter by extension - user needs to see directories to navigate
+	fp.AllowedTypes = []string{} // Empty = show all files
+	fp.DirAllowed = true         // Allow navigating into directories
+	fp.FileAllowed = true        // Allow selecting files (for overwrite)
 	fp.ShowHidden = false
-	fp.Height = 15
+	fp.ShowSize = true
+	fp.SetHeight(15)
 
 	// Apply dark theme styling to match editor
 	fp.Styles.Directory = lipgloss.NewStyle().
