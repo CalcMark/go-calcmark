@@ -67,12 +67,14 @@ func FormatNumber(value decimal.Decimal) string {
 // For known units (length, mass, volume, data, etc.), it normalizes to the
 // most appropriate unit scale (e.g., 1000000 GB → 976.56 TB).
 // For unknown/arbitrary units, it uses K/M/B/T number suffixes.
+// Napkin estimates (IsNapkin=true) are prefixed with tilde (~).
 //
 // Examples:
 //
 //	FormatQuantity(1000 m) → "1 km"
 //	FormatQuantity(23400000 GB) → "22.31 PB"
 //	FormatQuantity(100000 users) → "100K users"
+//	FormatQuantity(400 GB, isNapkin=true) → "~400 GB"
 func FormatQuantity(q *types.Quantity) string {
 	if q == nil {
 		return ""
@@ -81,13 +83,20 @@ func FormatQuantity(q *types.Quantity) string {
 	// Try to normalize to a better unit (e.g., 1000 m → 1 km)
 	normValue, normUnit := NormalizeForDisplay(q.Value, q.Unit)
 
+	var result string
 	// If normalization changed the unit, use the normalized form without K/M/B/T
 	if normUnit != q.Unit {
-		return formatNormalizedQuantity(normValue, normUnit)
+		result = formatNormalizedQuantity(normValue, normUnit)
+	} else {
+		// Unknown unit: fall back to K/M/B/T number suffixes
+		result = formatWithSuffix(q.Value, q.Unit)
 	}
 
-	// Unknown unit: fall back to K/M/B/T number suffixes
-	return formatWithSuffix(q.Value, q.Unit)
+	// Add tilde prefix for napkin estimates
+	if q.IsNapkin {
+		return "~" + result
+	}
+	return result
 }
 
 // FormatRate formats a rate (quantity per time) in human-readable form.
@@ -254,4 +263,35 @@ func abbreviateTimeUnit(unit string) string {
 		return abbrev
 	}
 	return unit
+}
+
+// addThousandSeparators inserts commas as thousand separators in a numeric string.
+// Only operates on the integer part of a number.
+//
+// Examples:
+//
+//	addThousandSeparators("999") → "999"
+//	addThousandSeparators("1000") → "1,000"
+//	addThousandSeparators("1234567") → "1,234,567"
+func addThousandSeparators(s string) string {
+	n := len(s)
+	if n <= 3 {
+		return s
+	}
+
+	var result strings.Builder
+	remainder := n % 3
+	if remainder > 0 {
+		result.WriteString(s[:remainder])
+		if n > remainder {
+			result.WriteString(",")
+		}
+	}
+	for i := remainder; i < n; i += 3 {
+		result.WriteString(s[i : i+3])
+		if i+3 < n {
+			result.WriteString(",")
+		}
+	}
+	return result.String()
 }

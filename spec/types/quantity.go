@@ -10,8 +10,9 @@ import (
 // This is a stub for future implementation with full unit support.
 // For now, it simply stores the value and unit string.
 type Quantity struct {
-	Value decimal.Decimal
-	Unit  string
+	Value    decimal.Decimal
+	Unit     string
+	IsNapkin bool // True if this is a napkin estimate (approximate value)
 }
 
 // NewQuantity creates a new Quantity with the given value and unit.
