@@ -825,13 +825,28 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	isActuallyCalc, _ := detector.IsCalculation(r.Source)
 
 	if r.Error != "" && isActuallyCalc {
-		// Show brief error indicator inline - details in context footer below
+		// Show full error message - per CONTEXT.md decision
+		// "Show full error message in preview (not abbreviated)"
 		errStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("208")) // amber
 
-		// Extract a brief error hint (variable name or short description)
-		errHint := extractErrorHint(r.Error, width-4)
-		return errStyle.Render("⚠ " + errHint)
+		// Check if this is a blocked (cascading) error
+		if r.IsBlocked {
+			// Blocked errors show brief indicator - root cause shown elsewhere
+			blockedStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("244")) // gray (less prominent)
+			return blockedStyle.Render("⊘ blocked")
+		}
+
+		// Root cause error - show cleaned message without error code prefix
+		// CleanErrorMessage removes prefixes like "undefined_variable: "
+		errorText := components.CleanErrorMessage(r.Error)
+		maxLen := width - 4 // room for "⚠ " prefix
+		if maxLen > 0 && lipgloss.Width(errorText) > maxLen {
+			// Truncate very long messages - full details in context footer
+			errorText = components.TruncateWithEllipsis(errorText, maxLen)
+		}
+		return errStyle.Render("⚠ " + errorText)
 	}
 
 	if !isActuallyCalc {

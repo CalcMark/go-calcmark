@@ -20,6 +20,7 @@ type LineResult struct {
 	Diagnostic *document.Diagnostic // Structured diagnostic with code, message, position
 	BlockID    string
 	WasChanged bool
+	IsBlocked  bool // True if this error is caused by an undefined variable from a prior error
 }
 
 // GetLineResults returns evaluation results for all lines.
@@ -27,6 +28,10 @@ type LineResult struct {
 func (m *Model) GetLineResults() []LineResult {
 	var results []LineResult
 	lineNum := 0
+
+	// Track variables that failed to evaluate (for cascading error detection)
+	// Per CONTEXT.md: "Cascading errors: show root cause only, dependents show 'blocked'"
+	blockedVars := make(map[string]bool)
 
 	for _, node := range m.doc.GetBlocks() {
 		switch b := node.Block.(type) {
@@ -85,6 +90,24 @@ func (m *Model) GetLineResults() []LineResult {
 				if diag, hasError := diagByLine[blockLineNum]; hasError {
 					lr.Diagnostic = diag
 					lr.Error = diag.Code + ": " + diag.Message // Legacy string for backwards compat
+
+					// Check if this is a cascading (blocked) error
+					if isUndefinedVarError(lr.Error) {
+						varName := extractVarFromUndefinedError(lr.Error)
+						if varName != "" && blockedVars[varName] {
+							lr.IsBlocked = true
+						}
+					}
+
+					// If this line defines a variable and has an error, add it to blockedVars
+					// Note: Don't set lr.VarName here to preserve original behavior (error lines
+					// don't report VarName)
+					if stmtIdx < len(statements) {
+						if varName := getAssignmentVarName(statements[stmtIdx]); varName != "" {
+							blockedVars[varName] = true
+						}
+					}
+
 					results = append(results, lr)
 					lineNum++
 					continue
@@ -101,6 +124,24 @@ func (m *Model) GetLineResults() []LineResult {
 					}
 					if showErrorHere {
 						lr.Error = blockError.Error()
+
+						// Check if this is a cascading (blocked) error
+						if isUndefinedVarError(lr.Error) {
+							varName := extractVarFromUndefinedError(lr.Error)
+							if varName != "" && blockedVars[varName] {
+								lr.IsBlocked = true
+							}
+						}
+
+						// If this line defines a variable and has an error, add it to blockedVars
+						// Note: Don't set lr.VarName here to preserve original behavior (error lines
+						// don't report VarName)
+						if stmtIdx < len(statements) {
+							if varName := getAssignmentVarName(statements[stmtIdx]); varName != "" {
+								blockedVars[varName] = true
+							}
+						}
+
 						results = append(results, lr)
 						lineNum++
 						continue
@@ -196,6 +237,29 @@ func getAssignmentVarName(node ast.Node) string {
 		return n.Name
 	case *ast.FrontmatterAssignment:
 		return n.Property
+	}
+	return ""
+}
+
+// isUndefinedVarError checks if an error message indicates an undefined variable.
+func isUndefinedVarError(errMsg string) bool {
+	lowerErr := strings.ToLower(errMsg)
+	return strings.Contains(lowerErr, "undefined variable") ||
+		strings.Contains(lowerErr, "undefined_variable")
+}
+
+// extractVarFromUndefinedError extracts the variable name from an undefined variable error.
+// Returns empty string if no variable name found.
+func extractVarFromUndefinedError(errMsg string) string {
+	// Common patterns:
+	// - `undefined_variable: Undefined variable "varname" - ...`
+	// - `undefined variable: "varname"`
+	start := strings.Index(errMsg, "\"")
+	if start >= 0 {
+		end := strings.Index(errMsg[start+1:], "\"")
+		if end >= 0 {
+			return errMsg[start+1 : start+1+end]
+		}
 	}
 	return ""
 }
