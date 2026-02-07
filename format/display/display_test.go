@@ -244,11 +244,11 @@ func TestUnifiedCurrencyFormat(t *testing.T) {
 		{"large dollar M", "1500000", "$", "$1.5M"},
 		{"large dollar B", "1500000000", "$", "$1.5B"},
 
-		// Code to symbol conversion
+		// Code to symbol conversion (all known codes map to symbols)
 		{"USD to dollar", "100", "USD", "$100.00"},
-		{"EUR keeps EUR", "100", "EUR", "EUR100.00"},
-		{"GBP to pound", "100", "GBP", "GBP100.00"},
-		{"JPY to yen", "100", "JPY", "JPY100"},
+		{"EUR to euro", "100", "EUR", "€100.00"},
+		{"GBP to pound", "100", "GBP", "£100.00"},
+		{"JPY to yen", "100", "JPY", "¥100"},
 
 		// Edge cases
 		{"zero", "0", "$", "$0.00"},

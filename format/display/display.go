@@ -130,26 +130,71 @@ func FormatRate(r *types.Rate) string {
 
 // FormatCurrency formats a currency value in human-readable form.
 // Preserves 2 decimal places for small values, uses suffixes for large values.
+// Normalizes currency codes to symbols (USD -> $) and handles sign positioning.
 //
 // Examples:
 //
 //	FormatCurrency($1500000) → "$1.5M"
 //	FormatCurrency($42.50) → "$42.50"
+//	FormatCurrency($1500) → "$1,500.00"
+//	FormatCurrency(USD100) → "$100.00"
 func FormatCurrency(c *types.Currency) string {
 	if c == nil {
 		return ""
 	}
 
-	absValue, _ := c.Value.Abs().Float64()
+	// Normalize code to symbol (USD -> $, etc.)
+	symbol := types.GetCurrencySymbol(c.Code)
 
-	// For small values, use standard currency format
-	if absValue < 10000 {
-		return c.String() // Use existing precise format
+	absValue, _ := c.Value.Abs().Float64()
+	isNegative := c.Value.IsNegative()
+
+	// Get the number of decimal places for this currency
+	decimals := getCurrencyDecimals(c.Code)
+
+	var numStr string
+	switch {
+	case absValue >= 10000:
+		// Large values: use K/M/B suffixes
+		numStr = formatNumberWithSuffix(c.Value.Abs())
+	case absValue >= 1000:
+		// Mid-range: thousand separators with decimals
+		numStr = formatCurrencyWithSeparators(c.Value.Abs(), decimals)
+	default:
+		// Small values: standard decimal format
+		numStr = c.Value.Abs().StringFixed(int32(decimals))
 	}
 
-	// For large values, use suffix notation
-	numStr := formatNumberWithSuffix(c.Value)
-	return fmt.Sprintf("%s%s", c.Symbol, numStr)
+	// Build result with proper sign positioning: -$50.00, not $-50.00
+	if isNegative {
+		return "-" + symbol + numStr
+	}
+	return symbol + numStr
+}
+
+// getCurrencyDecimals returns the number of decimal places for a currency.
+// Most currencies use 2 decimals, but some like JPY use 0.
+func getCurrencyDecimals(code string) int {
+	zeroDecimalCurrencies := map[string]bool{
+		"JPY": true, // Japanese Yen
+		"KRW": true, // Korean Won
+		"VND": true, // Vietnamese Dong
+	}
+	if zeroDecimalCurrencies[code] {
+		return 0
+	}
+	return 2
+}
+
+// formatCurrencyWithSeparators formats a value with thousand separators and fixed decimals.
+func formatCurrencyWithSeparators(value decimal.Decimal, decimals int) string {
+	str := value.StringFixed(int32(decimals))
+	parts := strings.Split(str, ".")
+	intPart := addThousandSeparators(parts[0])
+	if len(parts) > 1 && decimals > 0 {
+		return intPart + "." + parts[1]
+	}
+	return intPart
 }
 
 // FormatDuration formats a duration in human-readable form.
