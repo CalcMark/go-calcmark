@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 10 (Preview Pane)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-07 — Completed 10-04-PLAN.md (Error Presentation)
+Phase: 10 (Preview Pane) - COMPLETE
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-02-07 — Completed 10-05-PLAN.md (Preview Pane Tests)
 
-Progress: [████████░░░░░░░░░░░░] 26%
+Progress: [████████░░░░░░░░░░░░] 28%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
-- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (4/5)
+- Phase 10: Preview Pane (5 requirements) - COMPLETE
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -60,6 +60,8 @@ Progress: [████████░░░░░░░░░░░░] 26%
 
 Recent decisions affecting current work:
 
+- [10-05]: TestEditorCatwalkPreviewPane uses per-test documents (not shared document)
+- [10-05]: PREVIEW-XX tests in sidebyside_test.go alongside pane tests
 - [10-04]: Show full error messages in preview (not abbreviated hints)
 - [10-04]: Cascading errors show "blocked" instead of repeating root cause
 - [10-04]: Don't set VarName on error lines (preserve original behavior)
@@ -107,8 +109,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 10-04-PLAN.md, ready for 10-05
+Stopped at: Completed 10-05-PLAN.md (Phase 10 complete)
 Resume file: None
+Next phase: Phase 11 (Navigation)
 
 ---
-*Updated: 2026-02-07 — Completed 10-04-PLAN.md (Error Presentation)*
+*Updated: 2026-02-07 — Completed 10-05-PLAN.md (Preview Pane Tests)*
