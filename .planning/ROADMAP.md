@@ -21,6 +21,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 ---
 
 - [x] **Phase 9: Interpreter Correctness** - Fix calculation bugs and audit all conversion paths
+- [ ] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
 - [ ] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [ ] **Phase 11: Navigation** - Word, line, and document movement
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
@@ -50,10 +51,34 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans:** 4 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Fix napkin type erasure bug (TDD)
-- [ ] 09-02-PLAN.md — Audit all conversion paths for type erasure
-- [ ] 09-03-PLAN.md — Standard function forms and unit roundtrip tests
-- [ ] 09-04-PLAN.md — Natural language forms and compound unit tests
+- [x] 09-01-PLAN.md — Fix napkin type erasure bug (TDD)
+- [x] 09-02-PLAN.md — Audit all conversion paths for type erasure
+- [x] 09-03-PLAN.md — Standard function forms and unit roundtrip tests
+- [x] 09-04-PLAN.md — Natural language forms and compound unit tests
+
+---
+
+### Phase 9.1: Separate Validation from Execution (INSERTED)
+
+**Goal**: Clean separation between spec (validation) and impl (execution) per architecture rules
+
+**Depends on**: Phase 9 (interpreter correctness)
+
+**Requirements**: None (architectural refactoring)
+
+**Success Criteria** (what must be TRUE):
+1. `spec/document/evaluate.go` deleted (not renamed - execution belongs in impl/)
+2. `spec/document` has NO imports from `impl/` (architecture rule enforced)
+3. All execution (interpreter calls, environment) lives only in `impl/document/evaluator.go`
+4. All existing tests pass after migration
+5. Document struct contains no interpreter state
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09.1-01-PLAN.md — Remove impl/ imports from spec/document, delete evaluate.go
+- [ ] 09.1-02-PLAN.md — Migrate spec/document tests to impl/document.Evaluator
+- [ ] 09.1-03-PLAN.md — Migrate TUI editor tests to impl/document.Evaluator
 
 ---
 
@@ -61,7 +86,7 @@ Plans:
 
 **Goal**: The preview pane shows only calculation results, vertically aligned with source lines
 
-**Depends on**: Phase 9 (correct calculation results to display)
+**Depends on**: Phase 9.1 (clean architecture foundation)
 
 **Requirements**: PREVIEW-01, PREVIEW-02, PREVIEW-03, PREVIEW-04, PREVIEW-05
 
@@ -207,11 +232,12 @@ Plans:
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
+**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
+| 9.1 Separate Validation/Execution | v1.1 | 0/3 | Ready | - |
 | 10. Preview Pane | v1.1 | 0/TBD | Not started | - |
 | 11. Navigation | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
