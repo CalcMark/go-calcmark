@@ -20,6 +20,23 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// expandTilde expands ~ to the user's home directory in file paths.
+// The shell doesn't expand tilde for us when we get user input.
+func expandTilde(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			return filepath.Join(home, path[2:])
+		}
+	} else if path == "~" {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			return home
+		}
+	}
+	return path
+}
+
 // evalDebounceDelay is the time to wait after typing stops before re-evaluating.
 // This prevents excessive evaluation during rapid typing while keeping results responsive.
 // Can be tuned lower if interpreter performance allows (100ms is conservative).
@@ -1032,6 +1049,7 @@ func (m Model) handleSaveAsPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.saveAsPath = ""
 		m.quitting = false // Clear quit flag if canceling save
 		m.statusMsg = "Save cancelled"
+		return m, nil
 	case tea.KeyEnter:
 		if m.saveAsPath != "" {
 			m.saveFile(m.saveAsPath)
@@ -1044,6 +1062,7 @@ func (m Model) handleSaveAsPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			m.saveAsPath = ""
 		}
+		return m, nil
 	case tea.KeyBackspace:
 		if len(m.saveAsPath) > 0 {
 			m.saveAsPath = m.saveAsPath[:len(m.saveAsPath)-1]
@@ -1055,6 +1074,8 @@ func (m Model) handleSaveAsPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.saveAsPath += string(r)
 		}
 	}
+	// Update status message to show the path being entered
+	m.statusMsg = fmt.Sprintf("Save as: %s", m.saveAsPath)
 	return m, nil
 }
 
@@ -1485,6 +1506,9 @@ func (m *Model) saveFile(filename string) {
 		return
 	}
 
+	// Expand tilde to home directory
+	filename = expandTilde(filename)
+
 	// Ensure .cm extension
 	if !strings.HasSuffix(filename, ".cm") {
 		filename = filename + ".cm"
@@ -1524,6 +1548,9 @@ func (m *Model) exportFile(filename, formatName string) {
 		m.statusIsErr = true
 		return
 	}
+
+	// Expand tilde to home directory
+	filename = expandTilde(filename)
 
 	// Get absolute path and add appropriate extension
 	absPath, err := filepath.Abs(filename)
@@ -1670,8 +1697,8 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 	hints := ""
 	switch m.mode {
 	case StateDefault:
-		// Minimal hints - other commands discoverable via Ctrl+H command menu
-		hints = "Ctrl+Q quit | Ctrl+H commands"
+		// Minimal hints - other commands discoverable via Ctrl+H
+		hints = "Ctrl+Q quit | Ctrl+H help"
 	case StateCommandMenu:
 		hints = "Enter select | Esc close"
 	case StateExportFormat:
