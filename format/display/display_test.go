@@ -137,6 +137,90 @@ func TestFormatCurrency(t *testing.T) {
 	}
 }
 
+func TestNapkinFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		unit     string
+		isNapkin bool
+		expected string
+	}{
+		// Napkin estimates should show tilde prefix
+		{
+			name:     "napkin estimate shows tilde",
+			value:    "400",
+			unit:     "GB",
+			isNapkin: true,
+			expected: "~400 GB",
+		},
+		{
+			name:     "exact quantity no tilde",
+			value:    "400",
+			unit:     "GB",
+			isNapkin: false,
+			expected: "400 GB",
+		},
+		{
+			name:     "napkin with large normalized value",
+			value:    "22.3",
+			unit:     "PB",
+			isNapkin: true,
+			expected: "~22.3 PB",
+		},
+		{
+			name:     "napkin with arbitrary unit",
+			value:    "100000",
+			unit:     "users",
+			isNapkin: true,
+			expected: "~100K users",
+		},
+		{
+			name:     "napkin with small value",
+			value:    "42",
+			unit:     "items",
+			isNapkin: true,
+			expected: "~42 items",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value, _ := decimal.NewFromString(tt.value)
+			q := &types.Quantity{Value: value, Unit: tt.unit, IsNapkin: tt.isNapkin}
+			result := FormatQuantity(q)
+			if result != tt.expected {
+				t.Errorf("FormatQuantity(%s %s, isNapkin=%v) = %q, want %q",
+					tt.value, tt.unit, tt.isNapkin, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestThousandSeparators(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		// addThousandSeparators function tests
+		{"three digits", "999", "999"},
+		{"four digits", "1000", "1,000"},
+		{"five digits", "12345", "12,345"},
+		{"six digits", "123456", "123,456"},
+		{"seven digits", "1234567", "1,234,567"},
+		{"exact 1500", "1500", "1,500"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := addThousandSeparators(tt.input)
+			if result != tt.expected {
+				t.Errorf("addThousandSeparators(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestFormat(t *testing.T) {
 	tests := []struct {
 		name     string
