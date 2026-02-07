@@ -94,10 +94,17 @@ Plans:
 1. Preview pane shows calculation results only (no markdown text echoed)
 2. Each result line aligns vertically with its corresponding source line
 3. Variable assignments display as `variable_name -> result`
-4. Anonymous calculations display as `# -> result`
+4. Anonymous calculations display as `-> result` (arrow only, no placeholder)
 5. Non-calculation lines show as blank (preserving vertical spacing)
 
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Update pane ratio and visual layout
+- [ ] 10-02-PLAN.md — Add napkin tilde and thousand separators (TDD)
+- [ ] 10-03-PLAN.md — Unify currency display logic (TDD)
+- [ ] 10-04-PLAN.md — Improve error presentation and cascading detection
+- [ ] 10-05-PLAN.md — Add comprehensive preview pane tests
 
 ---
 
@@ -238,7 +245,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
 | 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 10. Preview Pane | v1.1 | 0/TBD | Not started | - |
+| 10. Preview Pane | v1.1 | 0/5 | Planned | - |
 | 11. Navigation | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
