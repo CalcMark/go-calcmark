@@ -393,9 +393,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.saveFile("")
 		return m, nil
 	case tea.KeyCtrlE:
-		// Export (Ctrl+E works in all modes)
-		m.enterExportMode()
-		return m, nil
+		// Readline-style: Ctrl+E moves to end of line (like End key)
+		// Export is available via command mode (/export) or Ctrl+Shift+E
+		return m.handleEndKey()
+	case tea.KeyCtrlA:
+		// Readline-style: Ctrl+A moves to start of line (like Home key)
+		return m.handleHomeKey()
 	}
 
 	// Handle help toggle (F1) - works regardless of mode
