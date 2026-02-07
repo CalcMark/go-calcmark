@@ -10,16 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 9.1 (Separate Validation from Execution)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 09.1-01-PLAN.md
+Last activity: 2026-02-07 — Completed 09.1-02-PLAN.md
 
-Progress: [██░░░░░░░░░░░░░░░░░░] 12%
+Progress: [███░░░░░░░░░░░░░░░░░] 15%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
-- Phase 9: Interpreter Correctness (6 requirements) - ✓ COMPLETE
+- Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
+- Phase 9.1: Separate Validation from Execution (3 plans) - IN PROGRESS (2/3)
 - Phase 10: Preview Pane (5 requirements)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
@@ -37,7 +38,7 @@ Progress: [██░░░░░░░░░░░░░░░░░░] 12%
 
 ## Performance Metrics
 
-**Velocity:** 2 min per plan (sample size: 1)
+**Velocity:** 5 min per plan (sample size: 2)
 
 *Updated after each plan completion*
 
@@ -47,6 +48,8 @@ Progress: [██░░░░░░░░░░░░░░░░░░] 12%
 
 Recent decisions affecting current work:
 
+- [09.1-02]: External test package (document_test) to avoid spec/impl import cycle
+- [09.1-02]: impldoc alias for impl/document import in tests
 - [09.1-01]: EnvironmentWriter interface with Set() and SetExchangeRate() for dependency inversion
 - [09-02]: All types.NewNumber usages in interpreter are intentional (no type erasure bugs)
 - [09-02]: Currency / Number division is a language limitation, not a bug
@@ -79,8 +82,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 09.1-01-PLAN.md
+Stopped at: Completed 09.1-02-PLAN.md
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Plan 09.1-01 complete, test migration next*
+*Updated: 2026-02-07 — Plan 09.1-02 complete, TUI test migration next*
