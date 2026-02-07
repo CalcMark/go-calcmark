@@ -213,6 +213,15 @@ func (m Model) View() string {
 		}
 	}
 
+	// Overlay command menu popup if active
+	if m.mode == StateCommandMenu {
+		menuPopup := m.renderCommandMenuPopup()
+		if menuPopup != "" {
+			row, col := m.calculateCommandMenuPosition()
+			allUILines = overlayPopupOnLines(allUILines, menuPopup, row, col)
+		}
+	}
+
 	// Join all lines - no bare newlines, all fully styled
 	return strings.Join(allUILines, "\n")
 }
@@ -1275,6 +1284,101 @@ func extractErrorHint(errMsg string, maxWidth int) string {
 
 	// Last resort: just say "error"
 	return "error"
+}
+
+// renderCommandMenuPopup renders the command menu as a popup overlay.
+func (m Model) renderCommandMenuPopup() string {
+	commands := EditorCommands
+	selected := m.commandMenuState.Selected
+
+	// Calculate popup dimensions
+	innerWidth := 40 // Wide enough for "Ctrl+Shift+S  Save As..." format
+
+	// Border characters (rounded style matching autocomplete)
+	borderFg := lipgloss.Color("#5C5C5C")
+	borderStyle := lipgloss.NewStyle().Foreground(borderFg)
+
+	topBorder := borderStyle.Render("╭" + strings.Repeat("─", innerWidth) + "╮")
+	bottomBorder := borderStyle.Render("╰" + strings.Repeat("─", innerWidth) + "╯")
+	leftBorder := borderStyle.Render("│")
+	rightBorder := borderStyle.Render("│")
+
+	var lines []string
+	lines = append(lines, topBorder)
+
+	// Title row
+	title := " Commands"
+	for len(title) < innerWidth {
+		title += " "
+	}
+	titleStyle := lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#1E1E1E"))
+	lines = append(lines, leftBorder+titleStyle.Render(title)+rightBorder)
+
+	// Separator
+	sepLine := strings.Repeat("─", innerWidth)
+	lines = append(lines, leftBorder+borderStyle.Render(sepLine)+rightBorder)
+
+	// Command items - show accelerator and name
+	itemBg := lipgloss.Color("#1E1E1E")
+	selectedBg := lipgloss.Color("#4A90D9")
+
+	for i, cmd := range commands {
+		line := fmt.Sprintf(" %-12s %s", cmd.Accelerator, cmd.Name)
+		for len(line) < innerWidth {
+			line += " "
+		}
+
+		var styledLine string
+		if i == selected {
+			selStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FFFFFF")).
+				Background(selectedBg).
+				Bold(true)
+			styledLine = selStyle.Render(line)
+		} else {
+			itemStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#CCCCCC")).
+				Background(itemBg)
+			styledLine = itemStyle.Render(line)
+		}
+		lines = append(lines, leftBorder+styledLine+rightBorder)
+	}
+
+	// Hint row
+	hint := " Enter:select  Esc:close"
+	for len(hint) < innerWidth {
+		hint += " "
+	}
+	hintStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Background(itemBg).
+		Italic(true)
+	lines = append(lines, leftBorder+hintStyle.Render(hint)+rightBorder)
+
+	lines = append(lines, bottomBorder)
+	return strings.Join(lines, "\n")
+}
+
+// calculateCommandMenuPosition returns screen position for command menu.
+// Centers the popup horizontally, positions near top of content area.
+func (m Model) calculateCommandMenuPosition() (row, col int) {
+	popupWidth := 42                        // innerWidth + 2 for borders
+	popupHeight := len(EditorCommands) + 4  // commands + title + sep + hint + borders
+
+	// Center horizontally in source pane
+	leftWidth, _ := m.GetPaneWidths(m.width)
+	col = (leftWidth - popupWidth) / 2
+	if col < 0 {
+		col = 0
+	}
+
+	// Position near top, below header
+	row = 3 // After source header + some globals padding
+
+	// Suppress unused variable warning - popupHeight is for future scrolling
+	_ = popupHeight
+
+	return row, col
 }
 
 // formatFunctionParamHint looks up a function's parameter specs and formats
