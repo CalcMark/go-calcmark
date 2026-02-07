@@ -490,6 +490,10 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleHomeKey()
 	case tea.KeyEnd:
 		return m.handleEndKey()
+	case tea.KeyCtrlHome:
+		return m.handleCtrlHomeKey()
+	case tea.KeyCtrlEnd:
+		return m.handleCtrlEndKey()
 	case tea.KeyEsc:
 		// ESC does nothing in normal editing mode - it's only for canceling special modes
 		// (like globals panel, export mode, save-as dialog, etc.)
@@ -600,6 +604,26 @@ func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
 
 func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
 	m.loadCurrentLineIntoEditBuffer()
+	m.cursorCol = len(m.editBuf)
+	return m, nil
+}
+
+// handleCtrlHomeKey moves cursor to document start (line 0, column 0).
+func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	m.saveCurrentLineAndMoveTo(0)
+	m.cursorCol = 0
+	return m, nil
+}
+
+// handleCtrlEndKey moves cursor to document end (last line, end of line).
+func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
+	m.loadCurrentLineIntoEditBuffer()
+	lastLine := m.TotalLines() - 1
+	if lastLine < 0 {
+		lastLine = 0
+	}
+	m.saveCurrentLineAndMoveTo(lastLine)
 	m.cursorCol = len(m.editBuf)
 	return m, nil
 }
