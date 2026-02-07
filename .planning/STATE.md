@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 11 (Navigation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-06 — Phase 10 complete (verified)
+Plan: 1 of TBD in current phase
+Status: In progress
+Last activity: 2026-02-07 — Completed 11-01-PLAN.md
 
-Progress: [████████░░░░░░░░░░░░] 28%
+Progress: [████████░░░░░░░░░░░░] 30%
 
 ## Milestone v1.1 Scope
 
@@ -60,6 +60,8 @@ Progress: [████████░░░░░░░░░░░░] 28%
 
 Recent decisions affecting current work:
 
+- [11-01]: Ctrl+E repurposed from export to line-end navigation (readline-style)
+- [11-01]: Export available via /export command only
 - [10-05]: TestEditorCatwalkPreviewPane uses per-test documents (not shared document)
 - [10-05]: PREVIEW-XX tests in sidebyside_test.go alongside pane tests
 - [10-04]: Show full error messages in preview (not abbreviated hints)
@@ -97,6 +99,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 11.1 inserted after Phase 11: Bug Fixes (URGENT) - Fix convert_rate preview and delete last character bugs
 - Phase 9.1 inserted after Phase 9: Separate Validation from Execution (URGENT) - NOW COMPLETE
   - Discovered while fixing error line display bug
   - spec/document/evaluate.go violates architecture rule (imports impl/)
@@ -110,9 +113,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 10-05-PLAN.md (Phase 10 complete)
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
-Next phase: Phase 11 (Navigation)
+Next plan: 11-02-PLAN.md (if exists)
 
 ---
-*Updated: 2026-02-07 — Completed 10-05-PLAN.md (Preview Pane Tests)*
+*Updated: 2026-02-07 — Completed 11-01-PLAN.md (Ctrl+A/E Line Navigation)*
