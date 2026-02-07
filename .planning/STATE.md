@@ -112,6 +112,7 @@ Recent decisions affecting current work:
 2. Delete last character on line bug — deleting last character on a line or under cursor behaves unexpectedly (tui)
 3. Preview pane extra blank line — cursor on last calc before empty line causes extra blank line in preview (tui)
 4. Preview pane shows markdown — blockquotes, links render in preview when only results should show (tui)
+5. Add natural language examples to function help messages — e.g., `average of 2, 4, 3` (interpreter)
 
 ### Roadmap Evolution
 
