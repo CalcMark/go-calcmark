@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 11 (Navigation)
-Plan: 2 of TBD in current phase
-Status: In progress
-Last activity: 2026-02-07 — Completed 11-02-PLAN.md
+Plan: 3 of 3 in current phase - PHASE COMPLETE
+Status: Phase complete
+Last activity: 2026-02-07 — Completed 11-03-PLAN.md
 
-Progress: [████████░░░░░░░░░░░░] 32%
+Progress: [████████░░░░░░░░░░░░] 34%
 
 ## Milestone v1.1 Scope
 
@@ -22,7 +22,7 @@ Progress: [████████░░░░░░░░░░░░] 32%
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
 - Phase 10: Preview Pane (5 requirements) - COMPLETE
-- Phase 11: Navigation (6 requirements)
+- Phase 11: Navigation (6 requirements) - COMPLETE
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
 - Phase 14: File Operations (8 requirements)
@@ -60,6 +60,8 @@ Progress: [████████░░░░░░░░░░░░] 32%
 
 Recent decisions affecting current work:
 
+- [11-03]: Alt+B/F navigation uses same word boundary logic as Ctrl+Arrow
+- [11-03]: Word boundary at punctuation (# treated as separate word)
 - [11-02]: Use saveCurrentLineAndMoveTo() for scroll adjustment in Ctrl+Home/End
 - [11-02]: Ctrl+End moves to last line and end of that line (not just last line)
 - [11-01]: Ctrl+E repurposed from export to line-end navigation (readline-style)
@@ -115,9 +117,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 11-02-PLAN.md
+Stopped at: Completed 11-03-PLAN.md (Phase 11 complete)
 Resume file: None
-Next plan: 11-03-PLAN.md (if exists)
+Next plan: Phase 12 (Undo/Redo)
 
 ---
-*Updated: 2026-02-07 — Completed 11-02-PLAN.md (Document Navigation)*
+*Updated: 2026-02-07 — Completed 11-03-PLAN.md (Word Navigation Test)*
