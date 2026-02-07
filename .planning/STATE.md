@@ -92,7 +92,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+1. `convert_rate` does not show correct preview result — `convert_rate(10 mb/s, per hour)` displays incorrectly (interpreter)
 
 ### Roadmap Evolution
 
