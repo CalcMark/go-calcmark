@@ -24,7 +24,8 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
 - [x] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [x] **Phase 11: Navigation** - Word, line, and document movement
-- [ ] **Phase 11.1: Bug Fixes** - Fix convert_rate preview display and delete last character TUI bugs (INSERTED)
+- [ ] **Phase 11.1: Bug Fixes** - Fix convert_rate preview and TUI display bugs (INSERTED)
+- [ ] **Phase 11.2: UX Redesign** - Holistic command/help system redesign (INSERTED)
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
 - [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
 - [ ] **Phase 14: File Operations** - Save, quit, new file flows
@@ -155,6 +156,29 @@ Plans:
 
 ---
 
+### Phase 11.2: UX Redesign (INSERTED)
+
+**Goal**: Holistic redesign of command and help system UX
+
+**Depends on**: Phase 11.1 (bug fixes complete)
+
+**Requirements**: None (UX improvement from user feedback)
+
+**Success Criteria** (what must be TRUE):
+1. Status bar shows only Ctrl+Q (quit) and Ctrl+H (help/commands)
+2. Ctrl+H opens a command menu popup listing all available actions
+3. Accelerators (Ctrl+S, Ctrl+E, etc.) work directly without menu
+4. No slash commands exist in the app (/ is divide operator in CalcMark)
+5. Help overlay provides comprehensive command reference
+6. Command menu is keyboard-navigable with clear visual feedback
+
+**Plans:** TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 11.2 to break down)
+
+---
+
 ### Phase 12: Undo/Redo
 
 **Goal**: Users can undo and redo any edit with full cursor position restoration
@@ -267,7 +291,7 @@ Plans:
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 11.1 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
+**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 11.1 -> 11.2 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -276,6 +300,7 @@ Plans:
 | 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
 | 11. Navigation | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 11.1 Bug Fixes | v1.1 | 0/TBD | Not started | - |
+| 11.2 UX Redesign | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |

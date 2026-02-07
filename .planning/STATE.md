@@ -18,11 +18,13 @@ Progress: [█████████░░░░░░░░░░░] 35%
 
 ## Milestone v1.1 Scope
 
-**9 phases, 48 requirements:**
+**11 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
 - Phase 10: Preview Pane (5 requirements) - COMPLETE
 - Phase 11: Navigation (6 requirements) - COMPLETE
+- Phase 11.1: Bug Fixes (0 requirements) - pending
+- Phase 11.2: UX Redesign (0 requirements) - pending
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
 - Phase 14: File Operations (8 requirements)
@@ -60,12 +62,17 @@ Progress: [█████████░░░░░░░░░░░] 35%
 
 Recent decisions affecting current work:
 
+- [11.2]: Ctrl+E restored to export mode (reverted readline navigation)
+- [11.2]: Ctrl+A not used for line-start (reserved for select-all in Phase 13)
+- [11.2]: No slash commands in app (/ is divide operator in CalcMark)
+- [11.2]: Status bar to show only Ctrl+Q and Ctrl+H (minimal, discoverable)
+- [11.2]: Ctrl+H opens command menu popup (not just help overlay)
 - [11-03]: Alt+B/F navigation uses same word boundary logic as Ctrl+Arrow
 - [11-03]: Word boundary at punctuation (# treated as separate word)
 - [11-02]: Use saveCurrentLineAndMoveTo() for scroll adjustment in Ctrl+Home/End
 - [11-02]: Ctrl+End moves to last line and end of that line (not just last line)
-- [11-01]: Ctrl+E repurposed from export to line-end navigation (readline-style)
-- [11-01]: Export available via /export command only
+- ~~[11-01]: Ctrl+E repurposed from export to line-end navigation (readline-style)~~ REVERTED
+- ~~[11-01]: Export available via /export command only~~ REVERTED
 - [10-05]: TestEditorCatwalkPreviewPane uses per-test documents (not shared document)
 - [10-05]: PREVIEW-XX tests in sidebyside_test.go alongside pane tests
 - [10-04]: Show full error messages in preview (not abbreviated hints)
@@ -105,6 +112,11 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 11.2 inserted after Phase 11.1: UX Redesign (URGENT) - Holistic command/help system redesign
+  - User feedback: Ctrl+E export was broken by Phase 11 changes
+  - User feedback: Slash commands conflict with / divide operator
+  - User feedback: Status bar and help system inadequate
+  - Resolution: Reverted Ctrl+A/E, created dedicated UX phase
 - Phase 11.1 inserted after Phase 11: Bug Fixes (URGENT) - Fix convert_rate preview and delete last character bugs
 - Phase 9.1 inserted after Phase 9: Separate Validation from Execution (URGENT) - NOW COMPLETE
   - Discovered while fixing error line display bug
@@ -119,9 +131,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 11-03-PLAN.md (Phase 11 complete)
+Stopped at: Created Phase 11.2 (UX Redesign), reverted Ctrl+A/E changes
 Resume file: None
 Next phase: Phase 11.1 (Bug Fixes)
 
 ---
-*Updated: 2026-02-07 — Completed 11-03-PLAN.md (Word Navigation Test)*
+*Updated: 2026-02-07 — Created Phase 11.2, reverted Ctrl+A/E to restore export*
