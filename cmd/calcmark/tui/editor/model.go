@@ -366,6 +366,24 @@ func (m Model) Init() tea.Cmd {
 
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// When file picker is active, pass ALL messages to it (not just KeyMsg)
+	// The filepicker needs to receive its internal messages (directory read results)
+	if m.mode == StateFilePicker {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			return m.handleKey(msg)
+		case tea.WindowSizeMsg:
+			m.width = msg.Width
+			m.height = msg.Height
+			m.InvalidateAlignedCache()
+		default:
+			// Pass other messages to filepicker (e.g., directory read results)
+			var cmd tea.Cmd
+			m.filePicker, cmd = m.filePicker.Update(msg)
+			return m, cmd
+		}
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
