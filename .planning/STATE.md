@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 11.2 (UX Redesign) — COMPLETE
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-07 — Completed file picker (11.2-03)
+Phase: 11.1 (Bug Fixes) — In progress
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-07 — Completed DELETE key fix (11.1-01)
 
-Progress: [████████████░░░░░░░░] 50%
+Progress: [████████████░░░░░░░░] 51%
 
 ## Milestone v1.1 Scope
 
@@ -23,7 +23,7 @@ Progress: [████████████░░░░░░░░] 50%
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
 - Phase 10: Preview Pane (5 requirements) - COMPLETE
 - Phase 11: Navigation (6 requirements) - COMPLETE
-- Phase 11.1: Bug Fixes (0 requirements) - pending
+- Phase 11.1: Bug Fixes (3 plans) - IN PROGRESS (1/3 complete)
 - Phase 11.2: UX Redesign (3 plans) - COMPLETE
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -62,6 +62,8 @@ Progress: [████████████░░░░░░░░] 50%
 
 Recent decisions affecting current work:
 
+- [11.1-01]: DELETE key fix verified - transitionToEditing() must be called BEFORE editBuf modification
+- [11.1-01]: All TUI bug fixes require catwalk test reproducing exact user scenario
 - [11.2-03]: File picker uses full-screen modal pattern (like StateHelp, StateCommandMenu)
 - [11.2-03]: Two modes: ModePickerBrowse (navigate) and ModePickerNewFile (type filename)
 - [11.2-03]: Existing files skip picker, save directly
@@ -112,7 +114,7 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 1. `convert_rate` does not show correct preview result — `convert_rate(10 mb/s, per hour)` displays incorrectly (interpreter)
-2. Delete last character on line bug — deleting last character on a line or under cursor behaves unexpectedly (tui)
+2. ~~Delete last character on line bug — deleting last character on a line or under cursor behaves unexpectedly (tui)~~ FIXED in 11.1-01
 3. Preview pane extra blank line — cursor on last calc before empty line causes extra blank line in preview (tui)
 4. Preview pane shows markdown — blockquotes, links render in preview when only results should show (tui)
 5. Add natural language examples to function help messages — e.g., `average of 2, 4, 3` (interpreter)
@@ -138,9 +140,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed Phase 11.2 (UX Redesign)
+Stopped at: Completed 11.1-01-PLAN.md (DELETE key fix)
 Resume file: None
-Next: Phase 12 (Undo/Redo) or Phase 11.1 (Bug Fixes)
+Next: 11.1-02-PLAN.md (convert_rate preview) or 11.1-03-PLAN.md (preview pane filtering)
 
 ---
-*Updated: 2026-02-07 — Completed Phase 11.2 (UX Redesign)*
+*Updated: 2026-02-07 — Completed 11.1-01-PLAN.md (DELETE key fix)*
