@@ -21,7 +21,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 ---
 
 - [x] **Phase 9: Interpreter Correctness** - Fix calculation bugs and audit all conversion paths
-- [ ] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
+- [x] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
 - [ ] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [ ] **Phase 11: Navigation** - Word, line, and document movement
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
@@ -76,9 +76,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09.1-01-PLAN.md — Remove impl/ imports from spec/document, delete evaluate.go
-- [ ] 09.1-02-PLAN.md — Migrate spec/document tests to impl/document.Evaluator
-- [ ] 09.1-03-PLAN.md — Migrate TUI editor tests to impl/document.Evaluator
+- [x] 09.1-01-PLAN.md — Remove impl/ imports from spec/document, delete evaluate.go
+- [x] 09.1-02-PLAN.md — Migrate spec/document tests to impl/document.Evaluator
+- [x] 09.1-03-PLAN.md — Migrate TUI editor tests to impl/document.Evaluator
 
 ---
 
@@ -237,7 +237,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
-| 9.1 Separate Validation/Execution | v1.1 | 0/3 | Ready | - |
+| 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 10. Preview Pane | v1.1 | 0/TBD | Not started | - |
 | 11. Navigation | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
@@ -250,4 +250,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*
