@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 9 of 17 (Interpreter Correctness)
-Plan: 1 of TBD in current phase
+Plan: 4 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 09-01-PLAN.md (napkin type preservation)
+Last activity: 2026-02-07 — Completed 09-04-PLAN.md (NL functions and compound units)
 
-Progress: [█░░░░░░░░░░░░░░░░░░░] 5%
+Progress: [████░░░░░░░░░░░░░░░░] 20%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
-- Phase 9: Interpreter Correctness (6 requirements) - 1 plan complete
+- Phase 9: Interpreter Correctness (6 requirements) - 4 plans complete
 - Phase 10: Preview Pane (5 requirements)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
@@ -47,6 +47,9 @@ Progress: [█░░░░░░░░░░░░░░░░░░░] 5%
 
 Recent decisions affecting current work:
 
+- [09-04]: NL forms consume expressions greedily - use parentheses for explicit grouping
+- [09-04]: Rate * scalar supported, but scalar * rate is not commutative
+- [09-04]: Rate + rate direct addition not implemented - use accumulate
 - [09-01]: Use display.NormalizeForDisplay for Quantity unit normalization in napkin conversion
 - [09-01]: Duration units preserved exactly (no auto-normalization to larger units)
 - [v1.0]: FunctionDef struct as single source of truth for function metadata
@@ -63,8 +66,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 09-01-PLAN.md
+Stopped at: Completed 09-04-PLAN.md
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Completed 09-01 napkin type preservation fix*
+*Updated: 2026-02-07 — Completed 09-04 NL functions and compound units tests*
