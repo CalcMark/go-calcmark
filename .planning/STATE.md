@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 10 (Preview Pane)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 10-03-PLAN.md (Unified Currency Formatting)
+Last activity: 2026-02-07 — Completed 10-04-PLAN.md (Error Presentation)
 
-Progress: [███████░░░░░░░░░░░░░] 24%
+Progress: [████████░░░░░░░░░░░░] 26%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
-- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (3/5)
+- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (4/5)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -60,6 +60,9 @@ Progress: [███████░░░░░░░░░░░░░] 24%
 
 Recent decisions affecting current work:
 
+- [10-04]: Show full error messages in preview (not abbreviated hints)
+- [10-04]: Cascading errors show "blocked" instead of repeating root cause
+- [10-04]: Don't set VarName on error lines (preserve original behavior)
 - [10-03]: All currency codes convert to symbols when available (USD -> $, EUR -> €)
 - [10-03]: Mid-range currency values (1000-9999) use thousand separators
 - [10-03]: Negative sign before symbol (-$50.00, not $-50.00)
@@ -104,8 +107,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 10-03-PLAN.md, ready for 10-04
+Stopped at: Completed 10-04-PLAN.md, ready for 10-05
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Completed 10-03-PLAN.md (Unified Currency Formatting)*
+*Updated: 2026-02-07 — Completed 10-04-PLAN.md (Error Presentation)*
