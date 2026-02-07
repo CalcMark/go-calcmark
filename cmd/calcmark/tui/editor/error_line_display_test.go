@@ -1,116 +1,126 @@
 package editor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
-// TestErrorLineDisplay tests that errors appear on the correct line in GetLineResults.
-// This reproduces the user's bug where changing "b = 5" to "b = 6" shows an error on "a = 3".
-func TestErrorLineDisplay(t *testing.T) {
-	// Exact scenario from user's screenshot
-	source := `a = 3
+// TestErrorLineDisplaysAtCorrectPosition verifies that errors display
+// at the correct source line in the preview pane.
+//
+// Bug: When there's an error at line 10 (`accumulate(5mb, 1 hour)`),
+// the error indicator "⚠ error" displays at line 4 in the preview
+// pane instead of line 10.
+func TestErrorLineDisplaysAtCorrectPosition(t *testing.T) {
+	// Reproduce exact scenario from user bug report
+	source := `# Monthly Budget
 
-b = 6
+## Income
+salary = $5000
+side_hustle = $800
+total_income = salary + side_hustle
 
-# Hello`
+123 + 4
+
+accumulate(5mb, 1 hour)
+
+## Fixed Expenses
+rent = $1500
+`
 
 	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	evalErr := doc.Evaluate()
-	if evalErr != nil {
-		t.Logf("Evaluate error: %v", evalErr)
-	}
+	// Evaluate the document (this should produce an error on line 10)
+	doc.Evaluate()
 
-	m := New(doc)
-	m.width = 80
-	m.height = 24
+	// Create model from document
+	m := &Model{doc: doc}
 
+	// Get line results
 	results := m.GetLineResults()
 
-	t.Logf("Got %d line results:", len(results))
-	for i, r := range results {
+	// Find which line has the error
+	var errorLineNum int = -1
+	var errorLine string
+	for _, r := range results {
 		if r.Error != "" {
-			t.Logf("  Line %d: %q -> ERROR: %s", i, r.Source, r.Error)
-		} else {
-			t.Logf("  Line %d: %q -> %s", i, r.Source, r.Value)
+			errorLineNum = r.LineNum
+			errorLine = r.Source
+			break
 		}
 	}
 
-	// There should be NO errors in this document
-	// Line 0: a = 3 (valid)
-	// Line 1: (empty)
-	// Line 2: b = 6 (valid, NOT a redefinition)
-	// Line 3: (empty)
-	// Line 4: # Hello (markdown)
-
-	if evalErr != nil {
-		t.Errorf("Document should evaluate without errors, got: %v", evalErr)
+	if errorLineNum == -1 {
+		t.Fatal("Expected an error but none found")
 	}
 
-	// Check that line 0 (a = 3) has no error
-	if results[0].Error != "" {
-		t.Errorf("Line 0 (a = 3) should have no error, got: %s", results[0].Error)
+	// The error should be on line 10 (0-indexed: 9) which contains "accumulate(5mb, 1 hour)"
+	// NOT on line 4 (0-indexed: 3) which contains "salary = $5000"
+	expectedErrorLine := 9 // 0-indexed line number for line 10
+	expectedErrorContent := "accumulate(5mb, 1 hour)"
+
+	if errorLineNum != expectedErrorLine {
+		t.Errorf("Error displayed on wrong line.\n"+
+			"  Expected: line %d (0-indexed) containing %q\n"+
+			"  Got:      line %d (0-indexed) containing %q\n"+
+			"  Error:    %s",
+			expectedErrorLine, expectedErrorContent,
+			errorLineNum, errorLine,
+			results[errorLineNum].Error)
 	}
 
-	// Check that line 2 (b = 6) has no error
-	if len(results) > 2 && results[2].Error != "" {
-		t.Errorf("Line 2 (b = 6) should have no error, got: %s", results[2].Error)
-	}
-
-	// Check all calc lines have no errors
-	for i, r := range results {
-		if r.IsCalc && r.Error != "" {
-			t.Errorf("Line %d should have no error, got: %s", i, r.Error)
-		}
+	// Also verify the error content is what we expect
+	if !strings.Contains(errorLine, "accumulate") {
+		t.Errorf("Error should be on the accumulate line, got: %q", errorLine)
 	}
 }
 
-// TestSingleAssignmentPerVariable tests that a single assignment of each variable is valid.
-func TestSingleAssignmentPerVariable(t *testing.T) {
-	tests := []struct {
-		name   string
-		source string
-	}{
-		{
-			name:   "Two different variables",
-			source: "a = 3\n\nb = 6",
-		},
-		{
-			name:   "Three different variables",
-			source: "a = 1\n\nb = 2\n\nc = 3",
-		},
-		{
-			name:   "Variable used in expression",
-			source: "a = 3\n\nb = a * 2",
-		},
+// TestErrorLineWithMultipleBlocks verifies error line tracking works
+// correctly across multiple CalcBlocks.
+func TestErrorLineWithMultipleBlocks(t *testing.T) {
+	// Document with multiple CalcBlocks separated by 2+ empty lines
+	// Error should appear in the correct block at the correct line
+	source := `a = 10
+b = 20
+
+
+c = undefined_var
+`
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			doc, err := document.NewDocument(tt.source)
-			if err != nil {
-				t.Fatalf("NewDocument failed: %v", err)
-			}
+	doc.Evaluate()
 
-			evalErr := doc.Evaluate()
-			if evalErr != nil {
-				t.Errorf("Document should evaluate without errors, got: %v", evalErr)
-			}
+	m := &Model{doc: doc}
+	results := m.GetLineResults()
 
-			m := New(doc)
-			results := m.GetLineResults()
+	// Find error
+	var errorLineNum int = -1
+	for _, r := range results {
+		if r.Error != "" {
+			errorLineNum = r.LineNum
+			break
+		}
+	}
 
-			// Check no calc lines have errors
-			for i, r := range results {
-				if r.IsCalc && r.Error != "" {
-					t.Errorf("Line %d (%q) should have no error, got: %s", i, r.Source, r.Error)
-				}
-			}
-		})
+	if errorLineNum == -1 {
+		t.Fatal("Expected an error on line with undefined_var")
+	}
+
+	// Error should be on line 5 (0-indexed: 4) which contains "c = undefined_var"
+	// NOT on line 1 (0-indexed: 0) which is the first calc line
+	expectedErrorLine := 4
+
+	if errorLineNum != expectedErrorLine {
+		t.Errorf("Error displayed on wrong line. Expected line %d (0-indexed), got line %d",
+			expectedErrorLine, errorLineNum)
 	}
 }

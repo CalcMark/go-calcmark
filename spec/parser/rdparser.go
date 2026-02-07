@@ -1103,6 +1103,10 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		return &ast.FunctionCall{
 			Name:      string(funcName.Value),
 			Arguments: args,
+			Range: &ast.Range{
+				Start: ast.Position{Line: funcName.Line, Column: funcName.Column},
+				End:   ast.Position{Line: funcName.Line, Column: funcName.Column + len(funcName.Value)},
+			},
 		}, nil
 	}
 
@@ -1143,6 +1147,10 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 	return &ast.FunctionCall{
 		Name:      funcNameStr,
 		Arguments: args,
+		Range: &ast.Range{
+			Start: ast.Position{Line: funcName.Line, Column: funcName.Column},
+			End:   ast.Position{Line: funcName.Line, Column: funcName.Column + len(funcName.Value)},
+		},
 	}, nil
 }
 

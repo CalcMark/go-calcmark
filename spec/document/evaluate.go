@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // Evaluate evaluates all blocks in the document in dependency order.
@@ -165,12 +167,37 @@ func (d *Document) evaluateCalcBlock(blockID string, block *CalcBlock) error {
 	}
 
 	// 3. Interpret statements with shared environment
+	// Evaluate one node at a time to track which statement fails
 	interp := interpreter.NewInterpreterWithEnv(d.env)
+	results := make([]types.Type, 0, len(nodes))
 
-	results, err := interp.Eval(nodes)
-	if err != nil {
-		block.SetError(err)
-		return fmt.Errorf("eval error: %w", err)
+	for _, node := range nodes {
+		nodeResults, err := interp.Eval([]ast.Node{node})
+		if err != nil {
+			// Create diagnostic with position from the failing node
+			line := 0
+			column := 0
+			if r := node.GetRange(); r != nil {
+				line = r.Start.Line
+				column = r.Start.Column
+			}
+
+			// Add runtime error as diagnostic with position info
+			runtimeDiag := Diagnostic{
+				BlockID:  blockID,
+				Severity: "error",
+				Code:     "RUNTIME",
+				Message:  err.Error(),
+				Line:     line,
+				Column:   column,
+			}
+			docDiags = append(docDiags, runtimeDiag)
+			block.SetDiagnostics(docDiags)
+
+			block.SetError(err)
+			return fmt.Errorf("eval error: %w", err)
+		}
+		results = append(results, nodeResults...)
 	}
 
 	// 4. Store all results (for inline display) and last result
