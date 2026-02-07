@@ -719,6 +719,7 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	m.insertLineBelow()
 	m.editBuf = textAfter
 	m.cursorCol = 0
+	m.updateCurrentLine(m.editBuf) // Save textAfter to the new line
 
 	// Process document changes immediately on ENTER
 	m.redetectBlockTypes()
