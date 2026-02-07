@@ -125,6 +125,32 @@ func TestConvertRateTimeUnit(t *testing.T) {
 			expectedUnit:  "MB",
 			expectError:   false,
 		},
+		{
+			// User scenario: 10 MB/s converted to per hour should be exactly 36000 MB/hour
+			// This tests the precision fix: using Mul(targetSeconds/sourceSeconds)
+			// instead of Div(sourceSeconds/targetSeconds) to avoid division precision loss
+			name: "10 MB/s to per hour (exact precision)",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(10), Unit: "MB"},
+				"second",
+			),
+			targetUnit:    "hour",
+			expectedValue: decimal.NewFromInt(36000), // 10 * 3600 = 36000 exactly
+			expectedUnit:  "MB",
+			expectError:   false,
+		},
+		{
+			// Test reverse: hour to second should also be exact
+			name: "3600 req/h to per second (exact precision)",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(3600), Unit: "req"},
+				"hour",
+			),
+			targetUnit:    "second",
+			expectedValue: decimal.NewFromInt(1), // 3600 / 3600 = 1 exactly
+			expectedUnit:  "req",
+			expectError:   false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -162,6 +188,77 @@ func TestConvertRateTimeUnit(t *testing.T) {
 			}
 
 			t.Logf("✓ %s = %s", tt.name, result.String())
+		})
+	}
+}
+
+// TestConvertRateTimeUnitExactPrecision verifies that rate time unit conversions
+// produce exact results without floating-point precision loss.
+// This is critical for user-facing calculations where 10 MB/s per hour should
+// display as exactly 36000 MB/hour (or 35.16 GB/hour), not 35999.99... MB/hour.
+func TestConvertRateTimeUnitExactPrecision(t *testing.T) {
+	tests := []struct {
+		name          string
+		rate          *types.Rate
+		targetUnit    string
+		expectedExact string // Expected exact string representation
+	}{
+		{
+			// User scenario from bug report: 10 MB/s to per hour
+			name: "10 MB/s to per hour must be exactly 36000",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(10), Unit: "MB"},
+				"second",
+			),
+			targetUnit:    "hour",
+			expectedExact: "36000", // 10 * 3600 = 36000
+		},
+		{
+			// Reverse conversion: hour to second
+			name: "3600 req/h to per second must be exactly 1",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(3600), Unit: "req"},
+				"hour",
+			),
+			targetUnit:    "second",
+			expectedExact: "1", // 3600 / 3600 = 1
+		},
+		{
+			// Larger scale: 1000/s to per hour
+			name: "1000/s to per hour must be exactly 3600000",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(1000), Unit: ""},
+				"second",
+			),
+			targetUnit:    "hour",
+			expectedExact: "3600000", // 1000 * 3600 = 3600000
+		},
+		{
+			// Day to second conversion
+			name: "86400/day to per second must be exactly 1",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(86400), Unit: ""},
+				"day",
+			),
+			targetUnit:    "second",
+			expectedExact: "1", // 86400 / 86400 = 1
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := convertRateTimeUnit(tt.rate, tt.targetUnit)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			actualStr := result.Amount.Value.String()
+			if actualStr != tt.expectedExact {
+				t.Errorf("Precision loss detected: expected exactly %q, got %q",
+					tt.expectedExact, actualStr)
+			}
+
+			t.Logf("Exact result: %s = %s", tt.name, result.String())
 		})
 	}
 }
