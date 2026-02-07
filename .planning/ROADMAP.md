@@ -145,6 +145,7 @@ Plans:
 1. `convert_rate(10 mb/s, per hour)` displays correct preview result (~36 GB/hour)
 2. Deleting last character on a line behaves correctly
 3. Cursor positioning after delete at line boundaries is correct
+4. Preview pane maintains consistent vertical alignment regardless of cursor position
 
 **Plans:** TBD
 

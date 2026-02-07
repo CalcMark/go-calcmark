@@ -100,6 +100,7 @@ Recent decisions affecting current work:
 
 1. `convert_rate` does not show correct preview result — `convert_rate(10 mb/s, per hour)` displays incorrectly (interpreter)
 2. Delete last character on line bug — deleting last character on a line or under cursor behaves unexpectedly (tui)
+3. Preview pane extra blank line — cursor on last calc before empty line causes extra blank line in preview (tui)
 
 ### Roadmap Evolution
 
