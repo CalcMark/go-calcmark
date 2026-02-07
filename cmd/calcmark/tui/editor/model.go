@@ -1665,31 +1665,23 @@ func (m *Model) getGlobalsCount() int {
 // GetStatusBarState returns state for the status bar.
 func (m *Model) GetStatusBarState() components.StatusBarState {
 	// Note: mode is an internal implementation detail and not shown to users
-
-	// Build hints with preview mode indicator
-	previewHint := ""
-	switch m.previewMode {
-	case PreviewFull:
-		previewHint = "Tab:min"
-	case PreviewMinimal:
-		previewHint = "Tab:hide"
-	case PreviewHidden:
-		previewHint = "Tab:full"
-	}
+	// Status bar shows minimal hints - full command list discoverable via Ctrl+H
 
 	hints := ""
 	switch m.mode {
 	case StateDefault:
-		// User is always able to edit - show all available commands
-		hints = fmt.Sprintf("Ctrl+S=save Ctrl+E=export Ctrl+Q=quit Arrows=navigate %s", previewHint)
+		// Minimal hints - other commands discoverable via Ctrl+H command menu
+		hints = "Ctrl+Q quit | Ctrl+H commands"
+	case StateCommandMenu:
+		hints = "Enter select | Esc close"
 	case StateExportFormat:
-		hints = "1-5=select Esc=cancel"
+		hints = "1-5 select | Esc cancel"
 	case StateExportPath:
-		hints = "Enter=export Esc=cancel"
+		hints = "Enter export | Esc cancel"
 	case StateSavePrompt:
-		hints = "y=save&quit n=quit c=cancel"
+		hints = "y/n/c"
 	case StateSaveAsPath:
-		hints = "Enter=save Esc=cancel"
+		hints = "Enter save | Esc cancel"
 	}
 
 	return components.StatusBarState{
