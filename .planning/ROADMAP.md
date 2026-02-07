@@ -22,7 +22,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [x] **Phase 9: Interpreter Correctness** - Fix calculation bugs and audit all conversion paths
 - [x] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
-- [ ] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
+- [x] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [ ] **Phase 11: Navigation** - Word, line, and document movement
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
 - [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
@@ -245,7 +245,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
 | 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 10. Preview Pane | v1.1 | 0/5 | Planned | - |
+| 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
 | 11. Navigation | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
@@ -257,4 +257,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-06*

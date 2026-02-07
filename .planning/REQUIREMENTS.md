@@ -16,11 +16,11 @@
 
 ### Preview Pane
 
-- [ ] **PREVIEW-01**: Preview pane shows ONLY calculation results (not markdown text)
-- [ ] **PREVIEW-02**: Results vertically aligned with source calculation lines
-- [ ] **PREVIEW-03**: Variable assignments display as `variable_name -> result`
-- [ ] **PREVIEW-04**: Anonymous calculations display as `# -> result`
-- [ ] **PREVIEW-05**: Non-calculation lines show blank in preview (spacing preserved)
+- [x] **PREVIEW-01**: Preview pane shows ONLY calculation results (not markdown text)
+- [x] **PREVIEW-02**: Results vertically aligned with source calculation lines
+- [x] **PREVIEW-03**: Variable assignments display as `variable_name -> result`
+- [x] **PREVIEW-04**: Anonymous calculations display as `-> result` (arrow only)
+- [x] **PREVIEW-05**: Non-calculation lines show blank in preview (spacing preserved)
 
 ### File Operations
 
