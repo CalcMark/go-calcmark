@@ -25,7 +25,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [x] **Phase 11: Navigation** - Word, line, and document movement
 - [ ] **Phase 11.1: Bug Fixes** - Fix convert_rate preview and TUI display bugs (INSERTED)
-- [ ] **Phase 11.2: UX Redesign** - Holistic command/help system redesign (INSERTED)
+- [x] **Phase 11.2: UX Redesign** - Holistic command/help system redesign (INSERTED)
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
 - [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
 - [ ] **Phase 14: File Operations** - Save, quit, new file flows
@@ -176,8 +176,8 @@ Plans:
 
 Plans:
 - [x] 11.2-01-PLAN.md — Command infrastructure and StateCommandMenu
-- [ ] 11.2-02-PLAN.md — Command menu popup rendering and status bar simplification
-- [ ] 11.2-03-PLAN.md — Visual file picker for Save/Save-As operations
+- [x] 11.2-02-PLAN.md — Command menu popup rendering and status bar simplification
+- [x] 11.2-03-PLAN.md — Visual file picker for Save/Save-As operations
 
 ---
 
@@ -302,7 +302,7 @@ Plans:
 | 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
 | 11. Navigation | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 11.1 Bug Fixes | v1.1 | 0/TBD | Not started | - |
-| 11.2 UX Redesign | v1.1 | 0/2 | Not started | - |
+| 11.2 UX Redesign | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
