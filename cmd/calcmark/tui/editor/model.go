@@ -16,6 +16,7 @@ import (
 	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -66,6 +67,7 @@ const (
 	StateGlobals                        // Globals panel active, preview shows global values
 	StateHelp                           // Help viewer active, preview shows help content
 	StateCommandMenu                    // Command menu popup active
+	StateFilePicker                     // File picker for save/open operations
 	StateExportFormat                   // Export dialog active, normal UI paused
 	StateExportPath                     // Export path input active, normal UI paused
 	StateSavePrompt                     // Save confirmation dialog active, normal UI paused
@@ -85,6 +87,8 @@ func (s InputState) String() string {
 		return "StateHelp"
 	case StateCommandMenu:
 		return "StateCommandMenu"
+	case StateFilePicker:
+		return "StateFilePicker"
 	case StateExportFormat:
 		return "StateExportFormat"
 	case StateExportPath:
@@ -207,6 +211,11 @@ type Model struct {
 
 	// Command menu state
 	commandMenuState CommandMenuState
+
+	// File picker state
+	filePicker     filepicker.Model
+	filePickerMode FilePickerMode // ModePickerBrowse or ModePickerNewFile
+	newFileName    string         // Filename being typed in new-file mode
 }
 
 // New creates a new editor model with an optional document.
@@ -406,13 +415,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case tea.KeyCtrlS:
 		// Save (Ctrl+S works in all modes)
-		// If no filename, prompt for one
+		// If no filename, show file picker
 		if m.filepath == "" {
-			m.mode = StateSaveAsPath
-			m.saveAsPath = ""
-			m.statusMsg = "Save as (filename):"
-			return m, nil
+			m.filePicker = initFilePicker()
+			m.filePickerMode = ModePickerBrowse
+			m.mode = StateFilePicker
+			m.statusMsg = ""
+			return m, m.filePicker.Init()
 		}
+		// Existing file - save directly
 		m.saveFile("")
 		return m, nil
 	case tea.KeyCtrlE:
@@ -450,6 +461,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGlobalsKey(msg)
 	case StateCommandMenu:
 		return m.handleCommandMenuKey(msg)
+	case StateFilePicker:
+		return m.handleFilePickerKey(msg)
 	case StateExportFormat:
 		return m.handleExportFormatKey(msg)
 	case StateExportPath:
@@ -1079,6 +1092,81 @@ func (m Model) handleSaveAsPathKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleFilePickerKey processes keys when file picker is visible.
+func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// In new-file input mode (typing a filename)
+	if m.filePickerMode == ModePickerNewFile {
+		switch msg.Type {
+		case tea.KeyEsc:
+			// Back to browse mode
+			m.filePickerMode = ModePickerBrowse
+			m.newFileName = ""
+			return m, nil
+		case tea.KeyEnter:
+			// Save with new filename
+			if m.newFileName != "" {
+				filename := addExtensionIfMissing(m.newFileName)
+				path := filepath.Join(m.filePicker.CurrentDirectory, filename)
+				m.saveFile(path)
+				m.mode = StateDefault
+				m.newFileName = ""
+			}
+			return m, nil
+		case tea.KeyBackspace:
+			if len(m.newFileName) > 0 {
+				m.newFileName = m.newFileName[:len(m.newFileName)-1]
+			}
+			return m, nil
+		case tea.KeyRunes:
+			m.newFileName += string(msg.Runes)
+			return m, nil
+		}
+		return m, nil
+	}
+
+	// In browse mode
+	switch msg.Type {
+	case tea.KeyEsc:
+		// Cancel and return to editing
+		m.mode = StateDefault
+		m.statusMsg = ""
+		return m, nil
+
+	case tea.KeyRunes:
+		if len(msg.Runes) > 0 && (msg.Runes[0] == 'n' || msg.Runes[0] == 'N') {
+			// Enter new-file mode to type filename
+			m.filePickerMode = ModePickerNewFile
+			m.newFileName = ""
+			return m, nil
+		}
+
+	case tea.KeyTab:
+		// Tab also enters new-file mode
+		m.filePickerMode = ModePickerNewFile
+		m.newFileName = ""
+		return m, nil
+	}
+
+	// Pass to filepicker for navigation
+	var cmd tea.Cmd
+	m.filePicker, cmd = m.filePicker.Update(msg)
+
+	// Check if file was selected (existing file to overwrite)
+	if didSelect, path := m.filePicker.DidSelectFile(msg); didSelect {
+		m.saveFile(path)
+		m.mode = StateDefault
+		return m, nil
+	}
+
+	// Check if directory was selected (navigate into it)
+	if didSelect, path := m.filePicker.DidSelectDisabledFile(msg); didSelect {
+		// This means user selected a directory - filepicker handles navigation
+		_ = path // filepicker already navigated
+	}
+
+	return m, cmd
+}
+
 // handleEscape processes escape key.
 // ESC is only for canceling modes, not for quitting the application.
 // Use Ctrl+Q to quit.
@@ -1701,6 +1789,12 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 		hints = "Ctrl+Q quit | Ctrl+H help"
 	case StateCommandMenu:
 		hints = "Enter select | Esc close"
+	case StateFilePicker:
+		if m.filePickerMode == ModePickerNewFile {
+			hints = "Enter save | Esc back"
+		} else {
+			hints = "up/down navigate | n new | Esc cancel"
+		}
 	case StateExportFormat:
 		hints = "1-5 select | Esc cancel"
 	case StateExportPath:
