@@ -31,8 +31,8 @@ func initFilePicker() filepicker.Model {
 	// Configuration - show ALL files and directories for navigation
 	// Don't filter by extension - user needs to see directories to navigate
 	fp.AllowedTypes = []string{} // Empty = show all files
-	fp.DirAllowed = true         // Allow navigating into directories
-	fp.FileAllowed = true        // Allow selecting files (for overwrite)
+	fp.DirAllowed = false        // Enter on directory = navigate into it (not select)
+	fp.FileAllowed = true        // Enter on file = select for overwrite
 	fp.ShowHidden = false
 	fp.ShowSize = true
 	fp.SetHeight(15)
