@@ -47,7 +47,13 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 4. Unit conversion roundtrips are lossless (meters -> feet -> meters equals original)
 5. Compound units like MB/s and km/h evaluate and convert correctly
 
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Fix napkin type erasure bug (TDD)
+- [ ] 09-02-PLAN.md — Audit all conversion paths for type erasure
+- [ ] 09-03-PLAN.md — Standard function forms and unit roundtrip tests
+- [ ] 09-04-PLAN.md — Natural language forms and compound unit tests
 
 ---
 
@@ -205,7 +211,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 9. Interpreter Correctness | v1.1 | 0/TBD | Not started | - |
+| 9. Interpreter Correctness | v1.1 | 0/4 | Planned | - |
 | 10. Preview Pane | v1.1 | 0/TBD | Not started | - |
 | 11. Navigation | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
