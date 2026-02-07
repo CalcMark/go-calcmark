@@ -50,12 +50,12 @@
 
 ### Navigation
 
-- [ ] **NAV-01**: Ctrl+← or Alt+B moves cursor one word left
-- [ ] **NAV-02**: Ctrl+→ or Alt+F moves cursor one word right
-- [ ] **NAV-03**: Home or Ctrl+A moves to start of line
-- [ ] **NAV-04**: End or Ctrl+E moves to end of line
-- [ ] **NAV-05**: Ctrl+Home moves to start of document
-- [ ] **NAV-06**: Ctrl+End moves to end of document
+- [x] **NAV-01**: Ctrl+← or Alt+B moves cursor one word left
+- [x] **NAV-02**: Ctrl+→ or Alt+F moves cursor one word right
+- [x] **NAV-03**: Home or Ctrl+A moves to start of line
+- [x] **NAV-04**: End or Ctrl+E moves to end of line
+- [x] **NAV-05**: Ctrl+Home moves to start of document
+- [x] **NAV-06**: Ctrl+End moves to end of document
 
 ### Help
 

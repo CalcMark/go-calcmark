@@ -23,7 +23,8 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 9: Interpreter Correctness** - Fix calculation bugs and audit all conversion paths
 - [x] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
 - [x] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
-- [ ] **Phase 11: Navigation** - Word, line, and document movement
+- [x] **Phase 11: Navigation** - Word, line, and document movement
+- [ ] **Phase 11.1: Bug Fixes** - Fix convert_rate preview display and delete last character TUI bugs (INSERTED)
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
 - [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
 - [ ] **Phase 14: File Operations** - Save, quit, new file flows
@@ -126,9 +127,29 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Add Ctrl+A/E line navigation and resolve export conflict
-- [ ] 11-02-PLAN.md — Implement Ctrl+Home/End document navigation
-- [ ] 11-03-PLAN.md — Comprehensive Alt+B/F word navigation tests
+- [x] 11-01-PLAN.md — Add Ctrl+A/E line navigation and resolve export conflict
+- [x] 11-02-PLAN.md — Implement Ctrl+Home/End document navigation
+- [x] 11-03-PLAN.md — Comprehensive Alt+B/F word navigation tests
+
+---
+
+### Phase 11.1: Bug Fixes (INSERTED)
+
+**Goal**: Fix known bugs discovered during v1.1 development
+
+**Depends on**: Phase 11 (navigation complete)
+
+**Requirements**: None (bug fixes from pending todos)
+
+**Success Criteria** (what must be TRUE):
+1. `convert_rate(10 mb/s, per hour)` displays correct preview result (~36 GB/hour)
+2. Deleting last character on a line behaves correctly
+3. Cursor positioning after delete at line boundaries is correct
+
+**Plans:** TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 11.1 to break down)
 
 ---
 
@@ -244,14 +265,15 @@ Plans:
 
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
+**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 11.1 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
 | 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
-| 11. Navigation | v1.1 | 0/3 | Not started | - |
+| 11. Navigation | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
+| 11.1 Bug Fixes | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
