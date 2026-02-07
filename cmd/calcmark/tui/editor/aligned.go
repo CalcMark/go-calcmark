@@ -235,6 +235,8 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 				}
 			} else {
 				// Render each line individually for proper wrapping alignment
+				// PREVIEW FILTERING: Only show headings and empty lines in preview
+				// Filter out: blockquotes, links, paragraphs, and other markdown
 				for blockLineIdx, lineResult := range blockResults {
 					lineText := lineResult.Source
 					// If user is typing on this line, use live editBuf instead
@@ -242,13 +244,21 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 						lineText = input.EditBuf
 					}
 
-					// Render this line individually
-					// renderMarkdown returns all visual lines for this source line
-					renderedLines := renderMarkdown(lineText, input.PreviewWidth)
+					trimmed := strings.TrimSpace(lineText)
 
-					// Store all rendered lines for this source line
-					// This preserves wrapping: if a heading wraps to 2 lines, we store both
-					textBlockPreviewCache[blockLineIdx] = renderedLines
+					// Determine what to show in preview for this TextBlock line
+					if trimmed == "" {
+						// Empty line - preserve for vertical spacing
+						textBlockPreviewCache[blockLineIdx] = []string{""}
+					} else if strings.HasPrefix(trimmed, "#") {
+						// Heading - render with markdown styling
+						renderedLines := renderMarkdown(lineText, input.PreviewWidth)
+						textBlockPreviewCache[blockLineIdx] = renderedLines
+					} else {
+						// All other TextBlock content (blockquotes, links, paragraphs, etc.)
+						// Filter out by showing blank line to maintain vertical alignment
+						textBlockPreviewCache[blockLineIdx] = []string{""}
+					}
 				}
 			}
 		}
