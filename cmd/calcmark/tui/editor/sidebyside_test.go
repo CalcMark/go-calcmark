@@ -435,3 +435,94 @@ y = 20`
 
 	t.Log("PREVIEW-05: Non-calculation lines show blank in preview ✓")
 }
+
+// =============================================================================
+// Phase 11.1 Preview Pane Filtering Tests
+// =============================================================================
+
+// TestPreviewPaneFiltering verifies preview pane shows only calc results and headings,
+// filtering out blockquotes, links, and other markdown.
+// Bug: Users see blockquotes, links, and other markdown in the Results pane,
+// but only headings and calculation results should display.
+func TestPreviewPaneFiltering(t *testing.T) {
+	lipgloss.SetColorProfile(termenv.Ascii)
+
+	tests := []struct {
+		name               string
+		source             string
+		expectInPreview    []string // Lines that SHOULD appear in preview content
+		expectNotInPreview []string // Lines that should NOT appear in preview content
+	}{
+		{
+			name:               "blockquote filtered",
+			source:             "x = 10\n> This is a quote\ny = 20",
+			expectInPreview:    []string{"x", "10", "y", "20"}, // calc results present
+			expectNotInPreview: []string{"quote", ">"},         // blockquote filtered
+		},
+		{
+			name:               "link filtered",
+			source:             "a = 5\n[link text](http://example.com)\nb = 15",
+			expectInPreview:    []string{"a", "5", "b", "15"}, // calc results present
+			expectNotInPreview: []string{"link", "http"},      // link filtered
+		},
+		{
+			name:               "heading preserved",
+			source:             "## Budget\namount = 100",
+			expectInPreview:    []string{"Budget", "amount", "100"}, // heading and calc present
+			expectNotInPreview: []string{},                          // nothing should be filtered
+		},
+		{
+			name:               "mixed content",
+			source:             "# Project\na = 1\n> Quote\n[link](url)\nb = 2",
+			expectInPreview:    []string{"Project", "a", "1", "b", "2"}, // heading and calcs
+			expectNotInPreview: []string{"Quote", "link", "url"},        // blockquote and link filtered
+		},
+		{
+			name:               "paragraph text filtered",
+			source:             "x = 100\nThis is a paragraph\ny = 200",
+			expectInPreview:    []string{"x", "100", "y", "200"}, // calc results
+			expectNotInPreview: []string{"paragraph"},            // text filtered
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			doc, err := document.NewDocument(tc.source)
+			if err != nil {
+				t.Fatalf("Failed to create document: %v", err)
+			}
+
+			m := New(doc)
+			m.width = 80
+			m.height = 24
+			m.previewMode = PreviewFull
+			m.eval.Evaluate(m.doc)
+
+			// Get aligned panes to check preview content
+			leftWidth, rightWidth := m.GetPaneWidths(m.width)
+			aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+
+			// Build preview content string
+			var previewContent strings.Builder
+			for _, pl := range aligned.previewLines {
+				previewContent.WriteString(pl.content)
+				previewContent.WriteString("\n")
+			}
+			preview := previewContent.String()
+
+			// Check expected content IS present
+			for _, expected := range tc.expectInPreview {
+				if !strings.Contains(preview, expected) {
+					t.Errorf("Preview should contain %q but doesn't.\nPreview:\n%s", expected, preview)
+				}
+			}
+
+			// Check filtered content is NOT present
+			for _, notExpected := range tc.expectNotInPreview {
+				if strings.Contains(preview, notExpected) {
+					t.Errorf("Preview should NOT contain %q but does.\nPreview:\n%s", notExpected, preview)
+				}
+			}
+		})
+	}
+}

@@ -72,6 +72,7 @@ z = 30`
 			"help_toggle",                    // TestEditorCatwalkHelpToggle
 			"document_navigation",            // TestEditorCatwalkDocumentNavigation
 			"word_nav_comprehensive",         // TestEditorCatwalkWordNavComprehensive
+			"delete_last_char",               // TestEditorCatwalkDeleteLastChar
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1200,6 +1201,40 @@ large = 1500 USD`,
 					buf.WriteString(fmt.Sprintf("[%d] %-50s | %s\n", i, srcInfo, prvInfo))
 				}
 				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkDeleteLastChar tests DELETE key removing the last remaining character.
+// This is a regression test for the bug: "DELETE sometimes fails to remove single character"
+// Verifies: DELETE at position 0 on single-character line removes the character.
+// Uses a fresh document with single "a" character.
+func TestEditorCatwalkDeleteLastChar(t *testing.T) {
+	// Document with single character "a"
+	doc, err := document.NewDocument("a")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "delete_last_char") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
 		)
