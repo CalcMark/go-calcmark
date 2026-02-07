@@ -37,7 +37,11 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 		rounded := roundToNapkinPrecision(v.Value)
 		// Use NormalizeForDisplay to convert to human-friendly units (e.g., 432000 MB -> ~400 GB)
 		normalizedValue, normalizedUnit := display.NormalizeForDisplay(rounded, v.Unit)
-		return types.NewQuantity(normalizedValue, normalizedUnit), nil
+		return &types.Quantity{
+			Value:    normalizedValue,
+			Unit:     normalizedUnit,
+			IsNapkin: true, // Mark as napkin estimate for display formatting
+		}, nil
 
 	case *types.Currency:
 		// Preserve symbol, round value

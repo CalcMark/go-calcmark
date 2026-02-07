@@ -3,6 +3,7 @@ package interpreter
 import (
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
@@ -216,6 +217,70 @@ func TestNapkinTypePreservation(t *testing.T) {
 
 			default:
 				t.Fatalf("Unknown expected type: %s", tt.wantType)
+			}
+		})
+	}
+}
+
+// TestNapkinQuantityIsNapkinFlag verifies that napkin conversion sets IsNapkin=true
+// on Quantity results, enabling tilde prefix in display formatting.
+func TestNapkinQuantityIsNapkinFlag(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantDisplay  string
+	}{
+		{
+			name:        "data accumulation shows tilde",
+			input:       "x = accumulate(5 MB/s, 1 day) as napkin\n",
+			wantDisplay: "~420 GB", // 5 MB/s * 86400s = 432000 MB ≈ 421.875 GB → ~420 GB
+		},
+		{
+			name:        "simple quantity shows tilde",
+			input:       "x = 1200 meters as napkin\n",
+			wantDisplay: "~1.2 km",
+		},
+		{
+			name:        "small quantity shows tilde",
+			input:       "x = 47 MB as napkin\n",
+			wantDisplay: "~47 MB",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Parse
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			// Interpret
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[0]
+			q, ok := result.(*types.Quantity)
+			if !ok {
+				t.Fatalf("Expected *types.Quantity, got %T", result)
+			}
+
+			// Verify IsNapkin flag is set
+			if !q.IsNapkin {
+				t.Error("Expected IsNapkin=true, got false")
+			}
+
+			// Verify display format includes tilde
+			formatted := display.FormatQuantity(q)
+			if formatted != tt.wantDisplay {
+				t.Errorf("Expected display %q, got %q", tt.wantDisplay, formatted)
 			}
 		})
 	}
