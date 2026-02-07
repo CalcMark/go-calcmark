@@ -4248,15 +4248,58 @@ func TestSavePromptMode(t *testing.T) {
 	}
 }
 
-// Test Ctrl+E export command
-func TestCtrlEExportCommand(t *testing.T) {
-	m := New(nil)
+// TestCtrlELineEnd verifies Ctrl+E moves cursor to end of line (readline-style).
+// Export is now available only via /export command.
+func TestCtrlELineEnd(t *testing.T) {
+	doc, _ := document.NewDocument("hello world")
+	m := New(doc)
 
+	// Start at column 0
+	if m.cursorCol != 0 {
+		t.Errorf("Expected cursorCol=0 initially, got %d", m.cursorCol)
+	}
+
+	// Ctrl+E should move to end of line (like End key)
 	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlE})
 	m = newModel.(Model)
 
-	if m.mode != StateExportFormat {
-		t.Errorf("Expected StateExportFormat after Ctrl+E, got %v", m.mode)
+	// Mode should remain StateDefault (not export mode)
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after Ctrl+E, got %v", m.mode)
+	}
+
+	// Cursor should be at end of line
+	expectedCol := len("hello world")
+	if m.cursorCol != expectedCol {
+		t.Errorf("Expected cursorCol=%d after Ctrl+E, got %d", expectedCol, m.cursorCol)
+	}
+}
+
+// TestCtrlALineStart verifies Ctrl+A moves cursor to start of line (readline-style).
+func TestCtrlALineStart(t *testing.T) {
+	doc, _ := document.NewDocument("hello world")
+	m := New(doc)
+
+	// First move to end of line
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m = newModel.(Model)
+
+	if m.cursorCol == 0 {
+		t.Errorf("Expected cursorCol>0 after End key, got %d", m.cursorCol)
+	}
+
+	// Ctrl+A should move to start of line (like Home key)
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlA})
+	m = newModel.(Model)
+
+	// Mode should remain StateDefault
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after Ctrl+A, got %v", m.mode)
+	}
+
+	// Cursor should be at start of line
+	if m.cursorCol != 0 {
+		t.Errorf("Expected cursorCol=0 after Ctrl+A, got %d", m.cursorCol)
 	}
 }
 
