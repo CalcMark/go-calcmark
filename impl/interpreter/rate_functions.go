@@ -70,18 +70,22 @@ func convertRateTimeUnit(rate *types.Rate, targetUnit string) (*types.Rate, erro
 		return nil, fmt.Errorf("invalid target time unit: %w", err)
 	}
 
-	// Calculate conversion ratio
+	// Calculate conversion factor using multiplication to avoid precision loss.
+	// When sourceSeconds/targetSeconds creates a repeating decimal (e.g., 1/3600),
+	// subsequent division loses precision. Using Mul(targetSeconds/sourceSeconds)
+	// preserves exact integer arithmetic when possible.
+	//
 	// Example: Converting 5M/day to per second
-	// - Day has 86400 seconds
-	// - Want amount per 1 second instead of per 86400 seconds
-	// - So divide by ratio: 5M / 86400 = 57.87
+	// - Day has 86400 seconds, second has 1 second
+	// - conversionFactor = 1 / 86400 (dividing by larger gives smaller result)
+	// - newAmount = 5M * (1/86400) = 57.87/s
 	//
 	// Example: Converting 1000/second to per hour
 	// - Second has 1 second, hour has 3600 seconds
-	// - Want amount per 3600 seconds instead of per 1 second
-	// - So multiply by ratio: 1000 * 3600 = 3,600,000
-	ratio := sourceSeconds.Div(targetSeconds)
-	newAmount := rate.Amount.Value.Div(ratio)
+	// - conversionFactor = 3600 / 1 = 3600 (exact integer, no precision loss)
+	// - newAmount = 1000 * 3600 = 3,600,000/h (exact)
+	conversionFactor := targetSeconds.Div(sourceSeconds)
+	newAmount := rate.Amount.Value.Mul(conversionFactor)
 
 	return &types.Rate{
 		Amount: &types.Quantity{
