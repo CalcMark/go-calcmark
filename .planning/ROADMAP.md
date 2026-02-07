@@ -24,7 +24,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 9.1: Separate Validation from Execution** - Clean spec/impl boundary (INSERTED)
 - [x] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [x] **Phase 11: Navigation** - Word, line, and document movement
-- [ ] **Phase 11.1: Bug Fixes** - Fix convert_rate preview and TUI display bugs (INSERTED)
+- [x] **Phase 11.1: Bug Fixes** - Fix convert_rate preview and TUI display bugs (INSERTED)
 - [x] **Phase 11.2: UX Redesign** - Holistic command/help system redesign (INSERTED)
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
 - [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
@@ -152,9 +152,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 11.1-01-PLAN.md — Fix DELETE key last character bug (TDD)
-- [ ] 11.1-02-PLAN.md — Fix convert_rate time unit conversion (TDD)
-- [ ] 11.1-03-PLAN.md — Fix preview pane markdown filtering
+- [x] 11.1-01-PLAN.md — Fix DELETE key last character bug (TDD)
+- [x] 11.1-02-PLAN.md — Fix convert_rate time unit conversion (TDD)
+- [x] 11.1-03-PLAN.md — Fix preview pane markdown filtering
 
 ---
 
@@ -303,7 +303,7 @@ Plans:
 | 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
 | 11. Navigation | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 11.1 Bug Fixes | v1.1 | 0/3 | Not started | - |
+| 11.1 Bug Fixes | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 11.2 UX Redesign | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
