@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 11.1 (Bug Fixes) — In progress
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-07 — Completed convert_rate precision fix (11.1-02)
+Phase: 11.1 (Bug Fixes) — COMPLETE
+Plan: 3 of 3 in current phase
+Status: Complete
+Last activity: 2026-02-07 — Completed preview pane filtering (11.1-03)
 
-Progress: [████████████░░░░░░░░] 52%
+Progress: [████████████░░░░░░░░] 55%
 
 ## Milestone v1.1 Scope
 
@@ -23,7 +23,7 @@ Progress: [████████████░░░░░░░░] 52%
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
 - Phase 10: Preview Pane (5 requirements) - COMPLETE
 - Phase 11: Navigation (6 requirements) - COMPLETE
-- Phase 11.1: Bug Fixes (3 plans) - IN PROGRESS (2/3 complete)
+- Phase 11.1: Bug Fixes (3 plans) - COMPLETE
 - Phase 11.2: UX Redesign (3 plans) - COMPLETE
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -62,6 +62,8 @@ Progress: [████████████░░░░░░░░] 52%
 
 Recent decisions affecting current work:
 
+- [11.1-03]: Only headings (# prefix) and calculation results shown in preview pane
+- [11.1-03]: Filtered content (blockquotes, links, paragraphs) shows blank for vertical alignment
 - [11.1-02]: Use Mul(targetSeconds/sourceSeconds) instead of Div(sourceSeconds/targetSeconds) for rate conversion to preserve integer precision
 - [11.1-02]: Accept tiny precision loss (<1e-10) for large-to-small time unit conversions (unavoidable in shopspring/decimal)
 - [11.1-01]: DELETE key fix verified - transitionToEditing() must be called BEFORE editBuf modification
@@ -117,8 +119,8 @@ Recent decisions affecting current work:
 
 1. ~~`convert_rate` does not show correct preview result — `convert_rate(10 mb/s, per hour)` displays incorrectly (interpreter)~~ FIXED in 11.1-02
 2. ~~Delete last character on line bug — deleting last character on a line or under cursor behaves unexpectedly (tui)~~ FIXED in 11.1-01
-3. Preview pane extra blank line — cursor on last calc before empty line causes extra blank line in preview (tui)
-4. Preview pane shows markdown — blockquotes, links render in preview when only results should show (tui)
+3. ~~Preview pane extra blank line — cursor on last calc before empty line causes extra blank line in preview (tui)~~ INVESTIGATED in 11.1-03, behavior now correct
+4. ~~Preview pane shows markdown — blockquotes, links render in preview when only results should show (tui)~~ FIXED in 11.1-03
 5. Add natural language examples to function help messages — e.g., `average of 2, 4, 3` (interpreter)
 
 ### Roadmap Evolution
@@ -128,7 +130,10 @@ Recent decisions affecting current work:
   - User feedback: Slash commands conflict with / divide operator
   - User feedback: Status bar and help system inadequate
   - Resolution: Reverted Ctrl+A/E, created dedicated UX phase
-- Phase 11.1 inserted after Phase 11: Bug Fixes (URGENT) - Fix convert_rate preview and delete last character bugs
+- Phase 11.1 inserted after Phase 11: Bug Fixes (URGENT) - NOW COMPLETE
+  - Fixed DELETE key behavior
+  - Fixed convert_rate precision loss
+  - Fixed preview pane markdown filtering
 - Phase 9.1 inserted after Phase 9: Separate Validation from Execution (URGENT) - NOW COMPLETE
   - Discovered while fixing error line display bug
   - spec/document/evaluate.go violates architecture rule (imports impl/)
@@ -142,9 +147,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 11.1-02-PLAN.md (convert_rate precision fix)
+Stopped at: Completed Phase 11.1 (Bug Fixes)
 Resume file: None
-Next: 11.1-03-PLAN.md (preview pane filtering)
+Next: Phase 12 (Undo/Redo)
 
 ---
-*Updated: 2026-02-07 — Completed 11.1-02-PLAN.md (convert_rate precision fix)*
+*Updated: 2026-02-07 — Completed Phase 11.1 (Bug Fixes)*
