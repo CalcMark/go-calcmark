@@ -3,19 +3,29 @@ package document
 import (
 	"fmt"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
 
+// EnvironmentWriter can receive frontmatter values during evaluation.
+// This interface is implemented by impl/interpreter.Environment.
+// It decouples the spec/document package from the impl/interpreter package.
+type EnvironmentWriter interface {
+	Set(name string, value types.Type)
+	SetExchangeRate(from, to string, rate decimal.Decimal)
+}
+
 // Document represents a CalcMark document with incremental evaluation.
 // Tracks blocks, dependencies, and provides efficient change propagation.
+//
+// Note: Document is a pure data structure and does NOT contain interpreter state.
+// The impl/document.Evaluator is responsible for evaluation with its own environment.
 type Document struct {
-	blocks      []*BlockNode             // Ordered blocks
-	blockIndex  map[string]*BlockNode    // UUID → Block for fast lookup
-	varToBlocks map[string][]string      // Dependency graph: Variable → Block UUIDs
-	env         *interpreter.Environment // Accumulated environment (top-down)
-	frontmatter *Frontmatter             // Parsed frontmatter (exchange rates, globals)
+	blocks      []*BlockNode          // Ordered blocks
+	blockIndex  map[string]*BlockNode // UUID -> Block for fast lookup
+	varToBlocks map[string][]string   // Dependency graph: Variable -> Block UUIDs
+	frontmatter *Frontmatter          // Parsed frontmatter (exchange rates, globals)
 }
 
 // BlockNode wraps a Block with metadata for incremental updates.
@@ -36,7 +46,6 @@ func NewDocument(source string) (*Document, error) {
 		blocks:      []*BlockNode{},
 		blockIndex:  make(map[string]*BlockNode),
 		varToBlocks: make(map[string][]string),
-		env:         interpreter.NewEnvironment(),
 		frontmatter: fm,
 	}
 
@@ -60,12 +69,12 @@ func NewDocument(source string) (*Document, error) {
 	// Build dependency graph for calculation blocks
 	doc.rebuildDependencies()
 
-	// NOTE: We do NOT call Evaluate() here because:
+	// NOTE: We do NOT evaluate here because:
 	// 1. The TUI needs to create documents with semantic errors so users can see/fix them
 	// 2. Evaluation happens incrementally as blocks are edited
 	// 3. Errors are stored in block diagnostics and displayed in the TUI
 	//
-	// For non-TUI use cases (like tests), call doc.Evaluate() explicitly after NewDocument.
+	// For evaluation, use impl/document.Evaluator after creating the document.
 
 	return doc, nil
 }
@@ -414,8 +423,9 @@ func (d *Document) EnsureFrontmatter() *Frontmatter {
 }
 
 // ApplyFrontmatter injects frontmatter values (exchange rates, globals) into
-// the given interpreter environment. This should be called before evaluation.
-func (d *Document) ApplyFrontmatter(env *interpreter.Environment) error {
+// the given environment. This should be called before evaluation.
+// The env parameter must implement EnvironmentWriter (e.g., *interpreter.Environment).
+func (d *Document) ApplyFrontmatter(env EnvironmentWriter) error {
 	if d.frontmatter == nil {
 		return nil
 	}
