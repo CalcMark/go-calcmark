@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 10 (Preview Pane)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 10-02-PLAN.md (Napkin Tilde and Separators)
+Last activity: 2026-02-07 — Completed 10-03-PLAN.md (Unified Currency Formatting)
 
-Progress: [██████░░░░░░░░░░░░░░] 22%
+Progress: [███████░░░░░░░░░░░░░] 24%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
 - Phase 9: Interpreter Correctness (6 requirements) - COMPLETE
 - Phase 9.1: Separate Validation from Execution (3 plans) - COMPLETE
-- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (2/5)
+- Phase 10: Preview Pane (5 requirements) - IN PROGRESS (3/5)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
 - Phase 13: Clipboard (4 requirements)
@@ -60,6 +60,9 @@ Progress: [██████░░░░░░░░░░░░░░] 22%
 
 Recent decisions affecting current work:
 
+- [10-03]: All currency codes convert to symbols when available (USD -> $, EUR -> €)
+- [10-03]: Mid-range currency values (1000-9999) use thousand separators
+- [10-03]: Negative sign before symbol (-$50.00, not $-50.00)
 - [10-02]: IsNapkin field on Quantity struct (not separate type)
 - [10-02]: Tilde applied in FormatQuantity, not during evaluation
 - [10-01]: Preview pane header is "Results" (not "Preview")
@@ -101,8 +104,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 10-02-PLAN.md, ready for 10-03
+Stopped at: Completed 10-03-PLAN.md, ready for 10-04
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Completed 10-02-PLAN.md (Napkin Tilde and Separators)*
+*Updated: 2026-02-07 — Completed 10-03-PLAN.md (Unified Currency Formatting)*
