@@ -3,14 +3,22 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
 
 // evalNapkinConversion evaluates a napkin conversion expression.
-// Returns a rounded numeric value that can be used in calculations.
+// Returns a rounded value that preserves the input type.
 // The value is rounded to 2 significant figures (adaptable).
+//
+// Type preservation:
+//   - *types.Quantity  -> *types.Quantity (with normalized unit if value > 1000)
+//   - *types.Currency  -> *types.Currency (same symbol, rounded value)
+//   - *types.Rate      -> *types.Rate (same Amount.Unit and PerUnit, rounded value)
+//   - *types.Duration  -> *types.Duration (same unit, rounded value)
+//   - *types.Number    -> *types.Number (rounded value)
 func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.Type, error) {
 	// Evaluate the expression
 	value, err := interp.evalNode(n.Expression)
@@ -18,32 +26,62 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 		return nil, err
 	}
 
-	// Extract numeric value from the result
-	var numValue decimal.Decimal
-
+	// Process based on input type - preserving the type
 	switch v := value.(type) {
 	case *types.Number:
-		numValue = v.Value
+		rounded := roundToNapkinPrecision(v.Value)
+		return types.NewNumber(rounded), nil
+
 	case *types.Quantity:
-		// For quantities, just use the numeric value
-		numValue = v.Value
+		// Round the value, then normalize to human-friendly unit
+		rounded := roundToNapkinPrecision(v.Value)
+		// Use NormalizeForDisplay to convert to human-friendly units (e.g., 432000 MB -> ~400 GB)
+		normalizedValue, normalizedUnit := display.NormalizeForDisplay(rounded, v.Unit)
+		return types.NewQuantity(normalizedValue, normalizedUnit), nil
+
 	case *types.Currency:
-		numValue = v.Value
+		// Preserve symbol, round value
+		rounded := roundToNapkinPrecision(v.Value)
+		return types.NewCurrency(rounded, v.Symbol), nil
+
 	case *types.Duration:
-		// Convert to seconds for napkin formatting
-		numValue = v.ToSeconds()
+		// Preserve unit, round value (keep in original unit)
+		rounded := roundToNapkinPrecision(v.Value)
+		duration, err := types.NewDuration(rounded, v.Unit)
+		if err != nil {
+			// Fallback: return with original unit even if validation fails
+			return &types.Duration{Value: rounded, Unit: v.Unit}, nil
+		}
+		return duration, nil
+
 	case *types.Rate:
-		// Use the amount of the rate
-		numValue = v.Amount.Value
+		// Preserve Amount.Unit and PerUnit, round Amount.Value
+		rounded := roundToNapkinPrecision(v.Amount.Value)
+		return &types.Rate{
+			Amount: &types.Quantity{
+				Value: rounded,
+				Unit:  v.Amount.Unit,
+			},
+			PerUnit: v.PerUnit,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("napkin conversion requires a numeric value, got %T", value)
 	}
+}
 
-	// Round the value to napkin precision (2 sig figs by default)
+// roundToNapkinPrecision rounds a decimal value to 2 significant figures.
+// This is the core napkin math rounding logic.
+func roundToNapkinPrecision(numValue decimal.Decimal) decimal.Decimal {
 	floatVal, _ := numValue.Abs().Float64()
 
-	// Round based on magnitude
-	roundedFloat := floatVal
+	// Handle zero
+	if floatVal == 0 {
+		return decimal.Zero
+	}
+
+	var roundedFloat float64
+
 	if floatVal >= 1000 {
 		// Determine scale
 		var magnitude float64
@@ -77,16 +115,20 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 		}
 
 		roundedFloat = roundedScaled * magnitude
-	} else if floatVal > 0 {
+	} else {
 		// For smaller numbers < 1000, round to 2 sig figs
 		rounded := roundToSignificantFigures(floatVal, 2)
 		switch r := rounded.(type) {
 		case string:
 			if d, err := decimal.NewFromString(r); err == nil {
 				roundedFloat, _ = d.Float64()
+			} else {
+				roundedFloat = floatVal
 			}
 		case int:
 			roundedFloat = float64(r)
+		default:
+			roundedFloat = floatVal
 		}
 	}
 
@@ -95,6 +137,5 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 		roundedFloat = -roundedFloat
 	}
 
-	// Return as Number with rounded value (can be used in calculations)
-	return types.NewNumber(decimal.NewFromFloat(roundedFloat)), nil
+	return decimal.NewFromFloat(roundedFloat)
 }

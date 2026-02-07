@@ -82,17 +82,18 @@ func TestNapkinTypePreservation(t *testing.T) {
 		},
 
 		// Duration type preservation
+		// Note: Parser normalizes duration units to singular form
 		{
 			name:     "Duration: preserves unit",
 			input:    "x = 86400 seconds as napkin\n",
 			wantType: "Duration",
-			wantUnit: "seconds",
+			wantUnit: "second", // Parser normalizes to singular
 		},
 		{
 			name:     "Duration: days preserved",
 			input:    "x = 365 days as napkin\n",
 			wantType: "Duration",
-			wantUnit: "days",
+			wantUnit: "day", // Parser normalizes to singular
 		},
 
 		// Number type (existing behavior)
