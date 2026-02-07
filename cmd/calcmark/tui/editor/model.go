@@ -48,6 +48,7 @@ const (
 	StateAutocomplete                   // Autocomplete dropdown active
 	StateGlobals                        // Globals panel active, preview shows global values
 	StateHelp                           // Help viewer active, preview shows help content
+	StateCommandMenu                    // Command menu popup active
 	StateExportFormat                   // Export dialog active, normal UI paused
 	StateExportPath                     // Export path input active, normal UI paused
 	StateSavePrompt                     // Save confirmation dialog active, normal UI paused
@@ -65,6 +66,8 @@ func (s InputState) String() string {
 		return "StateGlobals"
 	case StateHelp:
 		return "StateHelp"
+	case StateCommandMenu:
+		return "StateCommandMenu"
 	case StateExportFormat:
 		return "StateExportFormat"
 	case StateExportPath:
@@ -184,6 +187,9 @@ type Model struct {
 	// Autocomplete state
 	autocompleteState components.AutosuggestState
 	suggestionSource  components.SuggestionSource
+
+	// Command menu state
+	commandMenuState CommandMenuState
 }
 
 // New creates a new editor model with an optional document.
@@ -398,19 +404,20 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Handle help toggle (F1) - works regardless of mode
+	// Handle command menu toggle (Ctrl+H/F1) - works regardless of mode
 	if key.Matches(msg, m.keys.Help) {
-		if m.mode == StateHelp {
+		if m.mode == StateCommandMenu {
 			m.mode = StateDefault
 		} else {
-			m.mode = StateHelp
+			m.mode = StateCommandMenu
+			m.commandMenuState.Selected = 0 // Reset selection when opening
 		}
 		return m, nil
 	}
 
-	// If in help mode, only respond to escape to close
+	// If in help mode, only respond to escape or help key to close
 	if m.mode == StateHelp {
-		if key.Matches(msg, m.keys.Escape) {
+		if key.Matches(msg, m.keys.Escape) || key.Matches(msg, m.keys.Help) {
 			m.mode = StateDefault
 			return m, nil
 		}
@@ -424,6 +431,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleAutocompleteKey(msg)
 	case StateGlobals:
 		return m.handleGlobalsKey(msg)
+	case StateCommandMenu:
+		return m.handleCommandMenuKey(msg)
 	case StateExportFormat:
 		return m.handleExportFormatKey(msg)
 	case StateExportPath:
