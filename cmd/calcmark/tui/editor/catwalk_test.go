@@ -70,6 +70,7 @@ z = 30`
 			"text_wrapping_40col",            // TestEditorCatwalkTextWrapping40Col
 			"long_document_scroll",           // TestEditorCatwalkLongDocumentScroll
 			"help_toggle",                    // TestEditorCatwalkHelpToggle
+			"document_navigation",            // TestEditorCatwalkDocumentNavigation
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -478,6 +479,43 @@ z = 30`
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		if !strings.HasSuffix(path, "cursor_navigation") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkDocumentNavigation tests Ctrl+Home and Ctrl+End navigation.
+// Verifies: NAV-05 (Ctrl+Home -> doc start) and NAV-06 (Ctrl+End -> doc end).
+// Uses a fresh document to avoid pollution from other tests.
+func TestEditorCatwalkDocumentNavigation(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "document_navigation") {
 			return
 		}
 
