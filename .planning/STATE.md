@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 11.2 (UX Redesign)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-07 — Completed 11.2-01-PLAN.md
+Last activity: 2026-02-07 — Created 11.2-03-PLAN.md (file picker)
 
 Progress: [█████████░░░░░░░░░░░] 36%
 
@@ -62,6 +62,9 @@ Progress: [█████████░░░░░░░░░░░] 36%
 
 Recent decisions affecting current work:
 
+- [11.2-03]: File picker uses full-screen modal pattern (like StateHelp, StateCommandMenu)
+- [11.2-03]: Two modes: ModePickerBrowse (navigate) and ModePickerNewFile (type filename)
+- [11.2-03]: Existing files skip picker, save directly
 - [11.2-01]: StateCommandMenu inserted after StateHelp in InputState enum
 - [11.2-01]: Command menu captures arrow keys but dismisses on typing (like autocomplete)
 - [11.2-01]: Help binding description updated to 'help/commands' to reflect dual purpose

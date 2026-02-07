@@ -172,11 +172,12 @@ Plans:
 5. Help overlay provides comprehensive command reference
 6. Command menu is keyboard-navigable with clear visual feedback
 
-**Plans:** 2 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] 11.2-01-PLAN.md — Command infrastructure and StateCommandMenu
+- [x] 11.2-01-PLAN.md — Command infrastructure and StateCommandMenu
 - [ ] 11.2-02-PLAN.md — Command menu popup rendering and status bar simplification
+- [ ] 11.2-03-PLAN.md — Visual file picker for Save/Save-As operations
 
 ---
 
