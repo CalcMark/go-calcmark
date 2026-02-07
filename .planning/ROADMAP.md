@@ -146,6 +146,7 @@ Plans:
 2. Deleting last character on a line behaves correctly
 3. Cursor positioning after delete at line boundaries is correct
 4. Preview pane maintains consistent vertical alignment regardless of cursor position
+5. Preview pane shows only results and headings (no other markdown like quotes, links)
 
 **Plans:** TBD
 
