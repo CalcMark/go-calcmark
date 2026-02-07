@@ -32,10 +32,33 @@ func (m Model) View() string {
 	// If help mode is active, render help overlay on top
 	if m.mode == StateHelp {
 		helpView := m.renderHelpOverlay()
-		// Center the help overlay on screen with semi-transparent background
+		// Center the help overlay on screen with consistent background
 		return lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			helpView,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+		)
+	}
+
+	// If command menu is active, render it as full-screen modal (like help)
+	if m.mode == StateCommandMenu {
+		menuPopup := m.renderCommandMenuPopup()
+		// Center the command menu on screen with consistent background
+		return lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			menuPopup,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+		)
+	}
+
+	// If file picker is active, render it as full-screen modal
+	if m.mode == StateFilePicker {
+		pickerOverlay := m.renderFilePickerOverlay()
+		return lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			pickerOverlay,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
 		)
@@ -210,15 +233,6 @@ func (m Model) View() string {
 		if popup != "" {
 			row, col := m.calculatePopupScreenPosition(contentHeight)
 			allUILines = overlayPopupOnLines(allUILines, popup, row, col)
-		}
-	}
-
-	// Overlay command menu popup if active
-	if m.mode == StateCommandMenu {
-		menuPopup := m.renderCommandMenuPopup()
-		if menuPopup != "" {
-			row, col := m.calculateCommandMenuPosition()
-			allUILines = overlayPopupOnLines(allUILines, menuPopup, row, col)
 		}
 	}
 
@@ -1359,26 +1373,49 @@ func (m Model) renderCommandMenuPopup() string {
 	return strings.Join(lines, "\n")
 }
 
-// calculateCommandMenuPosition returns screen position for command menu.
-// Centers the popup horizontally, positions near top of content area.
-func (m Model) calculateCommandMenuPosition() (row, col int) {
-	popupWidth := 42                        // innerWidth + 2 for borders
-	popupHeight := len(EditorCommands) + 4  // commands + title + sep + hint + borders
+// renderFilePickerOverlay renders the file picker as a modal overlay.
+func (m Model) renderFilePickerOverlay() string {
+	var lines []string
 
-	// Center horizontally in source pane
-	leftWidth, _ := m.GetPaneWidths(m.width)
-	col = (leftWidth - popupWidth) / 2
-	if col < 0 {
-		col = 0
+	// Header with current directory
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("252")).
+		Background(lipgloss.Color("236")).
+		Padding(0, 1)
+
+	header := headerStyle.Render(fmt.Sprintf(" Save to: %s ", m.filePicker.CurrentDirectory))
+	lines = append(lines, header)
+	lines = append(lines, "") // spacing
+
+	// File picker view
+	pickerView := m.filePicker.View()
+	lines = append(lines, strings.Split(pickerView, "\n")...)
+
+	// Footer with hints based on mode
+	var hint string
+	if m.filePickerMode == ModePickerNewFile {
+		// Show filename being typed with cursor
+		hint = fmt.Sprintf("  Filename: %s|   [Enter] save  [Esc] back", m.newFileName)
+	} else {
+		hint = "  [up/down] navigate  [Enter] open/select  [n] new file  [Esc] cancel"
 	}
+	footerStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Italic(true)
+	lines = append(lines, "")
+	lines = append(lines, footerStyle.Render(hint))
 
-	// Position near top, below header
-	row = 3 // After source header + some globals padding
+	content := strings.Join(lines, "\n")
 
-	// Suppress unused variable warning - popupHeight is for future scrolling
-	_ = popupHeight
+	// Wrap in a box
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		Background(lipgloss.Color("235")).
+		Padding(1, 2)
 
-	return row, col
+	return boxStyle.Render(content)
 }
 
 // formatFunctionParamHint looks up a function's parameter specs and formats
