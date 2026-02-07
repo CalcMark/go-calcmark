@@ -22,14 +22,13 @@ Visual lines:
   [12] srcIdx=4 lineNum=0 wrap=true pad=false content="certainly wrap "
   [13] srcIdx=4 lineNum=0 wrap=true pad=false content="when displayed at "
   [14] srcIdx=4 lineNum=0 wrap=true pad=false content="narrow width."
-  [15] srcIdx=4 lineNum=0 wrap=false pad=true content=""
 
 # Check alignment shows wrapped lines
 run observe=alignment
 ----
 -- alignment:
 Source and Preview Alignment:
-Total visual lines: 16
+Total visual lines: 15
 [0] ln=1 wrap=false: "# Wrapping Test "
 [1] ln=0 wrap=true: "at 40 Columns"
 [2] ln=2 wrap=false: "This is a line "
@@ -52,4 +51,4 @@ key down
 key down
 ----
 -- debug:
-mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=7 cursorHighlight=7 scrollOffset=0 totalSource=5 totalVisual=16 editBuf="x = 12345 + 67890 * 2" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=7 cursorHighlight=7 scrollOffset=0 totalSource=5 totalVisual=15 editBuf="x = 12345 + 67890 * 2" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

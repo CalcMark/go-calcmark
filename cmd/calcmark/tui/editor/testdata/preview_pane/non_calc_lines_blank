@@ -1,8 +1,8 @@
 # Test: Non-calculation lines show blank in preview
 # Phase 10 requirement: PREVIEW-05 - Non-calculation lines show blank in preview (spacing preserved)
-# Markdown headers, text paragraphs, and empty lines should show blank in preview
+# Phase 11.1 update: Only headings are shown in preview, paragraph text is filtered out
 
-# Document with mixed content - preview should only show results for calculations
+# Document with mixed content - preview should only show results for calculations and headings
 
 run observe=results
 ----
@@ -18,7 +18,7 @@ Line 7 (## Summary): value=, error=""
 Line 8 (): value=, error=""
 Line 9 (savings = income - expenses): value=2K, error=""
 
-# Verify alignment - non-calc lines have empty preview
+# Verify alignment - non-calc lines have empty preview (except headings)
 run observe=alignment
 ----
 -- alignment:
@@ -27,7 +27,7 @@ Total visual lines: 10
 Source lines count: 10, Preview lines count: 10
 [0] SRC(ln=1 wrap=false): "# Budget Calculator"        | PRV(ln=0): "\x1b[97;1m\x1b[0m\x1b[97;1m\x1b[0m\x1b[97;1mBudget\x1b[0m\x1b..."
 [1] SRC(ln=2 wrap=false): ""                           | PRV(ln=1): ""
-[2] SRC(ln=3 wrap=false): "This is some explanatory text." | PRV(ln=2): "This is some explanatory text."
+[2] SRC(ln=3 wrap=false): "This is some explanatory text." | PRV(ln=2): ""
 [3] SRC(ln=4 wrap=false): ""                           | PRV(ln=3): ""
 [4] SRC(ln=5 wrap=false): "income = 5000"              | PRV(ln=4): "income → 5K"
 [5] SRC(ln=6 wrap=false): "expenses = 3000"            | PRV(ln=5): "expenses → 3K"

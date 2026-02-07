@@ -19,6 +19,7 @@ key up
 mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=6 totalVisual=6 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press DELETE - should merge next line
+# Note: "line 1" doesn't appear in preview because only headings and calcs show in preview (Phase 11.1)
 run observe=view
 key delete
 ----
@@ -27,7 +28,7 @@ key delete
  Source                                        │ Results                        
                                                │▸ Globals (0)                [g]
                                                │────────────────────────────────
-   1 line 1                                    │line 1                          
+   1 line 1                                    │                                
    2 line 2# Header                            │                                
    3 x = 10                                    │x → 10                          
    4 y = 20                                    │y → 20                          
