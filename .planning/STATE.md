@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 9 of 17 (Interpreter Correctness)
-Plan: 4 of 6 in current phase
+Plan: 3 of 6 in current phase (09-01, 09-03, 09-04 complete; 09-02 pending)
 Status: In progress
-Last activity: 2026-02-07 — Completed 09-04-PLAN.md (NL functions and compound units)
+Last activity: 2026-02-07 — Completed 09-03-PLAN.md (standard functions and unit roundtrip tests)
 
 Progress: [████░░░░░░░░░░░░░░░░] 20%
 
 ## Milestone v1.1 Scope
 
 **9 phases, 48 requirements:**
-- Phase 9: Interpreter Correctness (6 requirements) - 4 plans complete
+- Phase 9: Interpreter Correctness (6 requirements) - 3 plans complete (09-01, 09-03, 09-04)
 - Phase 10: Preview Pane (5 requirements)
 - Phase 11: Navigation (6 requirements)
 - Phase 12: Undo/Redo (5 requirements)
@@ -47,6 +47,8 @@ Progress: [████░░░░░░░░░░░░░░░░] 20%
 
 Recent decisions affecting current work:
 
+- [09-03]: Tolerance-based float comparison (0.0001 relative) for roundtrip tests
+- [09-03]: Document unsupported conversions (compound speed, multi-word area) rather than fail
 - [09-04]: NL forms consume expressions greedily - use parentheses for explicit grouping
 - [09-04]: Rate * scalar supported, but scalar * rate is not commutative
 - [09-04]: Rate + rate direct addition not implemented - use accumulate
@@ -66,8 +68,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed 09-04-PLAN.md
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
 
 ---
-*Updated: 2026-02-07 — Completed 09-04 NL functions and compound units tests*
+*Updated: 2026-02-07 — Completed 09-03 function and unit conversion tests*
