@@ -20,7 +20,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 
 ---
 
-- [ ] **Phase 9: Interpreter Correctness** - Fix calculation bugs and audit all conversion paths
+- [x] **Phase 9: Interpreter Correctness** - Fix calculation bugs and audit all conversion paths
 - [ ] **Phase 10: Preview Pane** - Show only calculation results with vertical alignment
 - [ ] **Phase 11: Navigation** - Word, line, and document movement
 - [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
@@ -211,7 +211,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 9. Interpreter Correctness | v1.1 | 0/4 | Planned | - |
+| 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
 | 10. Preview Pane | v1.1 | 0/TBD | Not started | - |
 | 11. Navigation | v1.1 | 0/TBD | Not started | - |
 | 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
@@ -224,4 +224,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06*
+*Last updated: 2026-02-07*

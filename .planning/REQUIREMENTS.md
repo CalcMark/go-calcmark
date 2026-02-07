@@ -7,12 +7,12 @@
 
 ### Interpreter Correctness
 
-- [ ] **INTERP-01**: Napkin conversion preserves unit types (`accumulate(5mb/s, 1 day) as napkin` shows ~400GB not 430K)
-- [ ] **INTERP-02**: All conversion paths audit — verify no type erasure in any conversion function
-- [ ] **INTERP-03**: Standard function forms work correctly (`avg()`, `sum()`, `accumulate()`, etc.)
-- [ ] **INTERP-04**: Natural language function forms work correctly (`average of...`, `sum of...`, etc.)
-- [ ] **INTERP-05**: Unit conversion roundtrips are accurate (e.g., meters → feet → meters)
-- [ ] **INTERP-06**: Compound units handle correctly (e.g., MB/s, km/h)
+- [x] **INTERP-01**: Napkin conversion preserves unit types (`accumulate(5mb/s, 1 day) as napkin` shows ~400GB not 430K)
+- [x] **INTERP-02**: All conversion paths audit — verify no type erasure in any conversion function
+- [x] **INTERP-03**: Standard function forms work correctly (`avg()`, `sum()`, `accumulate()`, etc.)
+- [x] **INTERP-04**: Natural language function forms work correctly (`average of...`, `sum of...`, etc.)
+- [x] **INTERP-05**: Unit conversion roundtrips are accurate (e.g., meters → feet → meters)
+- [x] **INTERP-06**: Compound units handle correctly (e.g., MB/s, km/h)
 
 ### Preview Pane
 
