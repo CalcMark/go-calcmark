@@ -58,7 +58,7 @@ func DefaultKeyMap() KeyMap {
 		),
 		Help: key.NewBinding(
 			key.WithKeys("f1", "ctrl+h"),
-			key.WithHelp("Ctrl+H/F1", "help"),
+			key.WithHelp("Ctrl+H/F1", "help/commands"),
 		),
 		Up: key.NewBinding(
 			key.WithKeys("up"),
