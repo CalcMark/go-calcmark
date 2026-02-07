@@ -11,13 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// runREPL starts the interactive TUI REPL
-func runREPL() {
-	doc, _ := document.NewDocument("")
-	app := tui.NewApp(doc)
-	runTUIApp(app)
-}
-
 // runEdit starts the editor mode, optionally with a file
 func runEdit(filepath string) {
 	var doc *document.Document

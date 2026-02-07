@@ -15,22 +15,22 @@ var rootCmd = &cobra.Command{
 and calculations in one document. Calculations are verifiable and reproducible.
 
 Examples:
-  cm                              Start interactive REPL
+  cm                              Open editor with new document
   cm budget.cm                    Open file in editor
   cm eval calc.cm                 Evaluate file and print result
   cm eval < input.cm              Evaluate from stdin
   cm convert doc.cm --to=html     Convert to HTML`,
 	// Allow 0 or 1 file argument
 	Args: cobra.MaximumNArgs(1),
-	// When called without subcommand, run REPL
+	// When called without subcommand, open editor
 	Run: func(cmd *cobra.Command, args []string) {
 		// If a file argument is provided, open in editor mode
 		if len(args) > 0 {
 			runEdit(args[0])
 			return
 		}
-		// Otherwise start REPL
-		runREPL()
+		// Otherwise open editor with empty document
+		runEdit("")
 	},
 }
 
