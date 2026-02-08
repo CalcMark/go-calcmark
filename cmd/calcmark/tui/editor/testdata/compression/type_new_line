@@ -38,8 +38,8 @@ run observe=lines
 -- lines:
 sourceToVisual: map[0:0 1:2 2:3 3:5 4:6 5:7 6:8 7:10 8:12 9:13 10:14 11:15 12:17]
 Visual lines:
-  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Compression Function - compr..." <CURSOR>
-  [1] srcIdx=0 lineNum=0 wrap=false pad=true content=""
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="jjjjjoThis# Compression Functi..." <CURSOR>
+  [1] srcIdx=0 lineNum=0 wrap=true pad=false content="compress()"
   [2] srcIdx=1 lineNum=2 wrap=false pad=false content=""
   [3] srcIdx=2 lineNum=3 wrap=false pad=false content="# Compressed size estimates fo..."
   [4] srcIdx=2 lineNum=0 wrap=true pad=false content="compression types"
@@ -72,8 +72,8 @@ run observe=lines
 -- lines:
 sourceToVisual: map[0:0 1:2 2:3 3:5 4:6 5:7 6:8 7:10 8:12 9:13 10:14 11:15 12:17]
 Visual lines:
-  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Compression Function - compr..." <CURSOR>
-  [1] srcIdx=0 lineNum=0 wrap=false pad=true content=""
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="jjjjjoThis# Compression Functi..." <CURSOR>
+  [1] srcIdx=0 lineNum=0 wrap=true pad=false content="compress()"
   [2] srcIdx=1 lineNum=2 wrap=false pad=false content=""
   [3] srcIdx=2 lineNum=3 wrap=false pad=false content="# Compressed size estimates fo..."
   [4] srcIdx=2 lineNum=0 wrap=true pad=false content="compression types"
