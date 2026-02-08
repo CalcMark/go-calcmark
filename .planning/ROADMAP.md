@@ -26,7 +26,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 11: Navigation** - Word, line, and document movement
 - [x] **Phase 11.1: Bug Fixes** - Fix convert_rate preview and TUI display bugs (INSERTED)
 - [x] **Phase 11.2: UX Redesign** - Holistic command/help system redesign (INSERTED)
-- [ ] **Phase 12: Undo/Redo** - Full history with cursor restoration
+- [x] **Phase 12: Undo/Redo** - Full history with cursor restoration
 - [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
 - [ ] **Phase 14: File Operations** - Save, quit, new file flows
 - [ ] **Phase 15: Help Update** - Accurate keybindings for new features
