@@ -554,6 +554,10 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCtrlD()
 	case tea.KeyCtrlU:
 		return m.handleCtrlU()
+	case tea.KeyCtrlZ:
+		return m.handleUndo()
+	case tea.KeyCtrlY:
+		return m.handleRedo()
 	case tea.KeySpace:
 		return m.handleSpaceKey()
 	case tea.KeyRunes:
@@ -1079,6 +1083,18 @@ func (m Model) handleCtrlD() (tea.Model, tea.Cmd) {
 func (m Model) handleCtrlU() (tea.Model, tea.Cmd) {
 	m.loadCurrentLineIntoEditBuffer()
 	m.moveCursor(-m.height/2, 0)
+	return m, nil
+}
+
+// handleUndo handles Ctrl+Z - undo last edit batch.
+func (m Model) handleUndo() (tea.Model, tea.Cmd) {
+	m.performUndo()
+	return m, nil
+}
+
+// handleRedo handles Ctrl+Y - redo last undone edit batch.
+func (m Model) handleRedo() (tea.Model, tea.Cmd) {
+	m.performRedo()
 	return m, nil
 }
 
