@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 12 (Undo/Redo)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-08 — Completed Timer-based Grouping (12-02)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 — Completed Model Integration (12-03)
 
-Progress: [████████████░░░░░░░░] 58%
+Progress: [█████████████░░░░░░░] 62%
 
 ## Milestone v1.1 Scope
 
@@ -62,6 +62,9 @@ Progress: [████████████░░░░░░░░] 58%
 
 Recent decisions affecting current work:
 
+- [12-03]: All edit paths (including autocomplete mode) must call recordEdit() for undo
+- [12-03]: transitionToProcessing() called before undo to flush editBuf
+- [12-03]: Cursor restoration uses first operation in batch (stores pre-batch state)
 - [12-02]: undoGroupingDelay = 1000ms (lower end of 1-2 second range)
 - [12-02]: Follow evalDebounceMsg pattern for stale timer detection (batchID vs groupID)
 - [12-02]: groupID never resets (stale timers remain invalidated across commits)
@@ -155,9 +158,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 12-02-PLAN.md (Timer-based Grouping)
+Stopped at: Completed 12-03-PLAN.md (Model Integration)
 Resume file: None
-Next: Phase 12-03 (Model integration)
+Next: Phase 13 (Clipboard)
 
 ---
-*Updated: 2026-02-08 — Completed 12-02 (Timer-based Grouping)*
+*Updated: 2026-02-08 — Completed Phase 12 (Undo/Redo)*
