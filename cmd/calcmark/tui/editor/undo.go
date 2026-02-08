@@ -1,7 +1,23 @@
 // Package editor provides the TUI editor for CalcMark documents.
 package editor
 
-import "time"
+import (
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+// undoGroupingDelay is the duration of typing pause that creates an undo boundary.
+// Consecutive typing within this duration groups into a single undo step.
+// Per CONTEXT.md: 1-2 seconds, starting with 1 second.
+const undoGroupingDelay = 1000 * time.Millisecond
+
+// undoGroupMsg is sent when the grouping timer fires to commit the current batch.
+// The batchID field prevents stale timer commits using the same pattern as evalDebounceMsg.
+// If batchID doesn't match the manager's current groupID, the timer is stale and ignored.
+type undoGroupMsg struct {
+	batchID int
+}
 
 // OpType represents the type of edit operation.
 type OpType int
@@ -122,6 +138,16 @@ func (b UndoBatch) Reverse() []EditOperation {
 // - Oldest states dropped silently when full
 // - Fresh history on file open
 // - Max 2x file size memory budget
+//
+// Grouping behavior (from CONTEXT.md):
+// - Timer expiry (1 second pause) -> auto boundary
+// - Enter key -> immediate boundary (always creates boundary)
+// - Arrow keys -> immediate boundary (navigation creates boundary)
+// - Line joins (Delete at EOL, Backspace at BOL) -> immediate boundary (separate step)
+// - Paste -> immediate boundary before AND after (one step)
+// - Scroll -> NO boundary (scroll doesn't create boundary)
+// - Character typing: No boundary (grouped by timer)
+// - Delete/Backspace within line: No boundary (grouped by timer)
 type UndoManager struct {
 	// history is a circular buffer of committed batches.
 	// Pre-allocated to maxHistory capacity.
@@ -142,6 +168,11 @@ type UndoManager struct {
 
 	// maxHistory is the maximum number of batches to keep.
 	maxHistory int
+
+	// groupID is incremented on each AddOperation to invalidate pending timers.
+	// When a timer fires, if its batchID doesn't match groupID, the timer is stale.
+	// This is the same pattern used by evalDebounceMsg.editBufSnapshot.
+	groupID int
 }
 
 // NewUndoManager creates a new UndoManager with the specified history limit.
@@ -160,10 +191,28 @@ func NewUndoManager(maxHistory int) *UndoManager {
 
 // AddOperation adds an operation to the current uncommitted batch.
 // This clears the redo stack (standard undo/redo behavior per CONTEXT.md discretion).
+// The groupID is incremented to invalidate any pending grouping timers.
 func (m *UndoManager) AddOperation(op EditOperation) {
 	m.current = append(m.current, op)
 	// Clear redo stack on new edit (standard behavior)
 	m.redoStack = m.redoStack[:0]
+	// Increment groupID to invalidate stale timers
+	m.groupID++
+}
+
+// GetGroupID returns the current groupID for timer validation.
+// Timer messages compare their batchID against this value to detect staleness.
+func (m *UndoManager) GetGroupID() int {
+	return m.groupID
+}
+
+// CreateGroupCmd returns a tea.Cmd that fires undoGroupMsg after undoGroupingDelay.
+// The message includes the current groupID so stale timers can be detected.
+func (m *UndoManager) CreateGroupCmd() tea.Cmd {
+	batchID := m.groupID
+	return tea.Tick(undoGroupingDelay, func(t time.Time) tea.Msg {
+		return undoGroupMsg{batchID: batchID}
+	})
 }
 
 // CommitBatch finalizes the current operations as a batch in history.
