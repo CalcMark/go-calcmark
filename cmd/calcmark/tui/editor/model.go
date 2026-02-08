@@ -788,6 +788,11 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 	runes := []rune(m.editBuf)
 	col := m.cursorCol
 
+	// Clamp col to valid range to prevent index out of bounds
+	if col > len(runes) {
+		col = len(runes)
+	}
+
 	// Skip whitespace backwards
 	for col > 0 && unicode.IsSpace(runes[col-1]) {
 		col--
@@ -799,7 +804,7 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 	}
 
 	// If we only skipped punctuation, skip it too
-	if col == m.cursorCol {
+	if col == m.cursorCol || col == len(runes) {
 		for col > 0 && unicode.IsPunct(runes[col-1]) {
 			col--
 		}
@@ -819,6 +824,11 @@ func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
 
 	runes := []rune(m.editBuf)
 	lineLen := len(runes)
+
+	// Clamp cursorCol to valid range
+	if m.cursorCol > lineLen {
+		m.cursorCol = lineLen
+	}
 
 	// If at end of line, move to start of next line
 	if m.cursorCol >= lineLen {
