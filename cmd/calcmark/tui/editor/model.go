@@ -157,9 +157,9 @@ type Model struct {
 	lineWrap        bool            // Whether to wrap long lines
 	changedBlockIDs map[string]bool // Track changed blocks for highlighting
 
-	// Undo/redo
-	undoStack []string // Document content snapshots
-	redoStack []string
+	// Undo/redo - UndoManager handles operation-based undo/redo with timer grouping
+	undoManager *UndoManager
+	undoGroupID int // Mirrors UndoManager.groupID for stale timer detection
 
 	// Export state
 	exportFormat     string   // Selected export format (text, json, html, md)
@@ -231,8 +231,7 @@ func New(doc *document.Document) Model {
 		pinnedVars:       make(map[string]bool),
 		changedVars:      make(map[string]bool),
 		changedBlockIDs:  make(map[string]bool),
-		undoStack:        []string{},
-		redoStack:        []string{},
+		undoManager:      NewUndoManager(1000),
 		exportFormatOpts: []string{"text", "cm", "json", "html", "md"},
 		width:            80,
 		height:           24,
@@ -267,9 +266,6 @@ func New(doc *document.Document) Model {
 	// Auto-pin all variables
 	m.autoPinVariables()
 
-	// Save initial state for undo
-	m.pushUndoState()
-
 	// Initialize savedContent to current content (new documents start "saved")
 	m.savedContent = m.getDocumentContent()
 
@@ -294,19 +290,6 @@ func (m *Model) autoPinVariables() {
 	}
 }
 
-// pushUndoState saves current document state for undo.
-func (m *Model) pushUndoState() {
-	content := m.getDocumentContent()
-	if len(m.undoStack) == 0 || m.undoStack[len(m.undoStack)-1] != content {
-		m.undoStack = append(m.undoStack, content)
-		// Limit undo stack size
-		if len(m.undoStack) > 100 {
-			m.undoStack = m.undoStack[1:]
-		}
-		// Clear redo stack on new change
-		m.redoStack = nil
-	}
-}
 
 // getDocumentContent returns the document as a string.
 // CRITICAL: Returns content with trailing newline to preserve line count.
@@ -777,7 +760,6 @@ func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
 	// Process document changes immediately on ESC
 	m.redetectBlockTypes()
 	m.reEvaluate()
-	m.pushUndoState()
 	m.modified = true
 	m.userIsTyping = false
 
@@ -805,7 +787,6 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	// Process document changes immediately on ENTER
 	m.redetectBlockTypes()
 	m.reEvaluate()
-	m.pushUndoState()
 	m.modified = true
 	m.userIsTyping = false
 
@@ -1230,14 +1211,12 @@ func (m *Model) saveCurrentLine(save bool) {
 				m.eval = implDoc.NewEvaluator()
 				_ = m.eval.Evaluate(m.doc)
 				m.modified = true
-				m.pushUndoState()
 				m.autoPinVariables()
 			}
 		} else if len(m.GetLines()) > 0 {
 			// Normal case: update existing line
 			m.updateCurrentLine(m.editBuf)
 			m.modified = true
-			m.pushUndoState()
 
 			// Re-detect block types in case content changed from calc to text or vice versa
 			m.redetectBlockTypes()
@@ -1258,7 +1237,6 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 	// CRITICAL: Re-evaluate after saving line so preview shows updated results
 	m.redetectBlockTypes()
 	m.reEvaluate()
-	m.pushUndoState()
 	m.userIsTyping = false // Navigation commits the typing
 
 	// Remember cursor column to try to preserve it
@@ -1412,7 +1390,6 @@ func (m *Model) insertLine(at int) {
 	m.cursorLine = at
 	m.cursorCol = 0
 	m.modified = true
-	m.pushUndoState()
 
 	// Adjust scroll to keep cursor visible with margin
 	m.adjustScrollForCursor()
@@ -1460,51 +1437,175 @@ func (m *Model) reEvaluate() {
 	// so the view can show which blocks were affected by the last change
 }
 
-// undo reverts to the previous state.
-func (m *Model) undo() {
-	if len(m.undoStack) <= 1 {
+// performUndo executes an undo operation using the UndoManager.
+// This is called from executeCommand and command menu.
+func (m *Model) performUndo() {
+	// Flush pending edits to document (CRITICAL - Pitfall 4)
+	m.transitionToProcessing()
+
+	// Commit any pending batch before undoing
+	m.undoManager.CommitCurrentBatch()
+
+	// Get batch to undo
+	batch, ok := m.undoManager.Undo()
+	if !ok {
+		m.statusMsg = "Nothing to undo"
 		return
 	}
 
-	// Save current state to redo
-	current := m.undoStack[len(m.undoStack)-1]
-	m.redoStack = append(m.redoStack, current)
-
-	// Pop and restore previous state
-	m.undoStack = m.undoStack[:len(m.undoStack)-1]
-	prev := m.undoStack[len(m.undoStack)-1]
-
-	// Restore document
-	doc, err := document.NewDocument(prev)
-	if err != nil {
-		return
+	// Apply operations in reverse order
+	for i := len(batch.Operations) - 1; i >= 0; i-- {
+		m.applyOperationReverse(batch.Operations[i])
 	}
-	m.doc = doc
-	m.eval = implDoc.NewEvaluator()
-	_ = m.eval.Evaluate(m.doc)
+
+	// Restore cursor from first operation (chronologically first - has pre-batch state)
+	if len(batch.Operations) > 0 {
+		op := batch.Operations[0]
+		m.cursorLine = op.CursorLine
+		m.cursorCol = op.CursorCol
+		m.scrollOffset = op.ScrollOffset
+	}
+
+	// Re-evaluate document
+	m.redetectBlockTypes()
+	m.reEvaluate()
+
+	m.statusMsg = "Undo"
 	m.modified = true
 }
 
-// redo re-applies an undone change.
-func (m *Model) redo() {
-	if len(m.redoStack) == 0 {
+// performRedo executes a redo operation using the UndoManager.
+// This is called from executeCommand and command menu.
+func (m *Model) performRedo() {
+	// Flush pending edits to document (CRITICAL - Pitfall 4)
+	m.transitionToProcessing()
+
+	// Commit any pending batch before redoing
+	m.undoManager.CommitCurrentBatch()
+
+	// Get batch to redo
+	batch, ok := m.undoManager.Redo()
+	if !ok {
+		m.statusMsg = "Nothing to redo"
 		return
 	}
 
-	// Pop from redo and apply
-	content := m.redoStack[len(m.redoStack)-1]
-	m.redoStack = m.redoStack[:len(m.redoStack)-1]
-
-	doc, err := document.NewDocument(content)
-	if err != nil {
-		return
+	// Apply operations in forward order (original execution order)
+	for _, op := range batch.Operations {
+		m.applyOperationForward(op)
 	}
-	m.doc = doc
-	m.eval = implDoc.NewEvaluator()
-	_ = m.eval.Evaluate(m.doc)
 
-	m.undoStack = append(m.undoStack, content)
+	// Restore cursor from last operation (chronologically last - has post-batch state)
+	if len(batch.Operations) > 0 {
+		lastOp := batch.Operations[len(batch.Operations)-1]
+		// For redo, cursor goes to the end of the last operation
+		// Position after the operation completed
+		m.cursorLine = lastOp.Line
+		m.cursorCol = lastOp.Col + len(lastOp.NewText)
+	}
+
+	// Re-evaluate document
+	m.redetectBlockTypes()
+	m.reEvaluate()
+
+	m.statusMsg = "Redo"
 	m.modified = true
+}
+
+// applyOperationReverse reverses a single edit operation (for undo).
+func (m *Model) applyOperationReverse(op EditOperation) {
+	lines := m.GetLines()
+	if op.Line < 0 || op.Line >= len(lines) {
+		return
+	}
+
+	line := lines[op.Line]
+	var newLine string
+
+	switch op.Type {
+	case OpInsert:
+		// Undoing insert: delete the NewText at position
+		if op.Col >= 0 && op.Col <= len(line) {
+			endCol := op.Col + len(op.NewText)
+			if endCol > len(line) {
+				endCol = len(line)
+			}
+			newLine = line[:op.Col] + line[endCol:]
+		} else {
+			newLine = line
+		}
+	case OpDelete:
+		// Undoing delete: insert the OldText at position
+		if op.Col >= 0 && op.Col <= len(line) {
+			newLine = line[:op.Col] + op.OldText + line[op.Col:]
+		} else {
+			newLine = line
+		}
+	case OpReplace:
+		// Undoing replace: replace NewText with OldText
+		if op.Col >= 0 && op.Col <= len(line) {
+			endCol := op.Col + len(op.NewText)
+			if endCol > len(line) {
+				endCol = len(line)
+			}
+			newLine = line[:op.Col] + op.OldText + line[endCol:]
+		} else {
+			newLine = line
+		}
+	}
+
+	// Update the line in the document
+	m.cursorLine = op.Line
+	m.editBuf = newLine
+	m.updateCurrentLine(newLine)
+}
+
+// applyOperationForward applies a single edit operation (for redo).
+func (m *Model) applyOperationForward(op EditOperation) {
+	lines := m.GetLines()
+	if op.Line < 0 || op.Line >= len(lines) {
+		return
+	}
+
+	line := lines[op.Line]
+	var newLine string
+
+	switch op.Type {
+	case OpInsert:
+		// Redo insert: insert the NewText at position
+		if op.Col >= 0 && op.Col <= len(line) {
+			newLine = line[:op.Col] + op.NewText + line[op.Col:]
+		} else {
+			newLine = line
+		}
+	case OpDelete:
+		// Redo delete: delete OldText.length chars at position
+		if op.Col >= 0 && op.Col <= len(line) {
+			endCol := op.Col + len(op.OldText)
+			if endCol > len(line) {
+				endCol = len(line)
+			}
+			newLine = line[:op.Col] + line[endCol:]
+		} else {
+			newLine = line
+		}
+	case OpReplace:
+		// Redo replace: replace OldText with NewText
+		if op.Col >= 0 && op.Col <= len(line) {
+			endCol := op.Col + len(op.OldText)
+			if endCol > len(line) {
+				endCol = len(line)
+			}
+			newLine = line[:op.Col] + op.NewText + line[endCol:]
+		} else {
+			newLine = line
+		}
+	}
+
+	// Update the line in the document
+	m.cursorLine = op.Line
+	m.editBuf = newLine
+	m.updateCurrentLine(newLine)
 }
 
 // executeCommand executes a slash command.
@@ -1564,9 +1665,9 @@ func (m *Model) executeCommand(cmd string) {
 			}
 		}
 	case "undo", "u":
-		m.undo()
+		m.performUndo()
 	case "redo":
-		m.redo()
+		m.performRedo()
 	case "find", "f", "search":
 		if len(parts) > 1 {
 			term := strings.Join(parts[1:], " ")
@@ -1762,10 +1863,8 @@ func (m *Model) openFile(filename string) {
 	m.cursorCol = 0
 	m.scrollOffset = 0
 
-	// Reset undo stack
-	m.undoStack = []string{}
-	m.redoStack = []string{}
-	m.pushUndoState()
+	// Reset undo history - fresh start on file open (per CONTEXT.md)
+	m.undoManager.Clear()
 
 	// Record file content as saved state
 	m.savedContent = string(content)
@@ -2191,7 +2290,6 @@ func (m *Model) deleteLine() {
 				}
 
 				m.modified = true
-				m.pushUndoState()
 				m.reEvaluate()
 				m.InvalidateAlignedCache()
 
@@ -2236,7 +2334,6 @@ func (m *Model) pasteLine() {
 	m.insertLineBelow()
 	m.updateCurrentLine(m.yankBuffer)
 	m.modified = true
-	m.pushUndoState()
 	m.reEvaluate()
 	m.statusMsg = "Line pasted"
 }
@@ -2251,7 +2348,6 @@ func (m *Model) pasteLineAbove() {
 	m.insertLineAbove()
 	m.updateCurrentLine(m.yankBuffer)
 	m.modified = true
-	m.pushUndoState()
 	m.reEvaluate()
 	m.statusMsg = "Line pasted above"
 }

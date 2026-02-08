@@ -257,19 +257,23 @@ func TestHandleKeyQuit(t *testing.T) {
 	}
 }
 
-func TestUndo(t *testing.T) {
+func TestUndoManager(t *testing.T) {
 	doc, _ := document.NewDocument("x = 10\n")
 	m := New(doc)
 
-	// Initial undo stack should have one entry
-	if len(m.undoStack) != 1 {
-		t.Errorf("Expected 1 undo entry, got %d", len(m.undoStack))
+	// Initial undo stack should be empty (no operations recorded yet)
+	if m.undoManager.HistorySize() != 0 {
+		t.Errorf("Expected 0 undo entries, got %d", m.undoManager.HistorySize())
 	}
 
-	// Make a change
-	m.pushUndoState() // This will be a duplicate, so shouldn't add
-	if len(m.undoStack) != 1 {
-		t.Error("Duplicate state should not be added")
+	// UndoManager is initialized
+	if m.undoManager == nil {
+		t.Error("UndoManager should be initialized")
+	}
+
+	// Test that HasUndo returns false when empty
+	if m.undoManager.HasUndo() {
+		t.Error("Should not have undo available when history is empty")
 	}
 }
 

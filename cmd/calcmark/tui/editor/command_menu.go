@@ -35,8 +35,8 @@ var EditorCommands = []Command{
 	{Name: "Toggle Preview", Accelerator: "Ctrl+P", Description: "Cycle preview mode", Category: "view"},
 
 	// Navigation commands
-	{Name: "Word Left", Accelerator: "Ctrl+Left/Alt+B", Description: "Move to previous word", Category: "navigation"},
-	{Name: "Word Right", Accelerator: "Ctrl+Right/Alt+F", Description: "Move to next word", Category: "navigation"},
+	{Name: "Word Left", Accelerator: "Ctrl+Left", Description: "Move to previous word", Category: "navigation"},
+	{Name: "Word Right", Accelerator: "Ctrl+Right", Description: "Move to next word", Category: "navigation"},
 	{Name: "Doc Start", Accelerator: "Ctrl+Home", Description: "Jump to document start", Category: "navigation"},
 	{Name: "Doc End", Accelerator: "Ctrl+End", Description: "Jump to document end", Category: "navigation"},
 
@@ -116,11 +116,11 @@ func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "Undo":
-		m.undo()
+		m.performUndo()
 		return m, nil
 
 	case "Redo":
-		m.redo()
+		m.performRedo()
 		return m, nil
 
 	case "Toggle Preview":
