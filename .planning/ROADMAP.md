@@ -298,9 +298,28 @@ Plans:
 
 ---
 
+### Phase 18: UI Polish
+
+**Goal**: Refine the user interface with visual improvements and UX enhancements
+
+**Depends on**: Phase 17 (all features tested and validated)
+
+**Requirements**: None (polish phase, requirements TBD during planning)
+
+**Success Criteria** (what must be TRUE):
+1. Error messages are clearly visible and not clipped
+2. Status area provides contextual information
+3. Visual consistency across all UI states
+4. Responsive feel during rapid input
+5. Keyboard shortcuts are discoverable
+
+**Plans**: TBD
+
+---
+
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 11.1 -> 11.2 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
+**Execution Order:** Phases execute in numeric order: 9 -> 9.1 -> 10 -> 11 -> 11.1 -> 11.2 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -316,6 +335,7 @@ Plans:
 | 15. Help Update | v1.1 | 0/TBD | Not started | - |
 | 16. Source Highlighting | v1.1 | 0/TBD | Not started | - |
 | 17. Testing & Validation | v1.1 | 0/TBD | Not started | - |
+| 18. UI Polish | v1.1 | 0/TBD | Not started | - |
 
 ---
 
