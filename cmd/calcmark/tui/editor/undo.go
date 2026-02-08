@@ -23,12 +23,23 @@ type undoGroupMsg struct {
 type OpType int
 
 const (
-	// OpInsert represents an insertion of text.
+	// OpInsert represents an insertion of text within a line.
 	OpInsert OpType = iota
-	// OpDelete represents a deletion of text.
+	// OpDelete represents a deletion of text within a line.
 	OpDelete
 	// OpReplace represents a replacement of text (delete + insert at same position).
 	OpReplace
+	// OpInsertLine represents insertion of a new line (Enter key).
+	// Line field is the line number where the split occurred.
+	// OldText is the original full line content.
+	// NewText is not used.
+	// The new line is inserted at Line+1.
+	OpInsertLine
+	// OpDeleteLine represents deletion of a line (Backspace at BOL, Delete at EOL).
+	// Line field is the line number that was deleted.
+	// OldText is the deleted line's content.
+	// NewText is not used.
+	OpDeleteLine
 )
 
 // String returns the string representation of OpType.
@@ -40,6 +51,10 @@ func (t OpType) String() string {
 		return "Delete"
 	case OpReplace:
 		return "Replace"
+	case OpInsertLine:
+		return "InsertLine"
+	case OpDeleteLine:
+		return "DeleteLine"
 	default:
 		return "Unknown"
 	}
@@ -75,6 +90,7 @@ type EditOperation struct {
 
 // Reverse returns an EditOperation that undoes this operation.
 // Insert becomes Delete, Delete becomes Insert, Replace swaps Old/New.
+// InsertLine becomes DeleteLine, DeleteLine becomes InsertLine.
 // The cursor and scroll positions are preserved to restore the pre-edit state.
 func (op EditOperation) Reverse() EditOperation {
 	reversed := EditOperation{
@@ -101,6 +117,16 @@ func (op EditOperation) Reverse() EditOperation {
 		reversed.Type = OpReplace
 		reversed.OldText = op.NewText
 		reversed.NewText = op.OldText
+	case OpInsertLine:
+		// Undoing line insert means deleting the created line
+		reversed.Type = OpDeleteLine
+		reversed.OldText = op.OldText
+		reversed.NewText = op.NewText
+	case OpDeleteLine:
+		// Undoing line delete means inserting the line back
+		reversed.Type = OpInsertLine
+		reversed.OldText = op.OldText
+		reversed.NewText = op.NewText
 	}
 
 	return reversed

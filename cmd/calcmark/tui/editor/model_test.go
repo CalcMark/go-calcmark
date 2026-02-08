@@ -393,6 +393,68 @@ func TestUndoNothingToUndo(t *testing.T) {
 	}
 }
 
+// TestUndoAfterTypeAndEnter reproduces the bug where:
+// 1. User types "hello" then Enter
+// 2. User presses Ctrl+Z
+// 3. BUG: Content becomes "hellohello" instead of being undone
+// This test MUST FAIL until the bug is fixed.
+func TestUndoAfterTypeAndEnter(t *testing.T) {
+	// Start with empty document
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	initialLines := m.GetLines()
+	t.Logf("Initial lines: %v", initialLines)
+
+	// Step 1: Type "hello"
+	for _, ch := range "hello" {
+		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		newModel, _ := m.Update(typeMsg)
+		m = newModel.(Model)
+	}
+
+	linesAfterHello := m.GetLines()
+	t.Logf("After typing 'hello': %v, editBuf=%q", linesAfterHello, m.editBuf)
+
+	// Step 2: Press Enter (this should commit "hello" and create newline)
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := m.Update(enterMsg)
+	m = newModel.(Model)
+
+	linesAfterEnter := m.GetLines()
+	t.Logf("After Enter: %v (total=%d)", linesAfterEnter, len(linesAfterEnter))
+
+	// Verify state before undo
+	if len(linesAfterEnter) < 2 {
+		t.Fatalf("Expected at least 2 lines after Enter, got %d: %v", len(linesAfterEnter), linesAfterEnter)
+	}
+	if linesAfterEnter[0] != "hello" {
+		t.Errorf("Expected first line to be 'hello', got %q", linesAfterEnter[0])
+	}
+
+	// Step 3: Press Ctrl+Z to undo
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	linesAfterUndo := m.GetLines()
+	t.Logf("After Ctrl+Z: %v", linesAfterUndo)
+
+	// CRITICAL BUG CHECK: Content should NOT be "hellohello"
+	if len(linesAfterUndo) > 0 && strings.Contains(linesAfterUndo[0], "hellohello") {
+		t.Errorf("BUG REPRODUCED: Undo duplicated content! Got %q", linesAfterUndo[0])
+	}
+
+	// After undo, we should be back to empty or have "hello" without newline
+	// (depending on what the last committed batch was)
+	// The key assertion is that content should NEVER be duplicated
+	totalContent := strings.Join(linesAfterUndo, "\n")
+	helloCount := strings.Count(totalContent, "hello")
+	if helloCount > 1 {
+		t.Errorf("BUG: 'hello' appears %d times after undo (should be 0 or 1). Content: %q", helloCount, totalContent)
+	}
+}
+
 func TestGetStatusBarState(t *testing.T) {
 	doc, _ := document.NewDocument("x = 10\ny = 20\n")
 	m := NewWithFile("test.cm", doc)

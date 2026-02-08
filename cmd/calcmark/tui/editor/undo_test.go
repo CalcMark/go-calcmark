@@ -61,6 +61,38 @@ func TestEditOperation_Reverse(t *testing.T) {
 			wantOld:  "bar", // Swapped
 			wantNew:  "foo", // Swapped
 		},
+		{
+			name: "InsertLine becomes DeleteLine",
+			op: EditOperation{
+				Type:         OpInsertLine,
+				Line:         2,
+				Col:          5,
+				OldText:      "hello world",
+				NewText:      " world",
+				CursorLine:   2,
+				CursorCol:    5,
+				ScrollOffset: 0,
+			},
+			wantType: OpDeleteLine,
+			wantOld:  "hello world",
+			wantNew:  " world",
+		},
+		{
+			name: "DeleteLine becomes InsertLine",
+			op: EditOperation{
+				Type:         OpDeleteLine,
+				Line:         3,
+				Col:          0,
+				OldText:      "deleted line content",
+				NewText:      "",
+				CursorLine:   3,
+				CursorCol:    0,
+				ScrollOffset: 1,
+			},
+			wantType: OpInsertLine,
+			wantOld:  "deleted line content",
+			wantNew:  "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -446,6 +478,8 @@ func TestOpType_String(t *testing.T) {
 		{OpInsert, "Insert"},
 		{OpDelete, "Delete"},
 		{OpReplace, "Replace"},
+		{OpInsertLine, "InsertLine"},
+		{OpDeleteLine, "DeleteLine"},
 		{OpType(99), "Unknown"},
 	}
 

@@ -840,13 +840,16 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	textBefore := m.editBuf[:m.cursorCol]
 	textAfter := m.editBuf[m.cursorCol:]
 
-	// Record as Replace operation (line split)
+	// Record as InsertLine operation (line split creates new line)
+	// OldText = original full line content (for restoration on undo)
+	// NewText = the part that moves to new line (textAfter)
+	// Col = cursor position where split occurred
 	op := EditOperation{
-		Type:         OpReplace,
+		Type:         OpInsertLine,
 		Line:         beforeLine,
 		Col:          beforeCol,
-		OldText:      m.editBuf,                    // Original line content
-		NewText:      textBefore + "\n" + textAfter, // Split content
+		OldText:      m.editBuf,  // Original line content before split
+		NewText:      textAfter,  // Content moved to new line
 		CursorLine:   beforeLine,
 		CursorCol:    beforeCol,
 		ScrollOffset: beforeScroll,
@@ -1788,6 +1791,40 @@ func (m *Model) performRedo() {
 // applyOperationReverse reverses a single edit operation (for undo).
 func (m *Model) applyOperationReverse(op EditOperation) {
 	lines := m.GetLines()
+
+	switch op.Type {
+	case OpInsertLine:
+		// Undoing line insert: delete the created line and restore original
+		// The new line was created at Line+1
+		if op.Line+1 < len(lines) {
+			// Delete line at Line+1
+			m.cursorLine = op.Line + 1
+			m.deleteLine()
+		}
+		// Restore original line content
+		if op.Line < len(m.GetLines()) {
+			m.cursorLine = op.Line
+			m.editBuf = op.OldText
+			m.updateCurrentLine(op.OldText)
+		}
+		return
+
+	case OpDeleteLine:
+		// Undoing line delete: insert the line back
+		// First ensure we're at the right position
+		m.cursorLine = op.Line
+		if op.Line > 0 {
+			m.cursorLine = op.Line - 1
+		}
+		// Insert a new line
+		m.insertLineBelow()
+		// Set its content
+		m.editBuf = op.OldText
+		m.updateCurrentLine(op.OldText)
+		return
+	}
+
+	// For single-line operations, validate bounds
 	if op.Line < 0 || op.Line >= len(lines) {
 		return
 	}
@@ -1836,6 +1873,33 @@ func (m *Model) applyOperationReverse(op EditOperation) {
 // applyOperationForward applies a single edit operation (for redo).
 func (m *Model) applyOperationForward(op EditOperation) {
 	lines := m.GetLines()
+
+	switch op.Type {
+	case OpInsertLine:
+		// Redo line insert: split the line again
+		if op.Line < len(lines) {
+			// Set line to content before split
+			textBefore := op.OldText[:op.Col]
+			m.cursorLine = op.Line
+			m.editBuf = textBefore
+			m.updateCurrentLine(textBefore)
+			// Insert new line with content after split
+			m.insertLineBelow()
+			m.editBuf = op.NewText
+			m.updateCurrentLine(op.NewText)
+		}
+		return
+
+	case OpDeleteLine:
+		// Redo line delete: delete the line again
+		if op.Line < len(lines) {
+			m.cursorLine = op.Line
+			m.deleteLine()
+		}
+		return
+	}
+
+	// For single-line operations, validate bounds
 	if op.Line < 0 || op.Line >= len(lines) {
 		return
 	}
