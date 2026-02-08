@@ -277,6 +277,122 @@ func TestUndoManager(t *testing.T) {
 	}
 }
 
+// TestUndoRedoIntegration tests the FULL undo/redo flow through Update().
+// This test explicitly verifies that Ctrl+Z actually modifies the document,
+// catching value/pointer receiver bugs that would cause changes to be lost.
+func TestUndoRedoIntegration(t *testing.T) {
+	// Use multi-line document so navigation commits edits
+	doc, _ := document.NewDocument("# Header\nx = 10\n")
+	m := New(doc)
+
+	// Get initial content
+	initialLines := m.GetLines()
+	if len(initialLines) == 0 || initialLines[0] != "# Header" {
+		t.Fatalf("Expected initial line '# Header', got %v", initialLines)
+	}
+
+	// Step 1: Type "abc" by sending KeyRunes through Update()
+	// This simulates actual user typing
+	typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("abc")}
+	newModel, _ := m.Update(typeMsg)
+	m = newModel.(Model)
+
+	// Verify typing was recorded in editBuf
+	if !strings.HasPrefix(m.editBuf, "abc") {
+		t.Errorf("Expected editBuf to start with 'abc', got %q", m.editBuf)
+	}
+
+	// Step 2: Force a boundary by navigating down (commits the edit)
+	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ = m.Update(downMsg)
+	m = newModel.(Model)
+
+	// Verify the document now contains the typed text
+	linesAfterType := m.GetLines()
+	if len(linesAfterType) == 0 || !strings.HasPrefix(linesAfterType[0], "abc") {
+		t.Errorf("Expected first line to start with 'abc' after typing, got %v", linesAfterType)
+	}
+
+	// Step 3: Press Ctrl+Z to undo
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	// CRITICAL ASSERTION: Document should be restored to original state
+	linesAfterUndo := m.GetLines()
+	if len(linesAfterUndo) == 0 {
+		t.Fatal("Expected lines after undo, got empty")
+	}
+	if linesAfterUndo[0] != "# Header" {
+		t.Errorf("UNDO FAILED: Expected first line to be '# Header' after undo, got %q", linesAfterUndo[0])
+	}
+
+	// Step 4: Press Ctrl+Y to redo
+	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	newModel, _ = m.Update(redoMsg)
+	m = newModel.(Model)
+
+	// CRITICAL ASSERTION: Document should have the typed text again
+	linesAfterRedo := m.GetLines()
+	if len(linesAfterRedo) == 0 {
+		t.Fatal("Expected lines after redo, got empty")
+	}
+	if !strings.HasPrefix(linesAfterRedo[0], "abc") {
+		t.Errorf("REDO FAILED: Expected first line to start with 'abc' after redo, got %q", linesAfterRedo[0])
+	}
+
+	// Step 5: Verify undo again works
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+	linesAfterUndo2 := m.GetLines()
+	if linesAfterUndo2[0] != "# Header" {
+		t.Errorf("UNDO (2nd) FAILED: Expected '# Header', got %q", linesAfterUndo2[0])
+	}
+}
+
+// TestUndoStatusMessage verifies undo sets the status message.
+// This catches the case where undo appears to work but doesn't update UI feedback.
+func TestUndoStatusMessage(t *testing.T) {
+	doc, _ := document.NewDocument("test\n")
+	m := New(doc)
+
+	// Type something
+	typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")}
+	newModel, _ := m.Update(typeMsg)
+	m = newModel.(Model)
+
+	// Navigate to commit
+	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ = m.Update(downMsg)
+	m = newModel.(Model)
+
+	// Undo
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	// Check status message
+	if m.statusMsg != "Undo" {
+		t.Errorf("Expected status message 'Undo', got %q", m.statusMsg)
+	}
+}
+
+// TestUndoNothingToUndo verifies correct behavior when undo stack is empty.
+func TestUndoNothingToUndo(t *testing.T) {
+	doc, _ := document.NewDocument("test\n")
+	m := New(doc)
+
+	// Immediately try to undo without any edits
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ := m.Update(undoMsg)
+	m = newModel.(Model)
+
+	// Should show "Nothing to undo"
+	if m.statusMsg != "Nothing to undo" {
+		t.Errorf("Expected status 'Nothing to undo', got %q", m.statusMsg)
+	}
+}
+
 func TestGetStatusBarState(t *testing.T) {
 	doc, _ := document.NewDocument("x = 10\ny = 20\n")
 	m := NewWithFile("test.cm", doc)
