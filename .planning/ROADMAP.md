@@ -310,7 +310,7 @@ Plans:
 | 11. Navigation | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 11.1 Bug Fixes | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 11.2 UX Redesign | v1.1 | 3/3 | Complete | 2026-02-07 |
-| 12. Undo/Redo | v1.1 | 0/3 | Not started | - |
+| 12. Undo/Redo | v1.1 | 3/3 | Complete | 2026-02-08 |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
 | 15. Help Update | v1.1 | 0/TBD | Not started | - |
@@ -320,4 +320,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*
