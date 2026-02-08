@@ -1088,13 +1088,74 @@ func (m Model) handleCtrlU() (tea.Model, tea.Cmd) {
 
 // handleUndo handles Ctrl+Z - undo last edit batch.
 func (m Model) handleUndo() (tea.Model, tea.Cmd) {
-	m.performUndo()
+	// Flush pending edits to document (CRITICAL - Pitfall 4)
+	m.transitionToProcessing()
+
+	// Commit any pending batch before undoing
+	m.undoManager.CommitCurrentBatch()
+
+	// Get batch to undo
+	batch, ok := m.undoManager.Undo()
+	if !ok {
+		m.statusMsg = "Nothing to undo"
+		return m, nil
+	}
+
+	// Apply operations in reverse order
+	for i := len(batch.Operations) - 1; i >= 0; i-- {
+		m.applyOperationReverse(batch.Operations[i])
+	}
+
+	// Restore cursor from first operation (chronologically first - has pre-batch state)
+	if len(batch.Operations) > 0 {
+		op := batch.Operations[0]
+		m.cursorLine = op.CursorLine
+		m.cursorCol = op.CursorCol
+		m.scrollOffset = op.ScrollOffset
+	}
+
+	// Re-evaluate document
+	m.redetectBlockTypes()
+	m.reEvaluate()
+
+	m.statusMsg = "Undo"
+	m.modified = true
 	return m, nil
 }
 
 // handleRedo handles Ctrl+Y - redo last undone edit batch.
 func (m Model) handleRedo() (tea.Model, tea.Cmd) {
-	m.performRedo()
+	// Flush pending edits to document (CRITICAL - Pitfall 4)
+	m.transitionToProcessing()
+
+	// Commit any pending batch before redoing
+	m.undoManager.CommitCurrentBatch()
+
+	// Get batch to redo
+	batch, ok := m.undoManager.Redo()
+	if !ok {
+		m.statusMsg = "Nothing to redo"
+		return m, nil
+	}
+
+	// Apply operations in forward order (original execution order)
+	for _, op := range batch.Operations {
+		m.applyOperationForward(op)
+	}
+
+	// Restore cursor to end state (last operation's position after edit)
+	if len(batch.Operations) > 0 {
+		lastOp := batch.Operations[len(batch.Operations)-1]
+		m.cursorLine = lastOp.Line
+		m.cursorCol = lastOp.Col + len(lastOp.NewText)
+	}
+
+	// Re-evaluate document
+	m.redetectBlockTypes()
+	m.reEvaluate()
+
+	m.statusMsg = "Redo"
+	m.modified = true
 	return m, nil
 }
 
