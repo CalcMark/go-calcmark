@@ -509,6 +509,80 @@ func TestUTF8TypeAndUndo(t *testing.T) {
 	}
 }
 
+// TestRepeatedUndoRedoNoPanic verifies that pressing Ctrl+Z or Ctrl+Y repeatedly
+// doesn't panic when the undo/redo stack is exhausted.
+func TestRepeatedUndoRedoNoPanic(t *testing.T) {
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	// Type something
+	for _, ch := range "hello" {
+		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		newModel, _ := m.Update(typeMsg)
+		m = newModel.(Model)
+	}
+
+	// Press Enter to commit
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := m.Update(enterMsg)
+	m = newModel.(Model)
+
+	// Press Ctrl+Z many times (should not panic)
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	for i := 0; i < 20; i++ {
+		newModel, _ = m.Update(undoMsg)
+		m = newModel.(Model)
+	}
+
+	// The undo stack should be exhausted, status should say "Nothing to undo"
+	t.Logf("After 20 undos: statusMsg=%q", m.statusMsg)
+
+	// Press Ctrl+Y many times (should not panic)
+	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	for i := 0; i < 20; i++ {
+		newModel, _ = m.Update(redoMsg)
+		m = newModel.(Model)
+	}
+
+	// The redo stack should be exhausted, status should say "Nothing to redo"
+	t.Logf("After 20 redos: statusMsg=%q", m.statusMsg)
+}
+
+// TestUndoRedoAlternating tests alternating undo/redo operations.
+// This can trigger edge cases where cursor positions become invalid.
+func TestUndoRedoAlternating(t *testing.T) {
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+
+	// Type and enter multiple times
+	for round := 0; round < 3; round++ {
+		for _, ch := range "hello" {
+			typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+			newModel, _ := m.Update(typeMsg)
+			m = newModel.(Model)
+		}
+		newModel, _ := m.Update(enterMsg)
+		m = newModel.(Model)
+	}
+
+	t.Logf("After typing: lines=%v", m.GetLines())
+
+	// Undo, redo, undo, redo pattern
+	for i := 0; i < 10; i++ {
+		newModel, _ := m.Update(undoMsg)
+		m = newModel.(Model)
+		t.Logf("After undo %d: lines=%d, status=%q", i, len(m.GetLines()), m.statusMsg)
+
+		newModel, _ = m.Update(redoMsg)
+		m = newModel.(Model)
+		t.Logf("After redo %d: lines=%d, status=%q", i, len(m.GetLines()), m.statusMsg)
+	}
+}
+
 // TestUTF8CursorMovement verifies cursor movement is rune-based, not byte-based.
 func TestUTF8CursorMovement(t *testing.T) {
 	doc, _ := document.NewDocument("日本語")  // 3 characters, 9 bytes

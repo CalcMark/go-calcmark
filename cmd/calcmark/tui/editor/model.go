@@ -1161,6 +1161,25 @@ func (m Model) handleUndo() (tea.Model, tea.Cmd) {
 		m.cursorLine = op.CursorLine
 		m.cursorCol = op.CursorCol
 		m.scrollOffset = op.ScrollOffset
+
+		// Clamp cursor to valid range after undo
+		totalLines := m.TotalLines()
+		if m.cursorLine >= totalLines {
+			m.cursorLine = totalLines - 1
+		}
+		if m.cursorLine < 0 {
+			m.cursorLine = 0
+		}
+		lines := m.GetLines()
+		if m.cursorLine < len(lines) {
+			lineLen := runeLen(lines[m.cursorLine])
+			if m.cursorCol > lineLen {
+				m.cursorCol = lineLen
+			}
+		}
+		if m.cursorCol < 0 {
+			m.cursorCol = 0
+		}
 	}
 
 	// Re-evaluate document
@@ -1196,7 +1215,27 @@ func (m Model) handleRedo() (tea.Model, tea.Cmd) {
 	if len(batch.Operations) > 0 {
 		lastOp := batch.Operations[len(batch.Operations)-1]
 		m.cursorLine = lastOp.Line
-		m.cursorCol = lastOp.Col + len(lastOp.NewText)
+		// Clamp cursorLine to valid range
+		totalLines := m.TotalLines()
+		if m.cursorLine >= totalLines {
+			m.cursorLine = totalLines - 1
+		}
+		if m.cursorLine < 0 {
+			m.cursorLine = 0
+		}
+		// Use runeLen for UTF-8 safety
+		m.cursorCol = lastOp.Col + runeLen(lastOp.NewText)
+		// Clamp cursorCol to valid range
+		lines := m.GetLines()
+		if m.cursorLine < len(lines) {
+			lineLen := runeLen(lines[m.cursorLine])
+			if m.cursorCol > lineLen {
+				m.cursorCol = lineLen
+			}
+		}
+		if m.cursorCol < 0 {
+			m.cursorCol = 0
+		}
 	}
 
 	// Re-evaluate document
