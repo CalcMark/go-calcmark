@@ -456,3 +456,305 @@ func TestOpType_String(t *testing.T) {
 		}
 	}
 }
+
+// TestUndoManager_GroupIDIncrement tests that groupID increments correctly.
+func TestUndoManager_GroupIDIncrement(t *testing.T) {
+	m := NewUndoManager(100)
+
+	// Initial groupID should be 0
+	if m.GetGroupID() != 0 {
+		t.Errorf("Initial GetGroupID() = %d, want 0", m.GetGroupID())
+	}
+
+	// Each AddOperation increments groupID
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "a"})
+	if m.GetGroupID() != 1 {
+		t.Errorf("GetGroupID() after first add = %d, want 1", m.GetGroupID())
+	}
+
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "b"})
+	if m.GetGroupID() != 2 {
+		t.Errorf("GetGroupID() after second add = %d, want 2", m.GetGroupID())
+	}
+
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "c"})
+	if m.GetGroupID() != 3 {
+		t.Errorf("GetGroupID() after third add = %d, want 3", m.GetGroupID())
+	}
+
+	// CommitBatch does NOT reset groupID (stale timers remain invalidated)
+	m.CommitBatch()
+	if m.GetGroupID() != 3 {
+		t.Errorf("GetGroupID() after CommitBatch = %d, want 3 (unchanged)", m.GetGroupID())
+	}
+
+	// Adding more operations continues incrementing
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "d"})
+	if m.GetGroupID() != 4 {
+		t.Errorf("GetGroupID() after fourth add = %d, want 4", m.GetGroupID())
+	}
+}
+
+// TestUndoManager_CommitCurrentBatch tests the CommitCurrentBatch alias.
+func TestUndoManager_CommitCurrentBatch(t *testing.T) {
+	m := NewUndoManager(100)
+
+	// Multiple AddOperation calls before CommitCurrentBatch creates single batch
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "h"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "e"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "l"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "l"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "o"})
+
+	if m.CurrentBatchSize() != 5 {
+		t.Errorf("CurrentBatchSize() = %d, want 5", m.CurrentBatchSize())
+	}
+
+	// CommitCurrentBatch groups them
+	m.CommitCurrentBatch()
+
+	if m.CurrentBatchSize() != 0 {
+		t.Errorf("CurrentBatchSize() after commit = %d, want 0", m.CurrentBatchSize())
+	}
+	if m.HistorySize() != 1 {
+		t.Errorf("HistorySize() = %d, want 1", m.HistorySize())
+	}
+
+	// Undo returns all operations together
+	batch, ok := m.Undo()
+	if !ok {
+		t.Fatal("Undo() failed")
+	}
+	if len(batch.Operations) != 5 {
+		t.Errorf("Batch has %d operations, want 5", len(batch.Operations))
+	}
+
+	// Verify the operations are in order
+	expected := []string{"h", "e", "l", "l", "o"}
+	for i, exp := range expected {
+		if batch.Operations[i].NewText != exp {
+			t.Errorf("Operation[%d].NewText = %q, want %q", i, batch.Operations[i].NewText, exp)
+		}
+	}
+
+	// CommitCurrentBatch with no current ops is no-op
+	m.Redo() // Put the batch back
+	if m.HistorySize() != 1 {
+		t.Fatalf("HistorySize() = %d after redo, want 1", m.HistorySize())
+	}
+
+	m.CommitCurrentBatch() // No-op, no uncommitted operations
+	if m.HistorySize() != 1 {
+		t.Errorf("HistorySize() = %d after empty commit, want 1", m.HistorySize())
+	}
+}
+
+// TestUndoManager_ForceBoundary tests the ForceBoundary method.
+func TestUndoManager_ForceBoundary(t *testing.T) {
+	m := NewUndoManager(100)
+
+	// Add some operations
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "h"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "i"})
+
+	// ForceBoundary commits current batch (simulates Enter key)
+	m.ForceBoundary()
+
+	if m.HistorySize() != 1 {
+		t.Errorf("HistorySize() after ForceBoundary = %d, want 1", m.HistorySize())
+	}
+	if m.CurrentBatchSize() != 0 {
+		t.Errorf("CurrentBatchSize() after ForceBoundary = %d, want 0", m.CurrentBatchSize())
+	}
+
+	// Subsequent AddOperation starts new batch
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "t"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "h"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "e"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "r"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "e"})
+
+	m.ForceBoundary()
+
+	if m.HistorySize() != 2 {
+		t.Errorf("HistorySize() after second ForceBoundary = %d, want 2", m.HistorySize())
+	}
+
+	// Undo should return "there" first, then "hi"
+	batch1, _ := m.Undo()
+	if len(batch1.Operations) != 5 {
+		t.Errorf("First undo batch has %d ops, want 5", len(batch1.Operations))
+	}
+
+	batch2, _ := m.Undo()
+	if len(batch2.Operations) != 2 {
+		t.Errorf("Second undo batch has %d ops, want 2", len(batch2.Operations))
+	}
+}
+
+// TestUndoManager_GroupingScenarios tests realistic grouping scenarios.
+func TestUndoManager_GroupingScenarios(t *testing.T) {
+	t.Run("Scenario 1: Type 'hello' rapidly -> 1 undo step", func(t *testing.T) {
+		m := NewUndoManager(100)
+
+		// Rapid typing (5 ops), then commit (simulating timer expiry)
+		for _, ch := range "hello" {
+			m.AddOperation(EditOperation{Type: OpInsert, NewText: string(ch)})
+		}
+		m.CommitCurrentBatch()
+
+		if m.HistorySize() != 1 {
+			t.Errorf("HistorySize() = %d, want 1", m.HistorySize())
+		}
+
+		batch, _ := m.Undo()
+		if len(batch.Operations) != 5 {
+			t.Errorf("Batch has %d operations, want 5", len(batch.Operations))
+		}
+	})
+
+	t.Run("Scenario 2: Type 'hi', boundary, type 'there' -> 2 undo steps", func(t *testing.T) {
+		m := NewUndoManager(100)
+
+		// Type "hi"
+		for _, ch := range "hi" {
+			m.AddOperation(EditOperation{Type: OpInsert, NewText: string(ch)})
+		}
+		m.ForceBoundary() // Simulates navigation or Enter
+
+		// Type "there"
+		for _, ch := range "there" {
+			m.AddOperation(EditOperation{Type: OpInsert, NewText: string(ch)})
+		}
+		m.CommitCurrentBatch()
+
+		if m.HistorySize() != 2 {
+			t.Errorf("HistorySize() = %d, want 2", m.HistorySize())
+		}
+
+		// First undo: "there"
+		batch1, _ := m.Undo()
+		if len(batch1.Operations) != 5 {
+			t.Errorf("First batch has %d ops, want 5", len(batch1.Operations))
+		}
+
+		// Second undo: "hi"
+		batch2, _ := m.Undo()
+		if len(batch2.Operations) != 2 {
+			t.Errorf("Second batch has %d ops, want 2", len(batch2.Operations))
+		}
+	})
+
+	t.Run("Scenario 3: Type 'a', delete 'a' in same batch -> 1 undo step", func(t *testing.T) {
+		m := NewUndoManager(100)
+
+		// Type "a"
+		m.AddOperation(EditOperation{
+			Type:       OpInsert,
+			NewText:    "a",
+			Line:       0,
+			Col:        0,
+			CursorLine: 0,
+			CursorCol:  0,
+		})
+
+		// Delete "a" (within same batch - rapid typing/deleting)
+		m.AddOperation(EditOperation{
+			Type:       OpDelete,
+			OldText:    "a",
+			Line:       0,
+			Col:        0,
+			CursorLine: 0,
+			CursorCol:  1,
+		})
+
+		m.CommitCurrentBatch()
+
+		if m.HistorySize() != 1 {
+			t.Errorf("HistorySize() = %d, want 1", m.HistorySize())
+		}
+
+		// Single undo restores original (both ops undone)
+		batch, _ := m.Undo()
+		if len(batch.Operations) != 2 {
+			t.Errorf("Batch has %d operations, want 2", len(batch.Operations))
+		}
+
+		// Verify reversal: should be Insert (undo delete), then Delete (undo insert)
+		reversed := batch.Reverse()
+		if len(reversed) != 2 {
+			t.Fatalf("Reversed batch has %d ops, want 2", len(reversed))
+		}
+		// First reversed: undo the delete -> insert "a"
+		if reversed[0].Type != OpInsert || reversed[0].NewText != "a" {
+			t.Errorf("reversed[0] = {%v, %q}, want {Insert, \"a\"}", reversed[0].Type, reversed[0].NewText)
+		}
+		// Second reversed: undo the insert -> delete "a"
+		if reversed[1].Type != OpDelete || reversed[1].OldText != "a" {
+			t.Errorf("reversed[1] = {%v, old=%q}, want {Delete, old=\"a\"}", reversed[1].Type, reversed[1].OldText)
+		}
+	})
+}
+
+// TestUndoGroupMsg_StaleTimer tests the stale timer detection pattern.
+func TestUndoGroupMsg_StaleTimer(t *testing.T) {
+	m := NewUndoManager(100)
+
+	// Type something
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "a"})
+	batchID := m.GetGroupID() // Capture current groupID (1)
+
+	if batchID != 1 {
+		t.Errorf("batchID = %d, want 1", batchID)
+	}
+
+	// Create a message with this batchID (simulates timer being started)
+	msg := undoGroupMsg{batchID: batchID}
+
+	// User keeps typing (new operations)
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "b"})
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "c"})
+
+	// groupID has changed, timer is now stale
+	currentGroupID := m.GetGroupID()
+	if currentGroupID != 3 {
+		t.Errorf("currentGroupID = %d, want 3", currentGroupID)
+	}
+
+	// Verify timer is stale
+	if msg.batchID == m.GetGroupID() {
+		t.Error("Timer should be stale: msg.batchID == GetGroupID()")
+	}
+
+	// This is how model.go will check: if msg.batchID != m.undo.GetGroupID(), ignore
+	isStale := msg.batchID != m.GetGroupID()
+	if !isStale {
+		t.Error("isStale should be true")
+	}
+
+	// If timer fires now, it should be ignored (the calling code checks this)
+	// We can simulate "fresh" timer by matching groupID
+	freshMsg := undoGroupMsg{batchID: m.GetGroupID()}
+	isFresh := freshMsg.batchID == m.GetGroupID()
+	if !isFresh {
+		t.Error("Fresh timer should match current groupID")
+	}
+}
+
+// TestUndoManager_CreateGroupCmd tests that CreateGroupCmd returns a valid tea.Cmd.
+func TestUndoManager_CreateGroupCmd(t *testing.T) {
+	m := NewUndoManager(100)
+
+	// Add an operation to have a non-zero groupID
+	m.AddOperation(EditOperation{Type: OpInsert, NewText: "test"})
+
+	// CreateGroupCmd should return a non-nil tea.Cmd
+	cmd := m.CreateGroupCmd()
+	if cmd == nil {
+		t.Error("CreateGroupCmd() returned nil")
+	}
+
+	// We can't easily test the tea.Tick behavior without running the bubbletea
+	// runtime, but we can verify the command is created and the groupID is captured
+	// The actual timer firing and message handling is tested in integration tests
+}
