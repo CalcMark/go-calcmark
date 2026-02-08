@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 11.1 (Bug Fixes) — COMPLETE
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-07 — Completed preview pane filtering (11.1-03)
+Phase: 12 (Undo/Redo)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-08 — Completed UndoManager core (12-01)
 
-Progress: [████████████░░░░░░░░] 55%
+Progress: [████████████░░░░░░░░] 56%
 
 ## Milestone v1.1 Scope
 
@@ -62,6 +62,10 @@ Progress: [████████████░░░░░░░░] 55%
 
 Recent decisions affecting current work:
 
+- [12-01]: Clear redo stack on new edits (standard undo/redo behavior)
+- [12-01]: Pre-allocate history buffer to maxHistory capacity
+- [12-01]: Store cursor/scroll BEFORE operations for restoration
+- [12-01]: Operation reversal: Insert<->Delete, Replace swaps Old/New
 - [11.1-03]: Only headings (# prefix) and calculation results shown in preview pane
 - [11.1-03]: Filtered content (blockquotes, links, paragraphs) shows blank for vertical alignment
 - [11.1-02]: Use Mul(targetSeconds/sourceSeconds) instead of Div(sourceSeconds/targetSeconds) for rate conversion to preserve integer precision
@@ -146,10 +150,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Completed Phase 11.1 (Bug Fixes)
+Last session: 2026-02-08
+Stopped at: Completed 12-01-PLAN.md (UndoManager core)
 Resume file: None
-Next: Phase 12 (Undo/Redo)
+Next: Phase 12-02 (Timer-based batching)
 
 ---
-*Updated: 2026-02-07 — Completed Phase 11.1 (Bug Fixes)*
+*Updated: 2026-02-08 — Completed 12-01 (UndoManager core)*
