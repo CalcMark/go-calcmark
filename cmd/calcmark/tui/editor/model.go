@@ -383,6 +383,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Transition to processing - this will update the line, re-evaluate, and transition to ready
 			m.transitionToProcessing()
 		}
+
+	case undoGroupMsg:
+		// Timer fired for undo grouping - commit if batchID matches current groupID
+		// (Stale timers have mismatched batchIDs and are ignored)
+		if msg.batchID == m.undoGroupID {
+			m.undoManager.CommitCurrentBatch()
+		}
 	}
 
 	return m, nil
@@ -563,6 +570,11 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Capture state BEFORE the edit for undo
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	// Insert all characters at cursor position
 	m.transitionToEditing()
 
@@ -570,10 +582,29 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 		m.insertRune(r)
 	}
 
+	// Record the insert operation
+	insertText := string(runes)
+	op := EditOperation{
+		Type:         OpInsert,
+		Line:         beforeLine,
+		Col:          beforeCol,
+		OldText:      "",
+		NewText:      insertText,
+		CursorLine:   beforeLine,
+		CursorCol:    beforeCol,
+		ScrollOffset: beforeScroll,
+	}
+	undoCmd := m.recordEdit(op)
+
 	// Check for autocomplete suggestions after typing (use pointer to modify)
 	(&m).updateAutocompleteState()
 
-	return m.debounceUpdate()
+	// Return batch of commands: debounce for evaluation + undo grouping timer
+	debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+		return evalDebounceMsg{editBufSnapshot: m.editBuf}
+	})
+
+	return m, tea.Batch(debounceCmd, undoCmd)
 }
 
 // ========================================
@@ -582,6 +613,8 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 
 // Navigation keys
 func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorLine > 0 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
@@ -590,6 +623,8 @@ func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorLine < m.TotalLines()-1 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
@@ -598,6 +633,8 @@ func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorCol > 0 {
 		m.cursorCol--
@@ -610,6 +647,8 @@ func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorCol < len(m.editBuf) {
 		m.cursorCol++
@@ -622,24 +661,32 @@ func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handlePageUpKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	m.moveCursor(-(m.height - 4), 0)
 	return m, nil
 }
 
 func (m Model) handlePageDownKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	m.moveCursor(m.height-4, 0)
 	return m, nil
 }
 
 func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	m.cursorCol = 0
 	return m, nil
 }
 
 func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	m.cursorCol = len(m.editBuf)
 	return m, nil
@@ -647,6 +694,8 @@ func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
 
 // handleCtrlHomeKey moves cursor to document start (line 0, column 0).
 func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	m.saveCurrentLineAndMoveTo(0)
 	m.cursorCol = 0
@@ -655,6 +704,8 @@ func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
 
 // handleCtrlEndKey moves cursor to document end (last line, end of line).
 func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	lastLine := m.TotalLines() - 1
 	if lastLine < 0 {
@@ -669,6 +720,8 @@ func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
 // Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
 // If at column 0, wraps to end of previous line first (like handleLeftKey).
 func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 
 	// If at start of line, move to end of previous line first
@@ -709,6 +762,8 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 // Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
 // If at end of line, wraps to start of next line first (like handleRightKey).
 func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
+	// Navigation creates undo boundary per CONTEXT.md discretion
+	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 
 	runes := []rune(m.editBuf)
@@ -767,11 +822,31 @@ func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
+	// Capture state BEFORE the edit for undo
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	m.loadCurrentLineIntoEditBuffer()
+
+	// Enter always creates immediate boundary per CONTEXT.md
+	m.undoManager.ForceBoundary()
 
 	// Split line at cursor position
 	textBefore := m.editBuf[:m.cursorCol]
 	textAfter := m.editBuf[m.cursorCol:]
+
+	// Record as Replace operation (line split)
+	op := EditOperation{
+		Type:         OpReplace,
+		Line:         beforeLine,
+		Col:          beforeCol,
+		OldText:      m.editBuf,                    // Original line content
+		NewText:      textBefore + "\n" + textAfter, // Split content
+		CursorLine:   beforeLine,
+		CursorCol:    beforeCol,
+		ScrollOffset: beforeScroll,
+	}
 
 	// Save current line with text before cursor
 	m.editBuf = textBefore
@@ -790,19 +865,49 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	m.modified = true
 	m.userIsTyping = false
 
+	// Record the operation (commits immediately due to ForceBoundary)
+	m.undoManager.AddOperation(op)
+	m.undoManager.CommitCurrentBatch()
+
 	return m, nil
 }
 
 func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
+	// Capture state BEFORE the edit for undo
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	m.transitionToEditing()
 
 	if m.cursorCol > 0 && len(m.editBuf) > 0 {
 		// Delete character before cursor
+		deletedChar := string(m.editBuf[m.cursorCol-1])
 		m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
 		m.cursorCol--
-		return m.debounceUpdate()
+
+		// Record the delete operation
+		op := EditOperation{
+			Type:         OpDelete,
+			Line:         beforeLine,
+			Col:          m.cursorCol, // Position where deletion occurred
+			OldText:      deletedChar,
+			NewText:      "",
+			CursorLine:   beforeLine,
+			CursorCol:    beforeCol,
+			ScrollOffset: beforeScroll,
+		}
+		undoCmd := m.recordEdit(op)
+
+		debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+			return evalDebounceMsg{editBufSnapshot: m.editBuf}
+		})
+		return m, tea.Batch(debounceCmd, undoCmd)
 	} else if m.cursorCol == 0 && m.cursorLine > 0 {
 		// At column 0 - join current line with previous line
+		// This is a line join - force boundary per CONTEXT.md
+		m.undoManager.ForceBoundary()
+
 		currentContent := m.editBuf
 		prevLine := m.cursorLine - 1
 
@@ -811,6 +916,18 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 		prevContent := ""
 		if prevLine < len(lines) {
 			prevContent = lines[prevLine]
+		}
+
+		// Record as Replace operation (more complex than simple delete)
+		op := EditOperation{
+			Type:         OpReplace,
+			Line:         prevLine,
+			Col:          len(prevContent),
+			OldText:      "\n" + currentContent, // Conceptually: newline + current line content
+			NewText:      currentContent,        // Joined content
+			CursorLine:   beforeLine,
+			CursorCol:    beforeCol,
+			ScrollOffset: beforeScroll,
 		}
 
 		// Delete current line
@@ -822,13 +939,23 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 		m.editBuf = prevContent + currentContent
 
 		m.transitionToEditing()
-		return m.debounceUpdate()
+		undoCmd := m.recordEdit(op)
+
+		debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+			return evalDebounceMsg{editBufSnapshot: m.editBuf}
+		})
+		return m, tea.Batch(debounceCmd, undoCmd)
 	}
 
 	return m, nil
 }
 
 func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
+	// Capture state BEFORE the edit for undo
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	// Transition to editing state BEFORE modifying editBuf.
 	// This ensures editBuf is loaded and state is set correctly.
 	// CRITICAL: Must be called first, because transitionToEditing reloads
@@ -837,15 +964,48 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 
 	if m.cursorCol < len(m.editBuf) {
 		// Delete character at cursor
+		deletedChar := string(m.editBuf[m.cursorCol])
 		m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
-		return m.debounceUpdate()
+
+		// Record the delete operation
+		op := EditOperation{
+			Type:         OpDelete,
+			Line:         beforeLine,
+			Col:          beforeCol,
+			OldText:      deletedChar,
+			NewText:      "",
+			CursorLine:   beforeLine,
+			CursorCol:    beforeCol,
+			ScrollOffset: beforeScroll,
+		}
+		undoCmd := m.recordEdit(op)
+
+		debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+			return evalDebounceMsg{editBufSnapshot: m.editBuf}
+		})
+		return m, tea.Batch(debounceCmd, undoCmd)
 	} else if m.cursorLine < m.TotalLines()-1 {
 		// At end of line - join with next line
+		// This is a line join - force boundary per CONTEXT.md
+		m.undoManager.ForceBoundary()
+
 		nextLine := m.cursorLine + 1
 		lines := m.GetLines()
 		nextContent := ""
 		if nextLine < len(lines) {
 			nextContent = lines[nextLine]
+		}
+
+		// Record as Replace operation
+		op := EditOperation{
+			Type:         OpReplace,
+			Line:         beforeLine,
+			Col:          beforeCol,
+			OldText:      "\n" + nextContent, // Conceptually: newline + next line content
+			NewText:      nextContent,        // Joined content
+			CursorLine:   beforeLine,
+			CursorCol:    beforeCol,
+			ScrollOffset: beforeScroll,
 		}
 
 		// Save current position
@@ -864,19 +1024,44 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 		}
 		m.cursorCol = currentCol
 
-		// transitionToEditing was already called at function start
-		return m.debounceUpdate()
+		undoCmd := m.recordEdit(op)
+		debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+			return evalDebounceMsg{editBufSnapshot: m.editBuf}
+		})
+		return m, tea.Batch(debounceCmd, undoCmd)
 	}
 
 	return m, nil
 }
 
 func (m Model) handleSpaceKey() (tea.Model, tea.Cmd) {
+	// Capture state BEFORE the edit for undo
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	m.loadCurrentLineIntoEditBuffer()
 	m.editBuf = m.editBuf[:m.cursorCol] + " " + m.editBuf[m.cursorCol:]
 	m.cursorCol++
 	m.transitionToEditing()
-	return m.debounceUpdate()
+
+	// Record the insert operation (space is just a character)
+	op := EditOperation{
+		Type:         OpInsert,
+		Line:         beforeLine,
+		Col:          beforeCol,
+		OldText:      "",
+		NewText:      " ",
+		CursorLine:   beforeLine,
+		CursorCol:    beforeCol,
+		ScrollOffset: beforeScroll,
+	}
+	undoCmd := m.recordEdit(op)
+
+	debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+		return evalDebounceMsg{editBufSnapshot: m.editBuf}
+	})
+	return m, tea.Batch(debounceCmd, undoCmd)
 }
 
 // Control keys
@@ -908,6 +1093,17 @@ func (m Model) debounceUpdate() (tea.Model, tea.Cmd) {
 	snapshot := m.editBuf
 	return m, tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
 		return evalDebounceMsg{editBufSnapshot: snapshot}
+	})
+}
+
+// recordEdit adds an operation to the undo history and starts a grouping timer.
+// Returns a tea.Cmd for the grouping timer.
+func (m *Model) recordEdit(op EditOperation) tea.Cmd {
+	m.undoManager.AddOperation(op)
+	m.undoGroupID = m.undoManager.GetGroupID()
+
+	return tea.Tick(undoGroupingDelay, func(t time.Time) tea.Msg {
+		return undoGroupMsg{batchID: m.undoGroupID}
 	})
 }
 
