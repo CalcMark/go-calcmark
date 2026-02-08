@@ -2721,21 +2721,67 @@ func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.acceptAutocomplete()
 	case tea.KeyRunes:
 		// Continue typing - insert characters and update suggestions
+		// Capture state BEFORE the edit for undo
+		beforeLine := m.cursorLine
+		beforeCol := m.cursorCol
+		beforeScroll := m.scrollOffset
+
 		m.transitionToEditing()
 		for _, r := range msg.Runes {
 			m.insertRune(r)
 		}
+
+		// Record the insert operation for undo
+		insertText := string(msg.Runes)
+		op := EditOperation{
+			Type:         OpInsert,
+			Line:         beforeLine,
+			Col:          beforeCol,
+			OldText:      "",
+			NewText:      insertText,
+			CursorLine:   beforeLine,
+			CursorCol:    beforeCol,
+			ScrollOffset: beforeScroll,
+		}
+		undoCmd := m.recordEdit(op)
+
 		// Update suggestions with new prefix (use pointer to modify)
 		(&m).updateAutocompleteState()
-		return m.debounceUpdate()
+		debounceModel, debounceCmd := m.debounceUpdate()
+		return debounceModel, tea.Batch(debounceCmd, undoCmd)
 	case tea.KeyBackspace:
 		// Allow backspace to edit the prefix
+		// Capture state BEFORE the edit for undo
+		beforeLine := m.cursorLine
+		beforeCol := m.cursorCol
+		beforeScroll := m.scrollOffset
+
 		m.transitionToEditing()
-		if m.cursorCol > 0 {
+		if m.cursorCol > 0 && len(m.editBuf) > 0 {
+			// Delete character before cursor
+			deletedChar := string(m.editBuf[m.cursorCol-1])
 			m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
 			m.cursorCol--
+
+			// Record the delete operation for undo
+			op := EditOperation{
+				Type:         OpDelete,
+				Line:         beforeLine,
+				Col:          m.cursorCol, // Position where deletion occurred
+				OldText:      deletedChar,
+				NewText:      "",
+				CursorLine:   beforeLine,
+				CursorCol:    beforeCol,
+				ScrollOffset: beforeScroll,
+			}
+			undoCmd := m.recordEdit(op)
+
+			// Update suggestions with new prefix (use pointer to modify)
+			(&m).updateAutocompleteState()
+			debounceModel, debounceCmd := m.debounceUpdate()
+			return debounceModel, tea.Batch(debounceCmd, undoCmd)
 		}
-		// Update suggestions with new prefix (use pointer to modify)
+		// If no character to delete, just update autocomplete state
 		(&m).updateAutocompleteState()
 		return m.debounceUpdate()
 	case tea.KeySpace:
