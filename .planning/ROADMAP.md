@@ -185,20 +185,25 @@ Plans:
 
 ### Phase 12: Undo/Redo
 
-**Goal**: Users can undo and redo any edit with full cursor position restoration
+**Goal**: Full history with cursor position restoration
 
-**Depends on**: Phase 11 (navigation foundation)
+**Depends on**: Phase 11.2 (UX redesign complete)
 
 **Requirements**: UNDO-01, UNDO-02, UNDO-03, UNDO-04, UNDO-05
 
 **Success Criteria** (what must be TRUE):
 1. Ctrl+Z undoes the last edit
 2. Ctrl+Y redoes the last undone edit
-3. Undo history is unlimited within session (no 100-state cap)
+3. Undo history uses operation-based diffs (not snapshots), 1000-state limit
 4. Cursor position is restored to where it was before each edit
 5. Undo/redo work correctly for edits spanning multiple lines
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — UndoManager core implementation (EditOperation, circular buffer)
+- [ ] 12-02-PLAN.md — Timer-based grouping (natural boundaries, 1s delay)
+- [ ] 12-03-PLAN.md — Editor integration and Ctrl+Z/Y handlers
 
 ---
 
@@ -299,13 +304,13 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 9. Interpreter Correctness | v1.1 | 4/4 | ✓ Complete | 2026-02-07 |
-| 9.1 Separate Validation/Execution | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 10. Preview Pane | v1.1 | 5/5 | ✓ Complete | 2026-02-06 |
-| 11. Navigation | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 11.1 Bug Fixes | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 11.2 UX Redesign | v1.1 | 3/3 | ✓ Complete | 2026-02-07 |
-| 12. Undo/Redo | v1.1 | 0/TBD | Not started | - |
+| 9. Interpreter Correctness | v1.1 | 4/4 | Complete | 2026-02-07 |
+| 9.1 Separate Validation/Execution | v1.1 | 3/3 | Complete | 2026-02-07 |
+| 10. Preview Pane | v1.1 | 5/5 | Complete | 2026-02-06 |
+| 11. Navigation | v1.1 | 3/3 | Complete | 2026-02-07 |
+| 11.1 Bug Fixes | v1.1 | 3/3 | Complete | 2026-02-07 |
+| 11.2 UX Redesign | v1.1 | 3/3 | Complete | 2026-02-07 |
+| 12. Undo/Redo | v1.1 | 0/3 | Not started | - |
 | 13. Clipboard | v1.1 | 0/TBD | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
 | 15. Help Update | v1.1 | 0/TBD | Not started | - |
