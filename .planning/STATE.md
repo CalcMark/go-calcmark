@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 12 (Undo/Redo)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-08 — Completed UndoManager core (12-01)
+Last activity: 2026-02-08 — Completed Timer-based Grouping (12-02)
 
-Progress: [████████████░░░░░░░░] 56%
+Progress: [████████████░░░░░░░░] 58%
 
 ## Milestone v1.1 Scope
 
@@ -62,6 +62,10 @@ Progress: [████████████░░░░░░░░] 56%
 
 Recent decisions affecting current work:
 
+- [12-02]: undoGroupingDelay = 1000ms (lower end of 1-2 second range)
+- [12-02]: Follow evalDebounceMsg pattern for stale timer detection (batchID vs groupID)
+- [12-02]: groupID never resets (stale timers remain invalidated across commits)
+- [12-02]: CommitCurrentBatch and ForceBoundary are semantic aliases for CommitBatch
 - [12-01]: Clear redo stack on new edits (standard undo/redo behavior)
 - [12-01]: Pre-allocate history buffer to maxHistory capacity
 - [12-01]: Store cursor/scroll BEFORE operations for restoration
@@ -151,9 +155,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 12-01-PLAN.md (UndoManager core)
+Stopped at: Completed 12-02-PLAN.md (Timer-based Grouping)
 Resume file: None
-Next: Phase 12-02 (Timer-based batching)
+Next: Phase 12-03 (Model integration)
 
 ---
-*Updated: 2026-02-08 — Completed 12-01 (UndoManager core)*
+*Updated: 2026-02-08 — Completed 12-02 (Timer-based Grouping)*
