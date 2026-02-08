@@ -201,9 +201,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — UndoManager core implementation (EditOperation, circular buffer)
-- [ ] 12-02-PLAN.md — Timer-based grouping (natural boundaries, 1s delay)
-- [ ] 12-03-PLAN.md — Editor integration and Ctrl+Z/Y handlers
+- [x] 12-01-PLAN.md — UndoManager core implementation (EditOperation, circular buffer)
+- [x] 12-02-PLAN.md — Timer-based grouping (natural boundaries, 1s delay)
+- [x] 12-03-PLAN.md — Editor integration and Ctrl+Z/Y handlers
 
 ---
 
@@ -221,7 +221,12 @@ Plans:
 3. Ctrl+C copies selected text to system clipboard (when selection exists)
 4. Ctrl+V pastes from system clipboard at cursor position
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Selection state foundation (Model fields, helper methods)
+- [ ] 13-02-PLAN.md — Selection highlighting and Ctrl+A with clear on navigation
+- [ ] 13-03-PLAN.md — Clipboard operations (Ctrl+X/C/V) with undo integration
 
 ---
 
@@ -330,7 +335,7 @@ Plans:
 | 11.1 Bug Fixes | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 11.2 UX Redesign | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 12. Undo/Redo | v1.1 | 3/3 | Complete | 2026-02-08 |
-| 13. Clipboard | v1.1 | 0/TBD | Not started | - |
+| 13. Clipboard | v1.1 | 0/3 | Not started | - |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
 | 15. Help Update | v1.1 | 0/TBD | Not started | - |
 | 16. Source Highlighting | v1.1 | 0/TBD | Not started | - |
