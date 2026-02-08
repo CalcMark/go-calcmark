@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
@@ -20,6 +21,52 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+// runeSlice splits a string at a rune position, returning (before, after).
+// This is UTF-8 safe - runePos is a character index, not a byte index.
+// If runePos is out of bounds, it's clamped to valid range.
+func runeSlice(s string, runePos int) (before, after string) {
+	runes := []rune(s)
+	if runePos < 0 {
+		runePos = 0
+	}
+	if runePos > len(runes) {
+		runePos = len(runes)
+	}
+	return string(runes[:runePos]), string(runes[runePos:])
+}
+
+// runeLen returns the number of runes (characters) in a string.
+// This is UTF-8 safe and returns character count, not byte count.
+func runeLen(s string) int {
+	return utf8.RuneCountInString(s)
+}
+
+// runeInsert inserts a string at a rune position.
+// This is UTF-8 safe - runePos is a character index, not a byte index.
+func runeInsert(s string, runePos int, insert string) string {
+	before, after := runeSlice(s, runePos)
+	return before + insert + after
+}
+
+// runeDelete removes count runes starting at runePos.
+// This is UTF-8 safe - runePos is a character index, not a byte index.
+func runeDelete(s string, runePos, count int) (result string, deleted string) {
+	runes := []rune(s)
+	if runePos < 0 {
+		runePos = 0
+	}
+	if runePos >= len(runes) {
+		return s, ""
+	}
+	endPos := runePos + count
+	if endPos > len(runes) {
+		endPos = len(runes)
+	}
+	deleted = string(runes[runePos:endPos])
+	result = string(runes[:runePos]) + string(runes[endPos:])
+	return result, deleted
+}
 
 // expandTilde expands ~ to the user's home directory in file paths.
 // The shell doesn't expand tilde for us when we get user input.
@@ -645,7 +692,7 @@ func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
 	} else if m.cursorLine > 0 {
 		// At start of line - move to end of previous line
 		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
-		m.cursorCol = len(m.editBuf)
+		m.cursorCol = runeLen(m.editBuf)
 	}
 	return m, nil
 }
@@ -654,7 +701,7 @@ func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
-	if m.cursorCol < len(m.editBuf) {
+	if m.cursorCol < runeLen(m.editBuf) {
 		m.cursorCol++
 	} else if m.cursorLine < m.TotalLines()-1 {
 		// At end of line - move to start of next line
@@ -692,7 +739,7 @@ func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
-	m.cursorCol = len(m.editBuf)
+	m.cursorCol = runeLen(m.editBuf)
 	return m, nil
 }
 
@@ -716,7 +763,7 @@ func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
 		lastLine = 0
 	}
 	m.saveCurrentLineAndMoveTo(lastLine)
-	m.cursorCol = len(m.editBuf)
+	m.cursorCol = runeLen(m.editBuf)
 	return m, nil
 }
 
@@ -732,7 +779,7 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 	if m.cursorCol == 0 {
 		if m.cursorLine > 0 {
 			m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
-			m.cursorCol = len(m.editBuf)
+			m.cursorCol = runeLen(m.editBuf)
 		}
 		return m, nil
 	}
@@ -836,9 +883,8 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	// Enter always creates immediate boundary per CONTEXT.md
 	m.undoManager.ForceBoundary()
 
-	// Split line at cursor position
-	textBefore := m.editBuf[:m.cursorCol]
-	textAfter := m.editBuf[m.cursorCol:]
+	// Split line at cursor position (UTF-8 safe)
+	textBefore, textAfter := runeSlice(m.editBuf, m.cursorCol)
 
 	// Record as InsertLine operation (line split creates new line)
 	// OldText = original full line content (for restoration on undo)
@@ -887,17 +933,17 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 
 	m.transitionToEditing()
 
-	if m.cursorCol > 0 && len(m.editBuf) > 0 {
-		// Delete character before cursor
-		deletedChar := string(m.editBuf[m.cursorCol-1])
-		m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
+	if m.cursorCol > 0 && runeLen(m.editBuf) > 0 {
+		// Delete character before cursor (UTF-8 safe)
+		var deletedChar string
+		m.editBuf, deletedChar = runeDelete(m.editBuf, m.cursorCol-1, 1)
 		m.cursorCol--
 
 		// Record the delete operation
 		op := EditOperation{
 			Type:         OpDelete,
 			Line:         beforeLine,
-			Col:          m.cursorCol, // Position where deletion occurred
+			Col:          m.cursorCol, // Position where deletion occurred (rune position)
 			OldText:      deletedChar,
 			NewText:      "",
 			CursorLine:   beforeLine,
@@ -929,7 +975,7 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 		op := EditOperation{
 			Type:         OpReplace,
 			Line:         prevLine,
-			Col:          len(prevContent),
+			Col:          runeLen(prevContent), // Rune position, not byte position
 			OldText:      "\n" + currentContent, // Conceptually: newline + current line content
 			NewText:      currentContent,        // Joined content
 			CursorLine:   beforeLine,
@@ -942,7 +988,7 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 
 		// Move to previous line and append current content
 		m.cursorLine = prevLine
-		m.cursorCol = len(prevContent)
+		m.cursorCol = runeLen(prevContent) // Rune position, not byte position
 		m.editBuf = prevContent + currentContent
 
 		m.transitionToEditing()
@@ -969,16 +1015,16 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 	// editBuf if it's empty, which would undo any deletion.
 	m.transitionToEditing()
 
-	if m.cursorCol < len(m.editBuf) {
-		// Delete character at cursor
-		deletedChar := string(m.editBuf[m.cursorCol])
-		m.editBuf = m.editBuf[:m.cursorCol] + m.editBuf[m.cursorCol+1:]
+	if m.cursorCol < runeLen(m.editBuf) {
+		// Delete character at cursor (UTF-8 safe)
+		var deletedChar string
+		m.editBuf, deletedChar = runeDelete(m.editBuf, m.cursorCol, 1)
 
 		// Record the delete operation
 		op := EditOperation{
 			Type:         OpDelete,
 			Line:         beforeLine,
-			Col:          beforeCol,
+			Col:          beforeCol, // Rune position, not byte position
 			OldText:      deletedChar,
 			NewText:      "",
 			CursorLine:   beforeLine,
@@ -1048,7 +1094,7 @@ func (m Model) handleSpaceKey() (tea.Model, tea.Cmd) {
 	beforeScroll := m.scrollOffset
 
 	m.loadCurrentLineIntoEditBuffer()
-	m.editBuf = m.editBuf[:m.cursorCol] + " " + m.editBuf[m.cursorCol:]
+	m.editBuf = runeInsert(m.editBuf, m.cursorCol, " ")
 	m.cursorCol++
 	m.transitionToEditing()
 
@@ -1165,7 +1211,7 @@ func (m Model) handleRedo() (tea.Model, tea.Cmd) {
 // insertRune inserts a single character at the cursor position.
 func (m *Model) insertRune(r rune) {
 	m.loadCurrentLineIntoEditBuffer()
-	m.editBuf = m.editBuf[:m.cursorCol] + string(r) + m.editBuf[m.cursorCol:]
+	m.editBuf = runeInsert(m.editBuf, m.cursorCol, string(r))
 	m.cursorCol++
 }
 
@@ -1530,8 +1576,8 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 	}
 
 	// Try to preserve column position, clamp to line length
-	if savedCol > len(m.editBuf) {
-		m.cursorCol = len(m.editBuf)
+	if savedCol > runeLen(m.editBuf) {
+		m.cursorCol = runeLen(m.editBuf)
 	} else {
 		m.cursorCol = savedCol
 	}
@@ -1831,34 +1877,29 @@ func (m *Model) applyOperationReverse(op EditOperation) {
 
 	line := lines[op.Line]
 	var newLine string
+	lineRuneLen := runeLen(line)
 
 	switch op.Type {
 	case OpInsert:
-		// Undoing insert: delete the NewText at position
-		if op.Col >= 0 && op.Col <= len(line) {
-			endCol := op.Col + len(op.NewText)
-			if endCol > len(line) {
-				endCol = len(line)
-			}
-			newLine = line[:op.Col] + line[endCol:]
+		// Undoing insert: delete the NewText at position (UTF-8 safe)
+		if op.Col >= 0 && op.Col <= lineRuneLen {
+			newLine, _ = runeDelete(line, op.Col, runeLen(op.NewText))
 		} else {
 			newLine = line
 		}
 	case OpDelete:
-		// Undoing delete: insert the OldText at position
-		if op.Col >= 0 && op.Col <= len(line) {
-			newLine = line[:op.Col] + op.OldText + line[op.Col:]
+		// Undoing delete: insert the OldText at position (UTF-8 safe)
+		if op.Col >= 0 && op.Col <= lineRuneLen {
+			newLine = runeInsert(line, op.Col, op.OldText)
 		} else {
 			newLine = line
 		}
 	case OpReplace:
-		// Undoing replace: replace NewText with OldText
-		if op.Col >= 0 && op.Col <= len(line) {
-			endCol := op.Col + len(op.NewText)
-			if endCol > len(line) {
-				endCol = len(line)
-			}
-			newLine = line[:op.Col] + op.OldText + line[endCol:]
+		// Undoing replace: replace NewText with OldText (UTF-8 safe)
+		if op.Col >= 0 && op.Col <= lineRuneLen {
+			// Delete NewText length, then insert OldText
+			temp, _ := runeDelete(line, op.Col, runeLen(op.NewText))
+			newLine = runeInsert(temp, op.Col, op.OldText)
 		} else {
 			newLine = line
 		}
@@ -1876,10 +1917,10 @@ func (m *Model) applyOperationForward(op EditOperation) {
 
 	switch op.Type {
 	case OpInsertLine:
-		// Redo line insert: split the line again
+		// Redo line insert: split the line again (UTF-8 safe)
 		if op.Line < len(lines) {
 			// Set line to content before split
-			textBefore := op.OldText[:op.Col]
+			textBefore, _ := runeSlice(op.OldText, op.Col)
 			m.cursorLine = op.Line
 			m.editBuf = textBefore
 			m.updateCurrentLine(textBefore)
@@ -1906,34 +1947,29 @@ func (m *Model) applyOperationForward(op EditOperation) {
 
 	line := lines[op.Line]
 	var newLine string
+	lineRuneLen := runeLen(line)
 
 	switch op.Type {
 	case OpInsert:
-		// Redo insert: insert the NewText at position
-		if op.Col >= 0 && op.Col <= len(line) {
-			newLine = line[:op.Col] + op.NewText + line[op.Col:]
+		// Redo insert: insert the NewText at position (UTF-8 safe)
+		if op.Col >= 0 && op.Col <= lineRuneLen {
+			newLine = runeInsert(line, op.Col, op.NewText)
 		} else {
 			newLine = line
 		}
 	case OpDelete:
-		// Redo delete: delete OldText.length chars at position
-		if op.Col >= 0 && op.Col <= len(line) {
-			endCol := op.Col + len(op.OldText)
-			if endCol > len(line) {
-				endCol = len(line)
-			}
-			newLine = line[:op.Col] + line[endCol:]
+		// Redo delete: delete OldText.length chars at position (UTF-8 safe)
+		if op.Col >= 0 && op.Col <= lineRuneLen {
+			newLine, _ = runeDelete(line, op.Col, runeLen(op.OldText))
 		} else {
 			newLine = line
 		}
 	case OpReplace:
-		// Redo replace: replace OldText with NewText
-		if op.Col >= 0 && op.Col <= len(line) {
-			endCol := op.Col + len(op.OldText)
-			if endCol > len(line) {
-				endCol = len(line)
-			}
-			newLine = line[:op.Col] + op.NewText + line[endCol:]
+		// Redo replace: replace OldText with NewText (UTF-8 safe)
+		if op.Col >= 0 && op.Col <= lineRuneLen {
+			// Delete OldText length, then insert NewText
+			temp, _ := runeDelete(line, op.Col, runeLen(op.OldText))
+			newLine = runeInsert(temp, op.Col, op.NewText)
 		} else {
 			newLine = line
 		}
@@ -2882,17 +2918,17 @@ func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		beforeScroll := m.scrollOffset
 
 		m.transitionToEditing()
-		if m.cursorCol > 0 && len(m.editBuf) > 0 {
-			// Delete character before cursor
-			deletedChar := string(m.editBuf[m.cursorCol-1])
-			m.editBuf = m.editBuf[:m.cursorCol-1] + m.editBuf[m.cursorCol:]
+		if m.cursorCol > 0 && runeLen(m.editBuf) > 0 {
+			// Delete character before cursor (UTF-8 safe)
+			var deletedChar string
+			m.editBuf, deletedChar = runeDelete(m.editBuf, m.cursorCol-1, 1)
 			m.cursorCol--
 
 			// Record the delete operation for undo
 			op := EditOperation{
 				Type:         OpDelete,
 				Line:         beforeLine,
-				Col:          m.cursorCol, // Position where deletion occurred
+				Col:          m.cursorCol, // Position where deletion occurred (rune position)
 				OldText:      deletedChar,
 				NewText:      "",
 				CursorLine:   beforeLine,
@@ -3016,18 +3052,24 @@ func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (w
 	return width, height
 }
 
-// getCurrentWordPrefix extracts the word being typed at cursor.
+// getCurrentWordPrefix extracts the word being typed at cursor (UTF-8 safe).
 func (m *Model) getCurrentWordPrefix() string {
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorCol == 0 {
 		return ""
 	}
 
+	// Convert to runes for UTF-8 safe iteration
+	runes := []rune(m.editBuf)
+	if m.cursorCol > len(runes) {
+		return ""
+	}
+
 	// Walk backwards to find word start
 	start := m.cursorCol
 	for start > 0 {
-		ch := m.editBuf[start-1]
-		if !isWordChar(ch) {
+		ch := runes[start-1]
+		if !isWordRune(ch) {
 			break
 		}
 		start--
@@ -3036,15 +3078,13 @@ func (m *Model) getCurrentWordPrefix() string {
 	if start >= m.cursorCol {
 		return ""
 	}
-	return m.editBuf[start:m.cursorCol]
+	return string(runes[start:m.cursorCol])
 }
 
-// isWordChar returns true if the byte is a valid word character for autocomplete.
-func isWordChar(ch byte) bool {
-	return (ch >= 'a' && ch <= 'z') ||
-		(ch >= 'A' && ch <= 'Z') ||
-		(ch >= '0' && ch <= '9') ||
-		ch == '_'
+// isWordRune returns true if the rune is a valid word character for autocomplete.
+// This is UTF-8 safe and handles Unicode letters/digits.
+func isWordRune(ch rune) bool {
+	return unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_'
 }
 
 // acceptAutocomplete inserts the selected suggestion at the cursor.
@@ -3068,15 +3108,18 @@ func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 		insertText += "("
 	}
 
-	// Replace prefix with selected suggestion
+	// Replace prefix with selected suggestion (UTF-8 safe)
 	prefix := m.autocompleteState.Prefix
-	prefixStart := m.cursorCol - len(prefix)
+	prefixStart := m.cursorCol - runeLen(prefix)
 	if prefixStart < 0 {
 		prefixStart = 0
 	}
 
-	m.editBuf = m.editBuf[:prefixStart] + insertText + m.editBuf[m.cursorCol:]
-	m.cursorCol = prefixStart + len(insertText)
+	// Delete the prefix, then insert the completion text
+	beforePrefix, _ := runeSlice(m.editBuf, prefixStart)
+	_, afterCursor := runeSlice(m.editBuf, m.cursorCol)
+	m.editBuf = beforePrefix + insertText + afterCursor
+	m.cursorCol = prefixStart + runeLen(insertText)
 
 	m.mode = StateDefault
 	m.autocompleteState = components.AutosuggestState{}

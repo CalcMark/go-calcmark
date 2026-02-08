@@ -455,6 +455,94 @@ func TestUndoAfterTypeAndEnter(t *testing.T) {
 	}
 }
 
+// TestUTF8TypeAndUndo verifies undo works correctly with multi-byte UTF-8 characters.
+// This tests that cursorCol is handled as rune position, not byte position.
+func TestUTF8TypeAndUndo(t *testing.T) {
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	// Type "世界" (two 3-byte UTF-8 characters)
+	for _, ch := range "世界" {
+		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		newModel, _ := m.Update(typeMsg)
+		m = newModel.(Model)
+	}
+
+	t.Logf("After typing '世界': editBuf=%q, cursorCol=%d", m.editBuf, m.cursorCol)
+
+	// editBuf should be "世界" (6 bytes, 2 runes)
+	if m.editBuf != "世界" {
+		t.Errorf("Expected editBuf='世界', got %q", m.editBuf)
+	}
+
+	// cursorCol should be 2 (2 characters), not 6 (6 bytes)
+	if m.cursorCol != 2 {
+		t.Errorf("Expected cursorCol=2 (rune position), got %d", m.cursorCol)
+	}
+
+	// Press Enter to commit and create undo point
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := m.Update(enterMsg)
+	m = newModel.(Model)
+
+	linesAfterEnter := m.GetLines()
+	t.Logf("After Enter: lines=%v", linesAfterEnter)
+
+	if len(linesAfterEnter) < 1 || linesAfterEnter[0] != "世界" {
+		t.Errorf("Expected first line='世界', got %v", linesAfterEnter)
+	}
+
+	// Undo the Enter
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	linesAfterUndo := m.GetLines()
+	t.Logf("After Ctrl+Z: lines=%v", linesAfterUndo)
+
+	// Should be back to "世界" on one line, not corrupted
+	if len(linesAfterUndo) != 1 {
+		t.Errorf("Expected 1 line after undo, got %d", len(linesAfterUndo))
+	}
+	if len(linesAfterUndo) > 0 && linesAfterUndo[0] != "世界" {
+		t.Errorf("UTF-8 CORRUPTION: Expected '世界', got %q", linesAfterUndo[0])
+	}
+}
+
+// TestUTF8CursorMovement verifies cursor movement is rune-based, not byte-based.
+func TestUTF8CursorMovement(t *testing.T) {
+	doc, _ := document.NewDocument("日本語")  // 3 characters, 9 bytes
+	m := New(doc)
+
+	// Load the line
+	m.loadCurrentLineIntoEditBuffer()
+
+	// Cursor should start at 0
+	if m.cursorCol != 0 {
+		t.Errorf("Initial cursorCol should be 0, got %d", m.cursorCol)
+	}
+
+	// Move right 3 times should reach end of "日本語"
+	for i := 0; i < 3; i++ {
+		rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+		newModel, _ := m.Update(rightMsg)
+		m = newModel.(Model)
+	}
+
+	// cursorCol should be 3 (3 runes), not 9 (9 bytes)
+	if m.cursorCol != 3 {
+		t.Errorf("After 3 right arrows, cursorCol should be 3 (runes), got %d", m.cursorCol)
+	}
+
+	// Moving right again should not move (at end)
+	rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+	newModel, _ := m.Update(rightMsg)
+	m = newModel.(Model)
+
+	// Should still be at position 3 (or moved to next line at 0)
+	t.Logf("After extra right: cursorCol=%d, cursorLine=%d", m.cursorCol, m.cursorLine)
+}
+
 func TestGetStatusBarState(t *testing.T) {
 	doc, _ := document.NewDocument("x = 10\ny = 20\n")
 	m := NewWithFile("test.cm", doc)
