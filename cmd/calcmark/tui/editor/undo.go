@@ -310,3 +310,27 @@ func (m *UndoManager) CurrentBatchSize() int {
 func (m *UndoManager) HistorySize() int {
 	return m.size
 }
+
+// CommitCurrentBatch commits the current uncommitted operations as a batch immediately.
+// This is used when the grouping timer fires after a typing pause.
+// If there are no current operations, this is a no-op.
+//
+// This is an alias for CommitBatch with semantic clarity for timer-based usage.
+// The groupID is NOT reset, so any pending timers remain invalidated.
+func (m *UndoManager) CommitCurrentBatch() {
+	m.CommitBatch()
+}
+
+// ForceBoundary creates an immediate undo boundary by committing the current batch.
+// This is used for operations that should always create a boundary:
+//   - Enter key (new line)
+//   - Arrow keys (navigation)
+//   - Line joins (Delete at EOL, Backspace at BOL)
+//   - Before and after paste operations
+//
+// Unlike timer-based commits, this is called synchronously when the boundary-creating
+// action occurs. The effect is identical to CommitCurrentBatch, but the name makes
+// the intent clear in calling code.
+func (m *UndoManager) ForceBoundary() {
+	m.CommitBatch()
+}
