@@ -5,28 +5,28 @@
 run observe=debug
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Type "av" - autocomplete popup should appear automatically
 run observe=debug
 type av
 ----
 -- debug:
-mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press Down to navigate to next suggestion
 run observe=debug
 key down
 ----
 -- debug:
-mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press Up to navigate back
 run observe=debug
 key up
 ----
 -- debug:
-mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press Tab to accept the selected suggestion
 # NOTE: Functions now get "(" appended so cursor is inside for parameter help
@@ -34,7 +34,7 @@ run observe=debug
 key tab
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg(# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg(# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Clear and test Escape to dismiss
 run observe=debug
@@ -45,18 +45,18 @@ key backspace
 type av
 ----
 -- debug:
-mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press Escape to dismiss autocomplete without accepting
 run observe=debug
 key esc
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test typing continues normally while popup is visible
 run observe=debug
 type g
 ----
 -- debug:
-mode=StateAutocomplete cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

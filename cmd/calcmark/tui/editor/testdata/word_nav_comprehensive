@@ -10,7 +10,7 @@
 run observe=debug
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 1: Alt+F moves forward by one word
 # Starting at column 0 of "# Header", should skip "# " and stop at start of "Header" (col 2)
@@ -18,91 +18,91 @@ run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 2: Alt+F again moves to end of "Header" (col 8)
 run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 3: Alt+F at end of line wraps to next line (line 1, col 0)
 run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 4: Alt+F on "x = 10" skips 'x', stops at '=' (col 2)
 run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=2 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=2 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 5: Alt+F skips '=' and whitespace, stops at '10' (col 4)
 run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=4 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=4 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 6: Alt+F moves to end of '10' (col 6)
 run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=6 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=6 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 7: Alt+B at end of "x = 10" moves backward to start of '10' (col 4)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=4 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=4 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 8: Alt+B skips whitespace and stops before '=' (col 2)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=2 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=2 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 9: Alt+B skips '=' and whitespace, moves to start of 'x' (col 0)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 10: Alt+B at start of line wraps to previous line end (line 0, col 8)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 11: Alt+B at end of "# Header" moves to start of "Header" (col 2)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 12: Alt+B from "Header" start moves to after "#" (col 1 - word boundary at punctuation)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 13: Alt+B from col 1 moves to document start (col 0)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 14: Continue Alt+F to reach last line
 # Currently at (0,0), need to navigate through all words
@@ -124,14 +124,14 @@ key alt+f
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 15: Alt+F at document end stays at document end (col 6 is end of "z = 30")
 run observe=debug
 key alt+f
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 16: Navigate back to document start using Alt+B repeatedly
 run observe=debug
@@ -153,11 +153,11 @@ key alt+b
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test 17: Alt+B at document start stays at document start (boundary check)
 run observe=debug
 key alt+b
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

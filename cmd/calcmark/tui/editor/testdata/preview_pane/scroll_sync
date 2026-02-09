@@ -6,7 +6,7 @@
 run observe=debug
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate down multiple lines
 run observe=debug
@@ -17,7 +17,7 @@ key j
 key j
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="jjjjj# Long Document" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="jjjjj# Long Document" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigate to near bottom (will trigger scrolling)
 run observe=debug
@@ -28,7 +28,7 @@ key j
 key j
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=10 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="jjjjjjjjjj# Long Document" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=10 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=15 totalVisual=15 editBuf="jjjjjjjjjj# Long Document" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Verify alignment is maintained during scrolling
 run observe=alignment

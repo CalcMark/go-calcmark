@@ -51,4 +51,4 @@ key down
 key down
 ----
 -- debug:
-mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=7 cursorHighlight=7 scrollOffset=0 totalSource=5 totalVisual=15 editBuf="x = 12345 + 67890 * 2" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=7 cursorHighlight=7 scrollOffset=0 totalSource=5 totalVisual=15 editBuf="x = 12345 + 67890 * 2" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

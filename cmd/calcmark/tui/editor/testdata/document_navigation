@@ -5,7 +5,7 @@
 run observe=debug
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Move down to line 2 with some content
 run observe=debug
@@ -13,32 +13,32 @@ key down
 key down
 ----
 -- debug:
-mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Move to end of line (to verify Ctrl+Home resets column too)
 run observe=debug
 key end
 ----
 -- debug:
-mode=StateDefault cursorLine=2 cursorCol=6 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=6 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Ctrl+End should jump to last line (3), end of line
 run observe=debug
 key ctrl+end
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Ctrl+Home should jump back to start (line 0, col 0)
 run observe=debug
 key ctrl+home
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Verify can navigate to end again
 run observe=debug
 key ctrl+end
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
