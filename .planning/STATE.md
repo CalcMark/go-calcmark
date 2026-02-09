@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 13 (Clipboard)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-09 — Completed Selection State (13-01)
+Last activity: 2026-02-09 — Completed Clipboard Operations (13-03)
 
-Progress: [█████████████░░░░░░░] 64%
+Progress: [█████████████░░░░░░░] 66%
 
 ## Milestone v1.1 Scope
 
@@ -62,6 +62,10 @@ Progress: [█████████████░░░░░░░] 64%
 
 Recent decisions affecting current work:
 
+- [13-02]: Selection highlighting uses gray background (240) with white foreground (255)
+- [13-02]: All navigation keys clear selection before moving cursor
+- [13-02]: All typing keys clear selection before inserting/deleting
+- [13-02]: Added selectionAnchorLine/Col to Debug() output for test verification
 - [13-01]: Use -1 sentinel for selectionAnchorLine to indicate no selection
 - [13-01]: HasSelection returns false when anchor equals cursor
 - [13-01]: GetSelectionRange normalizes to start <= end for consistent text extraction
@@ -162,9 +166,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 13-01-PLAN.md (Selection State)
+Stopped at: Completed 13-02-PLAN.md (Selection Highlighting and Ctrl+A)
 Resume file: None
-Next: 13-02-PLAN.md (Shift+Arrow Selection)
+Next: 13-03-PLAN.md (Cut/Copy/Paste)
 
 ---
-*Updated: 2026-02-09 — Completed 13-01 (Selection State)*
+*Updated: 2026-02-09 — Completed 13-02 (Selection Highlighting and Ctrl+A)*
