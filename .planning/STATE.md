@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 12 (Undo/Redo)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 — Completed Model Integration (12-03)
+Phase: 13 (Clipboard)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-09 — Completed Selection State (13-01)
 
-Progress: [█████████████░░░░░░░] 62%
+Progress: [█████████████░░░░░░░] 64%
 
 ## Milestone v1.1 Scope
 
@@ -62,6 +62,10 @@ Progress: [█████████████░░░░░░░] 62%
 
 Recent decisions affecting current work:
 
+- [13-01]: Use -1 sentinel for selectionAnchorLine to indicate no selection
+- [13-01]: HasSelection returns false when anchor equals cursor
+- [13-01]: GetSelectionRange normalizes to start <= end for consistent text extraction
+- [13-01]: DeleteSelection integrates with undo via recordEdit()
 - [12-03]: All edit paths (including autocomplete mode) must call recordEdit() for undo
 - [12-03]: transitionToProcessing() called before undo to flush editBuf
 - [12-03]: Cursor restoration uses first operation in batch (stores pre-batch state)
@@ -157,10 +161,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Completed 12-03-PLAN.md (Model Integration)
+Last session: 2026-02-09
+Stopped at: Completed 13-01-PLAN.md (Selection State)
 Resume file: None
-Next: Phase 13 (Clipboard)
+Next: 13-02-PLAN.md (Shift+Arrow Selection)
 
 ---
-*Updated: 2026-02-08 — Completed Phase 12 (Undo/Redo)*
+*Updated: 2026-02-09 — Completed 13-01 (Selection State)*
