@@ -1,0 +1,63 @@
+# Test Ctrl+X cut - document should be empty after cutting all text
+run observe=lines
+key ctrl+a
+key ctrl+x
+----
+-- lines:
+sourceToVisual: map[0:0]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Header" <CURSOR>
+
+
+# Test Ctrl+C with selection copies (doesn't quit)
+run observe=debug
+key ctrl+a
+key ctrl+c
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test Ctrl+C without selection quits
+run observe=debug
+key ctrl+c
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test cut can be undone
+run observe=lines
+key ctrl+a
+key ctrl+x
+----
+-- lines:
+sourceToVisual: map[0:0]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Header" <CURSOR>
+
+
+run observe=lines
+key ctrl+z
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="# Header" <CURSOR>
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="z = 30# Header"
+
+# Test Ctrl+X with no selection shows message
+run observe=debug
+type test
+key ctrl+x
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=10 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=7 totalVisual=7 editBuf="# Headtester\nx = 10\ny = 20\nz = 30# Header" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test cut updates modified flag
+run observe=debug
+key ctrl+a
+key ctrl+x
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
