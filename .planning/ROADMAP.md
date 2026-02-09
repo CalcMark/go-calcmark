@@ -27,7 +27,7 @@ See archived roadmap: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 11.1: Bug Fixes** - Fix convert_rate preview and TUI display bugs (INSERTED)
 - [x] **Phase 11.2: UX Redesign** - Holistic command/help system redesign (INSERTED)
 - [x] **Phase 12: Undo/Redo** - Full history with cursor restoration
-- [ ] **Phase 13: Clipboard** - Select, cut, copy, paste
+- [x] **Phase 13: Clipboard** - Select, cut, copy, paste
 - [ ] **Phase 14: File Operations** - Save, quit, new file flows
 - [ ] **Phase 15: Help Update** - Accurate keybindings for new features
 - [ ] **Phase 16: Source Highlighting** - Syntax coloring with theme support
@@ -335,7 +335,7 @@ Plans:
 | 11.1 Bug Fixes | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 11.2 UX Redesign | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 12. Undo/Redo | v1.1 | 3/3 | Complete | 2026-02-08 |
-| 13. Clipboard | v1.1 | 0/3 | Not started | - |
+| 13. Clipboard | v1.1 | 3/3 | Complete | 2026-02-09 |
 | 14. File Operations | v1.1 | 0/TBD | Not started | - |
 | 15. Help Update | v1.1 | 0/TBD | Not started | - |
 | 16. Source Highlighting | v1.1 | 0/TBD | Not started | - |
