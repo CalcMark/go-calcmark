@@ -460,8 +460,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Global quit handlers
 	switch msg.Type {
 	case tea.KeyCtrlC:
-		// Ctrl+C is a standard Unix interrupt signal - quit immediately without prompts
-		// This is the emergency exit - users expect this to always work
+		// Ctrl+C: copy if selection exists, quit if no selection
+		// This preserves Unix interrupt behavior while enabling copy
+		newModel, cmd, handled := m.handleCopy()
+		if handled {
+			return newModel, cmd
+		}
+		// No selection - fall through to quit behavior
 		m.quitting = true
 		return m, tea.Quit
 	case tea.KeyCtrlQ:
@@ -611,6 +616,16 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleUndo()
 	case tea.KeyCtrlY:
 		return m.handleRedo()
+	case tea.KeyCtrlA:
+		// Select all - Ctrl+A
+		m.SelectAll()
+		return m, nil
+	case tea.KeyCtrlX:
+		// Cut - Ctrl+X
+		return m.handleCut()
+	case tea.KeyCtrlV:
+		// Paste - Ctrl+V
+		return m.handlePaste()
 	case tea.KeySpace:
 		return m.handleSpaceKey()
 	case tea.KeyRunes:
@@ -670,6 +685,8 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 
 // Navigation keys
 func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
+	// Navigation clears selection
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -680,6 +697,8 @@ func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
+	// Navigation clears selection
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -690,6 +709,8 @@ func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
+	// Navigation clears selection
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -704,6 +725,8 @@ func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
+	// Navigation clears selection
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -824,6 +847,8 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 // Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
 // If at end of line, wraps to start of next line first (like handleRightKey).
 func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
+	// Navigation clears selection
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()

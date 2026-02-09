@@ -233,16 +233,28 @@ func TestEmptyDocumentNewlineCreation(t *testing.T) {
 }
 
 func TestHandleKeyQuit(t *testing.T) {
+	// Ctrl+C with no selection should quit (standard interrupt signal)
 	m := New(nil)
-
-	// Ctrl+C should quit (standard interrupt signal)
 	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	result := newModel.(Model)
 	if !result.quitting {
-		t.Error("Ctrl+C should set quitting=true")
+		t.Error("Ctrl+C with no selection should set quitting=true")
 	}
 	if cmd == nil {
-		t.Error("Ctrl+C should return quit command")
+		t.Error("Ctrl+C with no selection should return quit command")
+	}
+
+	// Ctrl+C with selection should copy (not quit)
+	doc, _ := document.NewDocument("test text\n")
+	m = New(doc)
+	m.SelectAll() // Select all text
+	newModel, cmd = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	result = newModel.(Model)
+	if result.quitting {
+		t.Error("Ctrl+C with selection should NOT quit")
+	}
+	if result.statusMsg != "Copied to clipboard" {
+		t.Errorf("Expected 'Copied to clipboard' status, got: %s", result.statusMsg)
 	}
 
 	// Ctrl+Q should also quit (no unsaved changes)
