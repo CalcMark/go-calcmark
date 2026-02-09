@@ -642,6 +642,9 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Typing clears selection
+	m.ClearSelection()
+
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
 	beforeCol := m.cursorCol
@@ -914,6 +917,9 @@ func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
+	// Typing clears selection
+	m.ClearSelection()
+
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
 	beforeCol := m.cursorCol
@@ -967,6 +973,9 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
+	// Typing clears selection
+	m.ClearSelection()
+
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
 	beforeCol := m.cursorCol
@@ -1045,6 +1054,9 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
+	// Typing clears selection
+	m.ClearSelection()
+
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
 	beforeCol := m.cursorCol
