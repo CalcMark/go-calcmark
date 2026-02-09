@@ -237,6 +237,10 @@ type Model struct {
 	searchMatches []int  // Line numbers with matches
 	searchIdx     int    // Current match index
 
+	// Selection state
+	selectionAnchorLine int // Line of selection anchor, -1 if no selection
+	selectionAnchorCol  int // Column of selection anchor
+
 	// Status message
 	statusMsg   string
 	statusIsErr bool
@@ -271,21 +275,23 @@ type Model struct {
 func New(doc *document.Document) Model {
 	// User is ALWAYS able to edit - mode only represents temporary UI overlays
 	m := Model{
-		doc:              doc,
-		eval:             nil,
-		mode:             StateDefault,
-		userIsTyping:     false,
-		pinnedVars:       make(map[string]bool),
-		changedVars:      make(map[string]bool),
-		changedBlockIDs:  make(map[string]bool),
-		undoManager:      NewUndoManager(1000),
-		exportFormatOpts: []string{"text", "cm", "json", "html", "md"},
-		width:            80,
-		height:           24,
-		previewMode:      PreviewFull,
-		lineWrap:         true,
-		styles:           config.GetStyles(),
-		keys:             shared.DefaultKeyMap(),
+		doc:                 doc,
+		eval:                nil,
+		mode:                StateDefault,
+		userIsTyping:        false,
+		pinnedVars:          make(map[string]bool),
+		changedVars:         make(map[string]bool),
+		changedBlockIDs:     make(map[string]bool),
+		undoManager:         NewUndoManager(1000),
+		exportFormatOpts:    []string{"text", "cm", "json", "html", "md"},
+		width:               80,
+		height:              24,
+		previewMode:         PreviewFull,
+		lineWrap:            true,
+		styles:              config.GetStyles(),
+		keys:                shared.DefaultKeyMap(),
+		selectionAnchorLine: -1, // No selection initially
+		selectionAnchorCol:  -1,
 	}
 
 	// Initialize autocomplete suggestion sources
