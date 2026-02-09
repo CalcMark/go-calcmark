@@ -744,6 +744,7 @@ func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handlePageUpKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -752,6 +753,7 @@ func (m Model) handlePageUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handlePageDownKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -760,6 +762,7 @@ func (m Model) handlePageDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -768,6 +771,7 @@ func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -777,6 +781,7 @@ func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
 
 // handleCtrlHomeKey moves cursor to document start (line 0, column 0).
 func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -787,6 +792,7 @@ func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
 
 // handleCtrlEndKey moves cursor to document end (last line, end of line).
 func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -803,6 +809,7 @@ func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
 // Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
 // If at column 0, wraps to end of previous line first (like handleLeftKey).
 func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
+	m.ClearSelection()
 	// Navigation creates undo boundary per CONTEXT.md discretion
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
