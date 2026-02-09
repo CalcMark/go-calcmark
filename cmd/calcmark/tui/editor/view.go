@@ -648,17 +648,27 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 	// creates separate ANSI blocks. We need ONE continuous background.
 	// Solution: Build the ENTIRE content first, THEN render once with padding included
 
-	contentLen := len(content)
+	// Use runes for proper UTF-8 handling - col is a rune position
+	runes := []rune(content)
+	contentLen := len(runes)
+
+	// Clamp col to valid range to prevent panic
+	if col < 0 {
+		col = 0
+	}
+	if col > contentLen {
+		col = contentLen
+	}
 
 	// Determine cursor character
 	var cursorChar string
 	if col >= contentLen {
 		cursorChar = " "
 	} else {
-		cursorChar = string(content[col])
+		cursorChar = string(runes[col])
 	}
 
-	// Calculate total padding needed
+	// Calculate total padding needed (use rune length for display width approximation)
 	totalPadding := width - contentLen
 	if col >= contentLen {
 		totalPadding -= 1 // Account for cursor space
@@ -669,7 +679,7 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 
 	// Before cursor
 	if col > 0 {
-		result.WriteString(lineStyle.Render(content[:col]))
+		result.WriteString(lineStyle.Render(string(runes[:col])))
 	}
 
 	// Cursor
@@ -677,7 +687,7 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 
 	// After cursor
 	if col+1 < contentLen {
-		result.WriteString(lineStyle.Render(content[col+1:]))
+		result.WriteString(lineStyle.Render(string(runes[col+1:])))
 	}
 
 	// Padding - CRITICAL FIX: lipgloss strips background from trailing spaces!
