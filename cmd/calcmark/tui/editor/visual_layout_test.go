@@ -462,3 +462,77 @@ func abs(x int) int {
 	}
 	return x
 }
+
+// TestRenderLineWithCursor_CursorBeyondContent verifies no panic when cursor > content length
+// Regression test for panic "slice bounds out of range [:48] with length 41" (fix: 7dbe80f)
+func TestRenderLineWithCursor_CursorBeyondContent(t *testing.T) {
+	// Save and restore color profile
+	originalProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.Ascii)
+	defer lipgloss.SetColorProfile(originalProfile)
+
+	doc, err := document.NewDocument("short")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Set cursor beyond content length - this should NOT panic
+	// Content is "short" (5 chars), cursor at position 48
+	content := "short"
+	col := 48 // Way beyond content length
+	width := 80
+
+	// This was panicking before the fix with "slice bounds out of range [:48] with length 41"
+	// After fix, should clamp col and render without panic
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("renderLineWithCursor panicked with cursor beyond content: %v", r)
+		}
+	}()
+
+	result := m.renderLineWithCursor(content, col, width, false)
+
+	// Verify we got a result (specific content doesn't matter, just no panic)
+	if result == "" {
+		t.Error("Expected non-empty result from renderLineWithCursor")
+	}
+}
+
+// TestRenderLineWithCursor_UTF8Content verifies proper rune handling
+func TestRenderLineWithCursor_UTF8Content(t *testing.T) {
+	// Save and restore color profile
+	originalProfile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.Ascii)
+	defer lipgloss.SetColorProfile(originalProfile)
+
+	doc, err := document.NewDocument("hello")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Content with multi-byte UTF-8 characters
+	// "héllo" has 5 runes but 6 bytes (é is 2 bytes)
+	content := "héllo"
+	col := 3 // Cursor at rune position 3 (the second 'l')
+	width := 80
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("renderLineWithCursor panicked with UTF-8 content: %v", r)
+		}
+	}()
+
+	result := m.renderLineWithCursor(content, col, width, false)
+
+	if result == "" {
+		t.Error("Expected non-empty result from renderLineWithCursor with UTF-8")
+	}
+}
