@@ -319,6 +319,89 @@ type sourceLine struct {
 	sourceLineIdx int    // Original source line index (for cursor tracking on wrapped lines)
 }
 
+// renderLineWithSelection applies selection highlighting to a line if needed.
+// Returns the line with selection styling applied.
+// Uses UTF-8 safe rune operations for column positions.
+func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
+	if !m.HasSelection() {
+		return lineText
+	}
+
+	startLine, startCol, endLine, endCol := m.GetSelectionRange()
+
+	// Line is outside selection range
+	if lineNum < startLine || lineNum > endLine {
+		return lineText
+	}
+
+	// Selection style - gray background with white text
+	selectionStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("240")).
+		Foreground(lipgloss.Color("255"))
+
+	runes := []rune(lineText)
+	lineLen := len(runes)
+
+	// Determine selection bounds for this line
+	var selectStart, selectEnd int
+
+	if lineNum == startLine && lineNum == endLine {
+		// Selection is within this line only
+		selectStart = startCol
+		selectEnd = endCol
+	} else if lineNum == startLine {
+		// First line of multi-line selection
+		selectStart = startCol
+		selectEnd = lineLen
+	} else if lineNum == endLine {
+		// Last line of multi-line selection
+		selectStart = 0
+		selectEnd = endCol
+	} else {
+		// Middle line - select entire line
+		selectStart = 0
+		selectEnd = lineLen
+	}
+
+	// Clamp to valid range
+	if selectStart < 0 {
+		selectStart = 0
+	}
+	if selectStart > lineLen {
+		selectStart = lineLen
+	}
+	if selectEnd < 0 {
+		selectEnd = 0
+	}
+	if selectEnd > lineLen {
+		selectEnd = lineLen
+	}
+
+	// Nothing to select on this line
+	if selectStart >= selectEnd {
+		return lineText
+	}
+
+	// Build the styled line: before + selected + after
+	var result strings.Builder
+
+	// Part before selection
+	if selectStart > 0 {
+		result.WriteString(string(runes[:selectStart]))
+	}
+
+	// Selected part with highlighting
+	selectedText := string(runes[selectStart:selectEnd])
+	result.WriteString(selectionStyle.Render(selectedText))
+
+	// Part after selection
+	if selectEnd < lineLen {
+		result.WriteString(string(runes[selectEnd:]))
+	}
+
+	return result.String()
+}
+
 // renderSourcePaneAligned renders the source pane using pre-computed aligned lines.
 // This avoids recomputing alignment which could cause cycles.
 func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) string {
@@ -412,13 +495,13 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			// Padding line - blank (for alignment with preview wrapping)
 			content = padToWidth("", contentWidth, lipgloss.Color("236"))
 		} else if sl.isWrapped {
-			// Wrapped continuation line - apply source text color and background
-			styledContent := m.styles.SourceText.Render(sl.content)
-			content = padToWidth(styledContent, contentWidth, lipgloss.Color("236"))
+			// Wrapped continuation line - apply selection highlighting then source text style
+			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, sl.content)
+			content = padToWidth(lineWithSelection, contentWidth, lipgloss.Color("236"))
 		} else {
-			// Normal source line - apply source text color and background
-			styledContent := m.styles.SourceText.Render(sl.content)
-			content = padToWidth(styledContent, contentWidth, lipgloss.Color("236"))
+			// Normal source line - apply selection highlighting then source text style
+			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, sl.content)
+			content = padToWidth(lineWithSelection, contentWidth, lipgloss.Color("236"))
 		}
 
 		// Assemble complete line: lineNum + gutter + content
