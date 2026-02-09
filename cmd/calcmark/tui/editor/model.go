@@ -2683,9 +2683,11 @@ func (m Model) Debug() string {
 	return fmt.Sprintf(
 		"mode=%v cursorLine=%d cursorCol=%d cursorVisual=%d cursorHighlight=%d "+
 			"scrollOffset=%d totalSource=%d totalVisual=%d editBuf=%q "+
+			"selectionAnchorLine=%d selectionAnchorCol=%d "+
 			"sourcePreviewMatch=%v cursorInBounds=%v highlightMatch=%v mappingComplete=%v",
 		m.mode, m.cursorLine, m.cursorCol, cursorVisual, cursorHighlightAt,
 		m.scrollOffset, m.TotalLines(), len(aligned.sourceLines), m.editBuf,
+		m.selectionAnchorLine, m.selectionAnchorCol,
 		sourcePreviewMatch, cursorInBounds, highlightMatchesMapping, mappingComplete,
 	)
 }
