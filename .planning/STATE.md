@@ -62,6 +62,10 @@ Progress: [█████████████░░░░░░░] 66%
 
 Recent decisions affecting current work:
 
+- [13-03]: Ctrl+C copies when selection exists, quits when no selection (preserves Unix interrupt behavior)
+- [13-03]: Paste forces undo boundaries before and after operation per RESEARCH.md
+- [13-03]: Multi-line paste splits current line and inserts intermediate lines properly
+- [13-03]: insertTextAtCursor and insertMultiLineText use recordEdit for undo integration
 - [13-02]: Selection highlighting uses gray background (240) with white foreground (255)
 - [13-02]: All navigation keys clear selection before moving cursor
 - [13-02]: All typing keys clear selection before inserting/deleting
@@ -166,9 +170,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 13-02-PLAN.md (Selection Highlighting and Ctrl+A)
+Stopped at: Completed 13-03-PLAN.md (Clipboard Operations)
 Resume file: None
-Next: 13-03-PLAN.md (Cut/Copy/Paste)
+Next: Phase 14 (File Operations) or 13-04 if exists
 
 ---
-*Updated: 2026-02-09 — Completed 13-02 (Selection Highlighting and Ctrl+A)*
+*Updated: 2026-02-09 — Completed 13-03 (Clipboard Operations)*
