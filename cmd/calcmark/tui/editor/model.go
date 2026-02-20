@@ -343,7 +343,6 @@ func (m *Model) autoPinVariables() {
 	}
 }
 
-
 // getDocumentContent returns the document as a string.
 // CRITICAL: Returns content with trailing newline to preserve line count.
 // See unicode.go fix - trailing newlines no longer create extra lines,
@@ -948,8 +947,8 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 		Type:         OpInsertLine,
 		Line:         beforeLine,
 		Col:          beforeCol,
-		OldText:      m.editBuf,  // Original line content before split
-		NewText:      textAfter,  // Content moved to new line
+		OldText:      m.editBuf, // Original line content before split
+		NewText:      textAfter, // Content moved to new line
 		CursorLine:   beforeLine,
 		CursorCol:    beforeCol,
 		ScrollOffset: beforeScroll,
@@ -1032,7 +1031,7 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 		op := EditOperation{
 			Type:         OpReplace,
 			Line:         prevLine,
-			Col:          runeLen(prevContent), // Rune position, not byte position
+			Col:          runeLen(prevContent),  // Rune position, not byte position
 			OldText:      "\n" + currentContent, // Conceptually: newline + current line content
 			NewText:      currentContent,        // Joined content
 			CursorLine:   beforeLine,

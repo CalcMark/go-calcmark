@@ -597,7 +597,7 @@ func TestUndoRedoAlternating(t *testing.T) {
 
 // TestUTF8CursorMovement verifies cursor movement is rune-based, not byte-based.
 func TestUTF8CursorMovement(t *testing.T) {
-	doc, _ := document.NewDocument("日本語")  // 3 characters, 9 bytes
+	doc, _ := document.NewDocument("日本語") // 3 characters, 9 bytes
 	m := New(doc)
 
 	// Load the line

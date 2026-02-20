@@ -8,11 +8,11 @@ func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
 	source := NewFunctionSuggestionSource()
 
 	tests := []struct {
-		name          string
-		prefix        string
-		wantMatch     string // Expected InsertText in results
-		wantMinCount  int    // Minimum number of results
-		wantNotMatch  string // Should NOT be in results
+		name         string
+		prefix       string
+		wantMatch    string // Expected InsertText in results
+		wantMinCount int    // Minimum number of results
+		wantNotMatch string // Should NOT be in results
 	}{
 		{
 			name:         "av prefix matches avg",
@@ -50,10 +50,10 @@ func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
 			wantMinCount: 12, // All 12 builtin functions
 		},
 		{
-			name:          "xyz prefix matches nothing",
-			prefix:        "xyz",
-			wantMinCount:  0,
-			wantNotMatch:  "avg",
+			name:         "xyz prefix matches nothing",
+			prefix:       "xyz",
+			wantMinCount: 0,
+			wantNotMatch: "avg",
 		},
 	}
 

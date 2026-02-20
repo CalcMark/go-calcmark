@@ -8,14 +8,14 @@ import (
 
 func TestGetCursorContext(t *testing.T) {
 	tests := []struct {
-		name           string
-		line           string
-		cursorCol      int
-		wantInFunc     bool
-		wantFuncName   string
-		wantArgIndex   int
-		wantParamName  string
-		wantParamType  semantic.ArgType
+		name          string
+		line          string
+		cursorCol     int
+		wantInFunc    bool
+		wantFuncName  string
+		wantArgIndex  int
+		wantParamName string
+		wantParamType semantic.ArgType
 	}{
 		{
 			name:       "not in function call",
@@ -64,10 +64,10 @@ func TestGetCursorContext(t *testing.T) {
 			wantParamType: semantic.ArgTypeNumber,
 		},
 		{
-			name:          "after closed paren - not in func",
-			line:          "avg(1, 2) + ",
-			cursorCol:     12,
-			wantInFunc:    false,
+			name:       "after closed paren - not in func",
+			line:       "avg(1, 2) + ",
+			cursorCol:  12,
+			wantInFunc: false,
 		},
 		{
 			name:          "downtime with percentage",
@@ -80,10 +80,10 @@ func TestGetCursorContext(t *testing.T) {
 			wantParamType: semantic.ArgTypeDuration,
 		},
 		{
-			name:       "unknown function",
-			line:       "unknown_func(",
-			cursorCol:  13,
-			wantInFunc: true,
+			name:         "unknown function",
+			line:         "unknown_func(",
+			cursorCol:    13,
+			wantInFunc:   true,
 			wantFuncName: "unknown_func",
 			// No param info for unknown functions
 		},

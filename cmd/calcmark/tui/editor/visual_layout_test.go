@@ -300,8 +300,8 @@ z = y * 2`
 // Requirement: Phase 10 - Fixed 60/40 width ratio (source/preview)
 func TestPreviewPaneWidthRatio(t *testing.T) {
 	testCases := []struct {
-		totalWidth            int
-		expectedSourcePercent int
+		totalWidth             int
+		expectedSourcePercent  int
 		expectedPreviewPercent int
 	}{
 		{80, 60, 40},

@@ -17,14 +17,14 @@ import (
 // - Number in -> Number out
 func TestNapkinTypePreservation(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		wantType     string // "Quantity", "Currency", "Rate", "Duration", "Number"
-		wantUnit     string // Expected unit for Quantity/Duration, symbol for Currency
-		wantPerUnit  string // Expected PerUnit for Rate
-		checkValue   bool   // Whether to check the rounded value
-		approxValue  float64
-		tolerance    float64
+		name        string
+		input       string
+		wantType    string // "Quantity", "Currency", "Rate", "Duration", "Number"
+		wantUnit    string // Expected unit for Quantity/Duration, symbol for Currency
+		wantPerUnit string // Expected PerUnit for Rate
+		checkValue  bool   // Whether to check the rounded value
+		approxValue float64
+		tolerance   float64
 	}{
 		// Quantity type preservation - the main bug case
 		{
@@ -226,9 +226,9 @@ func TestNapkinTypePreservation(t *testing.T) {
 // on Quantity results, enabling tilde prefix in display formatting.
 func TestNapkinQuantityIsNapkinFlag(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		wantDisplay  string
+		name        string
+		input       string
+		wantDisplay string
 	}{
 		{
 			name:        "data accumulation shows tilde",

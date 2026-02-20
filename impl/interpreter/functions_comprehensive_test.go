@@ -80,12 +80,12 @@ func TestAllStandardFunctions(t *testing.T) {
 		{"read 100 MB ssd", "read(100 MB, ssd)\n", "0.1818", 0.01, false, false}, // 100/550 seconds
 
 		// compress() - Compression estimate (returns Quantity with unit)
-		{"compress gzip", "compress(300 MB, gzip)\n", "100", 0.5, false, false},    // 300/3 = 100 MB
-		{"compress lz4", "compress(100 MB, lz4)\n", "50", 0.5, false, false},       // 100/2 = 50 MB
-		{"compress zstd", "compress(350 MB, zstd)\n", "100", 0.5, false, false},    // 350/3.5 = 100 MB
-		{"compress none", "compress(100 MB, none)\n", "100", 0.5, false, false},    // 100/1 = 100 MB
+		{"compress gzip", "compress(300 MB, gzip)\n", "100", 0.5, false, false},     // 300/3 = 100 MB
+		{"compress lz4", "compress(100 MB, lz4)\n", "50", 0.5, false, false},        // 100/2 = 50 MB
+		{"compress zstd", "compress(350 MB, zstd)\n", "100", 0.5, false, false},     // 350/3.5 = 100 MB
+		{"compress none", "compress(100 MB, none)\n", "100", 0.5, false, false},     // 100/1 = 100 MB
 		{"compress snappy", "compress(250 MB, snappy)\n", "100", 0.5, false, false}, // 250/2.5 = 100 MB
-		{"compress bzip2", "compress(400 MB, bzip2)\n", "100", 0.5, false, false},  // 400/4 = 100 MB
+		{"compress bzip2", "compress(400 MB, bzip2)\n", "100", 0.5, false, false},   // 400/4 = 100 MB
 
 		// ==================== Capacity Functions ====================
 

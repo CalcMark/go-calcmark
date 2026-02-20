@@ -82,8 +82,8 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 
 	// Priority 0: Show autocomplete details when active
 	if state.AutocompleteActive && state.AutocompleteName != "" {
-		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)   // bright blue
-		syntaxStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)           // white
+		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)    // bright blue
+		syntaxStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)            // white
 		descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("246")).Italic(true).Background(bg) // gray italic
 
 		var lines []string
@@ -115,9 +115,9 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 
 	// Priority 0.5: Show function argument help when inside function call
 	if state.InFunctionCall && state.ParamName != "" {
-		funcStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)    // bright blue
-		paramStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true).Background(bg)  // yellow/gold
-		exampleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)           // white
+		funcStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)   // bright blue
+		paramStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true).Background(bg) // yellow/gold
+		exampleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)          // white
 
 		var lines []string
 
