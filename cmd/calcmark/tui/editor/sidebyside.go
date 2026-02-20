@@ -6,12 +6,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// SideBySide renders two panes side-by-side with guaranteed full-width backgrounds.
-// This component ensures that every line is exactly (leftWidth + rightWidth) characters
-// with proper background styling on every character, preventing terminal default bleed-through.
+// SideBySide renders two panes side-by-side with a vertical divider and guaranteed
+// full-width backgrounds. The divider occupies 1 character between the panes.
 //
 // Key guarantees:
-// - Every output line is exactly (leftWidth + rightWidth) characters wide
+// - Every output line is exactly (leftWidth + 1 + rightWidth) characters wide
 // - All characters have background styling (no unstyled gaps)
 // - Line counts are balanced (both panes have same number of lines)
 type SideBySide struct {
@@ -39,10 +38,7 @@ func (s *SideBySide) Render(left, right string) string {
 	rightLines := strings.Split(right, "\n")
 
 	// Balance line counts
-	maxLines := len(leftLines)
-	if len(rightLines) > maxLines {
-		maxLines = len(rightLines)
-	}
+	maxLines := max(len(leftLines), len(rightLines))
 
 	// Pad to match line counts
 	for len(leftLines) < maxLines {
@@ -51,6 +47,11 @@ func (s *SideBySide) Render(left, right string) string {
 	for len(rightLines) < maxLines {
 		rightLines = append(rightLines, "")
 	}
+
+	// Style for the vertical divider between panes
+	dividerStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("240")).
+		Background(s.leftBg)
 
 	// Build output line by line
 	var result strings.Builder
@@ -62,6 +63,9 @@ func (s *SideBySide) Render(left, right string) string {
 		// Pad left line to exact width with left background
 		leftPadded := s.padLine(leftLines[i], s.leftWidth, s.leftBg)
 		result.WriteString(leftPadded)
+
+		// Render vertical divider between panes
+		result.WriteString(dividerStyle.Render("│"))
 
 		// Pad right line to exact width with right background
 		rightPadded := s.padLine(rightLines[i], s.rightWidth, s.rightBg)
@@ -102,7 +106,7 @@ func stripResetCodes(s string) string {
 	return result
 }
 
-// TotalWidth returns the total width of the rendered output.
+// TotalWidth returns the total width of the rendered output (left + divider + right).
 func (s *SideBySide) TotalWidth() int {
-	return s.leftWidth + s.rightWidth
+	return s.leftWidth + 1 + s.rightWidth
 }

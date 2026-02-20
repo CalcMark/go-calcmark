@@ -449,10 +449,11 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 				Code:     "eval_error",
 				Message:  evalErr.Error(),
 			}
-			// Use node's Range if available to get line number
-			if assignment, ok := node.(*ast.Assignment); ok && assignment.Range != nil {
-				diag.Line = assignment.Range.Start.Line
-				diag.Column = assignment.Range.Start.Column
+			// Use node's Range if available to get line number.
+			// All AST nodes implement GetRange() via the Node interface.
+			if r := node.GetRange(); r != nil {
+				diag.Line = r.Start.Line
+				diag.Column = r.Start.Column
 			}
 			block.AddDiagnostic(diag)
 		}

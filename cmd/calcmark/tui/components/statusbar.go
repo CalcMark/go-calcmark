@@ -134,11 +134,16 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 	// Get the background from Bar style for padding
 	barBg := style.Bar.GetBackground()
 
+	// Account for Bar style's horizontal padding when computing content width.
+	// Bar has Padding(0, 1) = 2 chars total, so content must fit in (width - 2).
+	barHPad := style.Bar.GetHorizontalPadding()
+	contentWidth := width - barHPad
+
 	// If there's room, space things out
-	if totalContent < width-4 {
-		padding := (width - totalContent) / 2
+	if totalContent < contentWidth-4 {
+		padding := (contentWidth - totalContent) / 2
 		leftPad := StyledPadding(padding, barBg)
-		rightPad := StyledPadding(width-totalContent-padding, barBg)
+		rightPad := StyledPadding(contentWidth-totalContent-padding, barBg)
 		return style.Bar.Width(width).Height(statusBarHeight).Render(leftStr + leftPad + center + rightPad + rightStr)
 	}
 
