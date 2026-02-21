@@ -20,11 +20,11 @@ brew install calcmark/tap/calcmark
 
 | Platform | Download |
 |----------|----------|
-| macOS (Apple Silicon) | [calcmark_darwin_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
-| macOS (Intel) | [calcmark_darwin_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
-| Linux (x64) | [calcmark_linux_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
-| Linux (arm64) | [calcmark_linux_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
-| Windows (x64) | [calcmark_windows_amd64.zip](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| macOS (Apple Silicon) | [calcmark_VERSION_darwin_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| macOS (Intel) | [calcmark_VERSION_darwin_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Linux (x64) | [calcmark_VERSION_linux_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Linux (arm64) | [calcmark_VERSION_linux_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Windows (x64) | [calcmark_VERSION_windows_amd64.zip](https://github.com/CalcMark/go-calcmark/releases/latest) |
 
 After downloading, extract and move `cm` to a directory in your PATH.
 

@@ -4,397 +4,166 @@ This document describes how to create and publish releases for go-calcmark.
 
 ## Overview
 
-Releases are driven by the version number in `version.go`. The release process ensures:
+Releases are automated via **GoReleaser** and **GitHub Actions**. Pushing a semver tag triggers the full pipeline:
 
-1. **Single source of truth**: Version is defined only in `version.go`
-2. **Reproducible builds**: Same process locally and in CI (via `release.sh`)
-3. **Versioned artifacts**: WASM files include version in filename (e.g., `calcmark-0.1.1.wasm`)
-4. **Git tag validation**: Tag must match version.go
-5. **CI-first**: GitHub Actions automatically builds and publishes when you push a tag
-
-## Two Ways to Release
-
-| Method | When to Use |
-|--------|-------------|
-| **GitHub Actions** (recommended) | Normal releases - push tag and CI does everything |
-| **Local Script** | Testing, debugging, or when CI is unavailable |
-
-Both methods run the same `release.sh` script, so the process is identical.
+1. **Git tag is the single source of truth** for the version number
+2. **GoReleaser** builds cross-platform CLI binaries, creates archives with checksums, and generates a changelog
+3. **Homebrew tap** is updated automatically (`CalcMark/homebrew-tap`)
+4. **No manual scripts** — the entire process is driven by `.goreleaser.yaml` and `.github/workflows/release.yml`
 
 ## Quick Start
 
 ```bash
-# 1. Update version in version.go
-#    const Version = "0.2.0"
+# 1. Ensure all tests and quality checks pass
+task test
+task quality
 
-# 2. Commit the version change
-git add version.go
-git commit -m "Bump version to 0.2.0"
+# 2. Push your commits to GitHub
+git push origin main
 
-# 3. Push the commit to GitHub
-git push origin main  # or your branch name
+# 3. Create an annotated tag
+git tag -a "v0.3.0" -m "Release v0.3.0"
 
-# 4. Create annotated tag
-git tag -a "v0.2.0" -m "Release v0.2.0"
-
-# 5. Push tag to GitHub (triggers automated release)
-git push origin v0.2.0
+# 4. Push the tag (triggers the release workflow)
+git push origin v0.3.0
 ```
 
-The GitHub Action will automatically:
-- Validate version matches tag
-- Run all tests (excluding `impl/wasm`)
-- Build CLI tool (`calcmark`)
-- Build WASM artifacts
-- Create GitHub release with generated notes
-- Attach `calcmark-{VERSION}.wasm` and `wasm_exec.js`
+GitHub Actions will automatically:
+- Build `cm` binary for all platforms (macOS, Linux, Windows × amd64/arm64)
+- Create `.tar.gz` (unix) and `.zip` (windows) archives
+- Generate SHA-256 checksums
+- Create a GitHub release with an auto-generated changelog
+- Update the Homebrew formula in `CalcMark/homebrew-tap`
 
-**Note**: The entire release process runs via `release.sh` in CI. The script detects CI mode automatically and runs non-interactively.
+## How Versioning Works
 
-## Local Release (Alternative)
+The version is injected into the `cm` binary at build time via ldflags:
 
-If you prefer to publish from your local machine instead of using GitHub Actions:
-
-```bash
-# After creating the tag locally (steps 1-4 above)
-
-# Run release script (requires gh CLI: brew install gh)
-./release.sh
-
-# The script will:
-# - Validate version matches tag
-# - Run all tests (excluding impl/wasm)
-# - Build CLI tools
-# - Build WASM artifacts
-# - Push tag to GitHub (if not already pushed)
-# - Create release with artifacts
+```
+-X main.Version={{.Version}}
+-X main.BuildTime={{.Date}}
 ```
 
-**Requirements for local release**:
-- `gh` CLI installed and authenticated (`gh auth login`)
-- Git configured with push access to the repository
-- Clean working tree (no uncommitted changes)
+GoReleaser derives `{{.Version}}` from the git tag (stripping the `v` prefix). There is no version constant in the source code — the git tag is the single source of truth.
 
-### Testing Before Release
-
-To test the full build process without publishing:
-
-```bash
-./release.sh --local
-```
-
-This runs all validation and builds artifacts locally but **does not**:
-- Push tags to GitHub
-- Create GitHub releases
-- Upload artifacts
-
-Use this to verify everything works before releasing:
-
-```bash
-# Test the build
-./release.sh --local
-
-# If successful, release for real
-./release.sh
-```
-
-## Release Process Steps
-
-### 1. Update Version
-
-Edit `version.go`:
-
-```go
-// Version is the current version of the CalcMark implementation.
-const Version = "0.2.0"
-```
-
-Commit the change:
-
-```bash
-git add version.go
-git commit -m "Bump version to 0.2.0"
-```
-
-### 2. Push Commit to GitHub
-
-Push your commit to GitHub (important: do this before creating the tag):
-
-```bash
-git push origin main  # or your branch name
-```
-
-**Why push first?** Git tags point to commits. If you push a tag that points to a commit that doesn't exist on GitHub yet, the CI won't be able to check it out.
-
-### 3. Create Git Tag
-
-Create an annotated tag that matches the version:
-
-```bash
-git tag -a "v0.2.0" -m "Release v0.2.0"
-```
-
-**Important**: The tag must be in the format `v{VERSION}` where `{VERSION}` exactly matches `version.go`.
-
-Examples:
-- ✅ `version.go = "0.2.0"` + tag `v0.2.0`
-- ❌ `version.go = "0.2.0"` + tag `0.2.0` (missing `v` prefix)
-- ❌ `version.go = "0.2.0"` + tag `v0.2.1` (mismatch)
-
-### 4. Push Tag
-
-Push the tag to GitHub:
-
-```bash
-git push origin v0.2.0
-```
-
-This triggers the GitHub Action which will:
-
-1. **Validate** version matches tag
-2. **Run tests** - all must pass
-3. **Build CLI tool** (`calcmark`)
-4. **Build WASM** using `calcmark wasm`
-5. **Create release** on GitHub
-6. **Upload artifacts**:
-   - `calcmark-{VERSION}.wasm`
-   - `wasm_exec.js`
-
-### 5. Verify Release
-
-After the GitHub Action completes (usually 2-3 minutes):
-
-1. Visit: `https://github.com/CalcMark/go-calcmark/releases`
-2. Verify the release exists with correct version
-3. Download and test WASM artifacts
+For local development builds, `task build` uses `git describe --tags --always --dirty` to set the version.
 
 ## Release Artifacts
 
-Each release includes:
+Each release produces the following archives:
 
-### WASM Module (`calcmark-{VERSION}.wasm`)
+| Platform | Archive |
+|----------|---------|
+| macOS (Apple Silicon) | `calcmark_VERSION_darwin_arm64.tar.gz` |
+| macOS (Intel) | `calcmark_VERSION_darwin_amd64.tar.gz` |
+| Linux (x64) | `calcmark_VERSION_linux_amd64.tar.gz` |
+| Linux (arm64) | `calcmark_VERSION_linux_arm64.tar.gz` |
+| Linux (arm v6) | `calcmark_VERSION_linux_armv6.tar.gz` |
+| Windows (x64) | `calcmark_VERSION_windows_amd64.zip` |
 
-The compiled CalcMark library for WebAssembly, including:
-- Lexer (tokenization)
-- Parser (AST generation)
-- Validator (semantic validation)
-- Evaluator (execution)
-- Classifier (line type detection)
+Plus `checksums.txt` (SHA-256 for all archives).
 
-Filename includes version for cache busting and version pinning.
+Each archive contains only the `cm` binary.
 
-### JavaScript Glue Code (`wasm_exec.js`)
+## Pre-release Versions
 
-The Go WASM runtime bridge from the Go standard library. Required to load and execute the WASM module in JavaScript environments.
+GoReleaser auto-detects pre-releases from the tag format:
 
-## Version Numbering
+- `v0.3.0-alpha.1` → marked as pre-release on GitHub
+- `v0.3.0-beta.2` → marked as pre-release on GitHub
+- `v0.3.0-rc.1` → marked as pre-release on GitHub
+- `v0.3.0` → marked as latest release
 
-go-calcmark follows [Semantic Versioning 2.0.0](https://semver.org/):
+This is controlled by `prerelease: auto` in `.goreleaser.yaml`.
 
-- **MAJOR** version: Incompatible API changes
-- **MINOR** version: New functionality (backward compatible)
-- **PATCH** version: Bug fixes (backward compatible)
+## Dry Run (Local Testing)
 
-### Pre-release Versions
-
-For alpha, beta, or release candidates:
-
-```go
-const Version = "0.2.0-alpha.1"
-const Version = "0.2.0-beta.2"
-const Version = "0.2.0-rc.1"
-```
-
-Tag format: `v0.2.0-alpha.1`
-
-## Troubleshooting
-
-### Tag doesn't match version.go
-
-**Error**: `Tag version (0.2.1) doesn't match version.go (0.2.0)`
-
-**Solution**: Update `version.go` to match the tag, or delete and recreate the tag:
+To test what GoReleaser would produce without publishing:
 
 ```bash
-git tag -d v0.2.1
-git tag -a "v0.2.0" -m "Release v0.2.0"
+# Requires: go install github.com/goreleaser/goreleaser/v2@latest
+goreleaser release --snapshot --clean
 ```
 
-### Tests fail in CI
-
-**Error**: `Error: Tests failed. Fix tests before releasing.`
-
-**Solution**:
-1. Run tests locally: `go test $(go list ./... | grep -v '/impl/wasm$')`
-2. Fix failing tests
-3. Commit fixes
-4. Delete tag: `git tag -d v0.2.0`
-5. Recreate tag on fixed commit
-
-**Note**: Tests exclude `impl/wasm` package which requires `GOOS=js GOARCH=wasm` build constraints.
-
-### WASM build fails
-
-**Error**: `Error: WASM artifacts not created`
-
-**Solution**:
-1. Test locally: `./release.sh --local`
-2. Check build errors in `impl/wasm/`
-3. Fix build issues
-4. Retry release
-
-### GitHub CLI not found (local release)
-
-**Error**: `Error: 'gh' CLI not found`
-
-**Solution**: Install GitHub CLI:
-
-```bash
-brew install gh
-gh auth login
-```
-
-Or use `--local` mode and manually create the release.
-
-### GitHub Action fails
-
-**Error**: Workflow run fails in GitHub Actions
-
-**Solution**:
-1. Check the Actions tab: `https://github.com/CalcMark/go-calcmark/actions`
-2. Click the failed workflow run to see detailed logs
-3. Common issues:
-   - **Tests fail**: Same as "Tests fail in CI" above
-   - **WASM build fails**: Check Go version matches (1.21+)
-   - **Release already exists**: Workflow auto-deletes and recreates
-   - **Permission denied**: Check repository settings → Actions → Workflow permissions
-
-**To retry after fixing**:
-```bash
-# Delete the failed tag locally and remotely
-git tag -d v0.2.0
-git push origin :refs/tags/v0.2.0
-
-# Fix the issue, commit
-git add .
-git commit -m "Fix release issue"
-git push origin main
-
-# Recreate and push tag
-git tag -a "v0.2.0" -m "Release v0.2.0"
-git push origin v0.2.0
-```
-
-### Simulating CI behavior locally
-
-To test exactly what will run in CI:
-
-```bash
-# Simulate CI mode (non-interactive, auto-delete existing releases)
-CI=true ./release.sh --local
-
-# Or test the full flow with GitHub publish (requires gh CLI + auth)
-CI=true GITHUB_TOKEN=$(gh auth token) ./release.sh
-```
-
-This helps debug issues before pushing tags.
-
-## Release Checklist
-
-Before pushing a tag:
-
-- [ ] All tests pass locally: `go test $(go list ./... | grep -v '/impl/wasm$')`
-- [ ] Version updated in `version.go`
-- [ ] Version change committed
-- [ ] Tag created: `git tag -a "vX.Y.Z" -m "Release vX.Y.Z"`
-- [ ] Tag matches version.go exactly
-- [ ] WASM builds locally: `./release.sh --local`
-- [ ] CLAUDE.md and docs updated (if needed)
-- [ ] Breaking changes documented (for major versions)
-
-Then push commit and tag:
-
-```bash
-git push origin main      # Push the commit first
-git push origin vX.Y.Z    # Then push the tag
-```
+This builds all archives locally in `dist/` without creating a GitHub release or pushing to the Homebrew tap.
 
 ## CI/CD Details
 
-### How GitHub Actions Works
+### GitHub Actions Workflow
 
-The release workflow (`.github/workflows/release.yml`) is minimal by design:
+The release workflow (`.github/workflows/release.yml`):
 
-1. **Trigger**: Push of tags matching `v*.*.*` pattern (e.g., `v0.1.0`, `v1.2.3`, `v2.0.0-beta.1`)
-2. **Setup**: Checks out code, installs Go 1.21, installs `gh` CLI
-3. **Execute**: Runs `release.sh` in CI mode
+1. **Trigger**: Push of tags matching `v*.*.*`
+2. **Setup**: Checks out code (full history), installs Go from `go.mod`
+3. **Execute**: Runs GoReleaser v2
 
-The script automatically detects it's running in CI (`CI=true`) and:
-- Runs non-interactively (no user prompts)
-- Uses `GITHUB_TOKEN` for authentication
-- Skips tag push (tag is already on remote)
-- Auto-deletes existing release if retrying
+### Required Secrets
 
-**Benefits of this approach**:
-- ✅ Same logic runs locally and in CI (no drift)
-- ✅ Easy to debug (test exact CI behavior with `CI=true ./release.sh`)
-- ✅ Single source of truth (`release.sh`)
-- ✅ Minimal GitHub Action YAML
-
-### Environment Variables
-
-| Variable | Set By | Purpose |
-|----------|--------|---------|
-| `CI` | GitHub Action | Enables non-interactive mode |
-| `GITHUB_TOKEN` | GitHub Actions | Authenticates `gh` CLI |
-| `GITHUB_ACTIONS` | GitHub Actions | Additional CI detection |
+| Secret | Purpose |
+|--------|---------|
+| `GITHUB_TOKEN` | Provided automatically by GitHub Actions. Creates the release and uploads artifacts. |
+| `HOMEBREW_TAP_GITHUB_TOKEN` | Personal access token with write access to `CalcMark/homebrew-tap`. Required for updating the Homebrew formula. |
 
 ### Permissions
 
 The workflow requires `contents: write` to create releases and upload artifacts.
 
-## Manual Release Creation
+## Troubleshooting
 
-If automation fails, you can manually create a release:
+### Tests fail before release
 
-1. Build artifacts locally:
-   ```bash
-   ./release.sh --local
-   ```
+**Solution**: Fix tests before tagging. Always run:
 
-2. Go to: `https://github.com/CalcMark/go-calcmark/releases/new`
+```bash
+task test
+task quality
+```
 
-3. Select the tag (e.g., `v0.2.0`)
+### GoReleaser build fails in CI
 
-4. Upload files from `release-artifacts/`:
-   - `calcmark-{VERSION}.wasm`
-   - `wasm_exec.js`
+1. Check the Actions tab: `https://github.com/CalcMark/go-calcmark/actions`
+2. Click the failed workflow run for detailed logs
+3. Common issues:
+   - **Go version mismatch**: Workflow reads from `go.mod`, ensure it's current
+   - **Permission denied**: Check repository Settings → Actions → Workflow permissions
+   - **Homebrew tap push fails**: Verify `HOMEBREW_TAP_GITHUB_TOKEN` secret exists and has write access
 
-5. Generate release notes automatically or write custom notes
+### Need to redo a release
 
-6. Publish release
+```bash
+# Delete the tag locally and remotely
+git tag -d v0.3.0
+git push origin :refs/tags/v0.3.0
+
+# Delete the GitHub release manually (if created)
+# Then fix the issue, commit, and re-tag
+git tag -a "v0.3.0" -m "Release v0.3.0"
+git push origin v0.3.0
+```
+
+## Release Checklist
+
+Before pushing a tag:
+
+- [ ] All tests pass: `task test`
+- [ ] Quality checks pass: `task quality`
+- [ ] All changes committed and pushed to `main`
+- [ ] Tag created: `git tag -a "vX.Y.Z" -m "Release vX.Y.Z"`
+- [ ] Breaking changes documented (for major versions)
+- [ ] `HOMEBREW_TAP_GITHUB_TOKEN` secret is configured (first release only)
+
+## Version Numbering
+
+go-calcmark follows [Semantic Versioning 2.0.0](https://semver.org/):
+
+- **MAJOR**: Incompatible API or language changes
+- **MINOR**: New functionality (backward compatible)
+- **PATCH**: Bug fixes (backward compatible)
 
 ## Post-Release
 
 After a successful release:
 
-1. **Update downstream projects** that consume go-calcmark:
-   - CalcMark Server (github.com/CalcMark/server)
-   - CalcMark Web (github.com/CalcMark/calcmark)
-
-2. **Announce release** (if appropriate):
-   - Update documentation sites
-   - Notify community/users
-   - Update integration guides
-
-3. **Prepare next version**:
-   - Optionally bump version.go to next -dev version
-   - Example: `const Version = "0.2.1-dev"`
-   - This makes it clear HEAD is not a release
-
-## Questions?
-
-For issues with the release process:
-- Check GitHub Actions logs: `https://github.com/CalcMark/go-calcmark/actions`
-- Test locally with `./release.sh --local`
-- Review this document for common issues
+1. Verify the release at `https://github.com/CalcMark/go-calcmark/releases`
+2. Test Homebrew installation: `brew install calcmark/tap/calcmark`
+3. Update downstream projects that consume go-calcmark

@@ -8,9 +8,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	calcmark "github.com/CalcMark/go-calcmark"
 )
+
+// Version is set via ldflags at build time (e.g., -X main.Version=0.3.0).
+// Falls back to "dev" for untagged builds.
+var Version = "dev"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -27,7 +29,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "version":
-		fmt.Println(calcmark.Version)
+		fmt.Println(Version)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
 		printUsage()
@@ -66,12 +68,12 @@ func buildWasm() error {
 	}
 
 	wasmDir := filepath.Join(moduleRoot, "impl", "wasm")
-	wasmFilename := fmt.Sprintf("calcmark-%s.wasm", calcmark.Version)
+	wasmFilename := fmt.Sprintf("calcmark-%s.wasm", Version)
 	buildWasmPath := filepath.Join(wasmDir, wasmFilename)
 	outputWasmPath := filepath.Join(outputDir, wasmFilename)
 
 	fmt.Printf("Building WASM module...\n")
-	fmt.Printf("  Version: %s\n", calcmark.Version)
+	fmt.Printf("  Version: %s\n", Version)
 	fmt.Printf("  Source:  %s\n", wasmDir)
 	fmt.Printf("  Build:   %s\n", buildWasmPath)
 
