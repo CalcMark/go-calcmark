@@ -45,7 +45,7 @@ CalcMark is designed to be safe for evaluating user-provided calculation code. T
 3. **Extension Validation**: Only `.cm` and `.calcmark` files for input
 4. **Timeout Protection** (recommended): Set timeouts in production environments
 
-Note: Output commands (`/output`, `/save`) allow writing to any path the user specifies, including paths with `..`. This is intentional - users should be able to export results anywhere they have write access.
+Note: Output commands (`:output`, `:save`) allow writing to any path the user specifies, including paths with `..`. This is intentional - users should be able to export results anywhere they have write access.
 
 ### Recommended Timeouts
 

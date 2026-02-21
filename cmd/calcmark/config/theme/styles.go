@@ -31,7 +31,7 @@ var (
 	HintStyle = lipgloss.NewStyle().
 			Foreground(Hint)
 
-	// Command style (slash commands)
+	// Command style (REPL command mode)
 	CommandStyle = lipgloss.NewStyle().
 			Foreground(Command)
 

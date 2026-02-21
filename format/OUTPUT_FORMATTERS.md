@@ -182,7 +182,7 @@ func (f *TextFormatter) Format(w io.Writer, doc *Document, opts FormatOptions) e
 The save command uses the same formatters but writes to files:
 
 ```go
-// REPL /save command
+// REPL :save command
 func (r *REPL) handleSave(args []string) error {
     filename := args[0]
     formatter := GetFormatter("", filename)  // Auto-detect
@@ -239,8 +239,8 @@ $ echo 'x = 100 GB / 8 Mbps' | ./cm eval
 100 hours
 
 # Save from REPL
-cm> /save results.json     # Uses JSON formatter
-cm> /save output.txt        # Uses text formatter
+cm> :save results.json     # Uses JSON formatter
+cm> :save output.txt        # Uses text formatter
 
 # CLI output subcommand
 $ ./cm output calc.cm -o results.html   # Auto-detect HTML

@@ -70,7 +70,7 @@ Colors are named by their **purpose**, not their appearance. Each semantic color
 | Semantic Name | Purpose                       | Light Mode | Dark Mode |
 |---------------|-------------------------------|------------|-----------|
 | `Hint`        | Autosuggestions, help text    | `#6e7781`  | `#6e7781` |
-| `Command`     | Slash commands                | `#8250df`  | `#a371f7` |
+| `Command`     | REPL commands                 | `#8250df`  | `#a371f7` |
 | `Success`     | Confirmations (save complete) | `#1a7f37`  | `#3fb950` |
 
 ### Border & Background
@@ -352,7 +352,7 @@ var (
 	HintStyle = lipgloss.NewStyle().
 		Foreground(Hint)
 
-	// Command style (slash commands)
+	// Command style (REPL commands)
 	CommandStyle = lipgloss.NewStyle().
 		Foreground(Command)
 

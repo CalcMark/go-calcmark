@@ -30,11 +30,11 @@ type Model struct {
 	// State
 	history       []string              // Command history for ↑↓
 	outputHistory []shared.HistoryEntry // Display history (input/output pairs)
-	pinnedVars    map[string]bool       // Variables (kept for /vars command)
+	pinnedVars    map[string]bool       // Pinned variables for display
 	changedVars   map[string]bool       // Variables changed in last update
 	historyIdx    int                   // Current position in history (-1 = not browsing)
 	lastSuggest   []features.Feature    // Cached suggestions
-	slashCommands []shared.SlashCommand // Available commands
+	commands      []shared.Command      // Available REPL commands
 
 	// Modes
 	inputMode shared.InputMode
@@ -79,7 +79,7 @@ func New(doc *document.Document) Model {
 		history:       []string{},
 		outputHistory: []shared.HistoryEntry{},
 		historyIdx:    -1,
-		slashCommands: shared.DefaultSlashCommands(),
+		commands:      shared.DefaultCommands(),
 		inputMode:     shared.InputNormal,
 		width:         80,
 		height:        24,
@@ -191,14 +191,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyRunes:
-		// Check for '/' to enter slash mode
+		// Check for ':' to enter command mode
 		if m.inputMode == shared.InputNormal &&
 			len(msg.Runes) == 1 &&
-			msg.Runes[0] == '/' &&
+			msg.Runes[0] == ':' &&
 			m.input.Value() == "" {
-			m.inputMode = shared.InputSlash
+			m.inputMode = shared.InputCommand
 			m.input.SetValue("")
-			m.input.Prompt = "/ "
+			m.input.Prompt = ": "
 			return m, nil
 		}
 	}
@@ -211,8 +211,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleEscape processes the escape key.
 func (m Model) handleEscape() (tea.Model, tea.Cmd) {
-	// Exit slash mode
-	if m.inputMode == shared.InputSlash {
+	// Exit command mode
+	if m.inputMode == shared.InputCommand {
 		m.inputMode = shared.InputNormal
 		m.input.SetValue("")
 		m.input.Prompt = "> "
@@ -268,8 +268,8 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Slash mode: treat as command
-	if m.inputMode == shared.InputSlash {
+	// Command mode: treat as command
+	if m.inputMode == shared.InputCommand {
 		m, cmd := m.handleCommand(input)
 		m.inputMode = shared.InputNormal
 		m.input.Prompt = "> "
@@ -302,9 +302,8 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleCommand processes slash commands.
+// handleCommand processes REPL commands.
 func (m Model) handleCommand(cmd string) (Model, tea.Cmd) {
-	cmd = strings.TrimPrefix(cmd, "/")
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
 		return m, nil
@@ -315,7 +314,7 @@ func (m Model) handleCommand(cmd string) (Model, tea.Cmd) {
 		// List all defined variables
 		varsOutput := m.formatVariables()
 		m.outputHistory = append(m.outputHistory, shared.HistoryEntry{
-			Input:   "/vars",
+			Input:   ":vars",
 			Output:  varsOutput,
 			IsError: false,
 		})
@@ -374,19 +373,19 @@ func (m Model) handleCommand(cmd string) (Model, tea.Cmd) {
 	case "help", "h", "?":
 		helpText := RenderHelpText(m.width)
 		m.outputHistory = append(m.outputHistory, shared.HistoryEntry{
-			Input:   "/help",
+			Input:   ":help",
 			Output:  helpText,
 			IsError: false,
 		})
 
 	default:
-		m.err = fmt.Errorf("unknown command: /%s (type /help)", parts[0])
+		m.err = fmt.Errorf("unknown command: %s (type :help)", parts[0])
 	}
 
 	return m, nil
 }
 
-// formatVariables formats all variables for the /vars command.
+// formatVariables formats all variables for the :vars command.
 func (m Model) formatVariables() string {
 	env := m.eval.GetEnvironment()
 	allVars := env.GetAllVariables()

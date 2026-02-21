@@ -29,9 +29,6 @@ type KeyMap struct {
 	Escape key.Binding
 	Tab    key.Binding
 
-	// Mode switching
-	SlashCommand key.Binding
-
 	// Editor-specific keys (used in editor mode)
 	Edit       key.Binding
 	Save       key.Binding
@@ -119,10 +116,6 @@ func DefaultKeyMap() KeyMap {
 		Tab: key.NewBinding(
 			key.WithKeys("tab"),
 			key.WithHelp("Tab", "complete"),
-		),
-		SlashCommand: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp("/", "command mode"),
 		),
 		Edit: key.NewBinding(
 			key.WithKeys("e", "i"),

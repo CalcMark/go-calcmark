@@ -50,7 +50,13 @@ func (m *Model) transitionToReady() {
 	// INVARIANT: Evaluator must exist
 	if m.eval == nil {
 		m.eval = implDoc.NewEvaluator()
-		_ = m.eval.Evaluate(m.doc)
+		if err := m.eval.Evaluate(m.doc); err != nil {
+			// Show a brief notice that the document has errors.
+			// The preview pane displays detailed error diagnostics —
+			// the status bar just flags there's a problem.
+			m.statusMsg = "Document has errors — see preview pane"
+			m.statusIsErr = true
+		}
 	}
 
 	// INVARIANT: Cursor at valid position

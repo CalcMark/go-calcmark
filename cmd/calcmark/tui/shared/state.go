@@ -19,10 +19,14 @@ type InputMode int
 
 const (
 	InputNormal   InputMode = iota // Normal input
-	InputSlash                     // Slash command entry
+	InputCommand                   // Command entry (triggered by ":")
 	InputMarkdown                  // Multi-line markdown entry
 	InputEditing                   // Line editing in editor
 )
+
+// Note: Slash commands (/help, /vars, etc.) were originally used for REPL
+// commands but were removed because "/" is the CalcMark divide operator.
+// Commands now use the ":" prefix (e.g., :help, :vars).
 
 // HistoryEntry represents a single REPL history entry.
 type HistoryEntry struct {
@@ -39,44 +43,25 @@ type PinnedVar struct {
 	IsFrontmatter bool       // Is this a frontmatter variable?
 }
 
-// SlashCommand defines a slash command with its syntax and description.
-type SlashCommand struct {
-	Name        string // Command name without /
-	Syntax      string // Full syntax example
+// Command defines a REPL command with its syntax and description.
+type Command struct {
+	Name        string // Command name without prefix
+	Syntax      string // Full syntax example (e.g., ":help")
 	Description string // Brief description
 }
 
-// DefaultSlashCommands returns the list of available slash commands for Simple REPL.
-func DefaultSlashCommands() []SlashCommand {
-	return []SlashCommand{
-		{"help", "/help", "Show help"},
-		{"vars", "/vars", "List all variables"},
-		{"clear", "/clear", "Clear screen (keep variables)"},
-		{"reset", "/reset", "Clear everything"},
-		{"edit", "/edit [file]", "Switch to editor mode"},
-		{"quit", "/quit", "Exit REPL"},
-		{"q", "/q", "Exit (shortcut)"},
-		{"h", "/h", "Help (shortcut)"},
-		{"?", "/?", "Help (shortcut)"},
-	}
-}
-
-// EditorSlashCommands returns the list of slash commands for Document Editor.
-func EditorSlashCommands() []SlashCommand {
-	return []SlashCommand{
-		{"save", "/save", "Save document"},
-		{"saveas", "/saveas <name>", "Save as new file"},
-		{"open", "/open [file]", "Open file"},
-		{"quit", "/quit", "Quit (warns if unsaved)"},
-		{"help", "/help", "Show help"},
-		{"globals", "/globals", "Toggle globals panel"},
-		{"preview", "/preview [mode]", "Cycle preview mode"},
-		{"find", "/find <term>", "Search document"},
-		{"goto", "/goto <line>", "Jump to line"},
-		{"eval", "/eval <expr>", "Quick evaluate"},
-		{"undo", "/undo", "Undo change"},
-		{"redo", "/redo", "Redo change"},
-		{"wq", "/wq", "Save and quit"},
+// DefaultCommands returns the list of available commands for Simple REPL.
+func DefaultCommands() []Command {
+	return []Command{
+		{"help", ":help", "Show help"},
+		{"vars", ":vars", "List all variables"},
+		{"clear", ":clear", "Clear screen (keep variables)"},
+		{"reset", ":reset", "Clear everything"},
+		{"edit", ":edit [file]", "Switch to editor mode"},
+		{"quit", ":quit", "Exit REPL"},
+		{"q", ":q", "Exit (shortcut)"},
+		{"h", ":h", "Help (shortcut)"},
+		{"?", ":?", "Help (shortcut)"},
 	}
 }
 

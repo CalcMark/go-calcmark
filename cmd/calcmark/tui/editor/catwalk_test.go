@@ -75,6 +75,8 @@ z = 30`
 			"delete_last_char",               // TestEditorCatwalkDeleteLastChar
 			"undo",                           // TestEditorCatwalkUndo
 			"clipboard",                      // TestEditorCatwalkClipboard
+			"export_flow",                    // TestEditorCatwalkExportFlow
+			"help_interactive",               // TestEditorCatwalkHelpInteractive
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1312,6 +1314,69 @@ z = 30`
 			}),
 			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkExportFlow tests the complete export flow through catwalk.
+func TestEditorCatwalkExportFlow(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "export_flow") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkHelpInteractive tests the interactive help overlay through catwalk.
+// Verifies: opening help, navigating, executing commands, dismissing.
+func TestEditorCatwalkHelpInteractive(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "help_interactive") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
 		)

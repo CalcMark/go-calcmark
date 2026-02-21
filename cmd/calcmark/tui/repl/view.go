@@ -32,8 +32,8 @@ func (m Model) View() string {
 		historyHeight = 3
 	}
 
-	// Mode indicator for slash mode (takes 1 line if shown)
-	if m.inputMode == shared.InputSlash {
+	// Mode indicator for command mode (takes 1 line if shown)
+	if m.inputMode == shared.InputCommand {
 		modeStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("3")).
 			Italic(true)
@@ -51,10 +51,10 @@ func (m Model) View() string {
 	b.WriteString("\n")
 
 	// Suggestions (if any)
-	if m.inputMode == shared.InputSlash {
-		suggestions := GetSlashCommandSuggestions(m.input.Value(), m.slashCommands)
+	if m.inputMode == shared.InputCommand {
+		suggestions := GetCommandSuggestions(m.input.Value(), m.commands)
 		if len(suggestions) > 0 {
-			b.WriteString(RenderSlashSuggestions(suggestions, m.styles))
+			b.WriteString(RenderCommandSuggestions(suggestions, m.styles))
 			b.WriteString("\n")
 		}
 	} else {
@@ -82,7 +82,7 @@ func (m Model) View() string {
 	helpStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("240")).
 		Width(m.width)
-	helpText := RenderHelpLine(m.inputMode == shared.InputSlash, m.width)
+	helpText := RenderHelpLine(m.inputMode == shared.InputCommand, m.width)
 	b.WriteString(helpStyle.Render(helpText))
 
 	return b.String()
@@ -198,14 +198,14 @@ func (m Model) getVariableCompletions() []string {
 // Pure rendering functions below
 
 // RenderHelpLine renders context-sensitive help text.
-func RenderHelpLine(slashMode bool, width int) string {
-	if slashMode {
-		return "↑↓ history │ /help │ /vars │ /quit │ Esc cancel"
+func RenderHelpLine(commandMode bool, width int) string {
+	if commandMode {
+		return "↑↓ history │ :help │ :vars │ :quit │ Esc cancel"
 	}
-	return "↑↓ history │ /help │ /vars │ /clear │ /quit"
+	return "↑↓ history │ :help │ :vars │ :clear │ :quit"
 }
 
-// RenderHelpText renders the /help output.
+// RenderHelpText renders the :help output.
 func RenderHelpText(width int) string {
 	help := `
 CalcMark REPL Help
@@ -216,13 +216,13 @@ EXPRESSIONS
   5 * 10 + 2          Simple arithmetic
   sqrt(144)           Built-in functions
 
-COMMANDS
-  /help, /h, /?       Show this help
-  /vars               List all defined variables
-  /clear              Clear screen (keep variables)
-  /reset              Clear everything
-  /quit, /q           Exit REPL
-  /edit [file]        Switch to editor mode
+COMMANDS (press : to enter command mode)
+  :help, :h, :?       Show this help
+  :vars               List all defined variables
+  :clear              Clear screen (keep variables)
+  :reset              Clear everything
+  :quit, :q           Exit REPL
+  :edit [file]        Switch to editor mode
 
 KEYBOARD
   ↑/↓                 Navigate command history
@@ -232,14 +232,14 @@ KEYBOARD
 	return strings.TrimSpace(help)
 }
 
-// GetSlashCommandSuggestions returns matching slash commands.
-func GetSlashCommandSuggestions(input string, commands []shared.SlashCommand) []shared.SlashCommand {
+// GetCommandSuggestions returns matching commands for the given input.
+func GetCommandSuggestions(input string, commands []shared.Command) []shared.Command {
 	input = strings.ToLower(strings.TrimSpace(input))
 	if input == "" {
 		return commands
 	}
 
-	var matches []shared.SlashCommand
+	var matches []shared.Command
 	for _, cmd := range commands {
 		if strings.HasPrefix(cmd.Name, input) {
 			matches = append(matches, cmd)
@@ -253,8 +253,8 @@ func GetSlashCommandSuggestions(input string, commands []shared.SlashCommand) []
 	return matches
 }
 
-// RenderSlashSuggestions renders slash command suggestions.
-func RenderSlashSuggestions(suggestions []shared.SlashCommand, styles config.Styles) string {
+// RenderCommandSuggestions renders command suggestions.
+func RenderCommandSuggestions(suggestions []shared.Command, styles config.Styles) string {
 	if len(suggestions) == 0 {
 		return ""
 	}

@@ -170,7 +170,7 @@ Plans:
 1. Status bar shows only Ctrl+Q (quit) and Ctrl+H (help/commands)
 2. Ctrl+H opens a command menu popup listing all available actions
 3. Accelerators (Ctrl+S, Ctrl+E, etc.) work directly without menu
-4. No slash commands exist in the app (/ is divide operator in CalcMark)
+4. Slash commands were removed because / is the CalcMark divide operator. REPL uses : prefix for commands.
 5. Help overlay provides comprehensive command reference
 6. Command menu is keyboard-navigable with clear visual feedback
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui"
@@ -17,7 +16,7 @@ func runEdit(filepath string) {
 	var err error
 
 	if filepath != "" {
-		doc, err = loadAndEvaluate(filepath)
+		doc, err = loadDocument(filepath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading file: %v\n", err)
 			os.Exit(1)
@@ -62,8 +61,10 @@ func runTUIApp(app *tui.App) {
 	}
 }
 
-// loadAndEvaluate loads a file and evaluates it
-func loadAndEvaluate(path string) (*document.Document, error) {
+// loadDocument loads and parses a file into a document.
+// Only file-system and parse errors are fatal — evaluation errors are
+// diagnostic and handled by the editor's preview pane.
+func loadDocument(path string) (*document.Document, error) {
 	if err := validateFilePath(path); err != nil {
 		return nil, err
 	}
@@ -76,11 +77,6 @@ func loadAndEvaluate(path string) (*document.Document, error) {
 	doc, err := document.NewDocument(string(content))
 	if err != nil {
 		return nil, fmt.Errorf("parse document: %w", err)
-	}
-
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		return nil, fmt.Errorf("evaluate: %w", err)
 	}
 
 	return doc, nil

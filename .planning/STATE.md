@@ -99,7 +99,7 @@ Recent decisions affecting current work:
 - [11.2-01]: Help binding description updated to 'help/commands' to reflect dual purpose
 - [11.2]: Ctrl+E restored to export mode (reverted readline navigation)
 - [11.2]: Ctrl+A not used for line-start (reserved for select-all in Phase 13)
-- [11.2]: No slash commands in app (/ is divide operator in CalcMark)
+- [11.2]: Slash commands were removed because / is the CalcMark divide operator. REPL uses : prefix for commands.
 - [11.2]: Status bar to show only Ctrl+Q and Ctrl+H (minimal, discoverable)
 - [11.2]: Ctrl+H opens command menu popup (not just help overlay)
 - [11-03]: Alt+B/F navigation uses same word boundary logic as Ctrl+Arrow

@@ -78,21 +78,21 @@ infra_cost = dev_cost * infra_pct
 
 ## REPL Commands
 
-Press `/` to enter command mode, then type a command:
+Press `:` to enter command mode, then type a command:
 
 | Command | Description |
 |---------|-------------|
-| `/help` | Show help topics |
-| `/help units` | List all supported units |
-| `/help functions` | List available functions |
-| `/open <file>` | Load a CalcMark file |
-| `/save <file.cm>` | Save session as CalcMark |
-| `/output <file>` | Export to HTML, Markdown, or JSON |
-| `/pin` | Pin all variables to the sidebar |
-| `/pin <var>` | Pin a specific variable |
-| `/unpin <var>` | Unpin a variable |
-| `/md` | Enter multi-line markdown mode |
-| `/quit` | Exit |
+| `:help` | Show help topics |
+| `:help units` | List all supported units |
+| `:help functions` | List available functions |
+| `:open <file>` | Load a CalcMark file |
+| `:save <file.cm>` | Save session as CalcMark |
+| `:output <file>` | Export to HTML, Markdown, or JSON |
+| `:pin` | Pin all variables to the sidebar |
+| `:pin <var>` | Pin a specific variable |
+| `:unpin <var>` | Unpin a variable |
+| `:md` | Enter multi-line markdown mode |
+| `:quit` | Exit |
 
 ### Keyboard Shortcuts
 
@@ -109,7 +109,7 @@ Press `/` to enter command mode, then type a command:
 Save the session as a CalcMark file (calculations + markdown):
 
 ```
-/save my-budget.cm
+:save my-budget.cm
 ```
 
 ### Export Results
@@ -209,7 +209,7 @@ CalcMark supports a wide range of units across categories:
 - **Speed**: mph, km/h, m/s
 - **Data Rate**: Mbps, Gbps
 
-Use `/help units` in the REPL for the complete list.
+Use `:help units` in the REPL for the complete list.
 
 ### Unit Conversion
 
@@ -370,7 +370,7 @@ Load a file, tweak values in the REPL, then save when satisfied:
 ```bash
 cm budget.cm           # Load and explore
 # ... make changes ...
-/save budget-v2.cm     # Save your iteration
+:save budget-v2.cm     # Save your iteration
 ```
 
 ## Troubleshooting
@@ -396,5 +396,5 @@ The line isn't valid CalcMark syntax. Common issues:
 ## Next Steps
 
 - Explore the example files in `docs/examples/`
-- Try `/help` in the REPL to discover features
+- Try `:help` in the REPL to discover features
 - Build your own calculation documents!

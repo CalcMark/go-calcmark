@@ -29,36 +29,40 @@ func (m Model) View() string {
 		return "Goodbye!\n"
 	}
 
-	// If help mode is active, render help overlay on top
-	if m.mode == StateHelp {
+	// Modal overlays - render centered on screen with consistent background
+	switch m.mode {
+	case StateHelp:
 		helpView := m.renderHelpOverlay()
-		// Center the help overlay on screen with consistent background
 		return lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			helpView,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
 		)
-	}
 
-	// If command menu is active, render it as full-screen modal (like help)
-	if m.mode == StateCommandMenu {
+	case StateCommandMenu:
 		menuPopup := m.renderCommandMenuPopup()
-		// Center the command menu on screen with consistent background
 		return lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			menuPopup,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
 		)
-	}
 
-	// If file picker is active, render it as full-screen modal
-	if m.mode == StateFilePicker {
+	case StateFilePicker:
 		pickerOverlay := m.renderFilePickerOverlay()
 		return lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			pickerOverlay,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+		)
+
+	case StateExport:
+		exportOverlay := m.renderExportOverlay()
+		return lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			exportOverlay,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
 		)
@@ -576,6 +580,26 @@ func ensureLinesAreFullWidth(content string, width int, bg lipgloss.TerminalColo
 		lines[i] = ensureFullWidth(line, width, bg)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// overlayPadLine pads content to exactly targetWidth visual columns and applies
+// a background style. Used by all modal overlays (help, export, command menu,
+// file picker) to ensure consistent line widths inside bordered panels.
+//
+// Handles ANSI escape codes correctly:
+//   - Uses lipgloss.Width() to measure visual width (ignores escape sequences)
+//   - Strips ANSI reset codes to prevent them from clearing the applied background
+//   - Wraps content + padding together so background covers the full width
+func overlayPadLine(content string, targetWidth int, bg lipgloss.Color) string {
+	// Strip reset codes so they don't clear our background
+	content = stripResetCodes(content)
+
+	visualWidth := lipgloss.Width(content)
+	if visualWidth < targetWidth {
+		content += strings.Repeat(" ", targetWidth-visualWidth)
+	}
+
+	return lipgloss.NewStyle().Background(bg).Render(content)
 }
 
 // wrapStyledLine wraps a line containing ANSI escape codes using visual width.
@@ -1398,142 +1422,208 @@ func (m Model) renderCommandMenuPopup() string {
 	commands := EditorCommands
 	selected := m.commandMenuState.Selected
 
-	// Calculate popup dimensions
-	innerWidth := 40 // Wide enough for "Ctrl+Shift+S  Save As..." format
+	innerWidth := 44
 
-	// Border characters (rounded style matching autocomplete)
+	// Border and background colors (shared palette across all overlays)
 	borderFg := lipgloss.Color("#5C5C5C")
 	borderStyle := lipgloss.NewStyle().Foreground(borderFg)
+	itemBg := lipgloss.Color("#1E1E1E")
+	selectedBg := lipgloss.Color("#4A90D9")
 
 	topBorder := borderStyle.Render("╭" + strings.Repeat("─", innerWidth) + "╮")
 	bottomBorder := borderStyle.Render("╰" + strings.Repeat("─", innerWidth) + "╯")
 	leftBorder := borderStyle.Render("│")
 	rightBorder := borderStyle.Render("│")
+	sepLine := borderStyle.Render(strings.Repeat("─", innerWidth))
+
+	// pad creates a line padded to innerWidth with the given foreground/background
+	pad := func(content string, fg, bg lipgloss.Color, bold bool) string {
+		style := lipgloss.NewStyle().Foreground(fg).Background(bg)
+		if bold {
+			style = style.Bold(true)
+		}
+		visualWidth := lipgloss.Width(content)
+		if visualWidth < innerWidth {
+			content += strings.Repeat(" ", innerWidth-visualWidth)
+		}
+		return style.Render(content)
+	}
 
 	var lines []string
 	lines = append(lines, topBorder)
 
 	// Title row
-	title := " Commands"
-	for len(title) < innerWidth {
-		title += " "
-	}
-	titleStyle := lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#1E1E1E"))
-	lines = append(lines, leftBorder+titleStyle.Render(title)+rightBorder)
+	lines = append(lines, leftBorder+pad(" Commands", "#FFFFFF", itemBg, true)+rightBorder)
 
 	// Separator
-	sepLine := strings.Repeat("─", innerWidth)
-	lines = append(lines, leftBorder+borderStyle.Render(sepLine)+rightBorder)
+	lines = append(lines, leftBorder+sepLine+rightBorder)
 
-	// Command items - show accelerator and name
-	itemBg := lipgloss.Color("#1E1E1E")
-	selectedBg := lipgloss.Color("#4A90D9")
-
+	// Command items — show accelerator and name
 	for i, cmd := range commands {
-		line := fmt.Sprintf(" %-12s %s", cmd.Accelerator, cmd.Name)
-		for len(line) < innerWidth {
-			line += " "
-		}
+		content := fmt.Sprintf(" %-12s %s", cmd.Accelerator, cmd.Name)
 
-		var styledLine string
 		if i == selected {
-			selStyle := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FFFFFF")).
-				Background(selectedBg).
-				Bold(true)
-			styledLine = selStyle.Render(line)
+			lines = append(lines, leftBorder+pad(content, "#FFFFFF", selectedBg, true)+rightBorder)
 		} else {
-			itemStyle := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#CCCCCC")).
-				Background(itemBg)
-			styledLine = itemStyle.Render(line)
+			lines = append(lines, leftBorder+pad(content, "#CCCCCC", itemBg, false)+rightBorder)
 		}
-		lines = append(lines, leftBorder+styledLine+rightBorder)
 	}
 
 	// Hint row
-	hint := " Enter:select  Esc:close"
-	for len(hint) < innerWidth {
-		hint += " "
-	}
 	hintStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#666666")).
 		Background(itemBg).
 		Italic(true)
+	hint := " ↑↓ navigate  Enter select  Esc close"
+	visualWidth := lipgloss.Width(hint)
+	if visualWidth < innerWidth {
+		hint += strings.Repeat(" ", innerWidth-visualWidth)
+	}
 	lines = append(lines, leftBorder+hintStyle.Render(hint)+rightBorder)
 
 	lines = append(lines, bottomBorder)
 	return strings.Join(lines, "\n")
 }
 
-// renderFilePickerOverlay renders the file picker as a modal overlay.
+// renderFilePickerOverlay renders the file picker as a modal overlay
+// with fixed-width manual borders matching other overlays.
 func (m Model) renderFilePickerOverlay() string {
-	var lines []string
+	innerWidth := 70
 
-	// Header with current directory
-	headerStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("252")).
-		Background(lipgloss.Color("236")).
-		Padding(0, 1)
+	// Border and background colors (shared palette across all overlays)
+	borderFg := lipgloss.Color("#5C5C5C")
+	borderStyle := lipgloss.NewStyle().Foreground(borderFg)
+	itemBg := lipgloss.Color("#1E1E1E")
 
-	header := headerStyle.Render(fmt.Sprintf(" Save to: %s ", m.filePicker.CurrentDirectory))
-	lines = append(lines, header)
-	lines = append(lines, "") // spacing
+	topBorder := borderStyle.Render("╭" + strings.Repeat("─", innerWidth) + "╮")
+	bottomBorder := borderStyle.Render("╰" + strings.Repeat("─", innerWidth) + "╯")
+	leftBorder := borderStyle.Render("│")
+	rightBorder := borderStyle.Render("│")
+	sepLine := borderStyle.Render(strings.Repeat("─", innerWidth))
 
-	// File picker view (dim if filename input has focus)
-	pickerView := m.filePicker.View()
-	if m.filePickerFocus == FocusFilename {
-		// Dim the picker when filename has focus
-		dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-		pickerView = dimStyle.Render(pickerView)
+	// pad creates a line padded to innerWidth with the given foreground/background
+	pad := func(content string, fg, bg lipgloss.Color, bold bool) string {
+		style := lipgloss.NewStyle().Foreground(fg).Background(bg)
+		if bold {
+			style = style.Bold(true)
+		}
+		visualWidth := lipgloss.Width(content)
+		if visualWidth < innerWidth {
+			content += strings.Repeat(" ", innerWidth-visualWidth)
+		}
+		return style.Render(content)
 	}
-	lines = append(lines, strings.Split(pickerView, "\n")...)
 
-	lines = append(lines, "") // spacing before filename
+	// truncatePath shortens a directory path to fit within maxLen,
+	// keeping the end (most relevant part) with leading "..."
+	truncatePath := func(path string, maxLen int) string {
+		if len(path) <= maxLen {
+			return path
+		}
+		return "..." + path[len(path)-(maxLen-3):]
+	}
 
-	// Filename input field (always visible)
-	var filenameField string
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	var lines []string
+	lines = append(lines, topBorder)
+
+	// Purpose-aware title with truncated directory path
+	var titlePrefix string
+	switch m.filePickerPurpose {
+	case PickerForOpen:
+		titlePrefix = " Open: "
+	case PickerForExport:
+		titlePrefix = " Export to: "
+	default:
+		titlePrefix = " Save to: "
+	}
+	maxPathLen := innerWidth - len(titlePrefix) - 1
+	dirPath := truncatePath(m.filePicker.CurrentDirectory, maxPathLen)
+	lines = append(lines, leftBorder+pad(titlePrefix+dirPath, "#FFFFFF", itemBg, true)+rightBorder)
+
+	// Format subheading for export mode
+	if m.filePickerPurpose == PickerForExport {
+		format := m.exportFormatOpts[m.exportState.FormatIdx]
+		ext := formatToExtension(format)
+		content := fmt.Sprintf(" Format: %s (%s)", format, ext)
+		formatStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA")).Background(itemBg).Italic(true)
+		visualWidth := lipgloss.Width(content)
+		if visualWidth < innerWidth {
+			content += strings.Repeat(" ", innerWidth-visualWidth)
+		}
+		lines = append(lines, leftBorder+formatStyle.Render(content)+rightBorder)
+	}
+
+	// Separator
+	lines = append(lines, leftBorder+sepLine+rightBorder)
+
+	// File picker view — split into lines, pad each with ANSI-aware padding.
+	// The filepicker View() output contains ANSI escape codes for directory
+	// coloring and cursor highlighting, so we use overlayPadLine which strips
+	// ANSI resets and applies background consistently.
+	pickerView := m.filePicker.View()
+	pickerLines := strings.Split(pickerView, "\n")
+
+	dimBg := lipgloss.Color("#1E1E1E")
+	for _, pl := range pickerLines {
+		content := " " + pl
+		if m.filePickerFocus == FocusFilename {
+			// Dim the browser when filename has focus
+			dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).Background(dimBg)
+			stripped := stripResetCodes(content)
+			visualWidth := lipgloss.Width(stripped)
+			if visualWidth < innerWidth {
+				stripped += strings.Repeat(" ", innerWidth-visualWidth)
+			}
+			lines = append(lines, leftBorder+dimStyle.Render(stripped)+rightBorder)
+		} else {
+			// Active browser — use overlayPadLine for ANSI-safe background
+			lines = append(lines, leftBorder+overlayPadLine(content, innerWidth, itemBg)+rightBorder)
+		}
+	}
+
+	// Separator before filename
+	lines = append(lines, leftBorder+sepLine+rightBorder)
+
+	// Filename input field
+	activeInputBg := lipgloss.Color("#2A2A3A")
+
 	if m.filePickerFocus == FocusFilename {
-		// Focused: show cursor
-		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("252")).
-			Background(lipgloss.Color("238")).
-			Padding(0, 1)
 		cursor := "█"
-		filenameField = labelStyle.Render("  Filename: ") + inputStyle.Render(m.newFileName+cursor)
+		display := m.newFileName + cursor
+		lines = append(lines, leftBorder+pad(" Filename: "+display, "#FFFFFF", activeInputBg, false)+rightBorder)
 	} else {
-		// Not focused: just show the filename
-		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("245")).
-			Padding(0, 1)
 		display := m.newFileName
 		if display == "" {
 			display = "(type filename)"
 		}
-		filenameField = labelStyle.Render("  Filename: ") + inputStyle.Render(display)
+		lines = append(lines, leftBorder+pad(" Filename: "+display, "#666666", itemBg, false)+rightBorder)
 	}
-	lines = append(lines, filenameField)
 
-	// Hints
-	lines = append(lines, "")
+	// Empty line
+	lines = append(lines, leftBorder+pad("", "#666666", itemBg, false)+rightBorder)
+
+	// Purpose-aware hints
+	var hint string
+	switch m.filePickerPurpose {
+	case PickerForOpen:
+		hint = " Tab switch  ← up dir  Enter open  Esc cancel"
+	case PickerForExport:
+		hint = " Tab switch  ← up dir  Enter export  Esc cancel"
+	default:
+		hint = " Tab switch  ← up dir  Enter save  Esc cancel"
+	}
 	hintStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Foreground(lipgloss.Color("#666666")).
+		Background(itemBg).
 		Italic(true)
-	hint := "  [Tab] switch focus  [Enter] save  [Esc] cancel"
-	lines = append(lines, hintStyle.Render(hint))
+	visualWidth := lipgloss.Width(hint)
+	if visualWidth < innerWidth {
+		hint += strings.Repeat(" ", innerWidth-visualWidth)
+	}
+	lines = append(lines, leftBorder+hintStyle.Render(hint)+rightBorder)
 
-	content := strings.Join(lines, "\n")
-
-	// Wrap in a box
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		Background(lipgloss.Color("235")).
-		Padding(1, 2)
-
-	return boxStyle.Render(content)
+	lines = append(lines, bottomBorder)
+	return strings.Join(lines, "\n")
 }
 
 // formatFunctionParamHint looks up a function's parameter specs and formats

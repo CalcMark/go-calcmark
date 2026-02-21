@@ -24,12 +24,15 @@ type CommandMenuState struct {
 var EditorCommands = []Command{
 	// File commands
 	{Name: "Save", Accelerator: "Ctrl+S", Description: "Save document", Category: "file"},
+	{Name: "Save As", Accelerator: "", Description: "Save with new name", Category: "file"},
+	{Name: "Open", Accelerator: "Ctrl+O", Description: "Open file", Category: "file"},
 	{Name: "Export", Accelerator: "Ctrl+E", Description: "Export to format", Category: "file"},
 	{Name: "Quit", Accelerator: "Ctrl+Q", Description: "Quit editor", Category: "file"},
 
 	// Edit commands
 	{Name: "Undo", Accelerator: "Ctrl+Z", Description: "Undo last change", Category: "edit"},
 	{Name: "Redo", Accelerator: "Ctrl+Y", Description: "Redo last change", Category: "edit"},
+	{Name: "Delete Line", Accelerator: "Ctrl+D", Description: "Delete current line", Category: "edit"},
 
 	// View commands
 	{Name: "Toggle Preview", Accelerator: "Ctrl+P", Description: "Cycle preview mode", Category: "view"},
@@ -81,6 +84,7 @@ func (m Model) handleCommandMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // executeCommandMenuSelection executes the currently selected command.
+// Thin wrapper that resolves the selected item's name and delegates.
 func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 	if m.commandMenuState.Selected < 0 || m.commandMenuState.Selected >= len(EditorCommands) {
 		m.mode = StateDefault
@@ -89,18 +93,39 @@ func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 
 	cmd := EditorCommands[m.commandMenuState.Selected]
 	m.mode = StateDefault
+	return m.executeCommandByName(cmd.Name)
+}
 
-	// Execute the command based on its name
-	switch cmd.Name {
+// executeCommandByName dispatches a command by name.
+// Shared by the command menu and help overlay.
+func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
+	switch name {
 	case "Save":
 		if m.filepath == "" {
-			m.mode = StateSaveAsPath
-			m.saveAsPath = ""
-			m.statusMsg = "Save as (filename):"
-			return m, nil
+			// No filepath: open file picker for save
+			m.filePicker = initFilePicker()
+			m.filePickerFocus = FocusFilename
+			m.filePickerPurpose = PickerForSave
+			m.mode = StateFilePicker
+			return m, m.filePicker.Init()
 		}
 		m.saveFile("")
 		return m, nil
+
+	case "Save As":
+		// Always open file picker for save-as
+		m.filePicker = initFilePicker()
+		m.filePickerFocus = FocusFilename
+		m.filePickerPurpose = PickerForSave
+		m.mode = StateFilePicker
+		return m, m.filePicker.Init()
+
+	case "Open":
+		m.filePicker = initFilePicker()
+		m.filePickerFocus = FocusFileBrowser
+		m.filePickerPurpose = PickerForOpen
+		m.mode = StateFilePicker
+		return m, m.filePicker.Init()
 
 	case "Export":
 		m.enterExportMode()
@@ -123,6 +148,9 @@ func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 		m.performRedo()
 		return m, nil
 
+	case "Delete Line":
+		return m.handleCtrlD()
+
 	case "Toggle Preview":
 		m.cyclePreviewMode()
 		return m, nil
@@ -141,6 +169,7 @@ func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 
 	case "Full Help":
 		m.mode = StateHelp
+		m.helpState = HelpOverlayState{Selected: 0, ScrollOffset: 0}
 		return m, nil
 	}
 

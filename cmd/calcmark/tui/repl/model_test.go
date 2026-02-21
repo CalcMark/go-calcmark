@@ -65,34 +65,34 @@ func TestHandleKeyCtrlQ(t *testing.T) {
 	}
 }
 
-func TestSlashModeEntry(t *testing.T) {
+func TestCommandModeEntry(t *testing.T) {
 	m := New(nil)
 
-	// Simulate typing '/' on empty input
+	// Simulate typing ':' on empty input
 	newModel, _ := m.Update(tea.KeyMsg{
 		Type:  tea.KeyRunes,
-		Runes: []rune{'/'},
+		Runes: []rune{':'},
 	})
 	result := newModel.(Model)
 
-	if result.inputMode != shared.InputSlash {
-		t.Error("Typing / should enter slash mode")
+	if result.inputMode != shared.InputCommand {
+		t.Error("Typing : should enter command mode")
 	}
-	if result.input.Prompt != "/ " {
-		t.Errorf("Expected '/ ' prompt, got %q", result.input.Prompt)
+	if result.input.Prompt != ": " {
+		t.Errorf("Expected ': ' prompt, got %q", result.input.Prompt)
 	}
 }
 
-func TestSlashModeEscapeExit(t *testing.T) {
+func TestCommandModeEscapeExit(t *testing.T) {
 	m := New(nil)
-	m.inputMode = shared.InputSlash
-	m.input.Prompt = "/ "
+	m.inputMode = shared.InputCommand
+	m.input.Prompt = ": "
 
 	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	result := newModel.(Model)
 
 	if result.inputMode != shared.InputNormal {
-		t.Error("Escape should exit slash mode")
+		t.Error("Escape should exit command mode")
 	}
 	if result.input.Prompt != "> " {
 		t.Errorf("Expected '> ' prompt after escape, got %q", result.input.Prompt)
@@ -277,23 +277,23 @@ func TestIsIdentChar(t *testing.T) {
 	}
 }
 
-func TestGetSlashCommandSuggestions(t *testing.T) {
-	commands := shared.DefaultSlashCommands()
+func TestGetCommandSuggestions(t *testing.T) {
+	commands := shared.DefaultCommands()
 
 	// Empty input returns all
-	all := GetSlashCommandSuggestions("", commands)
+	all := GetCommandSuggestions("", commands)
 	if len(all) != len(commands) {
 		t.Errorf("Empty input should return all commands")
 	}
 
 	// Prefix matching
-	qMatches := GetSlashCommandSuggestions("q", commands)
+	qMatches := GetCommandSuggestions("q", commands)
 	if len(qMatches) != 2 { // "quit" and "q"
 		t.Errorf("Expected 2 matches for 'q', got %d", len(qMatches))
 	}
 
 	// No match
-	noMatch := GetSlashCommandSuggestions("xyz", commands)
+	noMatch := GetCommandSuggestions("xyz", commands)
 	if len(noMatch) != 0 {
 		t.Error("Expected no matches for 'xyz'")
 	}
@@ -305,19 +305,19 @@ func TestRenderHelpLine(t *testing.T) {
 	if !strings.Contains(result, "history") {
 		t.Error("Normal mode should mention history navigation")
 	}
-	if !strings.Contains(result, "/help") {
-		t.Error("Normal mode should mention /help")
+	if !strings.Contains(result, ":help") {
+		t.Error("Normal mode should mention :help")
 	}
-	if !strings.Contains(result, "/quit") {
-		t.Error("Normal mode should mention /quit")
+	if !strings.Contains(result, ":quit") {
+		t.Error("Normal mode should mention :quit")
 	}
 
-	// Slash mode - should mention help and quit
+	// Command mode - should mention help and quit
 	result = RenderHelpLine(true, 100)
-	if !strings.Contains(result, "/help") {
-		t.Error("Slash mode should mention /help")
+	if !strings.Contains(result, ":help") {
+		t.Error("Command mode should mention :help")
 	}
 	if !strings.Contains(result, "Esc") {
-		t.Error("Slash mode should mention Esc to cancel")
+		t.Error("Command mode should mention Esc to cancel")
 	}
 }

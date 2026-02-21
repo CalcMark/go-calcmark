@@ -8,12 +8,21 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// FilePickerFocus indicates which part of the Save dialog has focus.
+// FilePickerFocus indicates which part of the file dialog has focus.
 type FilePickerFocus int
 
 const (
 	FocusFileBrowser FilePickerFocus = iota // Arrow keys navigate directory
 	FocusFilename                           // Typing updates filename
+)
+
+// FilePickerPurpose indicates why the file picker was opened.
+type FilePickerPurpose int
+
+const (
+	PickerForSave   FilePickerPurpose = iota // Save or Save As
+	PickerForOpen                            // Open file
+	PickerForExport                          // Export to format
 )
 
 // initFilePicker creates and configures a new filepicker for the editor.
@@ -34,6 +43,7 @@ func initFilePicker() filepicker.Model {
 	fp.DirAllowed = false        // Enter on directory = navigate into it (not select)
 	fp.FileAllowed = true        // Enter on file = select for overwrite
 	fp.ShowHidden = false
+	fp.ShowPermissions = false // Permissions are not useful for save/open and consume space
 	fp.ShowSize = true
 	fp.SetHeight(15)
 
@@ -54,6 +64,14 @@ func initFilePicker() filepicker.Model {
 func addExtensionIfMissing(filename string) string {
 	if filepath.Ext(filename) == "" {
 		return filename + ".cm"
+	}
+	return filename
+}
+
+// addExportExtension adds the appropriate file extension for an export format.
+func addExportExtension(filename, formatName string) string {
+	if filepath.Ext(filename) == "" {
+		return filename + formatToExtension(formatName)
 	}
 	return filename
 }
