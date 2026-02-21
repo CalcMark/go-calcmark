@@ -34,7 +34,10 @@ go.work
 # OS
 .DS_Store
 Thumbs.db
-.claude/
+# Claude Code - ignore everything except project-specific commands
+.claude/*
+!.claude/commands/
+.claude/commands/gsd/
 
 # Test artifacts
 test_*.cm
