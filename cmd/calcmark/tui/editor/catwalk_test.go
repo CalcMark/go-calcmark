@@ -79,6 +79,7 @@ z = 30`
 			"help_interactive",               // TestEditorCatwalkHelpInteractive
 			"frontmatter_insert",             // TestEditorCatwalkFrontmatterInsert
 			"frontmatter_editing",            // TestEditorCatwalkFrontmatterEditing
+			"open_unsaved_prompt",            // TestEditorCatwalkOpenUnsavedPrompt
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1368,6 +1369,38 @@ z = 30`
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		if !strings.HasSuffix(path, "help_interactive") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkOpenUnsavedPrompt tests Ctrl+O save prompt when there are unsaved changes.
+// Reproduces the bug where Ctrl+O skipped the unsaved changes check and didn't reset editBuf.
+func TestEditorCatwalkOpenUnsavedPrompt(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "open_unsaved_prompt") {
 			return
 		}
 

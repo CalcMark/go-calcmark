@@ -5382,6 +5382,171 @@ func TestCtrlOOpensFilePicker(t *testing.T) {
 	}
 }
 
+// TestCtrlOWithUnsavedChanges tests Ctrl+O shows save prompt when there are unsaved changes.
+func TestCtrlOWithUnsavedChanges(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Make an edit to trigger unsaved changes
+	m.cursorLine = 0
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "y = 200"
+	m.saveCurrentLine(true)
+
+	// Ctrl+O should show save prompt instead of file picker
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	m = newModel.(Model)
+
+	if m.mode != StateSavePrompt {
+		t.Errorf("Expected StateSavePrompt, got %v", m.mode)
+	}
+	if m.pendingSaveAction != PendingOpen {
+		t.Errorf("Expected PendingOpen, got %v", m.pendingSaveAction)
+	}
+	if m.statusMsg != "Unsaved changes! Save before open? (y/n/c)" {
+		t.Errorf("Expected open save prompt message, got %q", m.statusMsg)
+	}
+
+	// Press 'n' — should proceed to file picker for open (not quit)
+	newModel, cmd := m.handleSavePromptKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	m = newModel.(Model)
+
+	if m.mode != StateFilePicker {
+		t.Errorf("Expected StateFilePicker after pressing 'n', got %v", m.mode)
+	}
+	if m.filePickerPurpose != PickerForOpen {
+		t.Errorf("Expected PickerForOpen, got %v", m.filePickerPurpose)
+	}
+	if m.quitting {
+		t.Error("Expected quitting=false (should open, not quit)")
+	}
+	_ = cmd
+}
+
+// TestCtrlOWithUnsavedChangesCancel tests cancelling the save prompt from Ctrl+O.
+func TestCtrlOWithUnsavedChangesCancel(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Make an edit
+	m.cursorLine = 0
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "y = 200"
+	m.saveCurrentLine(true)
+
+	// Trigger Ctrl+O → save prompt
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	m = newModel.(Model)
+
+	// Press 'c' — should cancel and return to editing
+	newModel, _ = m.handleSavePromptKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	m = newModel.(Model)
+
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after cancel, got %v", m.mode)
+	}
+	if m.statusMsg != "Open cancelled" {
+		t.Errorf("Expected 'Open cancelled', got %q", m.statusMsg)
+	}
+}
+
+// TestOpenFileResetsEditBuf tests that openFile resets all editing state.
+func TestOpenFileResetsEditBuf(t *testing.T) {
+	m := New(nil)
+	m.width = 80
+	m.height = 24
+
+	// Simulate stale state from a previous editing session
+	m.editBuf = "some typed text"
+	m.userIsTyping = true
+	m.selectionAnchorLine = 1
+	m.selectionAnchorCol = 5
+	m.pendingKey = 'd'
+	m.yankBuffer = "yanked line"
+	m.searchTerm = "find me"
+	m.searchMatches = []int{1, 3, 5}
+	m.searchIdx = 2
+	m.pendingSaveAction = PendingOpen
+
+	// Create a temp file to open
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.cm")
+	if err := os.WriteFile(tmpFile, []byte("a = 42\n"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Open the file
+	m.openFile(tmpFile)
+
+	// Verify all editing state was reset
+	if m.editBuf != "" {
+		t.Errorf("Expected editBuf to be empty, got %q", m.editBuf)
+	}
+	if m.userIsTyping {
+		t.Error("Expected userIsTyping=false after openFile")
+	}
+	if m.selectionAnchorLine != -1 {
+		t.Errorf("Expected selectionAnchorLine=-1, got %d", m.selectionAnchorLine)
+	}
+	if m.selectionAnchorCol != -1 {
+		t.Errorf("Expected selectionAnchorCol=-1, got %d", m.selectionAnchorCol)
+	}
+	if m.cursorLine != 0 || m.cursorCol != 0 {
+		t.Errorf("Expected cursor at (0,0), got (%d,%d)", m.cursorLine, m.cursorCol)
+	}
+	if m.modified {
+		t.Error("Expected modified=false after openFile")
+	}
+	if m.pendingKey != 0 {
+		t.Errorf("Expected pendingKey=0, got %d", m.pendingKey)
+	}
+	if m.yankBuffer != "" {
+		t.Errorf("Expected yankBuffer empty, got %q", m.yankBuffer)
+	}
+	if m.searchTerm != "" {
+		t.Errorf("Expected searchTerm empty, got %q", m.searchTerm)
+	}
+	if m.searchMatches != nil {
+		t.Errorf("Expected searchMatches nil, got %v", m.searchMatches)
+	}
+	if m.searchIdx != 0 {
+		t.Errorf("Expected searchIdx=0, got %d", m.searchIdx)
+	}
+	if m.pendingSaveAction != PendingNone {
+		t.Errorf("Expected PendingNone, got %v", m.pendingSaveAction)
+	}
+}
+
+// TestTypeThenCtrlODetectsUnsaved traces how hasUnsavedChanges works after typing via Update.
+func TestTypeThenCtrlODetectsUnsaved(t *testing.T) {
+	content := "# Header\nx = 10\ny = 20\nz = 30"
+	doc, _ := document.NewDocument(content)
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Type "hello world" through Update (simulates catwalk)
+	for _, r := range "hello world" {
+		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m = newModel.(Model)
+	}
+
+	t.Logf("After typing: editBuf=%q modified=%v userIsTyping=%v", m.editBuf, m.modified, m.userIsTyping)
+	t.Logf("After typing: hasUnsavedChanges=%v", m.hasUnsavedChanges())
+
+	// Ctrl+O should show save prompt
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	m = newModel.(Model)
+
+	if m.mode != StateSavePrompt {
+		t.Errorf("Expected StateSavePrompt after Ctrl+O with unsaved editBuf, got %v", m.mode)
+	}
+}
+
 // TestHelpOverlayRendering tests the help overlay renders without panic.
 func TestHelpOverlayRendering(t *testing.T) {
 	m := New(nil)

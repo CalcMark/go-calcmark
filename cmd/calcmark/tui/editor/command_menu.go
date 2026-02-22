@@ -124,6 +124,9 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 		return m, m.filePicker.Init()
 
 	case "Open":
+		if m.promptSaveIfNeeded(PendingOpen, "Unsaved changes! Save before open? (y/n/c)") {
+			return m, nil
+		}
 		m.filePicker = initFilePicker()
 		m.filePickerFocus = FocusFileBrowser
 		m.filePickerPurpose = PickerForOpen
@@ -135,9 +138,7 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "Quit":
-		if m.hasUnsavedChanges() {
-			m.mode = StateSavePrompt
-			m.statusMsg = "Unsaved changes! Save before quit? (y/n/c)"
+		if m.promptSaveIfNeeded(PendingQuit, "Unsaved changes! Save before quit? (y/n/c)") {
 			return m, nil
 		}
 		m.quitting = true

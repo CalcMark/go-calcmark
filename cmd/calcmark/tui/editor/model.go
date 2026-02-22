@@ -179,6 +179,17 @@ func (s InputState) String() string {
 	}
 }
 
+// PendingAction tracks what action triggered the save prompt.
+// The save prompt handler uses this to decide what to do after
+// the user responds (quit vs open file).
+type PendingAction int
+
+const (
+	PendingNone PendingAction = iota // No pending action (default — normal save)
+	PendingQuit                      // Save prompt was triggered by Ctrl+Q
+	PendingOpen                      // Save prompt was triggered by Ctrl+O
+)
+
 // PreviewMode represents the preview pane display mode.
 type PreviewMode int
 
@@ -304,6 +315,10 @@ type Model struct {
 	filePicker      filepicker.Model
 	filePickerFocus FilePickerFocus // Which part of save dialog has focus
 	newFileName     string          // Filename being typed
+
+	// Save prompt context — tracks what action triggered the save prompt
+	// so the handler knows what to do after the user responds.
+	pendingSaveAction PendingAction
 }
 
 // ========================================

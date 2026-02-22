@@ -39,11 +39,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.quitting = true
 		return m, tea.Quit
 	case tea.KeyCtrlQ:
-		// Ctrl+Q is the dedicated quit command
-		// Check for unsaved changes before quitting
-		if m.hasUnsavedChanges() {
-			m.mode = StateSavePrompt
-			m.statusMsg = "Unsaved changes! Save before quit? (y/n/c)"
+		if m.promptSaveIfNeeded(PendingQuit, "Unsaved changes! Save before quit? (y/n/c)") {
 			return m, nil
 		}
 		m.quitting = true
@@ -67,7 +63,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.enterExportMode()
 		return m, nil
 	case tea.KeyCtrlO:
-		// Open file (Ctrl+O works in all modes)
+		if m.promptSaveIfNeeded(PendingOpen, "Unsaved changes! Save before open? (y/n/c)") {
+			return m, nil
+		}
 		m.filePicker = initFilePicker()
 		m.filePickerFocus = FocusFileBrowser
 		m.filePickerPurpose = PickerForOpen
