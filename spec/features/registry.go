@@ -23,13 +23,20 @@ const (
 	CategoryCompression Category = "compression"
 )
 
+// Alias represents an alternative name for a feature, with a flag indicating
+// whether it can be used as input syntax (Parseable) or is search-only.
+type Alias struct {
+	Name      string // Alternative name (e.g., "average of", "round trip time")
+	Parseable bool   // true if this alias works as input syntax, false if search-only
+}
+
 // Feature represents a single CalcMark feature that users can discover.
 type Feature struct {
 	Name        string   // Primary name (e.g., "avg", "meter", "today")
 	Category    Category // Type of feature
 	Syntax      string   // Usage syntax (e.g., "avg(a, b, c)")
 	Description string   // Human-readable description
-	Aliases     []string // Alternative names/spellings
+	Aliases     []Alias  // Alternative names/spellings
 	Example     string   // Example usage
 }
 
@@ -43,7 +50,7 @@ func (f Feature) Match(query string) bool {
 		return true
 	}
 	for _, alias := range f.Aliases {
-		if strings.HasPrefix(strings.ToLower(alias), query) {
+		if strings.HasPrefix(strings.ToLower(alias.Name), query) {
 			return true
 		}
 	}
@@ -133,7 +140,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "avg(a, b, c, ...)",
 			Description: "Calculate the average of numbers",
-			Aliases:     []string{"average", "average of"},
+			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "average of", Parseable: true}},
 			Example:     "avg(10, 20, 30) → 20",
 		},
 		{
@@ -141,7 +148,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "sqrt(n)",
 			Description: "Calculate the square root",
-			Aliases:     []string{"square root of"},
+			Aliases:     []Alias{{Name: "square root of", Parseable: true}},
 			Example:     "sqrt(16) → 4",
 		},
 		{
@@ -149,7 +156,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "accumulate(rate, time)",
 			Description: "Calculate total from a rate over time",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "accumulate(100 req/s, 1 hour) → 360000 req",
 		},
 		{
@@ -157,7 +164,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "convert_rate(rate, unit)",
 			Description: "Convert a rate to a different time unit",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "convert_rate(1000 req/s, minute) → 60000 req/min",
 		},
 		{
@@ -165,7 +172,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "requires(load, capacity) or requires(load, capacity, buffer)",
 			Description: "Calculate how many units needed for a given load",
-			Aliases:     []string{"capacity"},
+			Aliases:     []Alias{{Name: "capacity", Parseable: false}},
 			Example:     "requires(10000 req/s, 500 req/s) → 20",
 		},
 		{
@@ -173,7 +180,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "downtime(availability, period)",
 			Description: "Calculate downtime from availability percentage",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "downtime(99.9%, month) → 43.2 minutes",
 		},
 		{
@@ -181,7 +188,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "rtt(scope)",
 			Description: "Network round-trip time for a scope",
-			Aliases:     []string{"round trip time"},
+			Aliases:     []Alias{{Name: "round trip time", Parseable: false}},
 			Example:     "rtt(regional) → 10 ms",
 		},
 		{
@@ -189,7 +196,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "throughput(network_type)",
 			Description: "Network bandwidth for a connection type",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(gigabit) → 125 MB/s",
 		},
 		{
@@ -197,7 +204,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "transfer_time(size, scope, network)",
 			Description: "Time to transfer data over a network",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "transfer_time(1 GB, regional, gigabit)",
 		},
 		{
@@ -205,7 +212,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "read(size, storage_type)",
 			Description: "Time to read data from storage",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "read(100 MB, ssd) → 0.18 s",
 		},
 		{
@@ -213,7 +220,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "seek(storage_type)",
 			Description: "Access latency for storage type",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "seek(hdd) → 10 ms",
 		},
 		{
@@ -221,7 +228,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "compress(size, algorithm)",
 			Description: "Estimate compressed data size",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "compress(1 GB, gzip) → 333 MB",
 		},
 	}
@@ -239,12 +246,16 @@ func getUnits() []Feature {
 		}
 		seen[unit.Canonical] = true
 
+		aliases := make([]Alias, len(unit.Aliases))
+		for i, a := range unit.Aliases {
+			aliases[i] = Alias{Name: a, Parseable: true}
+		}
 		features = append(features, Feature{
 			Name:        unit.Canonical,
 			Category:    CategoryUnit,
 			Syntax:      unit.Symbol,
 			Description: unit.Description,
-			Aliases:     unit.Aliases,
+			Aliases:     aliases,
 			Example:     "10 " + unit.Symbol,
 		})
 	}
@@ -259,7 +270,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "today",
 			Description: "Current date",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "today + 7 days",
 		},
 		{
@@ -267,7 +278,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "tomorrow",
 			Description: "Tomorrow's date",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "tomorrow + 1 week",
 		},
 		{
@@ -275,7 +286,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "yesterday",
 			Description: "Yesterday's date",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "yesterday - 3 days",
 		},
 		{
@@ -283,7 +294,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "N days",
 			Description: "Duration in days",
-			Aliases:     []string{"day"},
+			Aliases:     []Alias{{Name: "day", Parseable: true}},
 			Example:     "today + 30 days",
 		},
 		{
@@ -291,7 +302,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "N weeks",
 			Description: "Duration in weeks",
-			Aliases:     []string{"week"},
+			Aliases:     []Alias{{Name: "week", Parseable: true}},
 			Example:     "2 weeks from today",
 		},
 		{
@@ -299,7 +310,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "N months",
 			Description: "Duration in months",
-			Aliases:     []string{"month"},
+			Aliases:     []Alias{{Name: "month", Parseable: true}},
 			Example:     "Dec 25 + 1 month",
 		},
 		{
@@ -307,7 +318,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "N years",
 			Description: "Duration in years",
-			Aliases:     []string{"year", "yr", "yrs"},
+			Aliases:     []Alias{{Name: "year", Parseable: true}, {Name: "yr", Parseable: true}, {Name: "yrs", Parseable: true}},
 			Example:     "today + 1 year",
 		},
 		{
@@ -315,7 +326,7 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "N units from date",
 			Description: "Calculate date offset",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "7 days from Dec 25",
 		},
 	}
@@ -330,7 +341,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "rtt(local)",
 			Description: "Same datacenter latency (~0.5ms)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "rtt(local) → 0.5 ms",
 		},
 		{
@@ -338,7 +349,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "rtt(regional)",
 			Description: "Same region latency (~10ms)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "rtt(regional) → 10 ms",
 		},
 		{
@@ -346,7 +357,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "rtt(continental)",
 			Description: "Cross-continent latency (~50ms)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "rtt(continental) → 50 ms",
 		},
 		{
@@ -354,7 +365,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "rtt(global)",
 			Description: "Global latency (~150ms)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "rtt(global) → 150 ms",
 		},
 		// Throughput types
@@ -363,7 +374,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "throughput(gigabit)",
 			Description: "1 Gbps network (~125 MB/s)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(gigabit) → 125 MB/s",
 		},
 		{
@@ -371,7 +382,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "throughput(ten_gig)",
 			Description: "10 Gbps network (~1.25 GB/s)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(ten_gig) → 1250 MB/s",
 		},
 		{
@@ -379,7 +390,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "throughput(hundred_gig)",
 			Description: "100 Gbps network (~12.5 GB/s)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(hundred_gig) → 12500 MB/s",
 		},
 		{
@@ -387,7 +398,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "throughput(wifi)",
 			Description: "Typical WiFi (~12.5 MB/s)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(wifi) → 12.5 MB/s",
 		},
 		{
@@ -395,7 +406,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "throughput(four_g)",
 			Description: "4G mobile network (~2.5 MB/s)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(four_g) → 2.5 MB/s",
 		},
 		{
@@ -403,7 +414,7 @@ func getNetworkFeatures() []Feature {
 			Category:    CategoryNetwork,
 			Syntax:      "throughput(five_g)",
 			Description: "5G mobile network (~50 MB/s)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "throughput(five_g) → 50 MB/s",
 		},
 	}
@@ -417,7 +428,7 @@ func getStorageFeatures() []Feature {
 			Category:    CategoryStorage,
 			Syntax:      "read(size, ssd) or seek(ssd)",
 			Description: "SATA SSD (~550 MB/s, 0.1ms seek)",
-			Aliases:     []string{"sata_ssd"},
+			Aliases:     []Alias{{Name: "sata_ssd", Parseable: true}},
 			Example:     "read(1 GB, ssd)",
 		},
 		{
@@ -425,7 +436,7 @@ func getStorageFeatures() []Feature {
 			Category:    CategoryStorage,
 			Syntax:      "read(size, nvme) or seek(nvme)",
 			Description: "NVMe SSD (~3.5 GB/s, 0.01ms seek)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "read(1 GB, nvme)",
 		},
 		{
@@ -433,7 +444,7 @@ func getStorageFeatures() []Feature {
 			Category:    CategoryStorage,
 			Syntax:      "read(size, pcie_ssd) or seek(pcie_ssd)",
 			Description: "PCIe Gen4 SSD (~7 GB/s, 0.01ms seek)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "read(1 GB, pcie_ssd)",
 		},
 		{
@@ -441,7 +452,7 @@ func getStorageFeatures() []Feature {
 			Category:    CategoryStorage,
 			Syntax:      "read(size, hdd) or seek(hdd)",
 			Description: "7200 RPM HDD (~150 MB/s, 10ms seek)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "seek(hdd) → 10 ms",
 		},
 	}
@@ -455,7 +466,7 @@ func getCompressionFeatures() []Feature {
 			Category:    CategoryCompression,
 			Syntax:      "compress(size, gzip)",
 			Description: "Gzip compression (~3:1 ratio)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "compress(1 GB, gzip) → 333 MB",
 		},
 		{
@@ -463,7 +474,7 @@ func getCompressionFeatures() []Feature {
 			Category:    CategoryCompression,
 			Syntax:      "compress(size, lz4)",
 			Description: "LZ4 fast compression (~2:1 ratio)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "compress(1 GB, lz4) → 500 MB",
 		},
 		{
@@ -471,7 +482,7 @@ func getCompressionFeatures() []Feature {
 			Category:    CategoryCompression,
 			Syntax:      "compress(size, zstd)",
 			Description: "Zstandard compression (~3.5:1 ratio)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "compress(1 GB, zstd) → 286 MB",
 		},
 		{
@@ -479,7 +490,7 @@ func getCompressionFeatures() []Feature {
 			Category:    CategoryCompression,
 			Syntax:      "compress(size, bzip2)",
 			Description: "Bzip2 compression (~4:1 ratio, slow)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "compress(1 GB, bzip2) → 250 MB",
 		},
 		{
@@ -487,7 +498,7 @@ func getCompressionFeatures() []Feature {
 			Category:    CategoryCompression,
 			Syntax:      "compress(size, snappy)",
 			Description: "Snappy fast compression (~2.5:1 ratio)",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "compress(1 GB, snappy) → 400 MB",
 		},
 	}
@@ -501,7 +512,7 @@ func getKeywords() []Feature {
 			Category:    CategoryKeyword,
 			Syntax:      "value in unit",
 			Description: "Convert to a different unit",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "100 cm in inches → 39.37 inches",
 		},
 		{
@@ -509,7 +520,7 @@ func getKeywords() []Feature {
 			Category:    CategoryKeyword,
 			Syntax:      "value as unit",
 			Description: "Convert to a different unit (alias for 'in')",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "1 mile as km → 1.609 km",
 		},
 		{
@@ -517,7 +528,7 @@ func getKeywords() []Feature {
 			Category:    CategoryKeyword,
 			Syntax:      "X% of value",
 			Description: "Calculate percentage of a value",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "15% of 200 → 30",
 		},
 		{
@@ -525,7 +536,7 @@ func getKeywords() []Feature {
 			Category:    CategoryKeyword,
 			Syntax:      "value per unit",
 			Description: "Create a rate",
-			Aliases:     []string{},
+			Aliases:     nil,
 			Example:     "1000 requests per second",
 		},
 	}
@@ -539,7 +550,7 @@ func getOperators() []Feature {
 			Category:    CategoryOperator,
 			Syntax:      "a + b",
 			Description: "Addition",
-			Aliases:     []string{"plus", "add"},
+			Aliases:     []Alias{{Name: "plus", Parseable: false}, {Name: "add", Parseable: false}},
 			Example:     "10 + 5 → 15",
 		},
 		{
@@ -547,7 +558,7 @@ func getOperators() []Feature {
 			Category:    CategoryOperator,
 			Syntax:      "a - b",
 			Description: "Subtraction",
-			Aliases:     []string{"minus", "subtract"},
+			Aliases:     []Alias{{Name: "minus", Parseable: false}, {Name: "subtract", Parseable: false}},
 			Example:     "10 - 5 → 5",
 		},
 		{
@@ -555,7 +566,7 @@ func getOperators() []Feature {
 			Category:    CategoryOperator,
 			Syntax:      "a * b",
 			Description: "Multiplication",
-			Aliases:     []string{"times", "multiply"},
+			Aliases:     []Alias{{Name: "times", Parseable: false}, {Name: "multiply", Parseable: false}},
 			Example:     "10 * 5 → 50",
 		},
 		{
@@ -563,7 +574,7 @@ func getOperators() []Feature {
 			Category:    CategoryOperator,
 			Syntax:      "a / b",
 			Description: "Division",
-			Aliases:     []string{"divide", "divided by"},
+			Aliases:     []Alias{{Name: "divide", Parseable: false}, {Name: "divided by", Parseable: false}},
 			Example:     "10 / 5 → 2",
 		},
 		{
@@ -571,7 +582,7 @@ func getOperators() []Feature {
 			Category:    CategoryOperator,
 			Syntax:      "a ^ b",
 			Description: "Exponentiation",
-			Aliases:     []string{"power", "to the power of"},
+			Aliases:     []Alias{{Name: "power", Parseable: false}, {Name: "to the power of", Parseable: false}},
 			Example:     "2 ^ 10 → 1024",
 		},
 		{
@@ -579,7 +590,7 @@ func getOperators() []Feature {
 			Category:    CategoryOperator,
 			Syntax:      "a % b or N%",
 			Description: "Modulo or percentage",
-			Aliases:     []string{"mod", "percent"},
+			Aliases:     []Alias{{Name: "mod", Parseable: false}, {Name: "percent", Parseable: false}},
 			Example:     "10 % 3 → 1, 50% → 0.5",
 		},
 	}

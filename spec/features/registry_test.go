@@ -92,8 +92,13 @@ func TestRegistryByCategory(t *testing.T) {
 
 func TestFeatureMatch(t *testing.T) {
 	f := Feature{
-		Name:    "meter",
-		Aliases: []string{"meters", "metre", "metres", "m"},
+		Name: "meter",
+		Aliases: []Alias{
+			{Name: "meters", Parseable: true},
+			{Name: "metre", Parseable: true},
+			{Name: "metres", Parseable: true},
+			{Name: "m", Parseable: true},
+		},
 	}
 
 	tests := []struct {
