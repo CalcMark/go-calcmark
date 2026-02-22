@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // HelpItemKind distinguishes actionable items (selectable, executable)
@@ -198,47 +198,22 @@ func (m Model) renderHelpOverlay() string {
 	categories := helpCategories()
 	selectedIdx := m.helpState.Selected
 
-	innerWidth := 52
-
-	// Border and background colors (shared palette across all overlays)
-	borderFg := lipgloss.Color("#5C5C5C")
-	borderStyle := lipgloss.NewStyle().Foreground(borderFg)
-	itemBg := lipgloss.Color("#1E1E1E")
-	selectedBg := lipgloss.Color("#4A90D9")
-
-	topBorder := borderStyle.Render("╭" + strings.Repeat("─", innerWidth) + "╮")
-	bottomBorder := borderStyle.Render("╰" + strings.Repeat("─", innerWidth) + "╯")
-	leftBorder := borderStyle.Render("│")
-	rightBorder := borderStyle.Render("│")
-	sepLine := borderStyle.Render(strings.Repeat("─", innerWidth))
-
-	// pad creates a line padded to innerWidth with the given foreground/background
-	pad := func(content string, fg, bg lipgloss.Color, bold bool) string {
-		style := lipgloss.NewStyle().Foreground(fg).Background(bg)
-		if bold {
-			style = style.Bold(true)
-		}
-		visualWidth := lipgloss.Width(content)
-		if visualWidth < innerWidth {
-			content += strings.Repeat(" ", innerWidth-visualWidth)
-		}
-		return style.Render(content)
-	}
+	o := NewOverlayStyle(52)
 
 	var lines []string
-	lines = append(lines, topBorder)
+	lines = append(lines, o.TopBorder)
 
 	// Title
-	lines = append(lines, leftBorder+pad(" CalcMark Help", "#FFFFFF", itemBg, true)+rightBorder)
+	lines = append(lines, o.WrapRow(o.PadLine(" CalcMark Help", theme.TextBright, o.ItemBg, true)))
 
 	// Separator
-	lines = append(lines, leftBorder+sepLine+rightBorder)
+	lines = append(lines, o.SepRow())
 
 	// Track flat index across categories
 	flatIdx := 0
 	for catIdx, cat := range categories {
 		// Category header
-		lines = append(lines, leftBorder+pad(fmt.Sprintf(" %s", cat.Name), "#AAAAAA", itemBg, true)+rightBorder)
+		lines = append(lines, o.WrapRow(o.PadLine(fmt.Sprintf(" %s", cat.Name), theme.TextMuted, o.ItemBg, true)))
 
 		for _, item := range cat.Items {
 			// Build the display line: prefix + accelerator + name
@@ -253,11 +228,11 @@ func (m Model) renderHelpOverlay() string {
 			content := fmt.Sprintf("%s%s%s", prefix, accel, item.Name)
 
 			if item.Kind == HelpActionable && flatIdx == selectedIdx {
-				lines = append(lines, leftBorder+pad(content, "#FFFFFF", selectedBg, true)+rightBorder)
+				lines = append(lines, o.WrapRow(o.PadLine(content, theme.PopupSelectedFg, o.SelectedBg, true)))
 			} else if item.Kind == HelpActionable {
-				lines = append(lines, leftBorder+pad(content, "#CCCCCC", itemBg, false)+rightBorder)
+				lines = append(lines, o.WrapRow(o.PadLine(content, theme.Text, o.ItemBg, false)))
 			} else {
-				lines = append(lines, leftBorder+pad(content, "#777777", itemBg, false)+rightBorder)
+				lines = append(lines, o.WrapRow(o.PadLine(content, theme.Hint, o.ItemBg, false)))
 			}
 
 			flatIdx++
@@ -265,25 +240,16 @@ func (m Model) renderHelpOverlay() string {
 
 		// Add empty line between categories (except last)
 		if catIdx < len(categories)-1 {
-			lines = append(lines, leftBorder+pad("", "#777777", itemBg, false)+rightBorder)
+			lines = append(lines, o.WrapRow(o.PadLine("", theme.Hint, o.ItemBg, false)))
 		}
 	}
 
 	// Separator before hints
-	lines = append(lines, leftBorder+sepLine+rightBorder)
+	lines = append(lines, o.SepRow())
 
 	// Hints
-	hintStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#666666")).
-		Background(itemBg).
-		Italic(true)
-	hint := " ↑↓ navigate  Enter execute  Esc close"
-	visualWidth := lipgloss.Width(hint)
-	if visualWidth < innerWidth {
-		hint += strings.Repeat(" ", innerWidth-visualWidth)
-	}
-	lines = append(lines, leftBorder+hintStyle.Render(hint)+rightBorder)
+	lines = append(lines, o.HintRow(" ↑↓ navigate  Enter execute  Esc close"))
 
-	lines = append(lines, bottomBorder)
+	lines = append(lines, o.BottomBorder)
 	return strings.Join(lines, "\n")
 }

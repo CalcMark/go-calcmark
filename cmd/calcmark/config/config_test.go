@@ -13,18 +13,21 @@ func TestLoad_DefaultsOnly(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// Verify defaults match expected values
-	if cfg.TUI.Theme.Primary != "#7D56F4" {
-		t.Errorf("expected default primary #7D56F4, got %s", cfg.TUI.Theme.Primary)
+	// Theme config defaults are empty strings (palette provides actual defaults)
+	if cfg.TUI.Theme.Primary != "" {
+		t.Errorf("expected default primary empty (palette default), got %s", cfg.TUI.Theme.Primary)
 	}
-	if cfg.TUI.Theme.Error != "#FF5555" {
-		t.Errorf("expected default error #FF5555, got %s", cfg.TUI.Theme.Error)
+	if cfg.TUI.Theme.Error != "" {
+		t.Errorf("expected default error empty (palette default), got %s", cfg.TUI.Theme.Error)
 	}
 	if cfg.Formatter.DefaultFormat != "text" {
 		t.Errorf("expected default format text, got %s", cfg.Formatter.DefaultFormat)
 	}
 	if !cfg.TUI.DarkMode {
 		t.Error("expected dark_mode true by default")
+	}
+	if cfg.TUI.ColorMode != "dark" {
+		t.Errorf("expected default color_mode dark, got %s", cfg.TUI.ColorMode)
 	}
 }
 
@@ -59,12 +62,12 @@ primary = "#ABCDEF"
 		t.Errorf("expected user override #ABCDEF, got %s", cfg.TUI.Theme.Primary)
 	}
 
-	// Other defaults should be preserved
-	if cfg.TUI.Theme.Error != "#FF5555" {
-		t.Errorf("expected default error preserved, got %s", cfg.TUI.Theme.Error)
+	// Other defaults should remain empty (palette defaults)
+	if cfg.TUI.Theme.Error != "" {
+		t.Errorf("expected default error empty (palette default), got %s", cfg.TUI.Theme.Error)
 	}
-	if cfg.TUI.Theme.Accent != "#874BFD" {
-		t.Errorf("expected default accent preserved, got %s", cfg.TUI.Theme.Accent)
+	if cfg.TUI.Theme.Accent != "" {
+		t.Errorf("expected default accent empty (palette default), got %s", cfg.TUI.Theme.Accent)
 	}
 }
 
@@ -131,6 +134,35 @@ primary = "#00FF00"
 	}
 }
 
+func TestLoad_DeprecatedKeysWarning(t *testing.T) {
+	// Create temp home directory
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	// Create config with deprecated keys
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	userConfig := `[tui.theme]
+primary = "#ABCDEF"
+edit_line_bg = "#2E2E2E"
+cursor_bg = "#7D56F4"
+`
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte(userConfig), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Load should succeed (deprecated keys don't cause errors)
+	_, err := Reload()
+	if err != nil {
+		t.Fatalf("Load() should not error on deprecated keys: %v", err)
+	}
+	// The warning is printed to stderr, which is expected behavior
+}
+
 func TestBuildStyles(t *testing.T) {
 	theme := ThemeConfig{
 		Primary:   "#111111",
@@ -159,6 +191,23 @@ func TestBuildStyles(t *testing.T) {
 	_ = styles.Changed.Render("changed")
 	_ = styles.Var.Render("var")
 	_ = styles.Hint.Render("hint")
+}
+
+func TestBuildStyles_EmptyOverrides(t *testing.T) {
+	// Empty ThemeConfig should use palette defaults
+	theme := ThemeConfig{}
+	styles := theme.BuildStyles()
+
+	// Verify styles render without panic even with empty config
+	result := styles.Title.Render("test")
+	if result == "" {
+		t.Error("expected non-empty rendered output with palette defaults")
+	}
+
+	_ = styles.SourcePane.Render("source")
+	_ = styles.PreviewPane.Render("preview")
+	_ = styles.SourceFrontmatter.Render("frontmatter")
+	_ = styles.SourceCalc.Render("calc")
 }
 
 func TestGetStyles_AfterLoad(t *testing.T) {

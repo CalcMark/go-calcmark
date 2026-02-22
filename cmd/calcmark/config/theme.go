@@ -1,9 +1,14 @@
 package config
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
+	"github.com/charmbracelet/lipgloss"
+)
 
-// Styles holds pre-built lipgloss styles derived from theme config.
+// Styles holds pre-built lipgloss styles derived from the semantic palette.
 // This avoids rebuilding styles on every render call.
+// All colors use lipgloss.AdaptiveColor from the theme package, so they
+// automatically resolve to the correct light/dark value at Render() time.
 type Styles struct {
 	Title         lipgloss.Style
 	PinnedPanel   lipgloss.Style
@@ -24,7 +29,7 @@ type Styles struct {
 	// Editor styles
 	EditLine    lipgloss.Style // Background for line being edited
 	Cursor      lipgloss.Style // Cursor style
-	CurrentLine lipgloss.Style // Current line highlight in normal mode
+	CurrentLine lipgloss.Style // Current line highlight
 	LineNumber  lipgloss.Style // Line number style
 	SourceText  lipgloss.Style // Normal source text color
 
@@ -53,154 +58,209 @@ type Styles struct {
 	PromptLabel lipgloss.Style // Prompt label style (e.g., "Save as:")
 	InputText   lipgloss.Style // User input text style
 	InputCursor lipgloss.Style // Input cursor style
+
+	// Source pane syntax highlighting (block-level)
+	SourceFrontmatter lipgloss.Style // Frontmatter lines (YAML between ---)
+	SourceMarkdown    lipgloss.Style // Markdown prose lines
+	SourceCalc        lipgloss.Style // Calculation lines
 }
 
-// BuildStyles creates lipgloss.Style instances from ThemeConfig.
-// Call this once after loading config, then reuse the Styles struct.
+// BuildStyles creates lipgloss.Style instances from the semantic palette.
+// User overrides from ThemeConfig are applied by overriding the appropriate
+// palette slot before building. Since AdaptiveColor resolves at Render() time,
+// this function only needs to be called once.
 func (t ThemeConfig) BuildStyles() Styles {
+	// Apply user overrides to palette. Each override replaces the palette slot
+	// matching the current color_mode (dark or light). Since we can't know the
+	// mode here, we set both slots when the user provides an override — the user
+	// has explicitly chosen this color for their mode.
+	primary := overrideColor(theme.Primary, t.Primary)
+	accent := overrideColor(theme.Accent, t.Accent)
+	errColor := overrideColor(theme.Error, t.Error)
+	warning := overrideColor(theme.Warning, t.Warning)
+	muted := overrideColor(theme.TextMuted, t.Muted)
+	dimmed := overrideColor(theme.Hint, t.Dimmed)
+	output := overrideColor(theme.Result, t.Output)
+	bright := overrideColor(theme.TextBright, t.Bright)
+	separator := overrideColor(theme.Separator, t.Separator)
+	sourcePaneBg := overrideColor(theme.SourcePaneBg, t.SourcePaneBg)
+	previewPaneBg := overrideColor(theme.PreviewPaneBg, t.PreviewPaneBg)
+	statusBarBg := overrideColor(theme.StatusBg, t.StatusBarBg)
+
 	return Styles{
 		Title: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(t.Primary)).
+			Foreground(primary).
 			Margin(1, 0),
 
 		PinnedPanel: lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
-			BorderForeground(lipgloss.Color(t.Accent)).
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(accent).
 			PaddingLeft(1),
 
 		Error: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Error)),
+			Foreground(errColor),
 
 		ErrorOutput: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Error)),
+			Foreground(errColor),
 
 		Help: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Muted)).
+			Foreground(muted).
 			Margin(1, 0),
 
 		Prompt: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Primary)),
+			Foreground(primary),
 
 		Output: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Output)),
+			Foreground(output),
 
 		Changed: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Warning)),
+			Foreground(warning),
 
 		Var: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Primary)),
+			Foreground(primary),
 
 		Hint: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Dimmed)).
+			Foreground(dimmed).
 			Italic(true),
 
 		Header: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(t.Primary)),
+			Foreground(primary),
 
 		Syntax: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(t.Bright)),
+			Foreground(bright),
 
 		Example: lipgloss.NewStyle().
 			Italic(true).
-			Foreground(lipgloss.Color(t.Dimmed)),
+			Foreground(dimmed),
 
 		Separator: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Separator)),
+			Foreground(separator),
 
 		ModeIndicator: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.Primary)),
+			Foreground(primary),
 
-		// Editor styles
+		// Editor styles — sourced from palette
 		EditLine: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.EditLineBg)).
-			Foreground(lipgloss.Color(t.EditLineFg)),
+			Background(theme.EditLineBg).
+			Foreground(theme.EditLineFg),
 
 		Cursor: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.CursorBg)).
-			Foreground(lipgloss.Color(t.CursorFg)),
+			Background(theme.Cursor).
+			Foreground(theme.CursorFg),
 
 		CurrentLine: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.CurrentLineBg)).
-			Foreground(lipgloss.Color(t.CurrentLineFg)),
+			Background(theme.CurrentLineBg).
+			Foreground(theme.CurrentLineFg),
 
 		LineNumber: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.LineNumber)),
+			Foreground(theme.LineNumber).
+			Background(sourcePaneBg),
 
 		SourceText: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.SourceText)),
+			Foreground(theme.Text).
+			Background(sourcePaneBg),
 
 		// Calculation result display styles
 		CalcVarName: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.CalcVarName)),
+			Foreground(theme.ResultMuted).
+			Background(previewPaneBg),
 
 		CalcArrow: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.CalcArrow)),
+			Foreground(theme.ResultArrow).
+			Background(previewPaneBg),
 
 		CalcValue: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.CalcValue)),
+			Foreground(output).
+			Background(previewPaneBg),
 
 		// Markdown preview styles
 		MdText: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.MdText)),
+			Foreground(theme.Text),
 
 		MdH1: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(t.MdText)).
-			Background(lipgloss.Color(t.MdH1Bg)).
+			Foreground(theme.Text).
+			Background(theme.MdH1Bg).
 			Padding(0, 1),
 
 		MdH2: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(t.MdText)).
-			Background(lipgloss.Color(t.MdH2Bg)).
+			Foreground(theme.Text).
+			Background(theme.MdH2Bg).
 			Padding(0, 1),
 
 		MdH3Plus: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(t.MdHeading)),
+			Foreground(theme.MdHeading),
 
 		MdLink: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.MdLink)).
+			Foreground(theme.MdLink).
 			Underline(true),
 
 		MdQuote: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.MdQuote)).
+			Foreground(theme.MdQuote).
 			Italic(true),
 
 		MdCode: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.MdCode)),
+			Foreground(theme.MdCode),
 
 		MdCodeBg: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.MdCode)).
-			Background(lipgloss.Color(t.MdCodeBg)).
+			Foreground(theme.MdCode).
+			Background(theme.MdCodeBg).
 			Padding(0, 1),
 
 		// Pane backgrounds
 		SourcePane: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.SourcePaneBg)),
+			Background(sourcePaneBg),
 		PreviewPane: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.PreviewPaneBg)),
+			Background(previewPaneBg),
 		StatusBar: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.StatusBarBg)),
+			Background(statusBarBg),
 		ContextFooter: lipgloss.NewStyle().
-			Background(lipgloss.Color(t.ContextFooterBg)),
+			Background(theme.ContextFooterBg),
 
 		// Input and prompt styles
 		PromptLabel: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.PromptFg)).
-			Background(lipgloss.Color(t.PromptBg)).
+			Foreground(theme.PromptFg).
+			Background(theme.PromptBg).
 			Bold(true).
 			Padding(0, 1),
 
 		InputText: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.InputFg)).
-			Background(lipgloss.Color(t.InputBg)),
+			Foreground(theme.InputFg).
+			Background(theme.InputBg),
 
 		InputCursor: lipgloss.NewStyle().
-			Foreground(lipgloss.Color(t.InputCursor)).
+			Foreground(theme.Cursor).
 			Bold(true),
+
+		// Source pane syntax highlighting (block-level)
+		SourceFrontmatter: lipgloss.NewStyle().
+			Foreground(theme.SourceFrontmatter).
+			Background(sourcePaneBg),
+		SourceMarkdown: lipgloss.NewStyle().
+			Foreground(theme.SourceMarkdown).
+			Background(sourcePaneBg),
+		SourceCalc: lipgloss.NewStyle().
+			Foreground(theme.SourceCalc).
+			Background(sourcePaneBg),
+	}
+}
+
+// overrideColor returns an AdaptiveColor with the user's hex override applied
+// to both slots if non-empty, otherwise returns the palette default.
+func overrideColor(palette lipgloss.AdaptiveColor, userHex string) lipgloss.AdaptiveColor {
+	if userHex == "" {
+		return palette
+	}
+	// User override applies to the slot matching their color_mode.
+	// Since we build once and AdaptiveColor resolves at render time,
+	// we set both slots — the user explicitly chose this color.
+	return lipgloss.AdaptiveColor{
+		Light: userHex,
+		Dark:  userHex,
 	}
 }

@@ -12,10 +12,13 @@ type Config struct {
 type TUIConfig struct {
 	Theme     ThemeConfig `mapstructure:"theme"`
 	DarkMode  bool        `mapstructure:"dark_mode"`  // Deprecated: use ColorMode instead
-	ColorMode string      `mapstructure:"color_mode"` // "auto", "light", or "dark"
+	ColorMode string      `mapstructure:"color_mode"` // "light" or "dark"
 }
 
-// ThemeConfig defines all TUI colors as hex strings.
+// ThemeConfig defines user-facing color overrides as hex strings.
+// These override the corresponding AdaptiveColor palette slot (light or dark)
+// based on the configured color_mode. Internal structural colors (popup borders,
+// separator shades, etc.) are not user-configurable and derive from the palette.
 type ThemeConfig struct {
 	Primary   string `mapstructure:"primary"`   // Titles, prompts, variable names
 	Accent    string `mapstructure:"accent"`    // Borders, highlights
@@ -27,43 +30,29 @@ type ThemeConfig struct {
 	Bright    string `mapstructure:"bright"`    // Syntax emphasis
 	Separator string `mapstructure:"separator"` // Divider lines
 
-	// Editor colors
-	EditLineBg    string `mapstructure:"edit_line_bg"`    // Background for line being edited
-	EditLineFg    string `mapstructure:"edit_line_fg"`    // Foreground for line being edited
-	CursorBg      string `mapstructure:"cursor_bg"`       // Cursor background color
-	CursorFg      string `mapstructure:"cursor_fg"`       // Cursor foreground color
-	CurrentLineBg string `mapstructure:"current_line_bg"` // Background for current line in normal mode
-	CurrentLineFg string `mapstructure:"current_line_fg"` // Foreground for current line in normal mode
-	LineNumber    string `mapstructure:"line_number"`     // Line number color
-	SourceText    string `mapstructure:"source_text"`     // Normal source text color
-
-	// Calculation result display colors
-	CalcVarName string `mapstructure:"calc_var_name"` // Variable name in result (e.g., "x" in "x → 5")
-	CalcArrow   string `mapstructure:"calc_arrow"`    // Arrow in result ("→")
-	CalcValue   string `mapstructure:"calc_value"`    // Calculated value in result (e.g., "5" in "x → 5")
-
-	// Markdown preview colors
-	MdText    string `mapstructure:"md_text"`    // Markdown body text
-	MdH1Bg    string `mapstructure:"md_h1_bg"`   // H1 background
-	MdH2Bg    string `mapstructure:"md_h2_bg"`   // H2 background
-	MdHeading string `mapstructure:"md_heading"` // H3+ and heading text
-	MdLink    string `mapstructure:"md_link"`    // Links
-	MdQuote   string `mapstructure:"md_quote"`   // Block quote indicator
-	MdCode    string `mapstructure:"md_code"`    // Code text
-	MdCodeBg  string `mapstructure:"md_code_bg"` // Code background
-
 	// Pane backgrounds
-	SourcePaneBg    string `mapstructure:"source_pane_bg"`    // Background color for source pane
-	PreviewPaneBg   string `mapstructure:"preview_pane_bg"`   // Background color for preview pane
-	StatusBarBg     string `mapstructure:"status_bar_bg"`     // Background color for status bar
-	ContextFooterBg string `mapstructure:"context_footer_bg"` // Background color for context footer (calc detail)
+	SourcePaneBg  string `mapstructure:"source_pane_bg"`  // Background color for source pane
+	PreviewPaneBg string `mapstructure:"preview_pane_bg"` // Background color for preview pane
+	StatusBarBg   string `mapstructure:"status_bar_bg"`   // Background color for status bar
+}
 
-	// Input and prompt colors
-	PromptFg    string `mapstructure:"prompt_fg"`    // Prompt text color
-	PromptBg    string `mapstructure:"prompt_bg"`    // Prompt background
-	InputFg     string `mapstructure:"input_fg"`     // User input text color
-	InputBg     string `mapstructure:"input_bg"`     // User input background
-	InputCursor string `mapstructure:"input_cursor"` // Input cursor color
+// ThemeConfigKnownKeys returns the set of known keys under [tui.theme].
+// Used to detect deprecated/unknown keys in user config and log warnings.
+func ThemeConfigKnownKeys() map[string]bool {
+	return map[string]bool{
+		"primary":         true,
+		"accent":          true,
+		"error":           true,
+		"warning":         true,
+		"muted":           true,
+		"dimmed":          true,
+		"output":          true,
+		"bright":          true,
+		"separator":       true,
+		"source_pane_bg":  true,
+		"preview_pane_bg": true,
+		"status_bar_bg":   true,
+	}
 }
 
 // FormatterConfig holds output formatter settings.

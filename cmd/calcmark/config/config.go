@@ -2,6 +2,7 @@ package config
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,13 +82,19 @@ func load() (*Config, error) {
 		}
 	}
 
-	// 3. Unmarshal into struct
+	// 3. Check for deprecated theme keys before unmarshal
+	warnDeprecatedThemeKeys(v)
+
+	// 4. Unmarshal into struct
 	var c Config
 	if err := v.Unmarshal(&c); err != nil {
 		return nil, err
 	}
 
-	// 4. Apply color mode to lipgloss
+	// 5. Warn about deprecated color_mode and dark_mode values
+	warnDeprecatedColorMode(c.TUI.ColorMode, v.IsSet("tui.dark_mode"))
+
+	// 6. Apply color mode to lipgloss
 	// NOTE: This is called during cobra PersistentPreRunE, which happens
 	// BEFORE alternate screen is entered. We must not trigger any terminal
 	// queries here or they will cause visible artifacts.
@@ -96,33 +103,59 @@ func load() (*Config, error) {
 	return &c, nil
 }
 
+// warnDeprecatedThemeKeys checks for unknown/deprecated keys under [tui.theme]
+// and logs warnings to stderr. This helps users discover that their old
+// customizations for removed fields need updating.
+func warnDeprecatedThemeKeys(v *viper.Viper) {
+	known := ThemeConfigKnownKeys()
+	prefix := "tui.theme."
+
+	for _, key := range v.AllKeys() {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		fieldName := strings.TrimPrefix(key, prefix)
+		if !known[fieldName] {
+			// Only warn if the user actually set a non-default value
+			val := v.GetString(key)
+			if val != "" {
+				fmt.Fprintf(os.Stderr, "calcmark: deprecated config key [tui.theme].%s — this key has been removed. See docs for the simplified theme config.\n", fieldName)
+			}
+		}
+	}
+}
+
+// warnDeprecatedColorMode logs warnings for deprecated color_mode and dark_mode usage.
+func warnDeprecatedColorMode(colorMode string, darkModeExplicit bool) {
+	if strings.EqualFold(colorMode, "auto") {
+		fmt.Fprintf(os.Stderr, "calcmark: color_mode=\"auto\" is deprecated and now treated as \"dark\". Set color_mode=\"light\" or color_mode=\"dark\" explicitly.\n")
+	}
+	if darkModeExplicit {
+		fmt.Fprintf(os.Stderr, "calcmark: dark_mode is deprecated. Use color_mode=\"dark\" or color_mode=\"light\" instead.\n")
+	}
+}
+
 // applyColorMode sets lipgloss's background detection based on config.
 // Priority: color_mode > dark_mode (for backward compatibility).
 //
-// IMPORTANT: For "auto" mode, we default to dark and let lipgloss detect
-// on first render WITHIN the TUI. We do NOT trigger detection here because
-// that would query the terminal BEFORE alternate screen mode is entered,
-// causing terminal artifacts to appear on screen.
+// IMPORTANT: We do NOT trigger terminal queries here because that would
+// query the terminal BEFORE alternate screen mode is entered, causing
+// terminal artifacts to appear on screen.
 func applyColorMode(colorMode string, darkMode bool) {
 	switch strings.ToLower(colorMode) {
 	case "light":
 		lipgloss.SetHasDarkBackground(false)
 	case "dark":
 		lipgloss.SetHasDarkBackground(true)
-	case "auto", "":
-		// For auto mode: Default to dark (most common), but allow lipgloss
-		// to auto-detect during first render within the TUI's alternate screen.
-		// This prevents terminal queries before alternate screen is entered.
-		if colorMode == "" {
-			// Legacy fallback: use dark_mode setting
-			lipgloss.SetHasDarkBackground(darkMode)
-		} else {
-			// color_mode="auto": Default to dark, let lipgloss detect within TUI
-			lipgloss.SetHasDarkBackground(true)
-		}
-	default:
-		// Invalid color_mode, fall back to dark_mode
+	case "auto":
+		// Deprecated: "auto" resolves to dark
+		lipgloss.SetHasDarkBackground(true)
+	case "":
+		// Legacy fallback: use dark_mode setting
 		lipgloss.SetHasDarkBackground(darkMode)
+	default:
+		// Invalid color_mode, fall back to dark
+		lipgloss.SetHasDarkBackground(true)
 	}
 }
 

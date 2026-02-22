@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -48,6 +49,18 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 	// This ensures NO bare newlines that could show terminal default color
 	var renderedLines []string
 
+	srcBg := m.sourcePaneBg()
+
+	// Compute frontmatter line count for block-level syntax highlighting.
+	// Lines 0..fmCount-1 are frontmatter, then calc/markdown follows.
+	fmCount := 0
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		serialized := fm.Serialize()
+		if serialized != "" {
+			fmCount = len(strings.Split(strings.TrimRight(serialized, "\n"), "\n"))
+		}
+	}
+
 	linesWritten := 0
 	for i := start; i < end && linesWritten < visibleLines; i++ {
 		if i >= len(sourceLines) {
@@ -84,14 +97,14 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 				if j > 0 {
 					// Continuation lines have no line number
 					emptyLineNum := m.styles.LineNumber.Width(lineNumWidth).Render("")
-					gutterStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
+					gutterStyle := lipgloss.NewStyle().Background(srcBg)
 					completeLine = emptyLineNum + gutterStyle.Render(" ") + editLine
 				} else {
-					gutterStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
+					gutterStyle := lipgloss.NewStyle().Background(srcBg)
 					completeLine = lineNum + gutterStyle.Render(" ") + editLine
 				}
 				// Ensure complete line is exactly width
-				completeLine = ensureFullWidth(completeLine, width, lipgloss.Color("236"))
+				completeLine = ensureFullWidth(completeLine, width, srcBg)
 				renderedLines = append(renderedLines, completeLine)
 				linesWritten++
 			}
@@ -101,22 +114,24 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			content = m.renderLineWithCursor(sl.content, m.cursorCol, contentWidth, false)
 		} else if sl.isPadding {
 			// Padding line - blank (for alignment with preview wrapping)
-			content = padToWidth("", contentWidth, lipgloss.Color("236"))
+			content = padToWidth("", contentWidth, srcBg)
 		} else if sl.isWrapped {
-			// Wrapped continuation line - apply selection highlighting then source text style
-			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, sl.content)
-			content = padToWidth(lineWithSelection, contentWidth, lipgloss.Color("236"))
+			// Wrapped continuation line - apply block-level tint then selection highlighting
+			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
+			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, tinted)
+			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		} else {
-			// Normal source line - apply selection highlighting then source text style
-			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, sl.content)
-			content = padToWidth(lineWithSelection, contentWidth, lipgloss.Color("236"))
+			// Normal source line - apply block-level tint then selection highlighting
+			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
+			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, tinted)
+			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		}
 
 		// Assemble complete line: lineNum + gutter + content
-		gutterStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
+		gutterStyle := lipgloss.NewStyle().Background(srcBg)
 		completeLine := lineNum + gutterStyle.Render(" ") + content
 		// Ensure complete line is exactly width
-		completeLine = ensureFullWidth(completeLine, width, lipgloss.Color("236"))
+		completeLine = ensureFullWidth(completeLine, width, srcBg)
 		renderedLines = append(renderedLines, completeLine)
 		linesWritten++
 	}
@@ -125,7 +140,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 	for i := linesWritten; i < visibleLines; i++ {
 		tildeLine := m.styles.LineNumber.Render("~")
 		// Pad tilde line to full width
-		tildeLine = ensureFullWidth(tildeLine, width, lipgloss.Color("236"))
+		tildeLine = ensureFullWidth(tildeLine, width, srcBg)
 		renderedLines = append(renderedLines, tildeLine)
 	}
 
@@ -138,7 +153,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 func (m Model) sourcePaneBg() lipgloss.TerminalColor {
 	color := m.styles.SourcePane.GetBackground()
 	if _, ok := color.(lipgloss.NoColor); ok {
-		return lipgloss.Color("236") // Fallback
+		return theme.SourcePaneBg // Fallback to palette
 	}
 	return color
 }
@@ -147,7 +162,7 @@ func (m Model) sourcePaneBg() lipgloss.TerminalColor {
 func (m Model) previewPaneBg() lipgloss.TerminalColor {
 	color := m.styles.PreviewPane.GetBackground()
 	if _, ok := color.(lipgloss.NoColor); ok {
-		return lipgloss.Color("236") // Fallback
+		return theme.PreviewPaneBg // Fallback to palette
 	}
 	return color
 }
@@ -165,13 +180,15 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	var allLines []string
 	allLines = append(allLines, strings.Split(globalsPanel, "\n")...)
 
+	pvBg := m.previewPaneBg()
+
 	// Separator after globals
 	separatorStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
-		Background(lipgloss.Color("236"))
+		Foreground(theme.DividerFg).
+		Background(pvBg)
 	separatorLine := separatorStyle.Render(strings.Repeat("─", width))
 	// Ensure separator is exactly width
-	separatorLine = ensureFullWidth(separatorLine, width, lipgloss.Color("236"))
+	separatorLine = ensureFullWidth(separatorLine, width, pvBg)
 	allLines = append(allLines, separatorLine)
 
 	// Adjust height for globals panel and separator
@@ -255,10 +272,10 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 					// Show preview content if available, otherwise empty
 					var completeLine string
 					if k < len(cursorPreviewLines) {
-						completeLine = ensureFullWidth(cursorPreviewLines[k].content, width, lipgloss.Color("236"))
+						completeLine = ensureFullWidth(cursorPreviewLines[k].content, width, pvBg)
 					} else {
 						// Empty line with background
-						completeLine = ensureFullWidth("", width, lipgloss.Color("236"))
+						completeLine = ensureFullWidth("", width, pvBg)
 					}
 					allLines = append(allLines, completeLine)
 					linesWritten++
@@ -269,14 +286,14 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 			continue
 		}
 
-		paddedContent := ensureFullWidth(pl.content, width, lipgloss.Color("236"))
+		paddedContent := ensureFullWidth(pl.content, width, pvBg)
 		allLines = append(allLines, paddedContent)
 		linesWritten++
 	}
 
 	// Fill remaining space to maintain consistent height
 	for i := linesWritten; i < resultsHeight; i++ {
-		emptyLine := ensureFullWidth("", width, lipgloss.Color("236"))
+		emptyLine := ensureFullWidth("", width, pvBg)
 		allLines = append(allLines, emptyLine)
 	}
 
@@ -290,17 +307,21 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	detector := document.NewDetector()
 	isActuallyCalc, _ := detector.IsCalculation(r.Source)
 
+	pvBg := m.previewPaneBg()
+
 	if r.Error != "" && isActuallyCalc {
 		// Show full error message - per CONTEXT.md decision
 		// "Show full error message in preview (not abbreviated)"
 		errStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("208")) // amber
+			Foreground(theme.CalcErrorFg).
+			Background(pvBg)
 
 		// Check if this is a blocked (cascading) error
 		if r.IsBlocked {
 			// Blocked errors show brief indicator - root cause shown elsewhere
 			blockedStyle := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("244")) // gray (less prominent)
+				Foreground(theme.CalcBlockedFg).
+				Background(pvBg)
 			return blockedStyle.Render("⊘ blocked")
 		}
 
@@ -335,21 +356,24 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	// Use themed colors for calculation results
 	valueStyle := m.styles.CalcValue
 
+	// Space with background to prevent terminal bleed-through
+	sp := lipgloss.NewStyle().Background(pvBg).Render(" ")
+
 	// Changed indicator: asterisk in yellow for values that were recomputed
 	changedMarker := ""
 	if r.WasChanged {
-		valueStyle = m.styles.Changed
-		changedMarker = m.styles.Changed.Bold(true).Render("* ")
+		valueStyle = m.styles.Changed.Background(pvBg)
+		changedMarker = m.styles.Changed.Background(pvBg).Bold(true).Render("* ")
 	}
 
 	switch m.previewMode {
 	case PreviewFull:
 		// Full mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
-			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + " " + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
+			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value)
 		}
 		// Anonymous calculation (no variable assignment) - show arrow without placeholder
-		return changedMarker + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
+		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value)
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
@@ -358,4 +382,29 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	}
 
 	return ""
+}
+
+// applyBlockTint applies a subtle foreground color tint to source line text
+// based on the block type: frontmatter (muted gray), calc (subtle blue),
+// or markdown (default text color — no tint applied).
+func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool, bg lipgloss.TerminalColor) string {
+	if content == "" {
+		return content
+	}
+
+	var fg lipgloss.TerminalColor
+	switch {
+	case sourceLineIdx < fmCount:
+		fg = theme.SourceFrontmatter
+	case isCalc:
+		fg = theme.SourceCalc
+	default:
+		// Markdown lines — apply background to prevent terminal bleed-through
+		return lipgloss.NewStyle().
+			Foreground(theme.SourceMarkdown).
+			Background(bg).
+			Render(content)
+	}
+
+	return lipgloss.NewStyle().Foreground(fg).Background(bg).Render(content)
 }

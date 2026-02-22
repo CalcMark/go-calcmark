@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -61,24 +62,24 @@ func DefaultPopupStyle() PopupStyle {
 	return PopupStyle{
 		Border: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#5C5C5C")).
-			Background(lipgloss.Color("#1E1E1E")),
+			BorderForeground(theme.PopupBorder).
+			Background(theme.PopupBg),
 		Item: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#CCCCCC")).
-			Background(lipgloss.Color("#1E1E1E")).
+			Foreground(theme.Text).
+			Background(theme.PopupBg).
 			Padding(0, 1),
 		Selected: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(lipgloss.Color("#4A90D9")).
+			Foreground(theme.PopupSelectedFg).
+			Background(theme.PopupSelectedBg).
 			Bold(true).
 			Padding(0, 1),
 		Description: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#888888")).
+			Foreground(theme.TextMuted).
 			Italic(true),
 		Hint: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#666666")).
+			Foreground(theme.Hint).
 			Italic(true).
-			Background(lipgloss.Color("#1E1E1E")).
+			Background(theme.PopupBg).
 			Padding(0, 1),
 	}
 }
@@ -87,19 +88,19 @@ func DefaultPopupStyle() PopupStyle {
 func DefaultAutosuggestStyle() AutosuggestStyle {
 	return AutosuggestStyle{
 		Container: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#888888")),
+			Foreground(theme.TextMuted),
 		Item: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#AAAAAA")),
+			Foreground(theme.AutosuggestText),
 		Selected: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(lipgloss.Color("#444444")),
+			Foreground(theme.TextBright).
+			Background(theme.AutosuggestSelectedBg),
 		Category: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#666666")).
+			Foreground(theme.Hint).
 			Italic(true),
 		Syntax: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#4ECDC4")),
+			Foreground(theme.AutosuggestSyntax),
 		Separator: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#555555")),
+			Foreground(theme.AutosuggestSeparator),
 	}
 }
 
