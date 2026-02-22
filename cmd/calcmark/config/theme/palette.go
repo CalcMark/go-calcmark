@@ -7,412 +7,416 @@ import "github.com/charmbracelet/lipgloss"
 // Every color used in the TUI must be defined here as an AdaptiveColor.
 // lipgloss resolves the Light/Dark slot at Render() time based on
 // SetHasDarkBackground(), so styles built with these values adapt automatically.
+//
+// Theme: "Pearish" — warm stone tones with pear-green accents.
+// Light: warm off-white backgrounds (#FAFAF9), brown-tinted text (#39322D)
+// Dark: warm dark backgrounds (#211D19), warm light text (#F5F3F0)
 var (
 	// --- Core text colors ---
 
 	Text = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#e5e5e5",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	TextMuted = lipgloss.AdaptiveColor{
-		Light: "#666666",
-		Dark:  "#888888",
+		Light: "#6B7280",
+		Dark:  "#9CA3AF",
 	}
 
 	TextBright = lipgloss.AdaptiveColor{
-		Light: "#000000",
-		Dark:  "#ffffff",
+		Light: "#1F1A17",
+		Dark:  "#FFFFFF",
 	}
 
 	// --- Brand / accent ---
 
 	Primary = lipgloss.AdaptiveColor{
-		Light: "#6639b6",
-		Dark:  "#7D56F4",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	Accent = lipgloss.AdaptiveColor{
-		Light: "#6f3fd6",
-		Dark:  "#874BFD",
+		Light: "#65A30D",
+		Dark:  "#BEF264",
 	}
 
 	// --- Semantic status colors ---
 
 	Error = lipgloss.AdaptiveColor{
-		Light: "#cc3333",
-		Dark:  "#FF5555",
+		Light: "#E84327",
+		Dark:  "#F87171",
 	}
 
 	ErrorIcon = lipgloss.AdaptiveColor{
-		Light: "#cc0000",
-		Dark:  "#FF4444",
+		Light: "#DC2626",
+		Dark:  "#FCA5A5",
 	}
 
 	Warning = lipgloss.AdaptiveColor{
-		Light: "#b35900",
-		Dark:  "#FFAA00",
+		Light: "#D97706",
+		Dark:  "#F59E0B",
 	}
 
 	Success = lipgloss.AdaptiveColor{
-		Light: "#1a7f37",
-		Dark:  "#4ECDC4",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	// --- Results and values ---
 
 	Result = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#4ECDC4",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	ResultMuted = lipgloss.AdaptiveColor{
-		Light: "#57606a",
-		Dark:  "#BBBBBB",
+		Light: "#6B7280",
+		Dark:  "#9CA3AF",
 	}
 
 	ResultArrow = lipgloss.AdaptiveColor{
-		Light: "#57606a",
-		Dark:  "#888888",
+		Light: "#9CA3AF",
+		Dark:  "#6B7280",
 	}
 
 	// --- Headers ---
 
 	Header = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#ffffff",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	// --- UI chrome ---
 
 	Cursor = lipgloss.AdaptiveColor{
-		Light: "#6639b6",
-		Dark:  "#7D56F4",
+		Light: "#2563EB",
+		Dark:  "#60A5FA",
 	}
 
 	CursorFg = lipgloss.AdaptiveColor{
-		Light: "#ffffff",
-		Dark:  "#000000",
+		Light: "#FFFFFF",
+		Dark:  "#211D19",
 	}
 
 	Selection = lipgloss.AdaptiveColor{
-		Light: "#ddf4ff",
-		Dark:  "#1f3a5f",
+		Light: "#DBEAFE",
+		Dark:  "#1E3A5F",
 	}
 
 	SelectionFg = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#ffffff",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	Hint = lipgloss.AdaptiveColor{
-		Light: "#6e7781",
-		Dark:  "#6e7781",
+		Light: "#6B7280",
+		Dark:  "#9CA3AF",
 	}
 
 	Command = lipgloss.AdaptiveColor{
-		Light: "#8250df",
-		Dark:  "#a371f7",
+		Light: "#9333EA",
+		Dark:  "#A855F7",
 	}
 
 	// --- Separator / divider ---
 
 	Separator = lipgloss.AdaptiveColor{
-		Light: "#d1d5db",
-		Dark:  "#555555",
+		Light: "#D1D5DB",
+		Dark:  "#4B5563",
 	}
 
 	DividerFg = lipgloss.AdaptiveColor{
-		Light: "#c0c0c0",
-		Dark:  "#444444",
+		Light: "#E5E7EB",
+		Dark:  "#374151",
 	}
 
 	// --- Borders ---
 
 	Border = lipgloss.AdaptiveColor{
-		Light: "#d1d5db",
-		Dark:  "#3d3d3d",
+		Light: "#D1D5DB",
+		Dark:  "#4B5563",
 	}
 
 	// --- Pane backgrounds ---
 
 	SourcePaneBg = lipgloss.AdaptiveColor{
-		Light: "#fafafa",
-		Dark:  "#1C1C1C",
+		Light: "#FAFAF9",
+		Dark:  "#211D19",
 	}
 
 	PreviewPaneBg = lipgloss.AdaptiveColor{
-		Light: "#f5f5f5",
-		Dark:  "#1a1a1a",
+		Light: "#F9FAFB",
+		Dark:  "#1A1714",
 	}
 
 	PaneBg = lipgloss.AdaptiveColor{
-		Light: "#ffffff",
-		Dark:  "#1a1a1a",
+		Light: "#FAFAF9",
+		Dark:  "#211D19",
 	}
 
 	// --- Status bar ---
 
 	StatusBg = lipgloss.AdaptiveColor{
-		Light: "#e8e8e8",
-		Dark:  "#2A2A2A",
+		Light: "#F3F4F6",
+		Dark:  "#2A2520",
 	}
 
 	StatusFg = lipgloss.AdaptiveColor{
-		Light: "#374151",
-		Dark:  "#FFFFFF",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	// --- Context footer ---
 
 	ContextFooterBg = lipgloss.AdaptiveColor{
-		Light: "#f0f0f0",
-		Dark:  "#252525",
+		Light: "#F3F4F6",
+		Dark:  "#2A2520",
 	}
 
 	// --- Popup / autocomplete ---
 
 	PopupBg = lipgloss.AdaptiveColor{
-		Light: "#ffffff",
-		Dark:  "#1E1E1E",
+		Light: "#FFFFFF",
+		Dark:  "#2A2520",
 	}
 
 	PopupBorder = lipgloss.AdaptiveColor{
-		Light: "#c0c0c0",
-		Dark:  "#5C5C5C",
+		Light: "#D1D5DB",
+		Dark:  "#4B5563",
 	}
 
 	PopupSelectedBg = lipgloss.AdaptiveColor{
-		Light: "#dbeafe",
-		Dark:  "#4A90D9",
+		Light: "#E8F5E9",
+		Dark:  "#3A3330",
 	}
 
 	PopupSelectedFg = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#FFFFFF",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	// --- Overlay (help, export, command menu, file picker) ---
 
 	OverlayBg = lipgloss.AdaptiveColor{
-		Light: "#ffffff",
-		Dark:  "#1E1E1E",
+		Light: "#FFFFFF",
+		Dark:  "#2A2520",
 	}
 
 	OverlayBorder = lipgloss.AdaptiveColor{
-		Light: "#c0c0c0",
-		Dark:  "#5C5C5C",
+		Light: "#D1D5DB",
+		Dark:  "#4B5563",
 	}
 
 	// --- Source pane syntax highlighting (block-level) ---
 
 	SourceFrontmatter = lipgloss.AdaptiveColor{
-		Light: "#6e7781",
-		Dark:  "#7d8590",
+		Light: "#9CA3AF",
+		Dark:  "#6B7280",
 	}
 
 	SourceMarkdown = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#e5e5e5",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	SourceCalc = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#79c0ff",
+		Light: "#2563EB",
+		Dark:  "#60A5FA",
 	}
 
 	// --- Editor-specific ---
 
 	EditLineBg = lipgloss.AdaptiveColor{
-		Light: "#f0f0f0",
-		Dark:  "#2E2E2E",
+		Light: "#F5F3F0",
+		Dark:  "#2A2520",
 	}
 
 	EditLineFg = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#FFFFFF",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	CurrentLineBg = lipgloss.AdaptiveColor{
-		Light: "#f5f5f5",
-		Dark:  "#262626",
+		Light: "#F5F3F0",
+		Dark:  "#2A2520",
 	}
 
 	CurrentLineFg = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#FFFFFF",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	LineNumber = lipgloss.AdaptiveColor{
-		Light: "#999999",
-		Dark:  "#666666",
+		Light: "#9CA3AF",
+		Dark:  "#6B7280",
 	}
 
 	// --- Globals panel ---
 
 	GlobalsVarName = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#4ECDC4",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	GlobalsExchange = lipgloss.AdaptiveColor{
-		Light: "#b35900",
-		Dark:  "#FFD93D",
+		Light: "#D97706",
+		Dark:  "#F59E0B",
 	}
 
 	GlobalsFocusBg = lipgloss.AdaptiveColor{
-		Light: "#e8e8e8",
-		Dark:  "#333333",
+		Light: "#E5E7EB",
+		Dark:  "#3A3330",
 	}
 
 	// --- Input / prompt ---
 
 	PromptFg = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#FFFFFF",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	PromptBg = lipgloss.AdaptiveColor{
-		Light: "#e0e0e0",
-		Dark:  "#333333",
+		Light: "#E5E7EB",
+		Dark:  "#3A3330",
 	}
 
 	InputFg = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#FFFFFF",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	InputBg = lipgloss.AdaptiveColor{
-		Light: "#ffffff",
-		Dark:  "#1A1A1A",
+		Light: "#FFFFFF",
+		Dark:  "#211D19",
 	}
 
 	// --- Context footer detail colors ---
 
 	FooterFuncName = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#58a6ff",
+		Light: "#2563EB",
+		Dark:  "#60A5FA",
 	}
 
 	FooterParamHighlight = lipgloss.AdaptiveColor{
-		Light: "#b35900",
-		Dark:  "#FFD93D",
+		Light: "#D97706",
+		Dark:  "#FCD34D",
 	}
 
 	FooterVarRef = lipgloss.AdaptiveColor{
-		Light: "#666666",
-		Dark:  "#888888",
+		Light: "#6B7280",
+		Dark:  "#9CA3AF",
 	}
 
 	// --- Markdown preview (glamour) ---
 
 	MdH1Bg = lipgloss.AdaptiveColor{
-		Light: "#fff3e0",
-		Dark:  "#3d2800",
+		Light: "#FEF3C7",
+		Dark:  "#3D2800",
 	}
 
 	MdH2Bg = lipgloss.AdaptiveColor{
-		Light: "#e8f5e9",
-		Dark:  "#1a3d1a",
+		Light: "#E8F5E9",
+		Dark:  "#1A3D1A",
 	}
 
 	MdHeading = lipgloss.AdaptiveColor{
-		Light: "#b35900",
-		Dark:  "#FF9900",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	MdLink = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#22AA22",
+		Light: "#2563EB",
+		Dark:  "#60A5FA",
 	}
 
 	MdQuote = lipgloss.AdaptiveColor{
-		Light: "#666666",
-		Dark:  "#888888",
+		Light: "#6B7280",
+		Dark:  "#9CA3AF",
 	}
 
 	MdCode = lipgloss.AdaptiveColor{
-		Light: "#c7254e",
-		Dark:  "#33CC33",
+		Light: "#E84327",
+		Dark:  "#F87171",
 	}
 
 	MdCodeBg = lipgloss.AdaptiveColor{
-		Light: "#f5f2f0",
-		Dark:  "#333333",
+		Light: "#F3F4F6",
+		Dark:  "#2A2520",
 	}
 
 	// --- File picker ---
 
 	FilePickerDir = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#58a6ff",
+		Light: "#2563EB",
+		Dark:  "#60A5FA",
 	}
 
 	FilePickerFile = lipgloss.AdaptiveColor{
-		Light: "#1a1a1a",
-		Dark:  "#e5e5e5",
+		Light: "#39322D",
+		Dark:  "#F5F3F0",
 	}
 
 	FilePickerSelected = lipgloss.AdaptiveColor{
-		Light: "#6639b6",
-		Dark:  "#a371f7",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	FilePickerCursor = lipgloss.AdaptiveColor{
-		Light: "#8250df",
-		Dark:  "#d2a8ff",
+		Light: "#9333EA",
+		Dark:  "#A855F7",
 	}
 
 	// --- Mode indicator ---
 
 	ModeIndicatorBg = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#4ECDC4",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	ModeIndicatorFg = lipgloss.AdaptiveColor{
-		Light: "#ffffff",
-		Dark:  "#000000",
+		Light: "#FFFFFF",
+		Dark:  "#211D19",
 	}
 
 	// --- Autosuggest inline hints (distinct from popup) ---
 
 	AutosuggestText = lipgloss.AdaptiveColor{
-		Light: "#57606a",
-		Dark:  "#AAAAAA",
+		Light: "#6B7280",
+		Dark:  "#9CA3AF",
 	}
 
 	AutosuggestSyntax = lipgloss.AdaptiveColor{
-		Light: "#0969da",
-		Dark:  "#4ECDC4",
+		Light: "#82B919",
+		Dark:  "#A8C940",
 	}
 
 	AutosuggestSeparator = lipgloss.AdaptiveColor{
-		Light: "#c0c0c0",
-		Dark:  "#555555",
+		Light: "#D1D5DB",
+		Dark:  "#4B5563",
 	}
 
 	AutosuggestSelectedBg = lipgloss.AdaptiveColor{
-		Light: "#e8e8e8",
-		Dark:  "#444444",
+		Light: "#E5E7EB",
+		Dark:  "#3A3330",
 	}
 
 	// --- Overlay backdrop ---
 
 	OverlayWhitespaceFg = lipgloss.AdaptiveColor{
-		Light: "#d0d0d0",
-		Dark:  "#333333",
+		Light: "#E5E7EB",
+		Dark:  "#2A2520",
 	}
 
 	// --- Calculation result errors ---
 
 	CalcErrorFg = lipgloss.AdaptiveColor{
-		Light: "#b35900",
-		Dark:  "#FF8800",
+		Light: "#D97706",
+		Dark:  "#F59E0B",
 	}
 
 	CalcBlockedFg = lipgloss.AdaptiveColor{
-		Light: "#999999",
-		Dark:  "#888888",
+		Light: "#9CA3AF",
+		Dark:  "#6B7280",
 	}
 )
