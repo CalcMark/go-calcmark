@@ -12,16 +12,27 @@ import (
 func (m Model) renderGlobalsPanel(width int) string {
 	state := m.GetGlobalsPanelState()
 	globalsCount := len(state.Globals)
+	hasError := state.Error != ""
 
 	if !state.Expanded {
-		// Collapsed: just show count
+		// Collapsed: show count (or warning if error)
 		indicator := "▸"
-		text := fmt.Sprintf(" Globals (%d)", globalsCount)
+		var text string
+		if hasError {
+			text = " Globals ⚠"
+		} else {
+			text = fmt.Sprintf(" Globals (%d)", globalsCount)
+		}
 		hint := "[g]"
+
+		headerFg := lipgloss.Color("252")
+		if hasError {
+			headerFg = lipgloss.Color("208") // amber for error
+		}
 
 		left := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("252")).
+			Foreground(headerFg).
 			Render(indicator + text)
 
 		right := lipgloss.NewStyle().
@@ -46,9 +57,15 @@ func (m Model) renderGlobalsPanel(width int) string {
 	text := " Globals"
 	hint := "[g]"
 
+	headerFg := lipgloss.Color("252")
+	if hasError {
+		headerFg = lipgloss.Color("208")
+		text = " Globals ⚠"
+	}
+
 	left := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("252")).
+		Foreground(headerFg).
 		Render(indicator + text)
 
 	right := lipgloss.NewStyle().
@@ -64,6 +81,17 @@ func (m Model) renderGlobalsPanel(width int) string {
 	headerLine := left + components.StyledPadding(space, lipgloss.Color("236")) + right
 	headerLine = ensureFullWidth(headerLine, width, lipgloss.Color("236"))
 	allLines = append(allLines, headerLine)
+
+	// Show error details when YAML is malformed
+	if hasError {
+		errStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("208")).
+			Italic(true)
+		errLine := errStyle.Render("  " + state.Error)
+		errLine = ensureFullWidth(errLine, width, lipgloss.Color("236"))
+		allLines = append(allLines, errLine)
+		return strings.Join(allLines, "\n")
+	}
 
 	if globalsCount == 0 {
 		noGlobalsLine := lipgloss.NewStyle().

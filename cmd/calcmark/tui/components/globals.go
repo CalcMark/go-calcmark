@@ -18,9 +18,10 @@ type GlobalVar struct {
 // GlobalsPanelState holds the state for the globals panel.
 type GlobalsPanelState struct {
 	Globals    []GlobalVar
-	Expanded   bool // Whether the panel is expanded
-	FocusIndex int  // Currently focused item (-1 for none)
-	Focused    bool // Whether this panel has focus
+	Expanded   bool   // Whether the panel is expanded
+	FocusIndex int    // Currently focused item (-1 for none)
+	Focused    bool   // Whether this panel has focus
+	Error      string // Non-empty when frontmatter YAML is malformed
 }
 
 // GlobalsPanelStyle holds styles for rendering the globals panel.
