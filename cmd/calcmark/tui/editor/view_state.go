@@ -126,6 +126,11 @@ func (m *Model) collectPinnedVariables() []components.PinnedVar {
 // GetGlobalsPanelState returns state for the globals panel.
 func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 	var globals []components.GlobalVar
+	var errMsg string
+
+	if m.frontmatterErr != nil {
+		errMsg = m.frontmatterErr.Error()
+	}
 
 	fm := m.doc.GetFrontmatter()
 	if fm != nil {
@@ -150,6 +155,7 @@ func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 		Expanded:   m.globalsExpanded,
 		FocusIndex: m.globalsFocusIdx,
 		Focused:    m.mode == StateGlobals,
+		Error:      errMsg,
 	}
 }
 

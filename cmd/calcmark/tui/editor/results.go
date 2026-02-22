@@ -25,9 +25,29 @@ type LineResult struct {
 
 // GetLineResults returns evaluation results for all lines.
 // Each source line maps to its corresponding statement result when available.
+// Frontmatter lines are prepended as empty (non-calc) results to match GetLines().
 func (m *Model) GetLineResults() []LineResult {
 	var results []LineResult
 	lineNum := 0
+
+	// Prepend empty results for frontmatter lines to maintain alignment
+	// with GetLines() which includes frontmatter
+	fmCount := m.frontmatterLineCount()
+	if fmCount > 0 {
+		allLines := m.GetLines()
+		for i := 0; i < fmCount; i++ {
+			source := ""
+			if i < len(allLines) {
+				source = allLines[i]
+			}
+			results = append(results, LineResult{
+				LineNum: lineNum,
+				Source:  source,
+				IsCalc:  false,
+			})
+			lineNum++
+		}
+	}
 
 	// Track variables that failed to evaluate (for cascading error detection)
 	// Per CONTEXT.md: "Cascading errors: show root cause only, dependents show 'blocked'"

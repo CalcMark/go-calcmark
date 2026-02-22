@@ -33,13 +33,14 @@ var EditorCommands = []Command{
 	{Name: "Undo", Accelerator: "Ctrl+Z", Description: "Undo last change", Category: "edit"},
 	{Name: "Redo", Accelerator: "Ctrl+Y", Description: "Redo last change", Category: "edit"},
 	{Name: "Delete Line", Accelerator: "Ctrl+K", Description: "Delete current line", Category: "edit"},
+	{Name: "Insert Frontmatter", Accelerator: "Ctrl+F", Description: "Add YAML frontmatter", Category: "edit"},
 
 	// View commands
 	{Name: "Toggle Preview", Accelerator: "Ctrl+P", Description: "Cycle preview mode", Category: "view"},
 
 	// Navigation commands
-	{Name: "Word Left", Accelerator: "Ctrl+Left", Description: "Move to previous word", Category: "navigation"},
-	{Name: "Word Right", Accelerator: "Ctrl+Right", Description: "Move to next word", Category: "navigation"},
+	{Name: "Word Left", Accelerator: "Opt+Left", Description: "Move to previous word (also Opt+B)", Category: "navigation"},
+	{Name: "Word Right", Accelerator: "Opt+Right", Description: "Move to next word (also Opt+F)", Category: "navigation"},
 	{Name: "Doc Start", Accelerator: "Ctrl+Home", Description: "Jump to document start", Category: "navigation"},
 	{Name: "Doc End", Accelerator: "Ctrl+End", Description: "Jump to document end", Category: "navigation"},
 	{Name: "Scroll Down", Accelerator: "Ctrl+D", Description: "Scroll down half page", Category: "navigation"},
@@ -151,6 +152,9 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 	case "Delete Line":
 		m.deleteLine()
 		return m, nil
+
+	case "Insert Frontmatter":
+		return m.insertFrontmatter()
 
 	case "Toggle Preview":
 		m.cyclePreviewMode()

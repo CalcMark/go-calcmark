@@ -34,6 +34,13 @@ type Frontmatter struct {
 	// Values are CalcMark expressions that will be parsed and evaluated.
 	// Example: "base_date" -> "Jan 15 2025", "tax_rate" -> "0.32"
 	Globals map[string]string
+
+	// rawSource preserves the exact frontmatter text (including --- delimiters)
+	// as it appeared in the original document. This allows Serialize() to return
+	// the user's formatting rather than reconstructed YAML, enabling natural
+	// editing of frontmatter lines (Enter, whitespace, etc.) in the TUI editor.
+	// Cleared on programmatic modification (SetGlobal, SetExchangeRate).
+	rawSource string
 }
 
 // reservedKeys lists all top-level frontmatter keys reserved for CalcMark grammar.
@@ -82,6 +89,7 @@ func (f *Frontmatter) SetExchangeRate(key string, rate decimal.Decimal) {
 	}
 	// Normalize key to uppercase
 	f.Exchange[strings.ToUpper(key)] = rate
+	f.rawSource = "" // Invalidate raw source — Serialize() will reconstruct
 }
 
 // SetGlobal sets a global variable value. The valueExpr is stored as the
@@ -91,6 +99,7 @@ func (f *Frontmatter) SetGlobal(name, valueExpr string) {
 		f.Globals = make(map[string]string)
 	}
 	f.Globals[name] = valueExpr
+	f.rawSource = "" // Invalidate raw source — Serialize() will reconstruct
 }
 
 // HasGlobal returns true if the global variable is defined in frontmatter.
@@ -176,8 +185,9 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 
 	// Convert to Frontmatter with decimal values
 	fm := &Frontmatter{
-		Exchange: make(map[string]decimal.Decimal),
-		Globals:  make(map[string]string),
+		Exchange:  make(map[string]decimal.Decimal),
+		Globals:   make(map[string]string),
+		rawSource: strings.Join(lines[0:closeIdx+1], "\n") + "\n",
 	}
 
 	// Process exchange rates
@@ -241,6 +251,8 @@ func isDigit(r rune) bool {
 
 // Serialize returns the frontmatter as a YAML string with --- delimiters.
 // If the frontmatter has no content (no exchange rates, no globals), returns "".
+// When rawSource is available (from parsing), the original text is preserved
+// to support natural editing (Enter, whitespace, etc.) in the TUI editor.
 func (f *Frontmatter) Serialize() string {
 	if f == nil {
 		return ""
@@ -249,6 +261,12 @@ func (f *Frontmatter) Serialize() string {
 		return ""
 	}
 
+	// Use raw source if available (preserves user formatting)
+	if f.rawSource != "" {
+		return f.rawSource + "\n" // Add CommonMark blank line
+	}
+
+	// Fall back to reconstruction (programmatically created frontmatter)
 	var sb strings.Builder
 	sb.WriteString("---\n")
 

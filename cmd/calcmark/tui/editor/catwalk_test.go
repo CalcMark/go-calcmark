@@ -77,6 +77,8 @@ z = 30`
 			"clipboard",                      // TestEditorCatwalkClipboard
 			"export_flow",                    // TestEditorCatwalkExportFlow
 			"help_interactive",               // TestEditorCatwalkHelpInteractive
+			"frontmatter_insert",             // TestEditorCatwalkFrontmatterInsert
+			"frontmatter_editing",            // TestEditorCatwalkFrontmatterEditing
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {

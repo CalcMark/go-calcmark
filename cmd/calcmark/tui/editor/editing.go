@@ -436,6 +436,7 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 
 // redetectBlockTypes rebuilds the document to properly detect block types.
 // This is needed when editing changes a line from calculation to markdown or vice versa.
+// Also captures frontmatter parsing errors for diagnostics display.
 func (m *Model) redetectBlockTypes() {
 	// Get current document content
 	content := m.getDocumentContent()
@@ -443,9 +444,13 @@ func (m *Model) redetectBlockTypes() {
 	// Rebuild document with proper block detection
 	newDoc, err := document.NewDocument(content)
 	if err != nil {
-		// If parsing fails, keep the old document
+		// Capture frontmatter errors for diagnostics — keep the old document
+		m.frontmatterErr = err
 		return
 	}
+
+	// Clear frontmatter error on successful parse
+	m.frontmatterErr = nil
 
 	// Preserve cursor position
 	cursorLine := m.cursorLine
@@ -474,7 +479,36 @@ func (m *Model) redetectBlockTypes() {
 }
 
 // updateCurrentLine updates the line at cursorLine with new content.
+// Accounts for frontmatter lines: if cursor is in frontmatter region,
+// triggers a full document rebuild instead of single-block update.
 func (m *Model) updateCurrentLine(newContent string) {
+	fmCount := m.frontmatterLineCount()
+	targetLine := m.cursorLine - fmCount
+
+	// If cursor is on a frontmatter line, rebuild the entire document with the
+	// modified line. Frontmatter is managed by the document parser, not individual
+	// blocks, so targeted updates aren't possible — we must reparse.
+	if targetLine < 0 {
+		lines := m.GetLines()
+		if m.cursorLine >= len(lines) {
+			return
+		}
+		lines[m.cursorLine] = newContent
+		content := strings.Join(lines, "\n") + "\n"
+		newDoc, err := document.NewDocument(content)
+		if err != nil {
+			// Capture parse error (e.g., malformed YAML) but keep old document
+			m.frontmatterErr = err
+			return
+		}
+		m.frontmatterErr = nil
+		m.doc = newDoc
+		m.eval = implDoc.NewEvaluator()
+		_ = m.eval.Evaluate(m.doc)
+		m.autoPinVariables()
+		return
+	}
+
 	lineIdx := 0
 	for _, node := range m.doc.GetBlocks() {
 		var blockLines []string
@@ -486,7 +520,7 @@ func (m *Model) updateCurrentLine(newContent string) {
 		}
 
 		for i := range blockLines {
-			if lineIdx == m.cursorLine {
+			if lineIdx == targetLine {
 				// This is the line to update
 				blockLines[i] = newContent
 
@@ -615,7 +649,35 @@ func (m *Model) deleteLine() {
 	// Copy to yank buffer first
 	m.yankBuffer = lines[m.cursorLine]
 
+	// If cursor is on a frontmatter line, rebuild the whole document
+	fmCount := m.frontmatterLineCount()
+	if m.cursorLine < fmCount {
+		// Rebuild without this line
+		newLines := make([]string, 0, len(lines)-1)
+		newLines = append(newLines, lines[:m.cursorLine]...)
+		newLines = append(newLines, lines[m.cursorLine+1:]...)
+		content := strings.Join(newLines, "\n") + "\n"
+		newDoc, err := document.NewDocument(content)
+		if err != nil {
+			m.frontmatterErr = err
+			return
+		}
+		m.frontmatterErr = nil
+		m.doc = newDoc
+		m.eval = implDoc.NewEvaluator()
+		_ = m.eval.Evaluate(m.doc)
+		m.modified = true
+		// Adjust cursor
+		total := m.TotalLines()
+		if m.cursorLine >= total && total > 0 {
+			m.cursorLine = total - 1
+		}
+		m.autoPinVariables()
+		return
+	}
+
 	// Find and update the block containing this line
+	targetLine := m.cursorLine - fmCount
 	lineIdx := 0
 	for _, node := range m.doc.GetBlocks() {
 		var blockLines []string
@@ -627,7 +689,7 @@ func (m *Model) deleteLine() {
 		}
 
 		for i := range blockLines {
-			if lineIdx == m.cursorLine {
+			if lineIdx == targetLine {
 				// Remove this line from the block
 				newLines := make([]string, 0, len(blockLines)-1)
 				newLines = append(newLines, blockLines[:i]...)
@@ -688,6 +750,44 @@ func (m *Model) pasteLine() {
 	m.modified = true
 	m.reEvaluate()
 	m.statusMsg = "Line pasted"
+}
+
+// insertFrontmatter inserts a default YAML frontmatter block at the top of the document.
+// Returns the updated model and command. No-op if frontmatter already exists.
+func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
+	if m.doc.GetFrontmatter() != nil {
+		m.statusMsg = "Frontmatter already exists"
+		return m, nil
+	}
+
+	// Build new content with default frontmatter prepended
+	fmBlock := "---\nglobals:\n  my_var: 42\n---\n"
+	content := fmBlock + m.getDocumentContent()
+
+	// Rebuild document via the spec layer (parsing stays in spec/document)
+	newDoc, err := document.NewDocument(content)
+	if err != nil {
+		m.statusMsg = "Error inserting frontmatter"
+		m.statusIsErr = true
+		return m, nil
+	}
+
+	m.doc = newDoc
+	m.frontmatterErr = nil
+	m.eval = implDoc.NewEvaluator()
+	_ = m.eval.Evaluate(m.doc)
+
+	// Set cursor to the my_var line (line 2, 0-indexed) so user can edit immediately
+	m.cursorLine = 2
+	m.cursorCol = 0
+	m.editBuf = ""
+
+	m.globalsExpanded = true
+	m.modified = true
+	m.autoPinVariables()
+	m.InvalidateAlignedCache()
+	m.statusMsg = "Frontmatter inserted"
+	return m, nil
 }
 
 // pasteLineAbove pastes the yank buffer above the current line (P command).
