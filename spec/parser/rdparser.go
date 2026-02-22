@@ -1059,6 +1059,28 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 	// Identifiers (variables or function calls)
 	if p.match(lexer.IDENTIFIER) {
 		name := p.previous()
+		identName := strings.ToLower(string(name.Value))
+
+		// NL function lookahead: "read <qty> from <ident>"
+		if identName == "read" && p.check(lexer.QUANTITY) {
+			if p.peekAhead(1).Type == lexer.FROM {
+				return p.parseNLReadFunction()
+			}
+		}
+
+		// NL function lookahead: "compress <qty> using <ident>"
+		if identName == "compress" && p.check(lexer.QUANTITY) {
+			if p.peekAhead(1).Type == lexer.IDENTIFIER && strings.ToLower(string(p.peekAhead(1).Value)) == "using" {
+				return p.parseNLCompressFunction()
+			}
+		}
+
+		// NL function lookahead: "transfer <qty> across <ident> <ident>"
+		if identName == "transfer" && p.check(lexer.QUANTITY) {
+			if p.peekAhead(1).Type == lexer.IDENTIFIER && strings.ToLower(string(p.peekAhead(1).Value)) == "across" {
+				return p.parseNLTransferFunction()
+			}
+		}
 
 		// Check if it's a function call (identifier followed by '(')
 		if p.check(lexer.LPAREN) {
@@ -1219,9 +1241,20 @@ func isNaturalSyntaxKeyword(ident string) bool {
 		return true
 	case "as":
 		return true // Used in "as napkin" conversion syntax
+	case "read", "compress", "transfer":
+		return true // NL function triggers: "read 100 MB from ssd", etc.
 	default:
 		return false
 	}
+}
+
+// isNLFunctionKeyword checks if an identifier name triggers NL function parsing.
+func isNLFunctionKeyword(name string) bool {
+	switch strings.ToLower(name) {
+	case "read", "compress", "transfer":
+		return true
+	}
+	return false
 }
 
 // isTimeUnit checks if a string is a valid time unit for rate expressions.
