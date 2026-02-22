@@ -16,7 +16,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = StateDefault
 		m.statusMsg = ""
 		m.newFileName = ""
-		m.quitting = false // Clear quit flag if canceling save
+		m.pendingSaveAction = PendingNone
 		return m, nil
 
 	case tea.KeyTab:
@@ -36,11 +36,10 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					filename := addExtensionIfMissing(m.newFileName)
 					path := filepath.Join(m.filePicker.CurrentDirectory, filename)
 					m.saveFile(path)
-					m.mode = StateDefault
 					m.newFileName = ""
-					// If we were trying to quit, quit now
-					if m.quitting && !m.statusIsErr {
-						return m, tea.Quit
+					if !m.statusIsErr {
+						// Save succeeded — complete whatever action triggered the save
+						return m.completePendingSaveAction()
 					}
 				}
 				return m, nil

@@ -1,6 +1,6 @@
 package editor
 
-// globals_handler.go — Key handling for globals panel and save prompt.
+// globals_handler.go — Key handling for globals panel.
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,42 +36,5 @@ func (m Model) handleGlobalsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return m, nil
-}
-
-// handleSavePromptKey processes keys in save prompt mode (before quit).
-func (m Model) handleSavePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 {
-		switch msg.Runes[0] {
-		case 'y', 'Y':
-			// Save and quit - but if no filename, open file picker first
-			if m.filepath == "" {
-				m.filePicker = initFilePicker()
-				m.filePickerFocus = FocusFilename
-				m.filePickerPurpose = PickerForSave
-				m.mode = StateFilePicker
-				return m, m.filePicker.Init()
-			}
-			m.saveFile("")
-			if !m.statusIsErr {
-				m.quitting = true
-				return m, tea.Quit
-			}
-			// If save failed, stay in prompt mode
-			return m, nil
-		case 'n', 'N':
-			// Quit without saving
-			m.quitting = true
-			return m, tea.Quit
-		case 'c', 'C':
-			// Cancel quit
-			m.mode = StateDefault
-			m.statusMsg = "Quit cancelled"
-		}
-	} else if msg.Type == tea.KeyEsc {
-		// Cancel quit
-		m.mode = StateDefault
-		m.statusMsg = "Quit cancelled"
-	}
 	return m, nil
 }

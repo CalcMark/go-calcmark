@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/format"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -143,8 +144,22 @@ func (m *Model) enterExportMode() {
 }
 
 // hasUnsavedChanges returns true if there are unsaved changes.
+// Checks both the flushed document content and the live edit buffer,
+// since the user may have typed text that hasn't been committed to
+// the document yet.
 func (m *Model) hasUnsavedChanges() bool {
-	// Compare current document content with last saved content
+	// The edit buffer holds uncommitted keystrokes that aren't reflected
+	// in Source() until the line is saved. If the user is actively typing,
+	// compare the buffer against the current line to catch pending edits.
+	if m.userIsTyping {
+		lines := m.GetLines()
+		if m.cursorLine < len(lines) && m.editBuf != lines[m.cursorLine] {
+			return true
+		}
+	}
+	if !m.modified {
+		return false
+	}
 	currentContent := m.getDocumentContent()
 	return currentContent != m.savedContent
 }
@@ -185,20 +200,41 @@ func (m *Model) openFile(filename string) {
 		m.statusMsg = fmt.Sprintf("Opened: %s", filepath.Base(absPath))
 	}
 
-	// Update model state
+	// Reinitialize all mutable editor state for the new document.
+	// Every field must be reset to prevent stale data from leaking
+	// into the newly opened document.
 	m.doc = doc
 	m.eval = eval
 	m.filepath = absPath
 	m.modified = false
+	m.savedContent = string(content)
+
+	// Cursor and scroll
 	m.cursorLine = 0
 	m.cursorCol = 0
 	m.scrollOffset = 0
 
-	// Reset undo history - fresh start on file open (per CONTEXT.md)
-	m.undoManager.Clear()
+	// Editing state
+	m.editBuf = ""
+	m.userIsTyping = false
+	m.frontmatterErr = nil
+	m.changedBlockIDs = make(map[string]bool)
+	m.selectionAnchorLine = -1
+	m.selectionAnchorCol = -1
+	m.pendingKey = 0
+	m.yankBuffer = ""
 
-	// Record file content as saved state
-	m.savedContent = string(content)
+	// Search state
+	m.searchTerm = ""
+	m.searchMatches = nil
+	m.searchIdx = 0
+
+	// Overlay / prompt state
+	m.autocompleteState = components.AutosuggestState{}
+	m.pendingSaveAction = PendingNone
+
+	// Undo history — fresh start on file open
+	m.undoManager.Clear()
 
 	// Auto-pin variables
 	m.pinnedVars = make(map[string]bool)

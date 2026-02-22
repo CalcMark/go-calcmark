@@ -97,11 +97,12 @@ func (m *Model) transitionToProcessing() {
 	m.userIsTyping = false
 	m.state = StateProcessing
 
-	// Save current editBuf to document.
+	// Save current editBuf to document and mark as modified.
 	// CRITICAL: Must save even when editBuf is empty - user may have deleted
 	// all content from the line. Without this, the document retains old content
 	// and transitionToEditing() will reload stale data.
 	m.updateCurrentLine(m.editBuf)
+	m.modified = true
 
 	// Process document: re-detect block types and re-evaluate
 	m.redetectBlockTypes()
