@@ -262,6 +262,7 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
 			isWrapped:     al.Kind == AlignedLineWrapped || al.Kind == AlignedLineCursorWrapped,
 			isCursorLine:  al.Kind == AlignedLineCursor,
 			sourceLineIdx: al.SourceLineIdx,
+			isCalc:        al.IsCalc,
 		}
 	}
 
@@ -319,6 +320,7 @@ type sourceLine struct {
 	isWrapped     bool   // True if this is a continuation of a wrapped line
 	isCursorLine  bool   // True if this is the cursor line
 	sourceLineIdx int    // Original source line index (for cursor tracking on wrapped lines)
+	isCalc        bool   // True if this line belongs to a CalcBlock
 }
 
 // previewLine represents a line in the preview pane with its source mapping.

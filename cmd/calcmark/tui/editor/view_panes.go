@@ -51,6 +51,16 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 
 	srcBg := m.sourcePaneBg()
 
+	// Compute frontmatter line count for block-level syntax highlighting.
+	// Lines 0..fmCount-1 are frontmatter, then calc/markdown follows.
+	fmCount := 0
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		serialized := fm.Serialize()
+		if serialized != "" {
+			fmCount = len(strings.Split(strings.TrimRight(serialized, "\n"), "\n"))
+		}
+	}
+
 	linesWritten := 0
 	for i := start; i < end && linesWritten < visibleLines; i++ {
 		if i >= len(sourceLines) {
@@ -106,12 +116,14 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			// Padding line - blank (for alignment with preview wrapping)
 			content = padToWidth("", contentWidth, srcBg)
 		} else if sl.isWrapped {
-			// Wrapped continuation line - apply selection highlighting then source text style
-			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, sl.content)
+			// Wrapped continuation line - apply block-level tint then selection highlighting
+			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc)
+			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, tinted)
 			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		} else {
-			// Normal source line - apply selection highlighting then source text style
-			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, sl.content)
+			// Normal source line - apply block-level tint then selection highlighting
+			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc)
+			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, tinted)
 			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		}
 
@@ -363,4 +375,27 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	}
 
 	return ""
+}
+
+// applyBlockTint applies a subtle foreground color tint to source line text
+// based on the block type: frontmatter (muted gray), calc (subtle blue),
+// or markdown (default text color — no tint applied).
+func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool) string {
+	if content == "" {
+		return content
+	}
+
+	var fg lipgloss.TerminalColor
+	switch {
+	case sourceLineIdx < fmCount:
+		fg = theme.SourceFrontmatter
+	case isCalc:
+		fg = theme.SourceCalc
+	default:
+		// Markdown lines use SourceMarkdown which matches the default text color,
+		// so applying it would be a no-op. Skip styling for performance.
+		return content
+	}
+
+	return lipgloss.NewStyle().Foreground(fg).Render(content)
 }
