@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -82,9 +83,9 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 
 	// Priority 0: Show autocomplete details when active
 	if state.AutocompleteActive && state.AutocompleteName != "" {
-		nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)    // bright blue
-		syntaxStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)            // white
-		descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("246")).Italic(true).Background(bg) // gray italic
+		nameStyle := lipgloss.NewStyle().Foreground(theme.FooterFuncName).Bold(true).Background(bg)
+		syntaxStyle := lipgloss.NewStyle().Foreground(theme.Text).Background(bg)
+		descStyle := lipgloss.NewStyle().Foreground(theme.TextMuted).Italic(true).Background(bg)
 
 		var lines []string
 
@@ -115,9 +116,9 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 
 	// Priority 0.5: Show function argument help when inside function call
 	if state.InFunctionCall && state.ParamName != "" {
-		funcStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true).Background(bg)   // bright blue
-		paramStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true).Background(bg) // yellow/gold
-		exampleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(bg)          // white
+		funcStyle := lipgloss.NewStyle().Foreground(theme.FooterFuncName).Bold(true).Background(bg)
+		paramStyle := lipgloss.NewStyle().Foreground(theme.FooterParamHighlight).Bold(true).Background(bg)
+		exampleStyle := lipgloss.NewStyle().Foreground(theme.Text).Background(bg)
 
 		var lines []string
 
@@ -146,10 +147,9 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 	// Priority 1: Show errors with helpful formatting
 	if state.HasError {
 		// Style based on severity - include background to prevent terminal bleed
-		// Use bold red for error icon to make it highly visible
-		iconStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Background(bg)   // bold red on themed bg
-		msgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true).Background(bg)    // bold white on themed bg
-		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("250")).Italic(true).Background(bg) // italic light gray on themed bg
+		iconStyle := lipgloss.NewStyle().Foreground(theme.ErrorIcon).Bold(true).Background(bg)
+		msgStyle := lipgloss.NewStyle().Foreground(theme.TextBright).Bold(true).Background(bg)
+		hintStyle := lipgloss.NewStyle().Foreground(theme.Hint).Italic(true).Background(bg)
 
 		// Build error display from structured diagnostic if available
 		var shortMsg, hint string
@@ -206,7 +206,7 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 
 	// Render variable references on first line with themed background
 	line1 := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Foreground(theme.FooterVarRef).
 		Background(bg).
 		Width(width).
 		MaxWidth(width).

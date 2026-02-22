@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -41,23 +42,23 @@ func DefaultGlobalsPanelStyle() GlobalsPanelStyle {
 	return GlobalsPanelStyle{
 		Container: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#444444")).
+			BorderForeground(theme.DividerFg).
 			Padding(0, 1),
 		Header: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FFFFFF")),
+			Foreground(theme.TextBright),
 		HeaderIcon: lipgloss.NewStyle().
 			MarginRight(1),
 		VarName: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#4ECDC4")),
+			Foreground(theme.GlobalsVarName),
 		VarValue: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")),
+			Foreground(theme.TextBright),
 		Exchange: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFD93D")),
+			Foreground(theme.GlobalsExchange),
 		Focused: lipgloss.NewStyle().
-			Background(lipgloss.Color("#333333")),
+			Background(theme.GlobalsFocusBg),
 		Collapsed: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#666666")).
+			Foreground(theme.Hint).
 			Italic(true),
 	}
 }

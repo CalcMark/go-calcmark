@@ -50,7 +50,7 @@ func ensureLinesAreFullWidth(content string, width int, bg lipgloss.TerminalColo
 //   - Uses lipgloss.Width() to measure visual width (ignores escape sequences)
 //   - Strips ANSI reset codes to prevent them from clearing the applied background
 //   - Wraps content + padding together so background covers the full width
-func overlayPadLine(content string, targetWidth int, bg lipgloss.Color) string {
+func overlayPadLine(content string, targetWidth int, bg lipgloss.TerminalColor) string {
 	// Strip reset codes so they don't clear our background
 	content = stripResetCodes(content)
 

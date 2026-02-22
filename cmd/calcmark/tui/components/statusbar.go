@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -53,25 +54,25 @@ type StatusBarStyle struct {
 func DefaultStatusBarStyle() StatusBarStyle {
 	return StatusBarStyle{
 		Bar: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
+			Foreground(theme.StatusFg).
 			Padding(0, 1),
 		Filename: lipgloss.NewStyle().
 			Bold(true),
 		Modified: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF6B6B")),
+			Foreground(theme.Error),
 		Position: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#888888")),
+			Foreground(theme.TextMuted),
 		Mode: lipgloss.NewStyle().
-			Background(lipgloss.Color("#4ECDC4")).
-			Foreground(lipgloss.Color("#000000")).
+			Background(theme.ModeIndicatorBg).
+			Foreground(theme.ModeIndicatorFg).
 			Padding(0, 1),
 		Hints: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#888888")).
+			Foreground(theme.TextMuted).
 			Italic(true),
 		StatusOK: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#4ECDC4")),
+			Foreground(theme.Success),
 		StatusErr: lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF6B6B")),
+			Foreground(theme.Error),
 	}
 }
 

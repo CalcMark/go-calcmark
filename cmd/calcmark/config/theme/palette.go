@@ -374,4 +374,26 @@ var (
 		Light: "#ffffff",
 		Dark:  "#000000",
 	}
+
+	// --- Autosuggest inline hints (distinct from popup) ---
+
+	AutosuggestText = lipgloss.AdaptiveColor{
+		Light: "#57606a",
+		Dark:  "#AAAAAA",
+	}
+
+	AutosuggestSyntax = lipgloss.AdaptiveColor{
+		Light: "#0969da",
+		Dark:  "#4ECDC4",
+	}
+
+	AutosuggestSeparator = lipgloss.AdaptiveColor{
+		Light: "#c0c0c0",
+		Dark:  "#555555",
+	}
+
+	AutosuggestSelectedBg = lipgloss.AdaptiveColor{
+		Light: "#e8e8e8",
+		Dark:  "#444444",
+	}
 )

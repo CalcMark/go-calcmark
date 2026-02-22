@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // ExportOverlayState holds the state for the export format selection overlay.
@@ -71,41 +71,17 @@ func (m Model) openExportFilePicker() (tea.Model, tea.Cmd) {
 func (m Model) renderExportOverlay() string {
 	state := m.exportState
 	formats := m.exportFormatOpts
-	innerWidth := 44
 
-	// Border and background colors (shared palette across all overlays)
-	borderFg := lipgloss.Color("#5C5C5C")
-	borderStyle := lipgloss.NewStyle().Foreground(borderFg)
-	itemBg := lipgloss.Color("#1E1E1E")
-	selectedBg := lipgloss.Color("#4A90D9")
-
-	topBorder := borderStyle.Render("╭" + strings.Repeat("─", innerWidth) + "╮")
-	bottomBorder := borderStyle.Render("╰" + strings.Repeat("─", innerWidth) + "╯")
-	leftBorder := borderStyle.Render("│")
-	rightBorder := borderStyle.Render("│")
-	sepLine := borderStyle.Render(strings.Repeat("─", innerWidth))
-
-	// pad creates a line padded to innerWidth with the given foreground/background
-	pad := func(content string, fg, bg lipgloss.Color, bold bool) string {
-		style := lipgloss.NewStyle().Foreground(fg).Background(bg)
-		if bold {
-			style = style.Bold(true)
-		}
-		visualWidth := lipgloss.Width(content)
-		if visualWidth < innerWidth {
-			content += strings.Repeat(" ", innerWidth-visualWidth)
-		}
-		return style.Render(content)
-	}
+	o := NewOverlayStyle(44)
 
 	var lines []string
-	lines = append(lines, topBorder)
+	lines = append(lines, o.TopBorder)
 
 	// Title
-	lines = append(lines, leftBorder+pad(" Export — Select Format", "#FFFFFF", itemBg, true)+rightBorder)
+	lines = append(lines, o.WrapRow(o.PadLine(" Export — Select Format", theme.TextBright, o.ItemBg, true)))
 
 	// Separator
-	lines = append(lines, leftBorder+sepLine+rightBorder)
+	lines = append(lines, o.SepRow())
 
 	// Format items
 	for i, f := range formats {
@@ -119,28 +95,19 @@ func (m Model) renderExportOverlay() string {
 		content := fmt.Sprintf("%s%d) %-8s (%s)", prefix, i+1, f, ext)
 
 		if i == state.FormatIdx {
-			lines = append(lines, leftBorder+pad(content, "#FFFFFF", selectedBg, true)+rightBorder)
+			lines = append(lines, o.WrapRow(o.PadLine(content, theme.PopupSelectedFg, o.SelectedBg, true)))
 		} else {
-			lines = append(lines, leftBorder+pad(content, "#CCCCCC", itemBg, false)+rightBorder)
+			lines = append(lines, o.WrapRow(o.PadLine(content, theme.Text, o.ItemBg, false)))
 		}
 	}
 
 	// Separator before hints
-	lines = append(lines, leftBorder+sepLine+rightBorder)
+	lines = append(lines, o.SepRow())
 
 	// Hints
-	hintStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#666666")).
-		Background(itemBg).
-		Italic(true)
-	hint := " ↑↓ navigate  Enter select  Esc cancel"
-	visualWidth := lipgloss.Width(hint)
-	if visualWidth < innerWidth {
-		hint += strings.Repeat(" ", innerWidth-visualWidth)
-	}
-	lines = append(lines, leftBorder+hintStyle.Render(hint)+rightBorder)
+	lines = append(lines, o.HintRow(" ↑↓ navigate  Enter select  Esc cancel"))
 
-	lines = append(lines, bottomBorder)
+	lines = append(lines, o.BottomBorder)
 	return strings.Join(lines, "\n")
 }
 
