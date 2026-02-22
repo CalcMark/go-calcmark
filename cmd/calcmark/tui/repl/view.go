@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -18,8 +19,8 @@ func (m Model) View() string {
 	// Title bar
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("252")).
-		Background(lipgloss.Color("236")).
+		Foreground(theme.TextBright).
+		Background(theme.SourcePaneBg).
 		Padding(0, 1).
 		Width(m.width)
 	b.WriteString(titleStyle.Render("CalcMark REPL"))
@@ -35,7 +36,7 @@ func (m Model) View() string {
 	// Mode indicator for command mode (takes 1 line if shown)
 	if m.inputMode == shared.InputCommand {
 		modeStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("3")).
+			Foreground(theme.Command).
 			Italic(true)
 		b.WriteString(modeStyle.Render("  COMMAND MODE - Type command or Esc to exit"))
 		b.WriteString("\n")
@@ -67,20 +68,20 @@ func (m Model) View() string {
 
 	// Error display (if any)
 	if m.err != nil {
-		errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+		errorStyle := lipgloss.NewStyle().Foreground(theme.Error)
 		b.WriteString(errorStyle.Render(fmt.Sprintf("⚠ %v", m.err)))
 		b.WriteString("\n")
 	}
 
 	// Separator line
-	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	separatorStyle := lipgloss.NewStyle().Foreground(theme.DividerFg)
 	separator := strings.Repeat("─", m.width)
 	b.WriteString(separatorStyle.Render(separator))
 	b.WriteString("\n")
 
 	// Help footer
 	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Foreground(theme.Hint).
 		Width(m.width)
 	helpText := RenderHelpLine(m.inputMode == shared.InputCommand, m.width)
 	b.WriteString(helpStyle.Render(helpText))
@@ -95,7 +96,7 @@ func (m Model) renderScrollingHistory(maxLines int) string {
 	if len(m.outputHistory) == 0 {
 		// Show welcome message for empty REPL
 		emptyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240")).
+			Foreground(theme.Hint).
 			Italic(true)
 		b.WriteString(emptyStyle.Render("  Type an expression and press Enter"))
 		b.WriteString("\n")
@@ -113,16 +114,16 @@ func (m Model) renderScrollingHistory(maxLines int) string {
 	// Render visible entries
 	for _, entry := range visibleEntries {
 		// Input line with prompt
-		promptStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+		promptStyle := lipgloss.NewStyle().Foreground(theme.PromptFg)
 		b.WriteString(promptStyle.Render("> "))
 		b.WriteString(entry.Input)
 		b.WriteString("\n")
 
 		// Output line (indented)
 		if entry.Output != "" {
-			outputStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
+			outputStyle := lipgloss.NewStyle().Foreground(theme.TextBright)
 			if entry.IsError {
-				outputStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+				outputStyle = lipgloss.NewStyle().Foreground(theme.Error)
 				b.WriteString("  ")
 				b.WriteString(outputStyle.Render("⚠ " + entry.Output))
 			} else {
