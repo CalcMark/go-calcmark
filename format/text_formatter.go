@@ -42,10 +42,11 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		hasFrontmatter := len(fm.Globals) > 0 || len(fm.Exchange) > 0
 		if hasFrontmatter {
 			fmt.Fprintln(w, "--- Frontmatter ---")
-			for name, expr := range fm.Globals {
-				fmt.Fprintf(w, "  %s = %s\n", name, expr)
+			for _, name := range fm.GlobalKeys() {
+				fmt.Fprintf(w, "  %s = %s\n", name, fm.Globals[name])
 			}
-			for key, rate := range fm.Exchange {
+			for _, key := range fm.ExchangeKeys() {
+				rate := fm.Exchange[key]
 				from, to, err := document.ParseExchangeRateKey(key)
 				if err == nil {
 					fmt.Fprintf(w, "  %s → %s: %s\n", from, to, rate.StringFixed(4))

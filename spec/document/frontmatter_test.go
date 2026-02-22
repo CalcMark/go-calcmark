@@ -619,6 +619,86 @@ func TestFrontmatter_Serialize_RoundTrip(t *testing.T) {
 	}
 }
 
+// TestFrontmatter_OrderPreservation verifies that globals and exchange rates
+// are iterated in document order (YAML source order), not random map order.
+// This is critical because frontmatter variables must be processed deterministically.
+func TestFrontmatter_OrderPreservation(t *testing.T) {
+	source := `---
+globals:
+  zebra: 1
+  alpha: 2
+  middle: 3
+exchange:
+  JPY_USD: 0.0067
+  EUR_USD: 1.08
+  GBP_USD: 1.27
+---
+x = alpha`
+
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	// Verify GlobalKeys returns YAML document order, not sorted order
+	expectedGlobalKeys := []string{"zebra", "alpha", "middle"}
+	gotGlobalKeys := fm.GlobalKeys()
+	if len(gotGlobalKeys) != len(expectedGlobalKeys) {
+		t.Fatalf("GlobalKeys length: got %d, want %d", len(gotGlobalKeys), len(expectedGlobalKeys))
+	}
+	for i, want := range expectedGlobalKeys {
+		if gotGlobalKeys[i] != want {
+			t.Errorf("GlobalKeys[%d]: got %q, want %q", i, gotGlobalKeys[i], want)
+		}
+	}
+
+	// Verify ExchangeKeys returns YAML document order
+	expectedExchangeKeys := []string{"JPY_USD", "EUR_USD", "GBP_USD"}
+	gotExchangeKeys := fm.ExchangeKeys()
+	if len(gotExchangeKeys) != len(expectedExchangeKeys) {
+		t.Fatalf("ExchangeKeys length: got %d, want %d", len(gotExchangeKeys), len(expectedExchangeKeys))
+	}
+	for i, want := range expectedExchangeKeys {
+		if gotExchangeKeys[i] != want {
+			t.Errorf("ExchangeKeys[%d]: got %q, want %q", i, gotExchangeKeys[i], want)
+		}
+	}
+
+	// Verify SetGlobal preserves insertion order for new keys
+	fm.SetGlobal("new_var", "99")
+	gotGlobalKeys = fm.GlobalKeys()
+	expectedGlobalKeys = append(expectedGlobalKeys, "new_var")
+	if len(gotGlobalKeys) != len(expectedGlobalKeys) {
+		t.Fatalf("GlobalKeys after SetGlobal: got %d, want %d", len(gotGlobalKeys), len(expectedGlobalKeys))
+	}
+	for i, want := range expectedGlobalKeys {
+		if gotGlobalKeys[i] != want {
+			t.Errorf("GlobalKeys[%d] after SetGlobal: got %q, want %q", i, gotGlobalKeys[i], want)
+		}
+	}
+
+	// Verify SetGlobal for existing key doesn't duplicate
+	fm.SetGlobal("alpha", "999")
+	gotGlobalKeys = fm.GlobalKeys()
+	if len(gotGlobalKeys) != len(expectedGlobalKeys) {
+		t.Fatalf("GlobalKeys after update: got %d, want %d (should not add duplicate)", len(gotGlobalKeys), len(expectedGlobalKeys))
+	}
+
+	// Run 100 times to confirm determinism (Go maps randomize order per-run)
+	for i := range 100 {
+		fm2, _, err := ParseFrontmatter(source)
+		if err != nil {
+			t.Fatalf("Parse failed on iteration %d: %v", i, err)
+		}
+		keys := fm2.GlobalKeys()
+		for j, want := range []string{"zebra", "alpha", "middle"} {
+			if keys[j] != want {
+				t.Fatalf("Iteration %d: GlobalKeys[%d] = %q, want %q", i, j, keys[j], want)
+			}
+		}
+	}
+}
+
 // TestFrontmatter_RawSourcePreservation verifies that Serialize() returns the
 // exact raw text from parsing, preserving user formatting like empty lines.
 func TestFrontmatter_RawSourcePreservation(t *testing.T) {

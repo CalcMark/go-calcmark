@@ -78,7 +78,8 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		tfm := &TemplateFrontmatter{}
 
 		// Add globals
-		for name, value := range fm.Globals {
+		for _, name := range fm.GlobalKeys() {
+			value := fm.Globals[name]
 			tfm.Globals = append(tfm.Globals, TemplateGlobal{
 				Name:  name,
 				Value: value,
@@ -86,7 +87,8 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		}
 
 		// Add exchange rates
-		for key, rate := range fm.Exchange {
+		for _, key := range fm.ExchangeKeys() {
+			rate := fm.Exchange[key]
 			from, to, err := document.ParseExchangeRateKey(key)
 			if err == nil {
 				tfm.Exchange = append(tfm.Exchange, TemplateExchange{

@@ -11,16 +11,17 @@ import (
 // LineResult represents a line's evaluation result.
 // This is the bridge between the document model and the view layer.
 type LineResult struct {
-	LineNum    int
-	Source     string
-	IsCalc     bool
-	VarName    string
-	Value      string
-	Error      string               // Legacy error string (for backwards compatibility)
-	Diagnostic *document.Diagnostic // Structured diagnostic with code, message, position
-	BlockID    string
-	WasChanged bool
-	IsBlocked  bool // True if this error is caused by an undefined variable from a prior error
+	LineNum       int
+	Source        string
+	IsCalc        bool
+	IsFrontmatter bool // True if this line is part of the YAML frontmatter block
+	VarName       string
+	Value         string
+	Error         string               // Legacy error string (for backwards compatibility)
+	Diagnostic    *document.Diagnostic // Structured diagnostic with code, message, position
+	BlockID       string
+	WasChanged    bool
+	IsBlocked     bool // True if this error is caused by an undefined variable from a prior error
 }
 
 // GetLineResults returns evaluation results for all lines.
@@ -41,9 +42,10 @@ func (m *Model) GetLineResults() []LineResult {
 				source = allLines[i]
 			}
 			results = append(results, LineResult{
-				LineNum: lineNum,
-				Source:  source,
-				IsCalc:  false,
+				LineNum:       lineNum,
+				Source:        source,
+				IsCalc:        false,
+				IsFrontmatter: true,
 			})
 			lineNum++
 		}

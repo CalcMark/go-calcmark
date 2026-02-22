@@ -3,6 +3,7 @@ package document
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/shopspring/decimal"
@@ -34,6 +35,14 @@ type Frontmatter struct {
 	// Values are CalcMark expressions that will be parsed and evaluated.
 	// Example: "base_date" -> "Jan 15 2025", "tax_rate" -> "0.32"
 	Globals map[string]string
+
+	// exchangeKeys preserves insertion order of exchange rate keys.
+	// Go maps have non-deterministic iteration order; frontmatter variables
+	// must be processed in document order (they are *front* matter).
+	exchangeKeys []string
+
+	// globalKeys preserves insertion order of global variable keys.
+	globalKeys []string
 
 	// rawSource preserves the exact frontmatter text (including --- delimiters)
 	// as it appeared in the original document. This allows Serialize() to return
@@ -87,8 +96,11 @@ func (f *Frontmatter) SetExchangeRate(key string, rate decimal.Decimal) {
 	if f.Exchange == nil {
 		f.Exchange = make(map[string]decimal.Decimal)
 	}
-	// Normalize key to uppercase
-	f.Exchange[strings.ToUpper(key)] = rate
+	normalized := strings.ToUpper(key)
+	if _, exists := f.Exchange[normalized]; !exists {
+		f.exchangeKeys = append(f.exchangeKeys, normalized)
+	}
+	f.Exchange[normalized] = rate
 	f.rawSource = "" // Invalidate raw source — Serialize() will reconstruct
 }
 
@@ -98,8 +110,49 @@ func (f *Frontmatter) SetGlobal(name, valueExpr string) {
 	if f.Globals == nil {
 		f.Globals = make(map[string]string)
 	}
+	if _, exists := f.Globals[name]; !exists {
+		f.globalKeys = append(f.globalKeys, name)
+	}
 	f.Globals[name] = valueExpr
 	f.rawSource = "" // Invalidate raw source — Serialize() will reconstruct
+}
+
+// GlobalKeys returns global variable names in insertion order.
+// Falls back to sorted keys for backward compatibility when frontmatter
+// is created via struct literals rather than ParseFrontmatter or SetGlobal.
+func (f *Frontmatter) GlobalKeys() []string {
+	if f == nil {
+		return nil
+	}
+	if len(f.globalKeys) > 0 {
+		return f.globalKeys
+	}
+	// Fallback: sorted order for determinism
+	keys := make([]string, 0, len(f.Globals))
+	for k := range f.Globals {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// ExchangeKeys returns exchange rate keys in insertion order.
+// Falls back to sorted keys for backward compatibility when frontmatter
+// is created via struct literals rather than ParseFrontmatter or SetExchangeRate.
+func (f *Frontmatter) ExchangeKeys() []string {
+	if f == nil {
+		return nil
+	}
+	if len(f.exchangeKeys) > 0 {
+		return f.exchangeKeys
+	}
+	// Fallback: sorted order for determinism
+	keys := make([]string, 0, len(f.Exchange))
+	for k := range f.Exchange {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // HasGlobal returns true if the global variable is defined in frontmatter.
@@ -190,25 +243,58 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		rawSource: strings.Join(lines[0:closeIdx+1], "\n") + "\n",
 	}
 
-	// Process exchange rates
-	for key, rate := range raw.Exchange {
-		// Validate key format
+	// Process exchange rates — use YAML node order for deterministic ordering.
+	// yaml.v3 preserves key order when unmarshaling into a map, but Go map
+	// iteration is non-deterministic. We extract order from the YAML AST.
+	exchangeOrder := extractYAMLKeyOrder(yamlContent, "exchange")
+	for _, key := range exchangeOrder {
+		rate, ok := raw.Exchange[key]
+		if !ok {
+			continue
+		}
 		from, to, err := ParseExchangeRateKey(key)
 		if err != nil {
 			return nil, "", err
 		}
-		// Normalize key and store rate
 		normalizedKey := ExchangeRateKey(from, to)
 		fm.Exchange[normalizedKey] = decimal.NewFromFloat(rate)
+		fm.exchangeKeys = append(fm.exchangeKeys, normalizedKey)
+	}
+	// Handle any keys not in YAML order (defensive)
+	for key, rate := range raw.Exchange {
+		from, to, err := ParseExchangeRateKey(key)
+		if err != nil {
+			return nil, "", err
+		}
+		normalizedKey := ExchangeRateKey(from, to)
+		if _, exists := fm.Exchange[normalizedKey]; !exists {
+			fm.Exchange[normalizedKey] = decimal.NewFromFloat(rate)
+			fm.exchangeKeys = append(fm.exchangeKeys, normalizedKey)
+		}
 	}
 
-	// Copy globals (values are raw strings to be parsed as CalcMark expressions)
-	for name, expr := range raw.Globals {
-		// Validate variable name (must be valid identifier)
+	// Copy globals — use YAML node order for deterministic ordering.
+	globalsOrder := extractYAMLKeyOrder(yamlContent, "globals")
+	for _, name := range globalsOrder {
+		expr, ok := raw.Globals[name]
+		if !ok {
+			continue
+		}
 		if !isValidIdentifier(name) {
 			return nil, "", fmt.Errorf("invalid global variable name '%s': must be a valid identifier", name)
 		}
 		fm.Globals[name] = expr
+		fm.globalKeys = append(fm.globalKeys, name)
+	}
+	// Handle any keys not in YAML order (defensive)
+	for name, expr := range raw.Globals {
+		if _, exists := fm.Globals[name]; !exists {
+			if !isValidIdentifier(name) {
+				return nil, "", fmt.Errorf("invalid global variable name '%s': must be a valid identifier", name)
+			}
+			fm.Globals[name] = expr
+			fm.globalKeys = append(fm.globalKeys, name)
+		}
 	}
 
 	// Calculate remaining source (after closing delimiter)
@@ -218,6 +304,40 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	}
 
 	return fm, remaining, nil
+}
+
+// extractYAMLKeyOrder extracts the key ordering for a nested map under a
+// top-level key from YAML content. Uses yaml.v3's Node API which preserves
+// document order. Returns keys in the order they appear in the YAML source.
+func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
+	var root yaml.Node
+	if err := yaml.Unmarshal([]byte(yamlContent), &root); err != nil {
+		return nil
+	}
+
+	// root is a Document node containing a Mapping node
+	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
+		return nil
+	}
+	mapping := root.Content[0]
+	if mapping.Kind != yaml.MappingNode {
+		return nil
+	}
+
+	// Find the top-level key (e.g., "exchange" or "globals")
+	for i := 0; i < len(mapping.Content)-1; i += 2 {
+		keyNode := mapping.Content[i]
+		valueNode := mapping.Content[i+1]
+		if keyNode.Value == topKey && valueNode.Kind == yaml.MappingNode {
+			// Extract keys in document order
+			var keys []string
+			for j := 0; j < len(valueNode.Content)-1; j += 2 {
+				keys = append(keys, valueNode.Content[j].Value)
+			}
+			return keys
+		}
+	}
+	return nil
 }
 
 // isValidIdentifier checks if a string is a valid CalcMark identifier.
@@ -270,20 +390,23 @@ func (f *Frontmatter) Serialize() string {
 	var sb strings.Builder
 	sb.WriteString("---\n")
 
-	// Serialize exchange rates
+	// Serialize exchange rates in insertion order (falls back to sorted)
 	if len(f.Exchange) > 0 {
 		sb.WriteString("exchange:\n")
-		for key, rate := range f.Exchange {
-			// Use String() for decimal to preserve precision
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", key, rate.String()))
+		for _, key := range f.ExchangeKeys() {
+			if rate, ok := f.Exchange[key]; ok {
+				sb.WriteString(fmt.Sprintf("  %s: %s\n", key, rate.String()))
+			}
 		}
 	}
 
-	// Serialize globals
+	// Serialize globals in insertion order (falls back to sorted)
 	if len(f.Globals) > 0 {
 		sb.WriteString("globals:\n")
-		for name, expr := range f.Globals {
-			sb.WriteString(fmt.Sprintf("  %s: %s\n", name, expr))
+		for _, name := range f.GlobalKeys() {
+			if expr, ok := f.Globals[name]; ok {
+				sb.WriteString(fmt.Sprintf("  %s: %s\n", name, expr))
+			}
 		}
 	}
 

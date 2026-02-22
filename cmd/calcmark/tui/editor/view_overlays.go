@@ -145,18 +145,11 @@ func (m Model) calculatePopupScreenPosition(contentHeight int) (row, col int) {
 	// The cursor visual position in the content area
 	visualCursorRow := m.cursorLine - m.scrollOffset
 
-	// Account for headers: source header (1) + globals padding if preview visible
+	// Account for headers: source header (1) + globals padding when no frontmatter.
+	// When frontmatter exists, globals are rendered inline (no extra header rows).
 	headerRows := 1
-	if m.previewMode != PreviewHidden {
-		globalsHeight := 1
-		if m.globalsExpanded {
-			globalsHeight = 1 + m.getGlobalsCount()
-			if m.getGlobalsCount() == 0 {
-				globalsHeight = 2
-			}
-		}
-		globalsHeight++ // separator
-		headerRows += globalsHeight
+	if m.previewMode != PreviewHidden && m.frontmatterLineCount() == 0 {
+		headerRows += m.computeGlobalsHeight()
 	}
 
 	// Screen row for popup (below cursor)
