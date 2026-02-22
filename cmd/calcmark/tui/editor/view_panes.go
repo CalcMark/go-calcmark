@@ -169,32 +169,41 @@ func (m Model) previewPaneBg() lipgloss.TerminalColor {
 
 // renderPreviewPaneAligned renders the preview pane using pre-computed aligned lines.
 // This avoids recomputing alignment which could cause cycles.
+//
+// Two rendering modes based on frontmatter presence:
+//   - With frontmatter: Globals panel content is rendered inline within frontmatter
+//     preview lines (blockID == "") so it appears vertically adjacent to the YAML.
+//   - Without frontmatter: Globals panel is rendered as a fixed header at the top.
 func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes) string {
 	previewLines := aligned.previewLines
 
-	// Globals panel at top (collapsible) - per spec lines 334-339
+	// Pre-compute Globals panel lines (used in both modes).
 	globalsPanel := m.renderGlobalsPanel(width)
-	globalsHeight := strings.Count(globalsPanel, "\n") + 1
-
-	// Build complete lines to avoid bare newlines
-	var allLines []string
-	allLines = append(allLines, strings.Split(globalsPanel, "\n")...)
+	globalsPanelLines := strings.Split(globalsPanel, "\n")
 
 	pvBg := m.previewPaneBg()
 
-	// Separator after globals
+	// Add separator after globals content
 	separatorStyle := lipgloss.NewStyle().
 		Foreground(theme.DividerFg).
 		Background(pvBg)
 	separatorLine := separatorStyle.Render(strings.Repeat("─", width))
-	// Ensure separator is exactly width
 	separatorLine = ensureFullWidth(separatorLine, width, pvBg)
-	allLines = append(allLines, separatorLine)
+	globalsPanelLines = append(globalsPanelLines, separatorLine)
 
-	// Adjust height for globals panel and separator
-	resultsHeight := height - globalsHeight - 1 // -1 for separator
-	if resultsHeight < 1 {
-		resultsHeight = 1
+	hasFrontmatter := m.frontmatterLineCount() > 0
+	resultsHeight := height
+
+	// Build complete lines to avoid bare newlines
+	var allLines []string
+
+	if !hasFrontmatter {
+		// No frontmatter: render globals as fixed header at top (original behavior)
+		allLines = append(allLines, globalsPanelLines...)
+		resultsHeight = height - len(globalsPanelLines)
+		if resultsHeight < 1 {
+			resultsHeight = 1
+		}
 	}
 
 	// Convert cursor's source line to visual line index for proper scrolling
@@ -248,6 +257,10 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		}
 	}
 
+	// Track which globals panel line to render next for frontmatter positions.
+	// Frontmatter preview lines (blockID == "") get globals content instead of blanks.
+	globalsPanelIdx := 0
+
 	linesWritten := 0
 	cursorLineProcessed := false
 	for j := start; j < end && linesWritten < resultsHeight; j++ {
@@ -283,6 +296,21 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 				cursorLineProcessed = true
 			}
 			// Skip all pre-computed lines for cursor (we've already output editLineCount lines)
+			continue
+		}
+
+		// Frontmatter lines: render globals panel content inline
+		if pl.isFrontmatter {
+			var completeLine string
+			if globalsPanelIdx < len(globalsPanelLines) {
+				completeLine = ensureFullWidth(globalsPanelLines[globalsPanelIdx], width, pvBg)
+				globalsPanelIdx++
+			} else {
+				// More frontmatter lines than globals content — fill with background
+				completeLine = ensureFullWidth("", width, pvBg)
+			}
+			allLines = append(allLines, completeLine)
+			linesWritten++
 			continue
 		}
 

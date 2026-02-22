@@ -88,17 +88,6 @@ func (m Model) View() string {
 	// Pane content height (minus header row)
 	paneContentHeight := max(contentHeight-1, 3)
 
-	// Calculate globals panel height for alignment
-	// (collapsed = 1 line, expanded = 1 + number of globals)
-	globalsHeight := 1 // collapsed state
-	if m.globalsExpanded {
-		globalsHeight = 1 + m.getGlobalsCount()
-		if m.getGlobalsCount() == 0 {
-			globalsHeight = 2 // "(no globals defined)" message
-		}
-	}
-	globalsHeight++ // +1 for separator line
-
 	// CRITICAL: Compute aligned line structure ONCE to avoid cycles.
 	// Use leftContentWidth (not leftWidth) because divider takes 1 char from left pane
 	// Both widths are fixed, and we compute wrapping/padding based on them.
@@ -116,17 +105,19 @@ func (m Model) View() string {
 	// Ensure header is exactly leftContentWidth
 	sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, m.sourcePaneBg())
 
-	// Source pane needs padding at top to match globals panel height in preview
+	// When frontmatter exists, its lines naturally align with the Globals panel
+	// rendered inline in the preview pane — no source padding needed.
+	// When no frontmatter, we need source padding to match the fixed Globals header.
+	hasFrontmatter := m.frontmatterLineCount() > 0
 	var sourcePaddingLines []string
-	if m.previewMode != PreviewHidden {
+	sourceContentHeight := paneContentHeight
+
+	if !hasFrontmatter && m.previewMode != PreviewHidden {
+		// No frontmatter: globals panel is a fixed header, needs source padding
+		globalsHeight := m.computeGlobalsHeight()
 		for i := 0; i < globalsHeight; i++ {
-			// Each padding line must be full width with background
 			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftContentWidth, m.sourcePaneBg()))
 		}
-	}
-
-	sourceContentHeight := paneContentHeight
-	if m.previewMode != PreviewHidden {
 		sourceContentHeight = paneContentHeight - globalsHeight
 	}
 	if sourceContentHeight < 1 {
@@ -135,7 +126,7 @@ func (m Model) View() string {
 
 	sourceContent := m.renderSourcePaneAligned(leftContentWidth, sourceContentHeight, aligned)
 
-	// Assemble source pane with header and padding
+	// Assemble source pane with header (and padding when no frontmatter)
 	var sourcePaneLines []string
 	sourcePaneLines = append(sourcePaneLines, sourceHeader)
 	sourcePaneLines = append(sourcePaneLines, sourcePaddingLines...)
@@ -277,6 +268,7 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
 			sourceLineNum: al.SourceLineIdx,
 			blockID:       al.BlockID,
 			isCalc:        al.IsCalc,
+			isFrontmatter: al.BlockID == "" && !al.IsCalc,
 		}
 	}
 
@@ -333,4 +325,5 @@ type previewLine struct {
 	sourceLineNum int    // Which source line this corresponds to (-1 if spanning multiple)
 	blockID       string // Block this line belongs to
 	isCalc        bool   // Whether this is from a CalcBlock
+	isFrontmatter bool   // Whether this is from the YAML frontmatter block
 }

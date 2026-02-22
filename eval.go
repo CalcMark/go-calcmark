@@ -51,10 +51,11 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 		return nil, fmt.Errorf("frontmatter error: %w", fmErr)
 	}
 
-	// Apply frontmatter to environment
+	// Apply frontmatter to environment (in document order)
 	if frontmatter != nil {
-		// Set exchange rates
-		for key, rate := range frontmatter.Exchange {
+		// Set exchange rates in document order
+		for _, key := range frontmatter.ExchangeKeys() {
+			rate := frontmatter.Exchange[key]
 			from, to, err := document.ParseExchangeRateKey(key)
 			if err != nil {
 				return nil, fmt.Errorf("frontmatter error: %w", err)
@@ -62,14 +63,16 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 			env.SetExchangeRate(from, to, rate)
 		}
 
-		// Parse and set global variables
+		// Parse and set global variables in document order
 		if len(frontmatter.Globals) > 0 {
-			parsedGlobals, err := document.ParseGlobals(frontmatter.Globals)
+			parsedGlobals, err := document.ParseGlobalsOrdered(frontmatter.Globals, frontmatter.GlobalKeys())
 			if err != nil {
 				return nil, fmt.Errorf("frontmatter error: %w", err)
 			}
-			for name, value := range parsedGlobals.Values {
-				env.Set(name, value)
+			for _, name := range frontmatter.GlobalKeys() {
+				if value, ok := parsedGlobals.Values[name]; ok {
+					env.Set(name, value)
+				}
 			}
 		}
 	}

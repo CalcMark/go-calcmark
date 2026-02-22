@@ -712,10 +712,94 @@ x = my_var + 1`
 				buf.WriteString(fmt.Sprintf("frontmatterLineCount=%d\n", model.frontmatterLineCount()))
 				buf.WriteString(fmt.Sprintf("frontmatterErr=%v\n", model.frontmatterErr))
 				if fm != nil {
-					for name, val := range fm.Globals {
-						buf.WriteString(fmt.Sprintf("global: %s=%s\n", name, val))
+					for _, name := range fm.GlobalKeys() {
+						buf.WriteString(fmt.Sprintf("global: %s=%s\n", name, fm.Globals[name]))
 					}
 				}
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkFrontmatterGlobalsAlignment tests that the Globals panel renders
+// inline with frontmatter lines in the preview pane (not as a fixed header).
+func TestEditorCatwalkFrontmatterGlobalsAlignment(t *testing.T) {
+	// Document with frontmatter containing a global variable
+	content := `---
+globals:
+  my_var: 42
+---
+x = my_var + 1`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "frontmatter_globals_alignment") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				leftWidth, rightWidth := model.GetPaneWidths(model.width)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+
+				var buf strings.Builder
+				buf.WriteString("Source and Preview Alignment:\n")
+				buf.WriteString(fmt.Sprintf("Source lines: %d, Preview lines: %d\n",
+					len(aligned.sourceLines), len(aligned.previewLines)))
+
+				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
+
+				for i := 0; i < maxLines; i++ {
+					var srcContent string
+					var srcLineNum int
+					var srcIsPadding bool
+					var prvIsFrontmatter bool
+
+					if i < len(aligned.sourceLines) {
+						src := aligned.sourceLines[i]
+						srcContent = src.content
+						srcLineNum = src.lineNum
+						srcIsPadding = src.isPadding
+					}
+
+					var prvContent string
+					var prvLineNum int
+					if i < len(aligned.previewLines) {
+						prv := aligned.previewLines[i]
+						prvContent = prv.content
+						prvLineNum = prv.sourceLineNum
+						prvIsFrontmatter = prv.isFrontmatter
+					}
+
+					// Truncate for readability
+					if len(srcContent) > 30 {
+						srcContent = srcContent[:30] + "..."
+					}
+					if len(prvContent) > 30 {
+						prvContent = prvContent[:30] + "..."
+					}
+
+					buf.WriteString(fmt.Sprintf("[%d] SRC(ln=%d pad=%v): %-35s | PRV(ln=%d fm=%v): %q\n",
+						i, srcLineNum, srcIsPadding, fmt.Sprintf("%q", srcContent),
+						prvLineNum, prvIsFrontmatter, prvContent))
+				}
+
 				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),

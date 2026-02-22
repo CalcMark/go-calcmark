@@ -80,6 +80,7 @@ z = 30`
 			"frontmatter_insert",             // TestEditorCatwalkFrontmatterInsert
 			"frontmatter_editing",            // TestEditorCatwalkFrontmatterEditing
 			"open_unsaved_prompt",            // TestEditorCatwalkOpenUnsavedPrompt
+			"frontmatter_globals_alignment",  // TestEditorCatwalkFrontmatterGlobalsAlignment
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {

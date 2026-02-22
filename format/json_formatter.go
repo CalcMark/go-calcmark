@@ -55,8 +55,8 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 
 		if len(fm.Exchange) > 0 {
 			jfm.Exchange = make(map[string]string)
-			for key, rate := range fm.Exchange {
-				jfm.Exchange[key] = rate.String()
+			for _, key := range fm.ExchangeKeys() {
+				jfm.Exchange[key] = fm.Exchange[key].String()
 			}
 		}
 

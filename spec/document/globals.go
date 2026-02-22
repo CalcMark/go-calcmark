@@ -42,6 +42,28 @@ func ParseGlobals(rawGlobals map[string]string) (*ParsedGlobals, error) {
 	return result, nil
 }
 
+// ParseGlobalsOrdered parses globals in the specified key order.
+// This ensures variables are processed in document order (frontmatter order).
+func ParseGlobalsOrdered(rawGlobals map[string]string, keys []string) (*ParsedGlobals, error) {
+	result := &ParsedGlobals{
+		Values: make(map[string]types.Type),
+	}
+
+	for _, name := range keys {
+		exprStr, ok := rawGlobals[name]
+		if !ok {
+			continue
+		}
+		value, err := parseGlobalValue(name, exprStr)
+		if err != nil {
+			return nil, err
+		}
+		result.Values[name] = value
+	}
+
+	return result, nil
+}
+
 // parseGlobalValue parses a single global variable value as a CalcMark literal.
 func parseGlobalValue(name, exprStr string) (types.Type, error) {
 	// Ensure expression ends with newline for parser
