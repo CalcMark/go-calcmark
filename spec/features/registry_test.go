@@ -31,6 +31,10 @@ func TestRegistrySearch(t *testing.T) {
 		{"today", 1, "today"},
 		{"ssd", 1, "ssd"},
 		{"gigabit", 1, "gigabit"},
+		// NL function aliases (ellipsis patterns like "read...from" match by prefix)
+		{"read", 1, "read"},
+		{"compress", 1, "compress"},
+		{"transfer", 1, "transfer_time"},
 		{"nonexistent", 0, ""},
 		{"", 0, ""},
 	}
@@ -92,8 +96,13 @@ func TestRegistryByCategory(t *testing.T) {
 
 func TestFeatureMatch(t *testing.T) {
 	f := Feature{
-		Name:    "meter",
-		Aliases: []string{"meters", "metre", "metres", "m"},
+		Name: "meter",
+		Aliases: []Alias{
+			{Name: "meters", Parseable: true},
+			{Name: "metre", Parseable: true},
+			{Name: "metres", Parseable: true},
+			{Name: "m", Parseable: true},
+		},
 	}
 
 	tests := []struct {
@@ -115,6 +124,88 @@ func TestFeatureMatch(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("Match(%q) = %v, want %v", tt.query, got, tt.want)
 			}
+		})
+	}
+}
+
+func TestNLAliasesAreParseable(t *testing.T) {
+	r := NewRegistry()
+
+	// Functions with parseable NL aliases
+	nlFunctions := map[string]string{
+		"avg":           "average of",
+		"sqrt":          "square root of",
+		"read":          "read...from",
+		"compress":      "compress...using",
+		"transfer_time": "transfer...across",
+	}
+
+	for funcName, wantAlias := range nlFunctions {
+		t.Run(funcName, func(t *testing.T) {
+			results := r.Search(funcName)
+			var feature *Feature
+			for i := range results {
+				if results[i].Name == funcName {
+					feature = &results[i]
+					break
+				}
+			}
+			if feature == nil {
+				t.Fatalf("Search(%q) did not find feature", funcName)
+			}
+
+			found := false
+			for _, alias := range feature.Aliases {
+				if alias.Name == wantAlias {
+					found = true
+					if !alias.Parseable {
+						t.Errorf("Alias %q on %q should be Parseable", wantAlias, funcName)
+					}
+					break
+				}
+			}
+			if !found {
+				t.Errorf("Feature %q missing expected alias %q", funcName, wantAlias)
+			}
+		})
+	}
+}
+
+func TestNonParseableAliases(t *testing.T) {
+	r := NewRegistry()
+
+	// Functions with search-only aliases (not parseable)
+	tests := []struct {
+		funcName  string
+		aliasName string
+	}{
+		{"rtt", "round trip time"},
+		{"requires", "capacity"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.funcName, func(t *testing.T) {
+			results := r.Search(tt.funcName)
+			var feature *Feature
+			for i := range results {
+				if results[i].Name == tt.funcName {
+					feature = &results[i]
+					break
+				}
+			}
+			if feature == nil {
+				t.Fatalf("Search(%q) did not find feature", tt.funcName)
+			}
+
+			for _, alias := range feature.Aliases {
+				if alias.Name == tt.aliasName {
+					if alias.Parseable {
+						t.Errorf("Alias %q on %q should NOT be Parseable", tt.aliasName, tt.funcName)
+					}
+					return
+				}
+			}
+			t.Errorf("Feature %q missing expected alias %q", tt.funcName, tt.aliasName)
 		})
 	}
 }

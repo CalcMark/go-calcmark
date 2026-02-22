@@ -12,3 +12,21 @@ square root of 25
 square root of 100
 square root of 2.25
 square root of 1M
+
+## read ... from
+read 100 MB from ssd
+read 1 GB from nvme
+read 500 MB from hdd
+read 10 GB from pcie_ssd
+
+## compress ... using
+compress 1 GB using gzip
+compress 500 MB using lz4
+compress 2 GB using zstd
+compress 100 MB using snappy
+
+## transfer ... across
+transfer 1 GB across regional gigabit
+transfer 500 MB across global wifi
+transfer 100 MB across local ten_gig
+transfer 10 GB across continental hundred_gig
