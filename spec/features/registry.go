@@ -204,16 +204,16 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "transfer_time(size, scope, network)",
 			Description: "Time to transfer data over a network",
-			Aliases:     nil,
-			Example:     "transfer_time(1 GB, regional, gigabit)",
+			Aliases:     []Alias{{Name: "transfer...across", Parseable: true}},
+			Example:     "transfer 1 GB across regional gigabit",
 		},
 		{
 			Name:        "read",
 			Category:    CategoryFunction,
 			Syntax:      "read(size, storage_type)",
 			Description: "Time to read data from storage",
-			Aliases:     nil,
-			Example:     "read(100 MB, ssd) → 0.18 s",
+			Aliases:     []Alias{{Name: "read...from", Parseable: true}},
+			Example:     "read 100 MB from ssd",
 		},
 		{
 			Name:        "seek",
@@ -228,8 +228,8 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "compress(size, algorithm)",
 			Description: "Estimate compressed data size",
-			Aliases:     nil,
-			Example:     "compress(1 GB, gzip) → 333 MB",
+			Aliases:     []Alias{{Name: "compress...using", Parseable: true}},
+			Example:     "compress 1 GB using gzip",
 		},
 	}
 }
