@@ -177,6 +177,10 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCtrlD()
 	case tea.KeyCtrlU:
 		return m.handleCtrlU()
+	case tea.KeyCtrlK:
+		// Delete current line
+		m.deleteLine()
+		return m, nil
 	case tea.KeyCtrlZ:
 		return m.handleUndo()
 	case tea.KeyCtrlY:

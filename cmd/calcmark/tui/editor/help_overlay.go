@@ -56,7 +56,7 @@ func helpCategories() []HelpCategory {
 			Items: []HelpItem{
 				{Name: "Undo", Accelerator: "Ctrl+Z", Kind: HelpActionable, CommandName: "Undo"},
 				{Name: "Redo", Accelerator: "Ctrl+Y", Kind: HelpActionable, CommandName: "Redo"},
-				{Name: "Delete Line", Accelerator: "Ctrl+D", Kind: HelpActionable, CommandName: "Delete Line"},
+				{Name: "Delete Line", Accelerator: "Ctrl+K", Kind: HelpActionable, CommandName: "Delete Line"},
 				{Name: "New Line", Accelerator: "Enter", Kind: HelpAdvisory},
 				{Name: "Backspace", Accelerator: "Bksp", Kind: HelpAdvisory},
 				{Name: "Delete Word", Accelerator: "Ctrl+Bksp", Kind: HelpAdvisory},
@@ -83,6 +83,8 @@ func helpCategories() []HelpCategory {
 				{Name: "Line End", Accelerator: "End", Kind: HelpAdvisory},
 				{Name: "Page Up", Accelerator: "PgUp", Kind: HelpAdvisory},
 				{Name: "Page Down", Accelerator: "PgDn", Kind: HelpAdvisory},
+				{Name: "Scroll Down", Accelerator: "Ctrl+D", Kind: HelpActionable, CommandName: "Scroll Down"},
+				{Name: "Scroll Up", Accelerator: "Ctrl+U", Kind: HelpActionable, CommandName: "Scroll Up"},
 				{Name: "Doc Start", Accelerator: "Ctrl+Home", Kind: HelpAdvisory},
 				{Name: "Doc End", Accelerator: "Ctrl+End", Kind: HelpAdvisory},
 			},

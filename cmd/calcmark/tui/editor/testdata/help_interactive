@@ -9,9 +9,11 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Open command menu with F1, then navigate to "Full Help" and press Enter
 # to open the interactive help overlay.
-# Full Help is the last command in EditorCommands, so navigate down to it.
+# Full Help is the last command in EditorCommands (index 15), so navigate down to it.
 run observe=debug
 key f1
+key down
+key down
 key down
 key down
 key down

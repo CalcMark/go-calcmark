@@ -6,11 +6,23 @@ import (
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/constants"
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
+
+// IdentifierResolver checks whether a variable name is defined in the current
+// evaluation context. This interface decouples the spec/classifier package
+// from impl/interpreter, preserving the spec → impl dependency direction.
+// impl/interpreter.Environment satisfies this interface.
+type IdentifierResolver interface {
+	Has(name string) bool
+}
+
+// emptyResolver is an IdentifierResolver that reports no identifiers as defined.
+type emptyResolver struct{}
+
+func (emptyResolver) Has(string) bool { return false }
 
 // LineType represents the type of a line in a CalcMark document
 type LineType int
@@ -106,7 +118,7 @@ func containsAssignment(tokens []lexer.Token) bool {
 }
 
 // allIdentifiersDefined checks if all identifiers in an AST are defined in the context
-func allIdentifiersDefined(node ast.Node, env *interpreter.Environment) bool {
+func allIdentifiersDefined(node ast.Node, env IdentifierResolver) bool {
 	switch n := node.(type) {
 	case *ast.Identifier:
 		// Check if identifier exists in context (which handles boolean keywords)
@@ -132,9 +144,9 @@ func allIdentifiersDefined(node ast.Node, env *interpreter.Environment) bool {
 
 // ClassifyLine classifies a line as CALCULATION, MARKDOWN, or BLANK.
 // Returns an error for critical syntax errors (like inline octothorpe).
-func ClassifyLine(line string, env *interpreter.Environment) (LineType, error) {
+func ClassifyLine(line string, env IdentifierResolver) (LineType, error) {
 	if env == nil {
-		env = interpreter.NewEnvironment()
+		env = emptyResolver{}
 	}
 
 	// 1. Check empty/whitespace (per ENCODING_SPEC.md)

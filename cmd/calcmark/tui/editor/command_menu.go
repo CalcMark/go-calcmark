@@ -32,7 +32,7 @@ var EditorCommands = []Command{
 	// Edit commands
 	{Name: "Undo", Accelerator: "Ctrl+Z", Description: "Undo last change", Category: "edit"},
 	{Name: "Redo", Accelerator: "Ctrl+Y", Description: "Redo last change", Category: "edit"},
-	{Name: "Delete Line", Accelerator: "Ctrl+D", Description: "Delete current line", Category: "edit"},
+	{Name: "Delete Line", Accelerator: "Ctrl+K", Description: "Delete current line", Category: "edit"},
 
 	// View commands
 	{Name: "Toggle Preview", Accelerator: "Ctrl+P", Description: "Cycle preview mode", Category: "view"},
@@ -42,6 +42,8 @@ var EditorCommands = []Command{
 	{Name: "Word Right", Accelerator: "Ctrl+Right", Description: "Move to next word", Category: "navigation"},
 	{Name: "Doc Start", Accelerator: "Ctrl+Home", Description: "Jump to document start", Category: "navigation"},
 	{Name: "Doc End", Accelerator: "Ctrl+End", Description: "Jump to document end", Category: "navigation"},
+	{Name: "Scroll Down", Accelerator: "Ctrl+D", Description: "Scroll down half page", Category: "navigation"},
+	{Name: "Scroll Up", Accelerator: "Ctrl+U", Description: "Scroll up half page", Category: "navigation"},
 
 	// Help commands
 	{Name: "Full Help", Accelerator: "F1", Description: "Show full help", Category: "help"},
@@ -141,15 +143,14 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "Undo":
-		m.performUndo()
-		return m, nil
+		return m.handleUndo()
 
 	case "Redo":
-		m.performRedo()
-		return m, nil
+		return m.handleRedo()
 
 	case "Delete Line":
-		return m.handleCtrlD()
+		m.deleteLine()
+		return m, nil
 
 	case "Toggle Preview":
 		m.cyclePreviewMode()
@@ -166,6 +167,12 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 
 	case "Doc End":
 		return m.handleCtrlEndKey()
+
+	case "Scroll Down":
+		return m.handleCtrlD()
+
+	case "Scroll Up":
+		return m.handleCtrlU()
 
 	case "Full Help":
 		m.mode = StateHelp

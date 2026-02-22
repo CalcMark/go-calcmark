@@ -6,7 +6,7 @@ package editor
 //   key_dispatch.go      — handleKey, handleDefaultKey, handleEscKey, handleEscape
 //   navigation.go        — Arrow keys, scroll, search, goto
 //   editing.go           — Text editing (rune input, Enter, Backspace, Delete, line ops)
-//   undo_operations.go   — handleUndo/Redo, performUndo/Redo, apply ops
+//   undo_operations.go   — handleUndo/Redo, apply ops
 //   file_operations.go   — Save, Open, Export, hasUnsavedChanges, cyclePreviewMode
 //   file_picker_handler.go — handleFilePickerKey
 //   globals_handler.go   — handleGlobalsKey, handleSavePromptKey
