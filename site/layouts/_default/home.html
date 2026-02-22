@@ -1,0 +1,50 @@
+{{ define "main" }}
+<section class="hero">
+  <div class="container">
+    <h1 class="hero-headline">Calculations embedded<br>in markdown documents.</h1>
+    <p class="hero-sub">Write your thinking in plain text. Add calculations that reference each other. Watch results update as you type.</p>
+    <div class="hero-install">
+      <pre class="install-cmd"><code>brew install calcmark/tap/calcmark</code></pre>
+      <div class="hero-actions">
+        <a href="{{ "docs/getting-started/" | relURL }}" class="btn btn-primary">Get Started</a>
+        <a href="{{ .Site.Params.githubURL }}" class="btn btn-secondary">View on GitHub</a>
+      </div>
+    </div>
+    <div class="hero-media">
+      <img src="{{ "images/hero.gif" | relURL }}" alt="CalcMark TUI in action" class="hero-gif" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section class="features container">
+  <h2>Why CalcMark?</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h3>Variables flow downward</h3>
+      <p>Define once, reference anywhere below. Change one number and watch everything update.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Units are first-class</h3>
+      <p>Write <code>5 miles in km</code> or <code>20 celsius in fahrenheit</code>. CalcMark understands physical units.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Currencies built in</h3>
+      <p><code>$100</code>, <code>50 EUR</code>, exchange rates via YAML frontmatter. Automatic formatting.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Markdown is ignored</h3>
+      <p>Write prose freely. Only lines that parse as calculations are evaluated. Your thinking stays in the document.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Export anywhere</h3>
+      <p>Convert to HTML, Markdown, JSON, or plain text. Pipe expressions from the command line.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Terminal-native</h3>
+      <p>A TUI editor that feels right at home in your terminal. Human-readable, diffable files.</p>
+    </div>
+  </div>
+</section>
+
+{{ .Content }}
+{{ end }}

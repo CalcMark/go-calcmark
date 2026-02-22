@@ -1,0 +1,125 @@
+---
+title: "Project Workback"
+summary: "Work backwards from a launch date with date arithmetic, sprint planning, and cost estimates."
+weight: 30
+---
+
+Planning a product launch with a fixed deadline, using CalcMark's date arithmetic and rate calculations.
+
+## The CalcMark File
+
+```cm
+# Project Workback Schedule
+
+Planning a product launch with a fixed deadline.
+Uses CalcMark's date arithmetic and compound durations.
+
+## Key Dates
+
+launch_date = Mar 15 2025
+kickoff = today
+
+Days until launch:
+
+days_to_launch = launch_date - kickoff
+
+## Phase Durations
+
+Using compound duration syntax:
+
+development_time = 4 weeks
+qa_time = 2 weeks
+staging_time = 1 week
+launch_prep = 5 days
+
+Total planned time:
+
+total_planned = development_time + qa_time + staging_time + launch_prep
+
+## Buffer Calculation
+
+buffer = days_to_launch - total_planned
+
+## Working Backwards from Launch
+
+Using date arithmetic to calculate milestone dates:
+
+launch_prep_start = launch_date - launch_prep
+staging_start = launch_prep_start - staging_time
+qa_start = staging_start - qa_time
+dev_start = qa_start - development_time
+
+## Sprint Planning
+
+Assuming 2-week sprints during development:
+
+num_sprints = 2
+sprint_duration = 2 weeks
+
+Points per sprint (team velocity):
+
+team_velocity = 40
+total_points = num_sprints * team_velocity
+
+## Key Milestones
+
+Using "X from Y" syntax:
+
+one_week_from_now = 1 week from today
+two_weeks_from_now = 2 weeks from today
+next_month = 1 month from today
+
+Milestone dates calculated from schedule:
+
+design_review = dev_start + 1 week
+first_sprint_end = dev_start + 2 weeks
+feature_freeze = dev_start + 3 weeks
+code_complete = qa_start
+
+## Resource Allocation
+
+developers = 4
+qa_engineers = 2
+devops = 1
+
+dev_person_weeks = developers * 4
+qa_person_weeks = qa_engineers * 2
+devops_person_weeks = devops * 2
+
+total_person_weeks = dev_person_weeks + qa_person_weeks + devops_person_weeks
+
+## Daily Rate Cost Estimate
+
+Using rate syntax for daily costs:
+
+dev_daily_rate = $800/day
+qa_daily_rate = $700/day
+devops_daily_rate = $900/day
+
+Team cost over development phase:
+
+dev_cost = dev_daily_rate * developers over development_time
+qa_cost = qa_daily_rate * qa_engineers over qa_time
+devops_cost = devops_daily_rate * devops over (staging_time + launch_prep)
+
+## Schedule Feasibility
+
+Time comparison:
+
+available_time = days_to_launch
+needed_time = total_planned + risk_buffer
+```
+
+## What This Demonstrates
+
+- Date arithmetic (subtracting durations from dates)
+- Working backwards from a fixed deadline
+- Rate calculations (`$800/day` over time periods)
+- Sprint planning with velocity estimates
+- Resource allocation and cost estimation
+
+## Try It
+
+```bash
+cm docs/examples/project-workback.cm
+```

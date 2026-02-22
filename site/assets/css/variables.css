@@ -1,0 +1,99 @@
+/* CalcMark Design Tokens
+   All colors, fonts, and spacing as CSS custom properties.
+   Override any variable to customize the site. */
+
+:root {
+  /* Brand */
+  --color-primary: #7D56F4;
+  --color-primary-hover: #6644d8;
+  --color-accent: #874BFD;
+
+  /* Text */
+  --color-text: #1a1a1a;
+  --color-text-muted: #555555;
+  --color-text-faint: #888888;
+
+  /* Backgrounds */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f6f8fa;
+  --color-bg-inset: #f0f2f5;
+
+  /* Borders */
+  --color-border: #d1d5db;
+  --color-border-strong: #9ca3af;
+
+  /* Code */
+  --color-code-bg: #f3f4f6;
+  --color-code-text: #1a1a1a;
+
+  /* Status */
+  --color-success: #1a7f37;
+  --color-warning: #9a6700;
+  --color-error: #cf222e;
+
+  /* Layout */
+  --nav-height: 56px;
+  --sidebar-width: 240px;
+  --content-max-width: 800px;
+  --container-max-width: 1200px;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-size-base: 16px;
+  --font-size-sm: 14px;
+  --font-size-xs: 12px;
+  --line-height-base: 1.65;
+  --line-height-code: 1.5;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.10);
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+  --color-primary: #a371f7;
+  --color-primary-hover: #b78df9;
+  --color-accent: #a371f7;
+
+  --color-text: #e5e5e5;
+  --color-text-muted: #8b949e;
+  --color-text-faint: #6e7781;
+
+  --color-bg: #0d1117;
+  --color-bg-subtle: #161b22;
+  --color-bg-inset: #1c2128;
+
+  --color-border: #30363d;
+  --color-border-strong: #6e7681;
+
+  --color-code-bg: #161b22;
+  --color-code-text: #e5e5e5;
+
+  --color-success: #3fb950;
+  --color-warning: #d29922;
+  --color-error: #f85149;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+}

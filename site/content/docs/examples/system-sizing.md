@@ -1,0 +1,141 @@
+---
+title: "System Sizing"
+summary: "Back-of-napkin infrastructure estimation for a 10M user app with storage, bandwidth, and capacity planning."
+weight: 50
+---
+
+Estimating infrastructure for a social media app with 10M monthly active users, using CalcMark's built-in network, storage, and capacity planning functions.
+
+## The CalcMark File
+
+```cm
+# Back-of-Napkin System Sizing
+
+Estimating infrastructure for a social media app with 10M monthly active users.
+Uses CalcMark's built-in network, storage, and capacity planning functions.
+
+## User Activity Assumptions
+
+monthly_users = 10M
+daily_active_pct = 0.40
+daily_users = monthly_users * daily_active_pct
+
+Posts per day (each user posts ~2x/week on average):
+
+posts_per_user_per_day = 2 / 7
+daily_posts = daily_users * posts_per_user_per_day
+daily_posts_napkin = daily_posts as napkin
+
+## Read vs Write Ratio
+
+Social media is read-heavy. Users scroll far more than they post.
+
+reads_per_user_per_day = 100
+daily_reads = daily_users * reads_per_user_per_day
+read_write_ratio = daily_reads / daily_posts
+
+## Traffic Rates
+
+Convert daily totals to per-second rates using CalcMark rate conversion:
+
+read_rate = (daily_reads)/day per second
+write_rate = (daily_posts)/day per second
+
+Peak traffic is typically 3x average:
+
+peak_multiplier = 3
+peak_read_rate = read_rate * peak_multiplier
+
+## Storage Requirements
+
+Average post size (text + metadata, excluding media):
+
+avg_post_size = 2 KB
+daily_post_storage = daily_posts * avg_post_size
+yearly_post_storage = daily_post_storage * 365
+
+Media storage (images average 500KB, 30% of posts have images):
+
+posts_with_media_pct = 0.30
+avg_image_size = 500 KB
+daily_media_storage = daily_posts * posts_with_media_pct * avg_image_size
+yearly_media_storage = daily_media_storage * 365
+
+Total storage with compression:
+
+compressed_posts = compress(yearly_post_storage, gzip)
+total_yearly_storage = compressed_posts + yearly_media_storage
+
+## Database Sizing
+
+Using natural capacity planning syntax:
+
+db_read_replicas = peak_read_rate at 5000 req/s per server with 20% buffer
+db_primaries = write_rate at 2000 req/s per server with 25% buffer
+total_db_servers = db_read_replicas + db_primaries
+
+## Storage I/O Performance
+
+Typical database query reads ~5MB of data. Compare storage options:
+
+query_data = 5 MB
+hdd_query_time = seek(hdd) + read(query_data, hdd)
+ssd_query_time = seek(ssd) + read(query_data, ssd)
+nvme_query_time = seek(nvme) + read(query_data, nvme)
+
+## Network Latency Budget
+
+API response latency breakdown for regional users:
+
+network_rtt = rtt(regional)
+db_query = nvme_query_time
+app_processing = 10 ms
+total_latency = network_rtt + db_query + app_processing
+
+## Bandwidth Requirements
+
+Average response is 10KB, peak bandwidth:
+
+avg_response_kb = 10
+peak_bandwidth_kbs = peak_read_rate * avg_response_kb
+peak_bandwidth_mbs = peak_bandwidth_kbs / 1000
+
+Compare to network capacity:
+
+gigabit_capacity = throughput(gigabit)
+ten_gig_capacity = throughput(ten_gig)
+
+## Availability and Downtime
+
+Target 99.9% availability (three nines):
+
+monthly_downtime = downtime(0.999, month)
+yearly_downtime = downtime(0.999, year)
+
+For 99.99% (four nines):
+
+strict_monthly_downtime = downtime(0.9999, month)
+
+## Summary
+
+Key metrics in human-readable format:
+
+storage_napkin = total_yearly_storage as napkin
+traffic_napkin = daily_reads as napkin
+servers_napkin = total_db_servers as napkin
+```
+
+## What This Demonstrates
+
+- Multiplier suffixes (`10M` users)
+- Built-in functions: `capacity()`, `compress()`, `rtt()`, `throughput()`, `downtime()`
+- Storage I/O comparison: `seek()`, `read()` across HDD/SSD/NVMe
+- Rate conversion (daily totals to per-second rates)
+- Napkin rounding for human-readable estimates
+- Back-of-envelope infrastructure planning
+
+## Try It
+
+```bash
+cm docs/examples/system-sizing.cm
+```

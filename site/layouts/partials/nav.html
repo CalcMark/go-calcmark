@@ -1,0 +1,12 @@
+<header class="site-nav">
+  <div class="container nav-inner">
+    <a href="{{ "/" | relURL }}" class="nav-logo">CalcMark</a>
+    <nav class="nav-links" aria-label="Main navigation">
+      {{ range .Site.Menus.main }}
+      <a class="nav-link{{ if or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }} nav-link--active{{ end }}"
+         href="{{ .URL }}"{{ with .Params.external }} target="_blank" rel="noopener"{{ end }}>{{ .Name }}</a>
+      {{ end }}
+    </nav>
+    {{ partial "theme-toggle.html" . }}
+  </div>
+</header>
