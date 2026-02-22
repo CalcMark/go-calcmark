@@ -3,6 +3,7 @@ package editor
 import (
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/charmbracelet/lipgloss"
@@ -34,7 +35,7 @@ func (m Model) View() string {
 			lipgloss.Center, lipgloss.Center,
 			helpView,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
 		)
 
 	case StateCommandMenu:
@@ -43,7 +44,7 @@ func (m Model) View() string {
 			lipgloss.Center, lipgloss.Center,
 			menuPopup,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
 		)
 
 	case StateFilePicker:
@@ -52,7 +53,7 @@ func (m Model) View() string {
 			lipgloss.Center, lipgloss.Center,
 			pickerOverlay,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
 		)
 
 	case StateExport:
@@ -61,7 +62,7 @@ func (m Model) View() string {
 			lipgloss.Center, lipgloss.Center,
 			exportOverlay,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(lipgloss.Color("237")),
+			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
 		)
 	}
 
@@ -103,20 +104,20 @@ func (m Model) View() string {
 	// Render source pane with header
 	sourceHeader := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("252")).
-		Background(lipgloss.Color("236")).
+		Foreground(theme.TextBright).
+		Background(m.sourcePaneBg()).
 		Padding(0, 1).
 		Width(leftContentWidth).
 		Render("Source")
 	// Ensure header is exactly leftContentWidth
-	sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, lipgloss.Color("236"))
+	sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, m.sourcePaneBg())
 
 	// Source pane needs padding at top to match globals panel height in preview
 	var sourcePaddingLines []string
 	if m.previewMode != PreviewHidden {
 		for i := 0; i < globalsHeight; i++ {
 			// Each padding line must be full width with background
-			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftContentWidth, lipgloss.Color("236")))
+			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftContentWidth, m.sourcePaneBg()))
 		}
 	}
 
@@ -142,13 +143,13 @@ func (m Model) View() string {
 	if m.previewMode != PreviewHidden {
 		previewHeader := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("252")).
-			Background(lipgloss.Color("236")).
+			Foreground(theme.TextBright).
+			Background(m.previewPaneBg()).
 			Padding(0, 1).
 			Width(rightWidth).
 			Render("Results")
 		// Ensure header is exactly rightWidth
-		previewHeader = ensureFullWidth(previewHeader, rightWidth, lipgloss.Color("236"))
+		previewHeader = ensureFullWidth(previewHeader, rightWidth, m.previewPaneBg())
 
 		previewContent := m.renderPreviewPaneAligned(rightWidth, paneContentHeight, aligned)
 
@@ -166,12 +167,12 @@ func (m Model) View() string {
 	if m.previewMode != PreviewHidden {
 		// SideBySide expects content widths and adds divider
 		// leftContentWidth already accounts for divider (leftWidth - dividerWidth)
-		sbs := NewSideBySide(leftContentWidth, rightWidth, lipgloss.Color("236"), lipgloss.Color("236"))
+		sbs := NewSideBySide(leftContentWidth, rightWidth, m.sourcePaneBg(), m.previewPaneBg())
 		panesOutput := sbs.Render(sourcePane, previewPane)
 		allUILines = append(allUILines, strings.Split(panesOutput, "\n")...)
 	} else {
 		// Single pane - use full left width (no divider in single-pane mode)
-		sourcePane = ensureLinesAreFullWidth(sourcePane, leftWidth, lipgloss.Color("236"))
+		sourcePane = ensureLinesAreFullWidth(sourcePane, leftWidth, m.sourcePaneBg())
 		allUILines = append(allUILines, strings.Split(sourcePane, "\n")...)
 	}
 
@@ -198,7 +199,7 @@ func (m Model) View() string {
 
 	// Separator - use context footer background for consistency
 	separatorStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Foreground(theme.DividerFg).
 		Background(contextFooterBg)
 	separatorLine := separatorStyle.Render(strings.Repeat("─", totalWidth))
 	separatorLine = ensureFullWidth(separatorLine, totalWidth, contextFooterBg)

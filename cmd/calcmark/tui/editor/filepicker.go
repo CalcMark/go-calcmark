@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -47,15 +48,15 @@ func initFilePicker() filepicker.Model {
 	fp.ShowSize = true
 	fp.SetHeight(15)
 
-	// Apply dark theme styling to match editor
+	// Apply themed styling to file picker
 	fp.Styles.Directory = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("33")).Bold(true)
+		Foreground(theme.FilePickerDir).Bold(true)
 	fp.Styles.File = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252"))
+		Foreground(theme.FilePickerFile)
 	fp.Styles.Selected = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("205")).Bold(true)
+		Foreground(theme.FilePickerSelected).Bold(true)
 	fp.Styles.Cursor = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("205"))
+		Foreground(theme.FilePickerCursor)
 
 	return fp
 }

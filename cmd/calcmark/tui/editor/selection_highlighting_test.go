@@ -60,11 +60,10 @@ remaining = total_income - fixed_total - savings`
 	for _, line := range lines {
 		if strings.Contains(line, "savings") {
 			foundWrappedSegment = true
-			// Check if it has selection highlighting (gray background 240)
-			// In ANSI, this would be something like \x1b[48;5;240m or similar
-			// For now, just verify the test runs - actual highlighting verification
-			// would need ANSI sequence parsing
-			if strings.Contains(line, "48;5;240") || strings.Contains(line, "[240") {
+			// Check if it has selection highlighting background.
+			// The palette Selection color (#1f3a5f dark) resolves to ANSI256 23,
+			// so we check for "48;5;23m" (background). Also accept the old "48;5;240".
+			if strings.Contains(line, "48;5;23m") || strings.Contains(line, "48;5;240") {
 				wrappedSegmentHighlighted = true
 			}
 			t.Logf("Wrapped segment line: %q", line)

@@ -396,4 +396,23 @@ var (
 		Light: "#e8e8e8",
 		Dark:  "#444444",
 	}
+
+	// --- Overlay backdrop ---
+
+	OverlayWhitespaceFg = lipgloss.AdaptiveColor{
+		Light: "#d0d0d0",
+		Dark:  "#333333",
+	}
+
+	// --- Calculation result errors ---
+
+	CalcErrorFg = lipgloss.AdaptiveColor{
+		Light: "#b35900",
+		Dark:  "#FF8800",
+	}
+
+	CalcBlockedFg = lipgloss.AdaptiveColor{
+		Light: "#999999",
+		Dark:  "#888888",
+	}
 )

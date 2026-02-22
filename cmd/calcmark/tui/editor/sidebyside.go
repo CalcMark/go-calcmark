@@ -3,6 +3,7 @@ package editor
 import (
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -50,7 +51,7 @@ func (s *SideBySide) Render(left, right string) string {
 
 	// Style for the vertical divider between panes
 	dividerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Foreground(theme.DividerFg).
 		Background(s.leftBg)
 
 	// Build output line by line

@@ -3,6 +3,7 @@ package editor
 import (
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -22,10 +23,10 @@ func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
 		return lineText
 	}
 
-	// Selection style - gray background with white text
+	// Selection style
 	selectionStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("240")).
-		Foreground(lipgloss.Color("255"))
+		Background(theme.Selection).
+		Foreground(theme.SelectionFg)
 
 	runes := []rune(lineText)
 	lineLen := len(runes)
