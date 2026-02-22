@@ -181,6 +181,12 @@ z = 30`
 // Bug: Preview pane jump bug is back when cursor moves to last calc before empty line.
 // Regression: When cursor moves from line 11 to 12 (last calc before empty line 13),
 // an extra blank line appears in the Preview Pane.
+//
+// IMPORTANT: This test calls renderPreviewPaneAligned directly to check the
+// preview pane output. Using extractPreviewPane(View()) would create false
+// positives because the context footer uses "│" as value separators for lines
+// like "rent = $1500 │ utilities = $200 │ insurance = $150", which gets
+// misinterpreted as pane divider rows.
 func TestPreviewPaneJump_LastCalcBeforeEmptyLine(t *testing.T) {
 	// Save and restore color profile
 	originalProfile := lipgloss.ColorProfile()
@@ -188,10 +194,10 @@ func TestPreviewPaneJump_LastCalcBeforeEmptyLine(t *testing.T) {
 	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Document that reproduces the exact scenario from user screenshot:
-	// - Line 11: insurance = $150
-	// - Line 12: fixed_total = rent + utilities + insurance (last calc)
-	// - Line 13: empty line
-	// - Line 14: ## Savings Target
+	// - Line 10: insurance = $150
+	// - Line 11: fixed_total = rent + utilities + insurance (last calc)
+	// - Line 12: empty line
+	// - Line 13: ## Savings Target
 	content := `# Budget
 ## Income
 salary = $5000
@@ -221,161 +227,70 @@ savings = total_income * savings_rate`
 	// Evaluate to get results
 	m.eval.Evaluate(m.doc)
 
-	// Position cursor at line 10 (insurance = $150) - line BEFORE the last calc
-	m.cursorLine = 10
-	m.cursorCol = 0
-	m.loadCurrentLineIntoEditBuffer()
+	leftWidth, rightWidth := m.GetPaneWidths(m.width)
+	const dividerWidth = 1
+	leftContentWidth := leftWidth - dividerWidth
+	paneHeight := m.height - 7 // Content area height
 
-	view1 := m.View()
-	previewLines1 := extractPreviewPane(view1)
+	// Helper: render preview pane directly and find "Savings Target" position
+	renderAndFindSavings := func(cursorLine int, desc string) int {
+		m.cursorLine = cursorLine
+		m.cursorCol = 0
+		m.editBuf = "" // Clear first to avoid stale state
+		m.loadCurrentLineIntoEditBuffer()
 
-	// Move cursor to line 11 (fixed_total = ...) - the LAST calc before empty line
-	m.cursorLine = 11
-	m.cursorCol = 0
-	m.loadCurrentLineIntoEditBuffer()
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		preview := m.renderPreviewPaneAligned(rightWidth, paneHeight, aligned)
+		previewLines := strings.Split(preview, "\n")
 
-	view2 := m.View()
-	previewLines2 := extractPreviewPane(view2)
-
-	// Find where "Savings Target" appears in preview for both views
-	findSavingsTargetLine := func(lines []string) int {
-		for i, line := range lines {
-			if strings.Contains(line, "Savings Target") {
-				return i
+		savingsPos := -1
+		for i, line := range previewLines {
+			stripped := stripANSI(line)
+			if strings.Contains(stripped, "Savings Target") {
+				savingsPos = i
+				break
 			}
 		}
-		return -1
+
+		t.Logf("Cursor on line %d (%s): 'Savings Target' at preview line %d, editBuf=%q",
+			cursorLine, desc, savingsPos, truncate(m.editBuf, 40))
+		return savingsPos
 	}
 
-	savingsLine1 := findSavingsTargetLine(previewLines1)
-	savingsLine2 := findSavingsTargetLine(previewLines2)
-
-	t.Logf("'Savings Target' at preview line %d (cursor on insurance)", savingsLine1)
-	t.Logf("'Savings Target' at preview line %d (cursor on fixed_total)", savingsLine2)
-
-	// Log a few lines around "Savings Target" for comparison
-	t.Log("Preview lines when cursor on insurance (line 10):")
-	for i := max(0, savingsLine1-3); i < min(len(previewLines1), savingsLine1+3); i++ {
-		t.Logf("  %d: %q", i, previewLines1[i])
-	}
-
-	t.Log("Preview lines when cursor on fixed_total (line 11):")
-	for i := max(0, savingsLine2-3); i < min(len(previewLines2), savingsLine2+3); i++ {
-		t.Logf("  %d: %q", i, previewLines2[i])
-	}
+	// Position cursor at line 10 (insurance) and line 11 (fixed_total)
+	savingsLine1 := renderAndFindSavings(10, "insurance")
+	savingsLine2 := renderAndFindSavings(11, "fixed_total")
 
 	// The position of "Savings Target" should NOT change
-	// An extra blank line appearing when cursor moves is the bug
+	if savingsLine1 == -1 {
+		t.Fatal("'Savings Target' not found in preview when cursor on insurance")
+	}
 	if savingsLine1 != savingsLine2 {
-		t.Errorf("Preview pane jumped! 'Savings Target' moved from line %d to %d when cursor moved down - extra blank line inserted",
+		t.Errorf("Preview pane jumped! 'Savings Target' moved from line %d to %d when cursor moved down",
 			savingsLine1, savingsLine2)
 	}
 
-	// Debug: Compare aligned model outputs for both cursor positions
-	t.Log("\nDEBUG: Checking editBuf values and aligned model...")
+	// Also verify that source and preview pane line counts are consistent
+	for _, cl := range []int{10, 11} {
+		m.cursorLine = cl
+		m.cursorCol = 0
+		m.editBuf = ""
+		m.loadCurrentLineIntoEditBuffer()
 
-	// Reset and check with cursor on line 10
-	m.cursorLine = 10
-	m.editBuf = "" // Clear first
-	m.loadCurrentLineIntoEditBuffer()
-	editBuf10 := m.editBuf
-	t.Logf("Cursor on 10: editBuf=%q (len=%d)", editBuf10, len(editBuf10))
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		sourcePane := m.renderSourcePaneAligned(leftContentWidth, paneHeight, aligned)
+		previewPane := m.renderPreviewPaneAligned(rightWidth, paneHeight, aligned)
 
-	// Get aligned model for cursor on line 10
-	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned10 := m.computeAlignedPanes(leftWidth-1, rightWidth)
-	t.Logf("AlignedModel (cursor 10): %d source lines, %d preview lines", len(aligned10.sourceLines), len(aligned10.previewLines))
-	for i, pl := range aligned10.previewLines {
-		if i >= 10 && i <= 18 {
-			t.Logf("  preview[%d] sourceNum=%d content=%q", i, pl.sourceLineNum, truncate(pl.content, 40))
-		}
-	}
+		srcLines := len(strings.Split(sourcePane, "\n"))
+		pvLines := len(strings.Split(previewPane, "\n"))
+		t.Logf("Cursor on line %d: source pane=%d lines, preview pane=%d lines", cl, srcLines, pvLines)
 
-	// Check with cursor on line 11
-	m.cursorLine = 11
-	m.editBuf = "" // Clear first
-	m.loadCurrentLineIntoEditBuffer()
-	editBuf11 := m.editBuf
-	t.Logf("\nCursor on 11: editBuf=%q (len=%d)", editBuf11, len(editBuf11))
-
-	// Get aligned model for cursor on line 11
-	aligned11 := m.computeAlignedPanes(leftWidth-1, rightWidth)
-	t.Logf("AlignedModel (cursor 11): %d source lines, %d preview lines", len(aligned11.sourceLines), len(aligned11.previewLines))
-	for i, pl := range aligned11.previewLines {
-		if i >= 10 && i <= 18 {
-			t.Logf("  preview[%d] sourceNum=%d content=%q", i, pl.sourceLineNum, truncate(pl.content, 40))
-		}
-	}
-
-	// Compare the aligned models
-	t.Log("\nComparing aligned models...")
-	if len(aligned10.previewLines) != len(aligned11.previewLines) {
-		t.Logf("DIFFERENCE: aligned10 has %d preview lines, aligned11 has %d", len(aligned10.previewLines), len(aligned11.previewLines))
-	}
-	for i := 0; i < min(len(aligned10.previewLines), len(aligned11.previewLines)); i++ {
-		if aligned10.previewLines[i].sourceLineNum != aligned11.previewLines[i].sourceLineNum ||
-			aligned10.previewLines[i].content != aligned11.previewLines[i].content {
-			t.Logf("DIFFERENCE at %d: cursor10(src=%d, %q) vs cursor11(src=%d, %q)",
-				i, aligned10.previewLines[i].sourceLineNum, truncate(aligned10.previewLines[i].content, 30),
-				aligned11.previewLines[i].sourceLineNum, truncate(aligned11.previewLines[i].content, 30))
-		}
-	}
-
-	// Check sourceToVisual mapping for both
-	t.Log("\nSourceToVisual mapping:")
-	t.Logf("  aligned10.sourceToVisual[10] = %d", aligned10.sourceToVisual[10])
-	t.Logf("  aligned10.sourceToVisual[11] = %d", aligned10.sourceToVisual[11])
-	t.Logf("  aligned11.sourceToVisual[10] = %d", aligned11.sourceToVisual[10])
-	t.Logf("  aligned11.sourceToVisual[11] = %d", aligned11.sourceToVisual[11])
-
-	// Check what the source pane looks like
-	t.Log("\nSource pane comparison:")
-	sourceLines1 := extractSourcePane(view1)
-	sourceLines2 := extractSourcePane(view2)
-	t.Logf("Source pane line count: cursor10=%d, cursor11=%d", len(sourceLines1), len(sourceLines2))
-
-	// Find where "fixed_total" appears in source for both
-	for i, line := range sourceLines1 {
-		if strings.Contains(line, "fixed_total") {
-			t.Logf("  cursor10: fixed_total at source line %d: %q", i, truncate(line, 50))
-			break
-		}
-	}
-	for i, line := range sourceLines2 {
-		if strings.Contains(line, "fixed_total") {
-			t.Logf("  cursor11: fixed_total at source line %d: %q", i, truncate(line, 50))
-			break
+		if srcLines != pvLines {
+			t.Errorf("Line count mismatch at cursor %d: source=%d, preview=%d", cl, srcLines, pvLines)
 		}
 	}
 }
 
-// extractPreviewPane extracts just the preview pane content from a full view
-func extractPreviewPane(view string) []string {
-	lines := strings.Split(view, "\n")
-	var previewLines []string
-	for _, line := range lines {
-		// Split on the divider │
-		parts := strings.SplitN(line, "│", 2)
-		if len(parts) >= 2 {
-			previewLines = append(previewLines, stripANSI(parts[1]))
-		}
-	}
-	return previewLines
-}
-
-// extractSourcePane extracts just the source pane content from a full view
-func extractSourcePane(view string) []string {
-	lines := strings.Split(view, "\n")
-	var sourceLines []string
-	for _, line := range lines {
-		// Split on the divider │
-		parts := strings.SplitN(line, "│", 2)
-		if len(parts) >= 2 {
-			sourceLines = append(sourceLines, stripANSI(parts[0]))
-		}
-	}
-	return sourceLines
-}
 
 // TestPaste_PreservesLineNumbersAndStyling verifies that after pasting
 // multi-line content, line numbers remain visible and text styling is consistent.
