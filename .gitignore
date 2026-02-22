@@ -39,6 +39,11 @@ Thumbs.db
 !.claude/commands/
 .claude/commands/gsd/
 
+# Hugo site build artifacts
+site/public/
+site/resources/
+.hugo_build.lock
+
 # Test artifacts
 test_*.cm
 test_*.tape

@@ -99,8 +99,8 @@ Press Ctrl+H (or F1) in the TUI editor for keybindings.
 
 ## Learn More
 
-- [User Guide](docs/README.md) - Complete documentation with examples
-- [Language Spec](spec/LANGUAGE_SPEC.md) - Formal language specification
+- [Documentation](https://calcmark.org/docs/) - Complete documentation with examples
+- [Language Reference](https://calcmark.org/docs/language-reference/) - Formal language specification
 
 ## License
 

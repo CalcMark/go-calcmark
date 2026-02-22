@@ -1,0 +1,8 @@
+<aside class="docs-sidebar">
+  <nav class="sidebar-nav" aria-label="Documentation">
+    {{ range .Site.Menus.docs }}
+    <a class="sidebar-link{{ if or ($.IsMenuCurrent "docs" .) ($.HasMenuCurrent "docs" .) }} sidebar-link--active{{ end }}"
+       href="{{ .URL }}">{{ .Name }}</a>
+    {{ end }}
+  </nav>
+</aside>

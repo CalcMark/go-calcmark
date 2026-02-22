@@ -1,0 +1,15 @@
+{{ define "main" }}
+<div class="docs-layout container">
+  {{ if eq .Section "docs" }}{{ partial "sidebar.html" . }}{{ end }}
+  <article class="docs-content">
+    <h1>{{ .Title }}</h1>
+    {{ with .Params.summary }}<p class="text-muted">{{ . | markdownify }}</p>{{ end }}
+    {{ .Content }}
+    {{ if .GitInfo }}
+    <footer class="page-meta">
+      Last updated: <time datetime="{{ .GitInfo.AuthorDate.Format "2006-01-02" }}">{{ .GitInfo.AuthorDate.Format "January 2, 2006" }}</time>
+    </footer>
+    {{ end }}
+  </article>
+</div>
+{{ end }}

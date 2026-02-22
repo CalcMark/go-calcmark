@@ -1,0 +1,27 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} — {{ .Site.Title }}{{ end }}</title>
+<meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+
+{{/* No-FOUC: read theme preference before render */}}
+<script>
+  (function() {
+    var t = localStorage.getItem('theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+</script>
+
+{{/* Google Fonts: Inter (body) + JetBrains Mono (code) */}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+{{/* CSS via Hugo Pipes with fingerprinting for cache-busting */}}
+{{ $vars := resources.Get "css/variables.css" }}
+{{ $base := resources.Get "css/base.css" }}
+{{ $components := resources.Get "css/components.css" }}
+{{ $utils := resources.Get "css/utilities.css" }}
+{{ $styles := slice $vars $base $components $utils | resources.Concat "css/site.css" | fingerprint }}
+<link rel="stylesheet" href="{{ $styles.RelPermalink }}">

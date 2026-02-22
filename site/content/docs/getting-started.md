@@ -1,0 +1,105 @@
+---
+title: "Getting Started"
+summary: "Install CalcMark and run your first calculation."
+weight: 10
+---
+
+## Installation
+
+**macOS/Linux (Homebrew):**
+
+```bash
+brew install calcmark/tap/calcmark
+```
+
+**Download binary:**
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | [calcmark\_darwin\_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| macOS (Intel) | [calcmark\_darwin\_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Linux (x64) | [calcmark\_linux\_amd64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Linux (arm64) | [calcmark\_linux\_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
+| Windows (x64) | [calcmark\_windows\_amd64.zip](https://github.com/CalcMark/go-calcmark/releases/latest) |
+
+After downloading, extract and move `cm` to a directory in your PATH.
+
+## Quick Start
+
+### Interactive REPL
+
+Start the interactive environment:
+
+```bash
+cm                    # Empty REPL
+cm budget.cm          # Load a file and explore
+```
+
+### Evaluate a File
+
+Process a file and see results:
+
+```bash
+cm eval docs/examples/system-sizing.cm
+```
+
+### Pipe Expressions
+
+Quick calculations from the command line:
+
+```bash
+echo "price = 100 USD" | cm eval
+echo "24 celsius in fahrenheit" | cm eval
+echo "500 gram in oz" | cm eval
+```
+
+## Core Concepts
+
+### Variables Flow Downward
+
+Variables must be defined before use. Later lines can reference earlier ones:
+
+```cm
+base_salary = $85000
+bonus_pct = 15%
+bonus = base_salary * bonus_pct
+total_comp = base_salary + bonus
+```
+
+### Units Are First-Class
+
+CalcMark understands physical units and currencies:
+
+```cm
+distance = 42.195 km
+time = 3 hours + 30 minutes
+pace = time / distance
+
+price_usd = 100 USD
+price_eur = 85 EUR
+```
+
+### Markdown is Ignored
+
+Write prose freely. Only lines that parse as calculations are evaluated:
+
+```cm
+# Project Budget
+
+We need to account for both development and infrastructure costs.
+
+dev_team = 5
+monthly_salary = $12000
+dev_cost = dev_team * monthly_salary * 6 months
+
+Infrastructure will be roughly 20% of dev costs.
+
+infra_pct = 20%
+infra_cost = dev_cost * infra_pct
+```
+
+## Next Steps
+
+- Read the full [User Guide]({{< ref "docs/user-guide" >}}) for all features
+- Explore the [Examples]({{< ref "docs/examples" >}}) to see CalcMark in action
+- Check the [Language Reference]({{< ref "docs/language-reference" >}}) for the formal specification

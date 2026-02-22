@@ -1,0 +1,122 @@
+---
+title: "Job Offer Comparison"
+summary: "Compare two job offers with salary, equity, bonuses, and risk-adjusted analysis."
+weight: 20
+---
+
+Evaluating competing job offers with different compensation structures: Big Tech vs Growth Startup.
+
+## The CalcMark File
+
+```cm
+# Job Offer Comparison
+
+Comparing two job offers with different compensation structures.
+Converting everything to effective monthly take-home pay.
+
+## Offer A: Big Tech Company
+
+Higher base, standard equity, signing bonus.
+
+base_salary_a = 180000
+signing_bonus_a = 30000
+annual_bonus_pct_a = 0.15
+annual_bonus_a = base_salary_a * annual_bonus_pct_a
+
+Stock grant (RSUs with 4-year vest, 1-year cliff):
+
+stock_grant_a = 200000
+vest_years_a = 4
+annual_stock_a = stock_grant_a / vest_years_a
+
+Total annual compensation:
+
+annual_comp_a = base_salary_a + annual_bonus_a + annual_stock_a
+
+## Offer B: Growth Startup
+
+Lower base, larger equity, no signing bonus.
+
+base_salary_b = 150000
+signing_bonus_b = 0
+annual_bonus_pct_b = 0.10
+annual_bonus_b = base_salary_b * annual_bonus_pct_b
+
+Stock options (4-year vest, 1-year cliff, strike price discount):
+
+option_value_b = 400000
+expected_appreciation_b = 0.50
+effective_stock_value_b = option_value_b * expected_appreciation_b
+vest_years_b = 4
+annual_stock_b = effective_stock_value_b / vest_years_b
+
+Total annual compensation:
+
+annual_comp_b = base_salary_b + annual_bonus_b + annual_stock_b
+
+## Tax Estimation
+
+Using simplified marginal rates:
+
+federal_rate = 0.32
+state_rate = 0.093
+fica_rate = 0.0765
+
+total_tax_rate = federal_rate + state_rate + fica_rate
+
+after_tax_a = annual_comp_a * (1 - total_tax_rate)
+after_tax_b = annual_comp_b * (1 - total_tax_rate)
+
+## Monthly Take-Home
+
+monthly_a = after_tax_a / 12
+monthly_b = after_tax_b / 12
+monthly_difference = monthly_a - monthly_b
+
+## Four Year Total
+
+Total comp over the full vesting period:
+
+four_year_a = annual_comp_a * 4 + signing_bonus_a
+four_year_b = annual_comp_b * 4 + signing_bonus_b
+
+four_year_net_a = four_year_a * (1 - total_tax_rate)
+four_year_net_b = four_year_b * (1 - total_tax_rate)
+
+## Risk-Adjusted Value
+
+Startup equity is riskier. Apply discount factor:
+
+startup_risk_discount = 0.40
+risk_adjusted_stock_b = annual_stock_b * (1 - startup_risk_discount)
+risk_adjusted_annual_b = base_salary_b + annual_bonus_b + risk_adjusted_stock_b
+risk_adjusted_monthly_b = risk_adjusted_annual_b * (1 - total_tax_rate) / 12
+
+## Decision Factors
+
+Monthly difference (A vs B):
+
+monthly_advantage_a = monthly_a - monthly_b
+annual_advantage_a = monthly_advantage_a * 12
+
+Break-even stock appreciation for Offer B to match A:
+
+comp_gap = annual_comp_a - (base_salary_b + annual_bonus_b)
+required_annual_stock = comp_gap
+required_total_stock = required_annual_stock * vest_years_b
+required_appreciation = required_total_stock / option_value_b
+```
+
+## What This Demonstrates
+
+- Complex multi-variable comparison with derived metrics
+- Tax estimation with multiple marginal rates
+- RSU vs stock option valuation
+- Risk-adjusted compensation analysis
+- Break-even calculation for equity appreciation
+
+## Try It
+
+```bash
+cm docs/examples/job-offer.cm
+```

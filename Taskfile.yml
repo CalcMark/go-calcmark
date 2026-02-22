@@ -213,6 +213,18 @@ tasks:
       - go get -u ./...
       - go mod tidy
 
+  # Website tasks
+  site:
+    desc: Start Hugo dev server for the website
+    cmds:
+      - hugo server --source site --buildDrafts
+
+  site:build:
+    desc: Build the website
+    cmds:
+      - hugo --source site --minify
+      - echo 'Site built to site/public/'
+
   # Example/Demo tasks
   example:dates:
     internal: true
