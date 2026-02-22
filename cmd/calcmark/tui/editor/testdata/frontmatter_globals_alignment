@@ -1,0 +1,15 @@
+# Test: Globals panel renders inline with frontmatter lines
+# Verifies: When a document has YAML frontmatter, the Globals panel content
+# appears in the preview pane next to the frontmatter lines (not as a fixed header).
+
+# Initial state - verify alignment structure shows frontmatter lines paired with globals
+run observe=alignment
+----
+-- alignment:
+Source and Preview Alignment:
+Source lines: 5, Preview lines: 5
+[0] SRC(ln=1 pad=false): "---"                               | PRV(ln=0 fm=true): ""
+[1] SRC(ln=2 pad=false): "globals:"                          | PRV(ln=1 fm=true): ""
+[2] SRC(ln=3 pad=false): "  my_var: 42"                      | PRV(ln=2 fm=true): ""
+[3] SRC(ln=4 pad=false): "---"                               | PRV(ln=3 fm=true): ""
+[4] SRC(ln=5 pad=false): "x = my_var + 1"                    | PRV(ln=4 fm=false): "x → 43"

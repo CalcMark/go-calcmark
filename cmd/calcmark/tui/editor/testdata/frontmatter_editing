@@ -1,0 +1,122 @@
+# Test: Editing within frontmatter lines
+# Verifies: Navigation, variable rename, Enter key for new lines,
+# and edits survive navigation (regression tests for frontmatter bugs).
+
+# Initial state - document with frontmatter
+run observe=frontmatter
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=4
+frontmatterErr=<nil>
+global: my_var=42
+
+# Verify initial results include frontmatter padding
+run observe=results
+----
+-- results:
+Line 0 (---): isCalc=false value= error=""
+Line 1 (globals:): isCalc=false value= error=""
+Line 2 (  my_var: 42): isCalc=false value= error=""
+Line 3 (---): isCalc=false value= error=""
+Line 4 (x = my_var + 1): isCalc=true value=43 error=""
+
+# Navigate to the my_var line (line 2) to edit it
+run observe=debug
+key down
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="  my_var: 42" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Position cursor after "my_var" (column 8) then backspace 6 times to remove it
+# Line: "  my_var: 42"  →  "  : 42"  →  type growth_rate  →  "  growth_rate: 42"
+run observe=debug
+key right
+key right
+key right
+key right
+key right
+key right
+key right
+key right
+key backspace
+key backspace
+key backspace
+key backspace
+key backspace
+key backspace
+type growth_rate
+----
+-- debug:
+mode=StateDefault cursorLine=2 cursorCol=13 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="  growth_rate: 42" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down — this triggers saveCurrentLineAndMoveTo which must persist the edit
+run observe=debug
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=3 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="---" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify the frontmatter was updated — growth_rate should exist, my_var should not
+run observe=frontmatter
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=4
+frontmatterErr=<nil>
+global: growth_rate=42
+
+# Verify the results reflect the new variable name (x still references my_var
+# which no longer exists, so it should error)
+run observe=results
+----
+-- results:
+Line 0 (---): isCalc=false value= error=""
+Line 1 (globals:): isCalc=false value= error=""
+Line 2 (  growth_rate: 42): isCalc=false value= error=""
+Line 3 (---): isCalc=false value= error=""
+Line 4 (x = my_var + 1): isCalc=true value= error="undefined_variable: undefined variable \"my_var\""
+
+# --- Enter key test ---
+# Navigate back to the growth_rate line and press Enter to add a new variable line
+run observe=debug
+key up
+key up
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=3 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Go down to growth_rate line, go to end of line, press Enter
+run observe=debug
+key down
+key end
+key enter
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=6 totalVisual=6 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type new variable on the new line
+run observe=debug
+type   tax_rate: 10%
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=15 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=6 totalVisual=6 editBuf="  tax_rate: 10%" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down past closing --- to persist and verify
+run observe=debug
+key down
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=5 cursorCol=3 cursorVisual=5 cursorHighlight=5 scrollOffset=0 totalSource=6 totalVisual=6 editBuf="x = my_var + 1" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify both variables exist in frontmatter (Enter + type created a new one)
+run observe=frontmatter
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=5
+frontmatterErr=<nil>
+global: growth_rate=42
+global: tax_rate=10%

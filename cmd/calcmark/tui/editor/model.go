@@ -6,7 +6,7 @@ package editor
 //   key_dispatch.go      — handleKey, handleDefaultKey, handleEscKey, handleEscape
 //   navigation.go        — Arrow keys, scroll, search, goto
 //   editing.go           — Text editing (rune input, Enter, Backspace, Delete, line ops)
-//   undo_operations.go   — handleUndo/Redo, performUndo/Redo, apply ops
+//   undo_operations.go   — handleUndo/Redo, apply ops
 //   file_operations.go   — Save, Open, Export, hasUnsavedChanges, cyclePreviewMode
 //   file_picker_handler.go — handleFilePickerKey
 //   globals_handler.go   — handleGlobalsKey, handleSavePromptKey
@@ -217,10 +217,11 @@ func (m Model) GetPaneWidths(totalWidth int) (sourceWidth, previewWidth int) {
 // Model represents the document editor state.
 type Model struct {
 	// Core document (from spec/document)
-	doc      *document.Document
-	eval     *implDoc.Evaluator
-	filepath string
-	modified bool // True if document has unsaved changes
+	doc            *document.Document
+	eval           *implDoc.Evaluator
+	filepath       string
+	modified       bool  // True if document has unsaved changes
+	frontmatterErr error // Non-nil when frontmatter YAML is malformed
 
 	// Save state tracking
 	savedContent string // Content as it was at last save (for detecting changes)
@@ -387,12 +388,23 @@ func (m *Model) autoPinVariables() {
 	}
 }
 
-// getDocumentContent returns the document as a string.
+// getDocumentContent returns the document as a string, including frontmatter.
 // CRITICAL: Returns content with trailing newline to preserve line count.
 // See unicode.go fix - trailing newlines no longer create extra lines,
 // so we MUST include them when reconstructing to preserve N lines.
 func (m *Model) getDocumentContent() string {
 	var lines []string
+
+	// Prepend frontmatter lines if present
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		serialized := fm.Serialize()
+		if serialized != "" {
+			// Serialize() produces "---\n...\n---\n\n" — split and trim trailing blank
+			fmLines := strings.Split(strings.TrimRight(serialized, "\n"), "\n")
+			lines = append(lines, fmLines...)
+		}
+	}
+
 	for _, node := range m.doc.GetBlocks() {
 		switch b := node.Block.(type) {
 		case *document.CalcBlock:
@@ -408,9 +420,19 @@ func (m *Model) getDocumentContent() string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
-// GetLines returns all lines in the document.
+// GetLines returns all lines in the document, including frontmatter.
 func (m *Model) GetLines() []string {
 	var lines []string
+
+	// Prepend frontmatter lines if present
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		serialized := fm.Serialize()
+		if serialized != "" {
+			fmLines := strings.Split(strings.TrimRight(serialized, "\n"), "\n")
+			lines = append(lines, fmLines...)
+		}
+	}
+
 	for _, node := range m.doc.GetBlocks() {
 		switch b := node.Block.(type) {
 		case *document.CalcBlock:
@@ -420,6 +442,20 @@ func (m *Model) GetLines() []string {
 		}
 	}
 	return lines
+}
+
+// frontmatterLineCount returns the number of lines occupied by frontmatter.
+// Returns 0 if no frontmatter exists.
+func (m *Model) frontmatterLineCount() int {
+	fm := m.doc.GetFrontmatter()
+	if fm == nil {
+		return 0
+	}
+	serialized := fm.Serialize()
+	if serialized == "" {
+		return 0
+	}
+	return len(strings.Split(strings.TrimRight(serialized, "\n"), "\n"))
 }
 
 // TotalLines returns the total number of lines.

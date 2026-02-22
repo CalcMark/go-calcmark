@@ -1,0 +1,4 @@
+<div class="cm-example">
+  {{ with .Get "file" }}<div class="cm-example-header"><span class="text-mono text-muted">{{ . }}</span></div>{{ end }}
+  <pre><code class="language-cm">{{ .Inner | htmlEscape }}</code></pre>
+</div>

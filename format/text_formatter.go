@@ -37,7 +37,27 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		return nil
 	}
 
-	// Verbose mode: show source with results and spacing between blocks
+	// Verbose mode: show frontmatter and source with results
+	if fm := doc.GetFrontmatter(); fm != nil {
+		hasFrontmatter := len(fm.Globals) > 0 || len(fm.Exchange) > 0
+		if hasFrontmatter {
+			fmt.Fprintln(w, "--- Frontmatter ---")
+			for _, name := range fm.GlobalKeys() {
+				fmt.Fprintf(w, "  %s = %s\n", name, fm.Globals[name])
+			}
+			for _, key := range fm.ExchangeKeys() {
+				rate := fm.Exchange[key]
+				from, to, err := document.ParseExchangeRateKey(key)
+				if err == nil {
+					fmt.Fprintf(w, "  %s → %s: %s\n", from, to, rate.StringFixed(4))
+				} else {
+					fmt.Fprintf(w, "  %s: %s\n", key, rate.StringFixed(4))
+				}
+			}
+			fmt.Fprintln(w)
+		}
+	}
+
 	for i, node := range blocks {
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:

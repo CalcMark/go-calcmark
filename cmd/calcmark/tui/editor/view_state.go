@@ -12,6 +12,23 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
+// computeGlobalsHeight returns the visual height of the globals panel + separator.
+// Must exactly mirror renderGlobalsPanel logic to avoid mismatches.
+func (m Model) computeGlobalsHeight() int {
+	globalsHeight := 1 // collapsed state (always 1 line)
+	if m.globalsExpanded {
+		if m.frontmatterErr != nil {
+			globalsHeight = 2 // header + error detail
+		} else if m.getGlobalsCount() == 0 {
+			globalsHeight = 2 // header + "(no globals defined)"
+		} else {
+			globalsHeight = 1 + m.getGlobalsCount()
+		}
+	}
+	globalsHeight++ // +1 for separator line
+	return globalsHeight
+}
+
 // getGlobalsCount returns the number of global variables.
 func (m *Model) getGlobalsCount() int {
 	fm := m.doc.GetFrontmatter()
@@ -126,20 +143,25 @@ func (m *Model) collectPinnedVariables() []components.PinnedVar {
 // GetGlobalsPanelState returns state for the globals panel.
 func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 	var globals []components.GlobalVar
+	var errMsg string
+
+	if m.frontmatterErr != nil {
+		errMsg = m.frontmatterErr.Error()
+	}
 
 	fm := m.doc.GetFrontmatter()
 	if fm != nil {
-		for name, value := range fm.Globals {
+		for _, name := range fm.GlobalKeys() {
 			globals = append(globals, components.GlobalVar{
 				Name:       name,
-				Value:      fmt.Sprintf("%v", value),
+				Value:      fmt.Sprintf("%v", fm.Globals[name]),
 				IsExchange: false,
 			})
 		}
-		for name, rate := range fm.Exchange {
+		for _, name := range fm.ExchangeKeys() {
 			globals = append(globals, components.GlobalVar{
 				Name:       name,
-				Value:      rate.StringFixed(4),
+				Value:      fm.Exchange[name].StringFixed(4),
 				IsExchange: true,
 			})
 		}
@@ -150,6 +172,7 @@ func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 		Expanded:   m.globalsExpanded,
 		FocusIndex: m.globalsFocusIdx,
 		Focused:    m.mode == StateGlobals,
+		Error:      errMsg,
 	}
 }
 

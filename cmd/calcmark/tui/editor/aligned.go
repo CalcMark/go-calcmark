@@ -59,6 +59,9 @@ type AlignedLine struct {
 
 	// IsCalc indicates if this line is from a CalcBlock (for preview styling).
 	IsCalc bool
+
+	// IsFrontmatter indicates if this line is from the YAML frontmatter block.
+	IsFrontmatter bool
 }
 
 // AlignedLineKind categorizes how a visual line should be rendered.

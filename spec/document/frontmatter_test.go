@@ -619,6 +619,228 @@ func TestFrontmatter_Serialize_RoundTrip(t *testing.T) {
 	}
 }
 
+// TestFrontmatter_OrderPreservation verifies that globals and exchange rates
+// are iterated in document order (YAML source order), not random map order.
+// This is critical because frontmatter variables must be processed deterministically.
+func TestFrontmatter_OrderPreservation(t *testing.T) {
+	source := `---
+globals:
+  zebra: 1
+  alpha: 2
+  middle: 3
+exchange:
+  JPY_USD: 0.0067
+  EUR_USD: 1.08
+  GBP_USD: 1.27
+---
+x = alpha`
+
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	// Verify GlobalKeys returns YAML document order, not sorted order
+	expectedGlobalKeys := []string{"zebra", "alpha", "middle"}
+	gotGlobalKeys := fm.GlobalKeys()
+	if len(gotGlobalKeys) != len(expectedGlobalKeys) {
+		t.Fatalf("GlobalKeys length: got %d, want %d", len(gotGlobalKeys), len(expectedGlobalKeys))
+	}
+	for i, want := range expectedGlobalKeys {
+		if gotGlobalKeys[i] != want {
+			t.Errorf("GlobalKeys[%d]: got %q, want %q", i, gotGlobalKeys[i], want)
+		}
+	}
+
+	// Verify ExchangeKeys returns YAML document order
+	expectedExchangeKeys := []string{"JPY_USD", "EUR_USD", "GBP_USD"}
+	gotExchangeKeys := fm.ExchangeKeys()
+	if len(gotExchangeKeys) != len(expectedExchangeKeys) {
+		t.Fatalf("ExchangeKeys length: got %d, want %d", len(gotExchangeKeys), len(expectedExchangeKeys))
+	}
+	for i, want := range expectedExchangeKeys {
+		if gotExchangeKeys[i] != want {
+			t.Errorf("ExchangeKeys[%d]: got %q, want %q", i, gotExchangeKeys[i], want)
+		}
+	}
+
+	// Verify SetGlobal preserves insertion order for new keys
+	fm.SetGlobal("new_var", "99")
+	gotGlobalKeys = fm.GlobalKeys()
+	expectedGlobalKeys = append(expectedGlobalKeys, "new_var")
+	if len(gotGlobalKeys) != len(expectedGlobalKeys) {
+		t.Fatalf("GlobalKeys after SetGlobal: got %d, want %d", len(gotGlobalKeys), len(expectedGlobalKeys))
+	}
+	for i, want := range expectedGlobalKeys {
+		if gotGlobalKeys[i] != want {
+			t.Errorf("GlobalKeys[%d] after SetGlobal: got %q, want %q", i, gotGlobalKeys[i], want)
+		}
+	}
+
+	// Verify SetGlobal for existing key doesn't duplicate
+	fm.SetGlobal("alpha", "999")
+	gotGlobalKeys = fm.GlobalKeys()
+	if len(gotGlobalKeys) != len(expectedGlobalKeys) {
+		t.Fatalf("GlobalKeys after update: got %d, want %d (should not add duplicate)", len(gotGlobalKeys), len(expectedGlobalKeys))
+	}
+
+	// Run 100 times to confirm determinism (Go maps randomize order per-run)
+	for i := range 100 {
+		fm2, _, err := ParseFrontmatter(source)
+		if err != nil {
+			t.Fatalf("Parse failed on iteration %d: %v", i, err)
+		}
+		keys := fm2.GlobalKeys()
+		for j, want := range []string{"zebra", "alpha", "middle"} {
+			if keys[j] != want {
+				t.Fatalf("Iteration %d: GlobalKeys[%d] = %q, want %q", i, j, keys[j], want)
+			}
+		}
+	}
+}
+
+// TestFrontmatter_RawSourcePreservation verifies that Serialize() returns the
+// exact raw text from parsing, preserving user formatting like empty lines.
+func TestFrontmatter_RawSourcePreservation(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		// wantLines are the frontmatter lines (after TrimRight + Split), excluding block content.
+		wantLines []string
+	}{
+		{
+			name: "standard formatting",
+			source: `---
+globals:
+  my_var: 42
+---
+x = 10
+`,
+			wantLines: []string{"---", "globals:", "  my_var: 42", "---"},
+		},
+		{
+			name: "extra whitespace in values",
+			source: `---
+globals:
+  my_var:    42
+---
+x = 10
+`,
+			wantLines: []string{"---", "globals:", "  my_var:    42", "---"},
+		},
+		{
+			name: "empty line between entries",
+			source: `---
+globals:
+  a: 1
+
+  b: 2
+---
+x = 10
+`,
+			wantLines: []string{"---", "globals:", "  a: 1", "", "  b: 2", "---"},
+		},
+		{
+			name: "empty line before closing delimiter",
+			source: `---
+globals:
+  my_var: 42
+
+---
+x = 10
+`,
+			wantLines: []string{"---", "globals:", "  my_var: 42", "", "---"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm, _, err := ParseFrontmatter(tt.source)
+			if err != nil {
+				t.Fatalf("ParseFrontmatter failed: %v", err)
+			}
+			if fm == nil {
+				t.Fatal("expected non-nil frontmatter")
+			}
+
+			serialized := fm.Serialize()
+			gotLines := strings.Split(strings.TrimRight(serialized, "\n"), "\n")
+
+			if len(gotLines) != len(tt.wantLines) {
+				t.Errorf("line count: got %d, want %d\ngot:  %q\nwant: %q",
+					len(gotLines), len(tt.wantLines), gotLines, tt.wantLines)
+				return
+			}
+			for i := range gotLines {
+				if gotLines[i] != tt.wantLines[i] {
+					t.Errorf("line %d: got %q, want %q", i, gotLines[i], tt.wantLines[i])
+				}
+			}
+		})
+	}
+}
+
+// TestFrontmatter_RawSourceClearedOnModification verifies that programmatic
+// changes (SetGlobal, SetExchangeRate) clear rawSource so Serialize reconstructs.
+func TestFrontmatter_RawSourceClearedOnModification(t *testing.T) {
+	source := "---\nglobals:\n  my_var:    42\n---\nx = 10\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter failed: %v", err)
+	}
+
+	// Before modification: raw formatting preserved (extra spaces)
+	serialized := fm.Serialize()
+	if !strings.Contains(serialized, "my_var:    42") {
+		t.Errorf("before SetGlobal, expected raw formatting preserved, got %q", serialized)
+	}
+
+	// After SetGlobal: rawSource cleared, Serialize reconstructs with normalized formatting
+	fm.SetGlobal("new_var", "99")
+	serialized = fm.Serialize()
+	if strings.Contains(serialized, "my_var:    42") {
+		t.Errorf("after SetGlobal, expected reconstructed formatting, got %q", serialized)
+	}
+	if !strings.Contains(serialized, "my_var: 42") {
+		t.Errorf("after SetGlobal, expected 'my_var: 42' in output, got %q", serialized)
+	}
+	if !strings.Contains(serialized, "new_var: 99") {
+		t.Errorf("after SetGlobal, expected 'new_var: 99' in output, got %q", serialized)
+	}
+}
+
+// TestFrontmatter_RawSourceRoundTrip verifies that parse→serialize→parse
+// produces identical frontmatter even with non-standard formatting.
+func TestFrontmatter_RawSourceRoundTrip(t *testing.T) {
+	source := "---\nglobals:\n  a: 1\n\n  b: 2\n---\nx = a + b\n"
+
+	// First parse
+	fm1, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("first parse failed: %v", err)
+	}
+
+	// Serialize (should use rawSource)
+	serialized1 := fm1.Serialize()
+
+	// Second parse (from serialized output only)
+	fm2, _, err := ParseFrontmatter(serialized1)
+	if err != nil {
+		t.Fatalf("second parse failed: %v", err)
+	}
+
+	// Globals should match
+	if fm1.Globals["a"] != fm2.Globals["a"] || fm1.Globals["b"] != fm2.Globals["b"] {
+		t.Errorf("globals mismatch:\n  first:  %v\n  second: %v", fm1.Globals, fm2.Globals)
+	}
+
+	// Serialized output should be identical (raw text preserved through round-trip)
+	serialized2 := fm2.Serialize()
+	if serialized1 != serialized2 {
+		t.Errorf("serialized output changed through round-trip:\n  first:  %q\n  second: %q", serialized1, serialized2)
+	}
+}
+
 func TestParseFrontmatter_ErrorWithLineNumber(t *testing.T) {
 	tests := []struct {
 		name        string

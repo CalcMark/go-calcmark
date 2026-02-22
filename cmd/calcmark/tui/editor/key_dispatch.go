@@ -75,6 +75,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.filePicker.Init()
 	}
 
+	// Ctrl+F: Insert Frontmatter (global shortcut)
+	if msg.Type == tea.KeyCtrlF {
+		return m.insertFrontmatter()
+	}
+
 	// Handle command menu toggle (Ctrl+H/F1) - works regardless of mode
 	if key.Matches(msg, m.keys.Help) {
 		if m.mode == StateCommandMenu {
@@ -177,6 +182,10 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCtrlD()
 	case tea.KeyCtrlU:
 		return m.handleCtrlU()
+	case tea.KeyCtrlK:
+		// Delete current line
+		m.deleteLine()
+		return m, nil
 	case tea.KeyCtrlZ:
 		return m.handleUndo()
 	case tea.KeyCtrlY:

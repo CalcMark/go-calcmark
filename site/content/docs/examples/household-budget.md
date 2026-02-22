@@ -1,0 +1,125 @@
+---
+title: "Household Budget"
+summary: "Monthly budget with income, taxes, expenses, savings goals, and the 50/30/20 rule."
+weight: 10
+---
+
+A practical monthly budget for a two-income household, showing currency arithmetic, percentage calculations, and the 50/30/20 rule analysis.
+
+## The CalcMark File
+
+```cm
+# Monthly Household Budget
+
+A practical monthly budget for a two-income household.
+Uses CalcMark's currency support and percentage calculations.
+
+## Income
+
+gross_salary_1 = $6500
+gross_salary_2 = $5200
+total_gross = gross_salary_1 + gross_salary_2
+
+## Tax Withholding
+
+Estimated combined effective tax rates:
+
+federal_rate = 0.18
+state_rate = 0.05
+fica_rate = 0.0765
+
+total_tax_rate = federal_rate + state_rate + fica_rate
+total_taxes = total_gross * total_tax_rate
+net_income = total_gross - total_taxes
+
+## Fixed Expenses
+
+These don't change month to month:
+
+rent = $2200
+car_payment = $450
+car_insurance = $180
+health_insurance = $400
+phone_plans = $120
+internet = $80
+streaming = $45
+
+total_fixed = rent + car_payment + car_insurance + health_insurance + phone_plans + internet + streaming
+
+## Variable Expenses
+
+Estimates based on past spending:
+
+groceries = $800
+gas = $250
+utilities = $150
+dining_out = $300
+entertainment = $200
+personal_care = $100
+household_supplies = $150
+
+total_variable = groceries + gas + utilities + dining_out + entertainment + personal_care + household_supplies
+
+## Savings Goals
+
+emergency_fund_contribution = $500
+retirement_401k = $600
+vacation_fund = $200
+
+total_savings = emergency_fund_contribution + retirement_401k + vacation_fund
+
+## Summary
+
+total_expenses = total_fixed + total_variable
+total_outflow = total_expenses + total_savings
+remaining = net_income - total_outflow
+
+## Budget Health Check
+
+Calculate percentages of net income:
+
+savings_rate = total_savings / net_income * 100
+fixed_pct = total_fixed / net_income * 100
+variable_pct = total_variable / net_income * 100
+
+## The 50/30/20 Rule Check
+
+The 50/30/20 rule suggests:
+- 50% on needs (fixed + essential variable)
+- 30% on wants (discretionary)
+- 20% on savings
+
+needs = total_fixed + groceries + gas + utilities
+wants = dining_out + entertainment + personal_care + streaming
+savings_check = total_savings
+
+needs_pct = needs / net_income * 100
+wants_pct = wants / net_income * 100
+savings_pct = savings_check / net_income * 100
+
+## Emergency Fund Status
+
+Current emergency fund balance:
+
+current_emergency = $8500
+monthly_expenses = total_fixed + total_variable
+months_runway = current_emergency / monthly_expenses
+target_months = 6
+target_fund = monthly_expenses * target_months
+shortfall = target_fund - current_emergency
+months_to_goal = shortfall / emergency_fund_contribution
+```
+
+## What This Demonstrates
+
+- Currency arithmetic with tax rate percentages
+- Section-based organization with markdown headings
+- Derived calculations (savings rate as percentage of net income)
+- Budget rule analysis (50/30/20)
+- Emergency fund runway and goal planning
+
+## Try It
+
+```bash
+cm docs/examples/household-budget.cm
+```

@@ -1,0 +1,57 @@
+baseURL: "https://calcmark.org/"
+languageCode: en-us
+title: CalcMark
+
+# Disable features not needed for a docs site
+disableKinds:
+  - taxonomy
+  - term
+  - RSS
+
+# Auto "last updated" dates from git history
+enableGitInfo: true
+
+params:
+  description: "Calculations embedded in markdown documents."
+  githubURL: "https://github.com/CalcMark/go-calcmark"
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    noClasses: false
+    codeFences: true
+    guessSyntax: false
+    tabWidth: 4
+
+menus:
+  main:
+    - name: Docs
+      url: /docs/
+      weight: 10
+    - name: Examples
+      url: /docs/examples/
+      weight: 20
+    - name: GitHub
+      url: https://github.com/CalcMark/go-calcmark
+      weight: 30
+      params:
+        external: true
+
+  docs:
+    - name: Getting Started
+      url: /docs/getting-started/
+      weight: 10
+    - name: User Guide
+      url: /docs/user-guide/
+      weight: 20
+    - name: Language Reference
+      url: /docs/language-reference/
+      weight: 30
+    - name: Configuration
+      url: /docs/configuration/
+      weight: 40
+    - name: Examples
+      url: /docs/examples/
+      weight: 50

@@ -11,23 +11,45 @@ import (
 // LineResult represents a line's evaluation result.
 // This is the bridge between the document model and the view layer.
 type LineResult struct {
-	LineNum    int
-	Source     string
-	IsCalc     bool
-	VarName    string
-	Value      string
-	Error      string               // Legacy error string (for backwards compatibility)
-	Diagnostic *document.Diagnostic // Structured diagnostic with code, message, position
-	BlockID    string
-	WasChanged bool
-	IsBlocked  bool // True if this error is caused by an undefined variable from a prior error
+	LineNum       int
+	Source        string
+	IsCalc        bool
+	IsFrontmatter bool // True if this line is part of the YAML frontmatter block
+	VarName       string
+	Value         string
+	Error         string               // Legacy error string (for backwards compatibility)
+	Diagnostic    *document.Diagnostic // Structured diagnostic with code, message, position
+	BlockID       string
+	WasChanged    bool
+	IsBlocked     bool // True if this error is caused by an undefined variable from a prior error
 }
 
 // GetLineResults returns evaluation results for all lines.
 // Each source line maps to its corresponding statement result when available.
+// Frontmatter lines are prepended as empty (non-calc) results to match GetLines().
 func (m *Model) GetLineResults() []LineResult {
 	var results []LineResult
 	lineNum := 0
+
+	// Prepend empty results for frontmatter lines to maintain alignment
+	// with GetLines() which includes frontmatter
+	fmCount := m.frontmatterLineCount()
+	if fmCount > 0 {
+		allLines := m.GetLines()
+		for i := 0; i < fmCount; i++ {
+			source := ""
+			if i < len(allLines) {
+				source = allLines[i]
+			}
+			results = append(results, LineResult{
+				LineNum:       lineNum,
+				Source:        source,
+				IsCalc:        false,
+				IsFrontmatter: true,
+			})
+			lineNum++
+		}
+	}
 
 	// Track variables that failed to evaluate (for cascading error detection)
 	// Per CONTEXT.md: "Cascading errors: show root cause only, dependents show 'blocked'"

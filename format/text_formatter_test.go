@@ -113,6 +113,135 @@ func TestTextFormatterExtensions(t *testing.T) {
 	}
 }
 
+// TestTextFormatterFrontmatterVerbose tests verbose mode includes frontmatter section.
+func TestTextFormatterFrontmatterVerbose(t *testing.T) {
+	source := `---
+globals:
+  tax_rate: 10%
+---
+price = 100
+total = price * (1 + tax_rate)
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	// Evaluate
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &TextFormatter{}
+	opts := Options{Verbose: true}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain frontmatter header
+	if !strings.Contains(output, "--- Frontmatter ---") {
+		t.Errorf("Expected verbose output to contain '--- Frontmatter ---', got:\n%s", output)
+	}
+
+	// Should contain the global variable
+	if !strings.Contains(output, "tax_rate") {
+		t.Errorf("Expected verbose output to contain 'tax_rate', got:\n%s", output)
+	}
+
+	// Should contain the calc results
+	if !strings.Contains(output, "price = 100") {
+		t.Errorf("Expected verbose output to contain 'price = 100', got:\n%s", output)
+	}
+}
+
+// TestTextFormatterFrontmatterNonVerbose tests that non-verbose mode skips frontmatter.
+func TestTextFormatterFrontmatterNonVerbose(t *testing.T) {
+	source := `---
+globals:
+  tax_rate: 10%
+---
+price = 100
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	// Evaluate
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &TextFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Non-verbose should NOT contain frontmatter header
+	if strings.Contains(output, "--- Frontmatter ---") {
+		t.Errorf("Non-verbose output should not contain '--- Frontmatter ---', got:\n%s", output)
+	}
+
+	// Should still contain the calc result
+	if !strings.Contains(output, "100") {
+		t.Errorf("Expected output to contain '100', got:\n%s", output)
+	}
+}
+
+// TestTextFormatterFrontmatterExchange tests exchange rates in verbose mode.
+func TestTextFormatterFrontmatterExchange(t *testing.T) {
+	source := `---
+exchange:
+  USD_EUR: 0.92
+---
+amount = 100 USD
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	// Evaluate
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &TextFormatter{}
+	opts := Options{Verbose: true}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain frontmatter header
+	if !strings.Contains(output, "--- Frontmatter ---") {
+		t.Errorf("Expected verbose output to contain '--- Frontmatter ---', got:\n%s", output)
+	}
+
+	// Should contain exchange rate info
+	if !strings.Contains(output, "USD") || !strings.Contains(output, "EUR") {
+		t.Errorf("Expected verbose output to contain exchange rate info, got:\n%s", output)
+	}
+}
+
 // TestTextFormatterMultipleBlocks tests formatting multiple blocks
 func TestTextFormatterMultipleBlocks(t *testing.T) {
 	source := `x = 10
