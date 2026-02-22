@@ -269,7 +269,26 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		}
 		pl := previewLines[j]
 
-		// In edit mode, handle cursor line specially to match source pane's edit rendering
+		// Frontmatter lines: always render globals panel content inline,
+		// regardless of cursor position. The globals panel is an overlay that
+		// replaces the empty preview content of frontmatter lines — the editBuf
+		// cursor-line path must not interfere with this substitution.
+		if pl.isFrontmatter {
+			var completeLine string
+			if globalsPanelIdx < len(globalsPanelLines) {
+				completeLine = ensureFullWidth(globalsPanelLines[globalsPanelIdx], width, pvBg)
+				globalsPanelIdx++
+			} else {
+				// More frontmatter lines than globals content — fill with background
+				completeLine = ensureFullWidth("", width, pvBg)
+			}
+			allLines = append(allLines, completeLine)
+			linesWritten++
+			continue
+		}
+
+		// In edit mode, handle cursor line specially to match source pane's edit rendering.
+		// This only applies to non-frontmatter lines (calc blocks, markdown).
 		if m.editBuf != "" && pl.sourceLineNum == m.cursorLine {
 			if !cursorLineProcessed {
 				// First occurrence of cursor line - output editLineCount lines
@@ -296,21 +315,6 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 				cursorLineProcessed = true
 			}
 			// Skip all pre-computed lines for cursor (we've already output editLineCount lines)
-			continue
-		}
-
-		// Frontmatter lines: render globals panel content inline
-		if pl.isFrontmatter {
-			var completeLine string
-			if globalsPanelIdx < len(globalsPanelLines) {
-				completeLine = ensureFullWidth(globalsPanelLines[globalsPanelIdx], width, pvBg)
-				globalsPanelIdx++
-			} else {
-				// More frontmatter lines than globals content — fill with background
-				completeLine = ensureFullWidth("", width, pvBg)
-			}
-			allLines = append(allLines, completeLine)
-			linesWritten++
 			continue
 		}
 
