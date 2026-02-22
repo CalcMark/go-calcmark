@@ -11,16 +11,16 @@ import (
 // (help, export, command menu, file picker). Using a shared struct eliminates
 // duplicated border/background definitions and ensures visual consistency.
 type OverlayStyle struct {
-	InnerWidth  int
-	BorderStyle lipgloss.Style
-	ItemBg      lipgloss.TerminalColor
-	SelectedBg  lipgloss.TerminalColor
-	TopBorder   string
+	InnerWidth   int
+	BorderStyle  lipgloss.Style
+	ItemBg       lipgloss.TerminalColor
+	SelectedBg   lipgloss.TerminalColor
+	TopBorder    string
 	BottomBorder string
-	LeftBorder  string
-	RightBorder string
-	SepLine     string
-	HintStyle   lipgloss.Style
+	LeftBorder   string
+	RightBorder  string
+	SepLine      string
+	HintStyle    lipgloss.Style
 }
 
 // NewOverlayStyle creates an OverlayStyle with the given inner width.
