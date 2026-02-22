@@ -117,12 +117,12 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			content = padToWidth("", contentWidth, srcBg)
 		} else if sl.isWrapped {
 			// Wrapped continuation line - apply block-level tint then selection highlighting
-			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc)
+			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
 			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, tinted)
 			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		} else {
 			// Normal source line - apply block-level tint then selection highlighting
-			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc)
+			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
 			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, tinted)
 			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		}
@@ -307,17 +307,21 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	detector := document.NewDetector()
 	isActuallyCalc, _ := detector.IsCalculation(r.Source)
 
+	pvBg := m.previewPaneBg()
+
 	if r.Error != "" && isActuallyCalc {
 		// Show full error message - per CONTEXT.md decision
 		// "Show full error message in preview (not abbreviated)"
 		errStyle := lipgloss.NewStyle().
-			Foreground(theme.CalcErrorFg)
+			Foreground(theme.CalcErrorFg).
+			Background(pvBg)
 
 		// Check if this is a blocked (cascading) error
 		if r.IsBlocked {
 			// Blocked errors show brief indicator - root cause shown elsewhere
 			blockedStyle := lipgloss.NewStyle().
-				Foreground(theme.CalcBlockedFg)
+				Foreground(theme.CalcBlockedFg).
+				Background(pvBg)
 			return blockedStyle.Render("⊘ blocked")
 		}
 
@@ -352,21 +356,24 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	// Use themed colors for calculation results
 	valueStyle := m.styles.CalcValue
 
+	// Space with background to prevent terminal bleed-through
+	sp := lipgloss.NewStyle().Background(pvBg).Render(" ")
+
 	// Changed indicator: asterisk in yellow for values that were recomputed
 	changedMarker := ""
 	if r.WasChanged {
-		valueStyle = m.styles.Changed
-		changedMarker = m.styles.Changed.Bold(true).Render("* ")
+		valueStyle = m.styles.Changed.Background(pvBg)
+		changedMarker = m.styles.Changed.Background(pvBg).Bold(true).Render("* ")
 	}
 
 	switch m.previewMode {
 	case PreviewFull:
 		// Full mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
-			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + " " + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
+			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value)
 		}
 		// Anonymous calculation (no variable assignment) - show arrow without placeholder
-		return changedMarker + m.styles.CalcArrow.Render("→") + " " + valueStyle.Render(r.Value)
+		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value)
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
@@ -380,7 +387,7 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 // applyBlockTint applies a subtle foreground color tint to source line text
 // based on the block type: frontmatter (muted gray), calc (subtle blue),
 // or markdown (default text color — no tint applied).
-func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool) string {
+func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool, bg lipgloss.TerminalColor) string {
 	if content == "" {
 		return content
 	}
@@ -392,10 +399,12 @@ func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool) str
 	case isCalc:
 		fg = theme.SourceCalc
 	default:
-		// Markdown lines use SourceMarkdown which matches the default text color,
-		// so applying it would be a no-op. Skip styling for performance.
-		return content
+		// Markdown lines — apply background to prevent terminal bleed-through
+		return lipgloss.NewStyle().
+			Foreground(theme.SourceMarkdown).
+			Background(bg).
+			Render(content)
 	}
 
-	return lipgloss.NewStyle().Foreground(fg).Render(content)
+	return lipgloss.NewStyle().Foreground(fg).Background(bg).Render(content)
 }

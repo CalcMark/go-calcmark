@@ -212,7 +212,7 @@ var (
 
 	SourceFrontmatter = lipgloss.AdaptiveColor{
 		Light: "#9CA3AF",
-		Dark:  "#6B7280",
+		Dark:  "#8B95A3",
 	}
 
 	SourceMarkdown = lipgloss.AdaptiveColor{

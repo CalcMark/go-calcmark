@@ -37,7 +37,9 @@ func (m Model) View() string {
 	if m.inputMode == shared.InputCommand {
 		modeStyle := lipgloss.NewStyle().
 			Foreground(theme.Command).
-			Italic(true)
+			Background(theme.SourcePaneBg).
+			Italic(true).
+			Width(m.width)
 		b.WriteString(modeStyle.Render("  COMMAND MODE - Type command or Esc to exit"))
 		b.WriteString("\n")
 		historyHeight--
@@ -61,20 +63,29 @@ func (m Model) View() string {
 	} else {
 		varCompletions := m.getVariableCompletions()
 		if len(varCompletions) > 0 {
-			b.WriteString(m.styles.Hint.Render("Hints: " + strings.Join(varCompletions, " | ")))
+			hintStyle := lipgloss.NewStyle().
+				Foreground(theme.Hint).
+				Background(theme.SourcePaneBg).
+				Width(m.width)
+			b.WriteString(hintStyle.Render("Hints: " + strings.Join(varCompletions, " | ")))
 			b.WriteString("\n")
 		}
 	}
 
 	// Error display (if any)
 	if m.err != nil {
-		errorStyle := lipgloss.NewStyle().Foreground(theme.Error)
+		errorStyle := lipgloss.NewStyle().
+			Foreground(theme.Error).
+			Background(theme.SourcePaneBg).
+			Width(m.width)
 		b.WriteString(errorStyle.Render(fmt.Sprintf("⚠ %v", m.err)))
 		b.WriteString("\n")
 	}
 
 	// Separator line
-	separatorStyle := lipgloss.NewStyle().Foreground(theme.DividerFg)
+	separatorStyle := lipgloss.NewStyle().
+		Foreground(theme.DividerFg).
+		Background(theme.SourcePaneBg)
 	separator := strings.Repeat("─", m.width)
 	b.WriteString(separatorStyle.Render(separator))
 	b.WriteString("\n")
@@ -82,6 +93,7 @@ func (m Model) View() string {
 	// Help footer
 	helpStyle := lipgloss.NewStyle().
 		Foreground(theme.Hint).
+		Background(theme.SourcePaneBg).
 		Width(m.width)
 	helpText := RenderHelpLine(m.inputMode == shared.InputCommand, m.width)
 	b.WriteString(helpStyle.Render(helpText))
@@ -97,13 +109,18 @@ func (m Model) renderScrollingHistory(maxLines int) string {
 		// Show welcome message for empty REPL
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(theme.Hint).
-			Italic(true)
+			Background(theme.SourcePaneBg).
+			Italic(true).
+			Width(m.width)
 		b.WriteString(emptyStyle.Render("  Type an expression and press Enter"))
 		b.WriteString("\n")
 		b.WriteString(emptyStyle.Render("  Example: salary = $85000"))
 		b.WriteString("\n")
 		b.WriteString(emptyStyle.Render("           monthly = salary / 12"))
-		b.WriteString("\n\n")
+		b.WriteString("\n")
+		blankLine := lipgloss.NewStyle().Background(theme.SourcePaneBg).Width(m.width).Render("")
+		b.WriteString(blankLine)
+		b.WriteString("\n")
 		return b.String()
 	}
 
@@ -112,24 +129,43 @@ func (m Model) renderScrollingHistory(maxLines int) string {
 	visibleEntries := m.calculateVisibleEntries(maxLines)
 
 	// Render visible entries
+	lineBg := theme.SourcePaneBg
 	for _, entry := range visibleEntries {
-		// Input line with prompt
-		promptStyle := lipgloss.NewStyle().Foreground(theme.PromptFg)
-		b.WriteString(promptStyle.Render("> "))
-		b.WriteString(entry.Input)
+		// Input line with prompt — render as full-width styled line
+		promptStyle := lipgloss.NewStyle().
+			Foreground(theme.PromptFg).
+			Background(lineBg)
+		inputStyle := lipgloss.NewStyle().
+			Foreground(theme.Text).
+			Background(lineBg)
+		inputLine := promptStyle.Render("> ") + inputStyle.Render(entry.Input)
+		// Pad to full width
+		inputWidth := lipgloss.Width(inputLine)
+		if inputWidth < m.width {
+			inputLine += lipgloss.NewStyle().Background(lineBg).Render(strings.Repeat(" ", m.width-inputWidth))
+		}
+		b.WriteString(inputLine)
 		b.WriteString("\n")
 
 		// Output line (indented)
 		if entry.Output != "" {
-			outputStyle := lipgloss.NewStyle().Foreground(theme.TextBright)
+			var outputLine string
 			if entry.IsError {
-				outputStyle = lipgloss.NewStyle().Foreground(theme.Error)
-				b.WriteString("  ")
-				b.WriteString(outputStyle.Render("⚠ " + entry.Output))
+				outputStyle := lipgloss.NewStyle().
+					Foreground(theme.Error).
+					Background(lineBg)
+				outputLine = outputStyle.Render("  ⚠ " + entry.Output)
 			} else {
-				b.WriteString("  ")
-				b.WriteString(outputStyle.Render(entry.Output))
+				outputStyle := lipgloss.NewStyle().
+					Foreground(theme.TextBright).
+					Background(lineBg)
+				outputLine = outputStyle.Render("  " + entry.Output)
 			}
+			outWidth := lipgloss.Width(outputLine)
+			if outWidth < m.width {
+				outputLine += lipgloss.NewStyle().Background(lineBg).Render(strings.Repeat(" ", m.width-outWidth))
+			}
+			b.WriteString(outputLine)
 			b.WriteString("\n")
 		}
 	}

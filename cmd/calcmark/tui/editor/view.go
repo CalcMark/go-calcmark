@@ -36,6 +36,7 @@ func (m Model) View() string {
 			helpView,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
+			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
 		)
 
 	case StateCommandMenu:
@@ -45,6 +46,7 @@ func (m Model) View() string {
 			menuPopup,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
+			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
 		)
 
 	case StateFilePicker:
@@ -54,6 +56,7 @@ func (m Model) View() string {
 			pickerOverlay,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
+			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
 		)
 
 	case StateExport:
@@ -63,6 +66,7 @@ func (m Model) View() string {
 			exportOverlay,
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
+			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
 		)
 	}
 

@@ -156,20 +156,25 @@ func (t ThemeConfig) BuildStyles() Styles {
 			Foreground(theme.CurrentLineFg),
 
 		LineNumber: lipgloss.NewStyle().
-			Foreground(theme.LineNumber),
+			Foreground(theme.LineNumber).
+			Background(sourcePaneBg),
 
 		SourceText: lipgloss.NewStyle().
-			Foreground(theme.Text),
+			Foreground(theme.Text).
+			Background(sourcePaneBg),
 
 		// Calculation result display styles
 		CalcVarName: lipgloss.NewStyle().
-			Foreground(theme.ResultMuted),
+			Foreground(theme.ResultMuted).
+			Background(previewPaneBg),
 
 		CalcArrow: lipgloss.NewStyle().
-			Foreground(theme.ResultArrow),
+			Foreground(theme.ResultArrow).
+			Background(previewPaneBg),
 
 		CalcValue: lipgloss.NewStyle().
-			Foreground(output),
+			Foreground(output).
+			Background(previewPaneBg),
 
 		// Markdown preview styles
 		MdText: lipgloss.NewStyle().
@@ -234,11 +239,14 @@ func (t ThemeConfig) BuildStyles() Styles {
 
 		// Source pane syntax highlighting (block-level)
 		SourceFrontmatter: lipgloss.NewStyle().
-			Foreground(theme.SourceFrontmatter),
+			Foreground(theme.SourceFrontmatter).
+			Background(sourcePaneBg),
 		SourceMarkdown: lipgloss.NewStyle().
-			Foreground(theme.SourceMarkdown),
+			Foreground(theme.SourceMarkdown).
+			Background(sourcePaneBg),
 		SourceCalc: lipgloss.NewStyle().
-			Foreground(theme.SourceCalc),
+			Foreground(theme.SourceCalc).
+			Background(sourcePaneBg),
 	}
 }
 

@@ -26,7 +26,9 @@ type OverlayStyle struct {
 // NewOverlayStyle creates an OverlayStyle with the given inner width.
 // All colors come from the palette so they adapt to light/dark mode.
 func NewOverlayStyle(innerWidth int) OverlayStyle {
-	bs := lipgloss.NewStyle().Foreground(theme.OverlayBorder)
+	bs := lipgloss.NewStyle().
+		Foreground(theme.OverlayBorder).
+		Background(theme.OverlayBg)
 
 	return OverlayStyle{
 		InnerWidth:   innerWidth,

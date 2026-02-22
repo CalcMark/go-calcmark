@@ -36,10 +36,12 @@ func (m Model) renderGlobalsPanel(width int) string {
 		left := lipgloss.NewStyle().
 			Bold(true).
 			Foreground(headerFg).
+			Background(paneBg).
 			Render(indicator + text)
 
 		right := lipgloss.NewStyle().
 			Foreground(theme.Hint).
+			Background(paneBg).
 			Render(hint)
 
 		// Space between left and right with background
@@ -69,10 +71,12 @@ func (m Model) renderGlobalsPanel(width int) string {
 	left := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(headerFg).
+		Background(paneBg).
 		Render(indicator + text)
 
 	right := lipgloss.NewStyle().
 		Foreground(theme.Hint).
+		Background(paneBg).
 		Render(hint)
 
 	space := width - lipgloss.Width(left) - lipgloss.Width(right)
@@ -89,6 +93,7 @@ func (m Model) renderGlobalsPanel(width int) string {
 	if hasError {
 		errStyle := lipgloss.NewStyle().
 			Foreground(theme.Warning).
+			Background(paneBg).
 			Italic(true)
 		errLine := errStyle.Render("  " + state.Error)
 		errLine = ensureFullWidth(errLine, width, paneBg)
@@ -99,6 +104,7 @@ func (m Model) renderGlobalsPanel(width int) string {
 	if globalsCount == 0 {
 		noGlobalsLine := lipgloss.NewStyle().
 			Foreground(theme.Hint).
+			Background(paneBg).
 			Italic(true).
 			Render("  (no globals defined)")
 		noGlobalsLine = ensureFullWidth(noGlobalsLine, width, paneBg)
@@ -106,6 +112,7 @@ func (m Model) renderGlobalsPanel(width int) string {
 		return strings.Join(allLines, "\n")
 	}
 
+	prefixStyle := lipgloss.NewStyle().Background(paneBg)
 	for i, g := range state.Globals {
 		prefix := "  "
 		if state.Focused && i == state.FocusIndex {
@@ -113,9 +120,11 @@ func (m Model) renderGlobalsPanel(width int) string {
 		}
 
 		nameStyle := lipgloss.NewStyle().
-			Foreground(theme.GlobalsVarName)
+			Foreground(theme.GlobalsVarName).
+			Background(paneBg)
 		valueStyle := lipgloss.NewStyle().
-			Foreground(theme.Result)
+			Foreground(theme.Result).
+			Background(paneBg)
 
 		if g.IsExchange {
 			nameStyle = nameStyle.Foreground(theme.GlobalsExchange)
@@ -123,7 +132,7 @@ func (m Model) renderGlobalsPanel(width int) string {
 
 		// Format: "  name          value"
 		name := fmt.Sprintf("%-18s", g.Name)
-		globalLine := prefix + nameStyle.Render(name) + valueStyle.Render(g.Value)
+		globalLine := prefixStyle.Render(prefix) + nameStyle.Render(name) + valueStyle.Render(g.Value)
 		globalLine = ensureFullWidth(globalLine, width, paneBg)
 		allLines = append(allLines, globalLine)
 	}
