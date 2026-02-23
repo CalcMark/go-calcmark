@@ -2,6 +2,10 @@ package editor
 
 import (
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestEditOperation_Reverse tests that operations reverse correctly.
@@ -791,4 +795,69 @@ func TestUndoManager_CreateGroupCmd(t *testing.T) {
 	// We can't easily test the tea.Tick behavior without running the bubbletea
 	// runtime, but we can verify the command is created and the groupID is captured
 	// The actual timer firing and message handling is tested in integration tests
+}
+
+// TestUndoResetsEditBufLoaded verifies that undo resets editBufLoaded
+// so the cursor line's content is freshly loaded from the document.
+//
+// Bug scenario (P0-01 from architecture review):
+//  1. Type "abc" on line 0 → editBuf="abc", editBufLoaded=true
+//  2. Debounce saves to document
+//  3. Undo → cursor restored to line 0, document reverts to ""
+//  4. BUT editBufLoaded is still true and editBuf has stale content
+//     from applyOperationReverse (which operated on a different line
+//     or left editBuf with the reversed content).
+//  5. View renders stale editBuf instead of loading fresh from document.
+func TestUndoResetsEditBufLoaded(t *testing.T) {
+	doc, err := document.NewDocument("\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Type "abc" on line 0
+	for _, r := range "abc" {
+		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m = result.(Model)
+	}
+
+	if m.editBuf != "abc" {
+		t.Fatalf("After typing: editBuf=%q, want 'abc'", m.editBuf)
+	}
+	if !m.editBufLoaded {
+		t.Fatal("After typing: editBufLoaded should be true")
+	}
+
+	// Simulate debounce saving to document
+	m.transitionToProcessing()
+
+	// Verify document has "abc"
+	lines := m.GetLines()
+	if len(lines) == 0 || lines[0] != "abc" {
+		t.Fatalf("After debounce: document line 0=%q, want 'abc'", lines[0])
+	}
+
+	// Now undo — should revert document to "" and reset editBufLoaded
+	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlZ})
+	m = result.(Model)
+
+	// After undo, editBufLoaded MUST be true — undo eagerly reloads editBuf
+	// from the document for the restored cursor line.
+	if !m.editBufLoaded {
+		t.Error("After undo: editBufLoaded must be true (eagerly loaded from document)")
+	}
+
+	// The document should have reverted
+	lines = m.GetLines()
+	if len(lines) > 0 && lines[0] != "" {
+		t.Errorf("After undo: document line 0=%q, want empty", lines[0])
+	}
+
+	// editBuf should match the document's content for the cursor line
+	if m.editBuf != "" {
+		t.Errorf("After undo: editBuf=%q, want empty (matching document)", m.editBuf)
+	}
 }
