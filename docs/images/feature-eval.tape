@@ -1,0 +1,34 @@
+# feature-eval.tape - Shows cm eval with a budget calculation
+# Regenerate: vhs docs/images/feature-eval.tape
+# For the "Terminal-native" feature card on the homepage.
+Output docs/images/feature-eval.gif
+
+Set Shell "bash"
+Set FontSize 16
+Set Width 700
+Set Height 350
+Set Theme "Catppuccin Mocha"
+Set Padding 10
+Set TypingSpeed 60ms
+Set Framerate 12
+
+Require cm
+
+# Create demo file reliably (printf, not heredoc)
+Hide
+Type "printf 'income = $5000\nrent = $1500\ngroceries = $400\nsavings = income * 0.20\nremaining = income - rent - groceries - savings\n' > /tmp/cm-eval-demo.cm"
+Enter
+Sleep 300ms
+Show
+
+# Evaluate the file
+Type "cm eval /tmp/cm-eval-demo.cm"
+Enter
+Sleep 3s
+
+# Clean up
+Hide
+Type "rm /tmp/cm-eval-demo.cm"
+Enter
+Show
+Sleep 500ms

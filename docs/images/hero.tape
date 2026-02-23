@@ -1,6 +1,6 @@
-# hero.tape - CalcMark hero demo GIF
+# hero.tape - CalcMark hero demo GIF (TUI editor session)
 # Regenerate: vhs docs/images/hero.tape
-# Shows cm eval with a budget calculation featuring variables, expressions, and currency formatting.
+# Shows the TUI editor with live-updating variables and results pane.
 Output docs/images/hero.gif
 
 Set Shell "bash"
@@ -9,43 +9,38 @@ Set Width 900
 Set Height 500
 Set Theme "Catppuccin Mocha"
 Set Padding 15
-Set TypingSpeed 50ms
+Set TypingSpeed 60ms
 Set Framerate 12
 
 Require cm
 
-# Create a demo file with calculations
+# Launch editor with no file (opens blank document)
 Hide
-Type `cat << 'EOF' > /tmp/cm-hero-demo.cm`
+Type "cm edit"
 Enter
-Sleep 100ms
-Type "# Monthly Budget"
-Enter
-Type ""
-Enter
+Show
+
+# Wait for the TUI editor to render
+Sleep 2s
+
+# Build a budget calculation line by line, showing live results
 Type "income = $5000"
 Enter
+Sleep 800ms
+
 Type "rent = $1500"
 Enter
+Sleep 800ms
+
 Type "groceries = $400"
 Enter
+Sleep 800ms
+
 Type "savings = income * 0.20"
 Enter
+Sleep 800ms
+
 Type "remaining = income - rent - groceries - savings"
-Enter
-Type "EOF"
-Enter
-Sleep 200ms
-Show
+Sleep 2s
 
-# Evaluate the file
-Type "cm eval /tmp/cm-hero-demo.cm"
-Enter
-Sleep 3s
-
-# Clean up
-Hide
-Type "rm /tmp/cm-hero-demo.cm"
-Enter
-Show
-Sleep 500ms
+Ctrl+C
