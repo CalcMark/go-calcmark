@@ -120,3 +120,38 @@ func TestArrowKeyNavigationWithKeyMsg(t *testing.T) {
 
 	t.Log("✓ Arrow keys work correctly with KeyMsg events")
 }
+
+// --- Test moved from model_test.go ---
+
+func TestUTF8CursorMovement(t *testing.T) {
+	doc, _ := document.NewDocument("日本語") // 3 characters, 9 bytes
+	m := New(doc)
+
+	// Load the line
+	m.loadCurrentLineIntoEditBuffer()
+
+	// Cursor should start at 0
+	if m.cursorCol != 0 {
+		t.Errorf("Initial cursorCol should be 0, got %d", m.cursorCol)
+	}
+
+	// Move right 3 times should reach end of "日本語"
+	for range 3 {
+		rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+		newModel, _ := m.Update(rightMsg)
+		m = newModel.(Model)
+	}
+
+	// cursorCol should be 3 (3 runes), not 9 (9 bytes)
+	if m.cursorCol != 3 {
+		t.Errorf("After 3 right arrows, cursorCol should be 3 (runes), got %d", m.cursorCol)
+	}
+
+	// Moving right again should not move (at end)
+	rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+	newModel, _ := m.Update(rightMsg)
+	m = newModel.(Model)
+
+	// Should still be at position 3 (or moved to next line at 0)
+	t.Logf("After extra right: cursorCol=%d, cursorLine=%d", m.cursorCol, m.cursorLine)
+}
