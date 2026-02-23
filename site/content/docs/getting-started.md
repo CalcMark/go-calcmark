@@ -9,7 +9,6 @@ weight: 10
 **macOS/Linux (Homebrew):**
 
 ```bash
-brew tap calcmark/tap https://github.com/CalcMark/homebrew-tap
 brew install calcmark/tap/calcmark
 ```
 
