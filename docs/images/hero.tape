@@ -1,5 +1,6 @@
-# hero.tape - CalcMark demo GIF
-# Run from project root: vhs docs/images/hero.tape
+# hero.tape - CalcMark hero demo GIF
+# Regenerate: vhs docs/images/hero.tape
+# Shows cm eval with a budget calculation featuring variables, expressions, and currency formatting.
 Output docs/images/hero.gif
 
 Set Shell "bash"
@@ -11,10 +12,13 @@ Set Padding 15
 Set TypingSpeed 50ms
 Set Framerate 12
 
+Require cm
+
 # Create a demo file with calculations
-Type "cat << 'EOF' > demo.cm"
+Hide
+Type `cat << 'EOF' > /tmp/cm-hero-demo.cm`
 Enter
-Sleep 200ms
+Sleep 100ms
 Type "# Monthly Budget"
 Enter
 Type ""
@@ -23,26 +27,25 @@ Type "income = $5000"
 Enter
 Type "rent = $1500"
 Enter
-Type "utilities = $200"
-Enter
 Type "groceries = $400"
-Enter
-Type ""
 Enter
 Type "savings = income * 0.20"
 Enter
-Type "remaining = income - rent - utilities - groceries - savings"
+Type "remaining = income - rent - groceries - savings"
 Enter
 Type "EOF"
 Enter
-Sleep 500ms
+Sleep 200ms
+Show
 
 # Evaluate the file
-Type "./cm eval demo.cm"
+Type "cm eval /tmp/cm-hero-demo.cm"
 Enter
-Sleep 2s
+Sleep 3s
 
 # Clean up
-Type "rm demo.cm"
+Hide
+Type "rm /tmp/cm-hero-demo.cm"
 Enter
+Show
 Sleep 500ms
