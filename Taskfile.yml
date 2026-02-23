@@ -214,13 +214,26 @@ tasks:
       - go mod tidy
 
   # Website tasks
+  generate-docs:
+    desc: Generate site data from feature registry
+    cmds:
+      - go run ./cmd/docgen
+    sources:
+      - spec/features/registry.go
+    generates:
+      - site/data/features.json
+
   site:
     desc: Start Hugo dev server for the website
+    deps:
+      - generate-docs
     cmds:
       - hugo server --source site --buildDrafts
 
   site:build:
     desc: Build the website
+    deps:
+      - generate-docs
     cmds:
       - hugo --source site --minify
       - echo 'Site built to site/public/'

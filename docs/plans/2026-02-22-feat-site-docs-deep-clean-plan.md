@@ -54,10 +54,10 @@ Add missing entries to `spec/features/registry.go`:
 
 Create `cmd/docgen/main.go` -- a Go program that:
 
-- [ ] Imports `spec/features` package
-- [ ] Creates a `features.NewRegistry()`
-- [ ] Iterates all features, grouped by category
-- [ ] Outputs `site/data/features.json` with structure:
+- [x] Imports `spec/features` package
+- [x] Creates a `features.NewRegistry()`
+- [x] Iterates all features, grouped by category
+- [x] Outputs `site/data/features.json` with structure:
 
 ```json
 {
@@ -84,8 +84,8 @@ Create `cmd/docgen/main.go` -- a Go program that:
 }
 ```
 
-- [ ] Each entry gets an `anchor` field (kebab-cased name) for deep linking
-- [ ] Add Taskfile entries:
+- [x] Each entry gets an `anchor` field (kebab-cased name) for deep linking
+- [x] Add Taskfile entries:
 
 ```yaml
 generate-docs:
@@ -113,9 +113,9 @@ site:
     - hugo server --source site --buildDrafts
 ```
 
-- [ ] Add `site/data/` to `.gitignore` (generated, not checked in)
-- [ ] Write a test for docgen that verifies the JSON output has expected structure
-- [ ] Add a cross-registry completeness check: the docgen test should verify that every function in `impl/interpreter/functions.go` BuiltinFunctions has a corresponding entry in `spec/features/registry.go` (prevents future drift)
+- [x] Add `site/data/` to `.gitignore` (generated, not checked in)
+- [x] Write a test for docgen that verifies the JSON output has expected structure
+- [x] Add a cross-registry completeness check: the docgen test should verify that every function in `impl/interpreter/functions.go` BuiltinFunctions has a corresponding entry in `spec/features/registry.go` (prevents future drift)
 
 **New files:**
 - `cmd/docgen/main.go`

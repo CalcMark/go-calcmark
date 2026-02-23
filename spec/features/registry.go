@@ -140,7 +140,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "avg(a, b, c, ...)",
 			Description: "Calculate the average of numbers",
-			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "average of", Parseable: true}},
+			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "mean", Parseable: false}, {Name: "average of", Parseable: true}},
 			Example:     "avg(10, 20, 30) → 20",
 		},
 		{
