@@ -1,60 +1,65 @@
 ---
 title: "User Guide"
-summary: "Complete guide to CalcMark features, REPL commands, and workflows."
+summary: "Complete guide to CalcMark features, editor shortcuts, and workflows."
 weight: 20
 ---
 
-## REPL Commands
+## Editor Shortcuts
 
-Press `:` to enter command mode, then type a command:
+The CalcMark editor provides keyboard shortcuts for common actions. Press **F1** for full help inside the editor.
 
-| Command | Description |
-|---------|-------------|
-| `:help` | Show help topics |
-| `:help units` | List all supported units |
-| `:help functions` | List available functions |
-| `:open <file>` | Load a CalcMark file |
-| `:save <file.cm>` | Save session as CalcMark |
-| `:output <file>` | Export to HTML, Markdown, or JSON |
-| `:pin` | Pin all variables to the sidebar |
-| `:pin <var>` | Pin a specific variable |
-| `:unpin <var>` | Unpin a variable |
-| `:md` | Enter multi-line markdown mode |
-| `:quit` | Exit |
+### File
 
-### Keyboard Shortcuts
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+S | Save document |
+| Ctrl+O | Open file |
+| Ctrl+E | Export to format |
+| Ctrl+Q | Quit editor |
 
-- `Esc` - Exit current mode (command, markdown, help)
-- `Esc Esc` - Clear input line (double-tap quickly)
-- `Ctrl+C` or `Ctrl+D` - Quit
-- `Up/Down` - Navigate command history
-- `PgUp/PgDn` - Scroll help viewer
+### Edit
 
-## Output Formats
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+Z | Undo last change |
+| Ctrl+Y | Redo last change |
+| Ctrl+K | Delete current line |
+| Ctrl+F | Add YAML frontmatter |
 
-### Save Your Work
+### View
 
-Save the session as a CalcMark file (calculations + markdown):
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+P | Cycle preview mode |
+
+### Navigation
+
+| Shortcut | Action |
+|----------|--------|
+| Opt+Left / Opt+B | Move to previous word |
+| Opt+Right / Opt+F | Move to next word |
+| Ctrl+Home | Jump to document start |
+| Ctrl+End | Jump to document end |
+| Ctrl+D | Scroll down half page |
+| Ctrl+U | Scroll up half page |
+
+## Exporting Results
+
+Convert CalcMark files to other formats using `cm convert`:
 
 ```bash
-:save my-budget.cm
+cm convert doc.cm --to=html              # HTML to stdout
+cm convert doc.cm --to=md -o doc.md      # Markdown file
+cm convert doc.cm --to=json              # JSON to stdout
+cm convert doc.cm --to=html -T tpl.html  # Custom HTML template
 ```
 
-### Export Results
-
-Export evaluated results in different formats:
+Use `cm eval` for quick evaluation:
 
 ```bash
-:output report.html     # Formatted HTML with results
-:output summary.md      # Markdown with calculations shown
-:output data.json       # Structured JSON for processing
-```
-
-### Command Line Export
-
-```bash
-cm eval budget.cm --json > results.json
-cm eval budget.cm > results.txt
+cm eval budget.cm            # Print final results
+cm eval -v budget.cm         # Show all intermediate values
+echo "1 + 2" | cm eval      # Evaluate from stdin
 ```
 
 ## Language Features
@@ -73,11 +78,11 @@ CalcMark supports a wide range of units across categories:
 - **Speed**: mph, km/h, m/s
 - **Data Rate**: Mbps, Gbps
 
-Use `:help units` in the REPL for the complete list.
+Run `cm help constants` for the complete list.
 
 ### Unit Conversion
 
-Convert between compatible units using `in`:
+Convert between compatible units using `in` or `as`:
 
 ```cm
 distance = 5 miles
@@ -147,19 +152,13 @@ Globals must be literal values. Expressions like `1 + 1` are not allowed.
 
 ### Built-in Functions
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `avg()` | Average of values | `avg(10, 20, 30)` |
-| `sqrt()` | Square root | `sqrt(144)` |
-| `accumulate()` | Rate x time | `accumulate(100/hour, 8 hours)` |
-| `capacity()` | Ceiling division with unit | `capacity(1000, 100, server)` |
-| `downtime()` | SLA to downtime | `downtime(99.9%, year)` |
-| `rtt()` | Network round-trip time | `rtt(regional)` |
-| `throughput()` | Network bandwidth | `throughput(gigabit)` |
+{{< feature-table category="function" >}}
 
-### Rates
+See the [Language Reference](/docs/language-reference/) for the complete list of functions, including [natural language syntax](/docs/language-reference/#natural-language-syntax) forms.
 
-Define and work with rates (quantity per time):
+### Rates and the `over` keyword {#rates}
+
+Define and work with rates (quantity per time). Use `over` to accumulate a rate over a duration:
 
 ```cm
 salary = $120000/year
@@ -168,6 +167,20 @@ daily_earnings = hourly_rate over 8 hours
 bandwidth = 100 MB/s
 monthly_transfer = bandwidth over 30 days
 ```
+
+### Napkin Math {#napkin-math}
+
+Use `as napkin` to round results to 2 significant figures -- useful for quick estimates:
+
+```cm
+monthly_transfer = 100 MB/s over 30 days
+monthly_transfer as napkin
+
+exact_servers = 10000 req/s at 450 req/s per server
+exact_servers as napkin
+```
+
+The `as napkin` modifier normalizes units and adds a `~` prefix to signal the result is an approximation.
 
 ### Date Arithmetic
 
@@ -180,6 +193,16 @@ project_end = project_start + duration
 
 deadline = Jun 1 2025
 launch = deadline - 2 weeks
+```
+
+### Capacity Planning {#capacity-planning}
+
+Use the `at...per` syntax to calculate how many units you need:
+
+```cm
+disks = 10 TB at 2 TB per disk
+servers = 10000 req/s at 450 req/s per server
+servers_buffered = 10000 req/s at 450 req/s per server with 20% buffer
 ```
 
 ### Multiplier Suffixes
@@ -207,15 +230,6 @@ tax = price * tax_rate
 
 ## Tips
 
-### Reactive Updates
-
-In the REPL, changing a variable automatically updates all dependent values. Pin important variables to the sidebar to watch them change:
-
-```bash
-:pin total_cost
-:pin profit_margin
-```
-
 ### Organize with Markdown
 
 Use headers and prose to structure your thinking:
@@ -234,15 +248,13 @@ variable_pct = 30%
 variable_costs = total_revenue * variable_pct
 ```
 
-### Iterate Quickly
+### Use the Preview Pane
 
-Load a file, tweak values in the REPL, then save when satisfied:
+Press **Ctrl+P** in the editor to toggle the preview pane, which shows evaluated results alongside your source.
 
-```bash
-cm budget.cm           # Load and explore
-# ... make changes ...
-:save budget-v2.cm     # Save your iteration
-```
+### Get Help on Functions
+
+Run `cm help functions` to see all available functions with descriptions and usage patterns. Run `cm help constants` for unit constants.
 
 ## Troubleshooting
 

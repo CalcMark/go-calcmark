@@ -142,9 +142,9 @@ Create a Hugo shortcode that renders function tables from generated data:
 
 Major rewrite of `site/content/docs/user-guide.md`:
 
-- [ ] **Remove entire REPL Commands section** (lines 7-32) -- REPL mode is gone
-- [ ] **Remove keyboard shortcuts section** (lines 25-31) tied to REPL
-- [ ] **Add Editor Shortcuts section** using data from `cmd/calcmark/tui/editor/command_menu.go:24-51`:
+- [x] **Remove entire REPL Commands section** (lines 7-32) -- REPL mode is gone
+- [x] **Remove keyboard shortcuts section** (lines 25-31) tied to REPL
+- [x] **Add Editor Shortcuts section** using data from `cmd/calcmark/tui/editor/command_menu.go:24-51`:
 
 | Category | Shortcut | Action |
 |----------|----------|--------|
@@ -162,13 +162,13 @@ Major rewrite of `site/content/docs/user-guide.md`:
 | Navigation | Ctrl+D/U | Half-page scroll |
 | Help | F1 | Full help |
 
-- [ ] **Replace functions table** (lines 148-158) with the `feature-table` shortcode for functions
-- [ ] **Remove `cm eval --json` reference** (line 57) -- flag doesn't exist. Replace with `cm convert budget.cm --to=json > results.json`
-- [ ] **Remove Output Formats section** (lines 33-58) that references `:save` and `:output` commands. Replace with a brief section about `cm convert`
-- [ ] **Fix `capacity()` reference** (line 155) to match the reconciled naming from Phase 1
-- [ ] **Remove Tips section** (lines 208-244) -- it still references REPL commands like `:help`, `:vars`, etc. Replace with editor-relevant tips
-- [ ] **Add `over` keyword examples** in the Rates section
-- [ ] **Add `as napkin` section** explaining napkin math
+- [x] **Replace functions table** (lines 148-158) with the `feature-table` shortcode for functions
+- [x] **Remove `cm eval --json` reference** (line 57) -- flag doesn't exist. Replace with `cm convert budget.cm --to=json > results.json`
+- [x] **Remove Output Formats section** (lines 33-58) that references `:save` and `:output` commands. Replace with a brief section about `cm convert`
+- [x] **Fix `capacity()` reference** (line 155) to match the reconciled naming from Phase 1
+- [x] **Remove Tips section** (lines 208-244) -- it still references REPL commands like `:help`, `:vars`, etc. Replace with editor-relevant tips
+- [x] **Add `over` keyword examples** in the Rates section
+- [x] **Add `as napkin` section** explaining napkin math
 
 **Modified files:**
 - `site/content/docs/user-guide.md`
