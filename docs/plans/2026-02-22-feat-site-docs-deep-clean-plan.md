@@ -210,7 +210,7 @@ Major update to `site/content/docs/language-reference.md`:
 
 New page `site/content/docs/cli-reference.md`:
 
-- [ ] Document all subcommands with flags, sourced from cobra definitions:
+- [x] Document all subcommands with flags, sourced from cobra definitions:
 
 **`cm [file]`** (root)
 - `--color-mode` auto|light|dark -- Color mode override
@@ -231,7 +231,7 @@ New page `site/content/docs/cli-reference.md`:
 
 **`cm completion [bash|zsh|fish|powershell]`**
 
-- [ ] Add to Hugo sidebar menu in `site/hugo.yaml` with weight 35 (between Language Reference and Configuration)
+- [x] Add to Hugo sidebar menu in `site/hugo.yaml` with weight 35 (between Language Reference and Configuration)
 
 **New files:**
 - `site/content/docs/cli-reference.md`

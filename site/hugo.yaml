@@ -49,6 +49,9 @@ menus:
     - name: Language Reference
       url: /docs/language-reference/
       weight: 30
+    - name: CLI Reference
+      url: /docs/cli-reference/
+      weight: 35
     - name: Configuration
       url: /docs/configuration/
       weight: 40
