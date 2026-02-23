@@ -13,6 +13,12 @@ import (
 //go:embed templates/default.html
 var defaultHTMLTemplate string
 
+// DefaultHTMLTemplate returns the embedded default HTML template.
+// Use this to inspect the template data model or as a starting point for custom templates.
+func DefaultHTMLTemplate() string {
+	return defaultHTMLTemplate
+}
+
 // HTMLFormatter formats CalcMark documents as HTML.
 // Uses an embedded template with modern styling.
 type HTMLFormatter struct{}

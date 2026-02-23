@@ -75,6 +75,7 @@ Convert a CalcMark file to another format. Requires the `--to` flag.
 | `--to` | `-t` | **(required)** Output format: `html`, `md`, `json`, `text`, `cm` |
 | `--output` | `-o` | Write to file instead of stdout |
 | `--template` | `-T` | Custom Go template (html format only) |
+| `--show-template` | | Print the default HTML template and exit |
 
 ### Examples
 
@@ -84,6 +85,7 @@ cm convert doc.cm --to=md -o doc.md      # Markdown to file
 cm convert doc.cm --to=json              # JSON to stdout
 cm convert doc.cm --to=text              # Plain text
 cm convert doc.cm --to=html -T tpl.html  # Custom HTML template
+cm convert --show-template               # Print default HTML template
 ```
 
 ### Output Formats
@@ -95,6 +97,77 @@ cm convert doc.cm --to=html -T tpl.html  # Custom HTML template
 | `json` | Structured JSON of all variables and results |
 | `text` | Plain text output (same as `cm eval -v`) |
 | `cm` | Normalized CalcMark source |
+
+### Custom HTML Templates {#custom-templates}
+
+CalcMark uses Go's `html/template` package for HTML output. You can provide your own template to control the HTML structure and styling.
+
+**Get the default template as a starting point:**
+
+```bash
+cm convert --show-template > my-template.html
+```
+
+**Use your custom template:**
+
+```bash
+cm convert doc.cm --to=html -T my-template.html
+```
+
+#### Template Data Model
+
+The template receives a root object with two fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.Frontmatter` | object (nil if absent) | Document frontmatter (globals, exchange rates) |
+| `.Blocks` | list | Ordered list of content blocks |
+
+**Block fields** (each item in `.Blocks`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.Type` | string | `"calculation"` or `"text"` |
+| `.SourceLines` | list | Calculation lines (only for `calculation` blocks) |
+| `.Error` | string | Error message (only for `calculation` blocks) |
+| `.HTML` | HTML | Rendered markdown (only for `text` blocks) |
+
+**SourceLine fields** (each item in `.SourceLines`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.Source` | string | The CalcMark source expression |
+| `.Result` | string | Formatted evaluation result (empty if line has no result) |
+
+**Frontmatter fields** (when `.Frontmatter` is non-nil):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `.Frontmatter.Globals` | list | Global variables (`@var = value`) |
+| `.Frontmatter.Exchange` | list | Exchange rates |
+
+Each global has `.Name` and `.Value`. Each exchange rate has `.From`, `.To`, and `.Rate`.
+
+#### Minimal Custom Template
+
+```html
+<!DOCTYPE html>
+<html>
+<body>
+  {{range .Blocks}}
+    {{if eq .Type "calculation"}}
+      <pre>
+      {{range .SourceLines}}
+        {{.Source}}{{if .Result}} = {{.Result}}{{end}}
+      {{end}}
+      </pre>
+    {{else}}
+      <div>{{.HTML}}</div>
+    {{end}}
+  {{end}}
+</body>
+</html>
+```
 
 ---
 

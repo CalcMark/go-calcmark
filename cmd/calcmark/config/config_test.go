@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,8 +24,8 @@ func TestLoad_DefaultsOnly(t *testing.T) {
 	if cfg.Formatter.DefaultFormat != "text" {
 		t.Errorf("expected default format text, got %s", cfg.Formatter.DefaultFormat)
 	}
-	if !cfg.TUI.DarkMode {
-		t.Error("expected dark_mode true by default")
+	if cfg.TUI.DarkMode {
+		t.Error("expected dark_mode false by default (deprecated, removed from defaults)")
 	}
 	if cfg.TUI.ColorMode != "dark" {
 		t.Errorf("expected default color_mode dark, got %s", cfg.TUI.ColorMode)
@@ -208,6 +209,82 @@ func TestBuildStyles_EmptyOverrides(t *testing.T) {
 	_ = styles.PreviewPane.Render("preview")
 	_ = styles.SourceFrontmatter.Render("frontmatter")
 	_ = styles.SourceCalc.Render("calc")
+}
+
+// TestThemeOverride_EndToEnd verifies the full path from TOML config
+// through Viper → ThemeConfig → BuildStyles → lipgloss style color.
+// This catches any disconnect between the config file format and the
+// actual rendered styles.
+func TestThemeOverride_EndToEnd(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	// Write a TOML config that overrides primary color
+	userConfig := `[tui.theme]
+primary = "#FF00FF"
+`
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte(userConfig), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Load config (TOML → Viper → ThemeConfig)
+	cfg, err := Reload()
+	if err != nil {
+		t.Fatalf("Reload() error: %v", err)
+	}
+
+	// Verify ThemeConfig has the override
+	if cfg.TUI.Theme.Primary != "#FF00FF" {
+		t.Fatalf("ThemeConfig.Primary = %q, want #FF00FF", cfg.TUI.Theme.Primary)
+	}
+
+	// Build styles (ThemeConfig → BuildStyles → lipgloss)
+	styles := cfg.TUI.Theme.BuildStyles()
+
+	// Verify the Title style uses the overridden color.
+	// lipgloss.Style.GetForeground() returns the TerminalColor set on the style.
+	fg := styles.Title.GetForeground()
+	if fg == nil {
+		t.Fatal("Title style has no foreground color set")
+	}
+
+	// overrideColor sets both Light and Dark slots to the user's hex.
+	// AdaptiveColor stringifies as "{Light Dark}".
+	fgStr := fmt.Sprintf("%v", fg)
+	if fgStr != "{#FF00FF #FF00FF}" {
+		t.Errorf("Title foreground = %v, want {#FF00FF #FF00FF}", fgStr)
+	}
+}
+
+// TestThemeOverride_PaletteDefault verifies that when no user override is
+// provided, styles use the palette default (not empty/zero).
+func TestThemeOverride_PaletteDefault(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	// No user config — palette defaults should be used
+	cfg, err := Reload()
+	if err != nil {
+		t.Fatalf("Reload() error: %v", err)
+	}
+
+	if cfg.TUI.Theme.Primary != "" {
+		t.Fatalf("expected empty primary (palette default), got %q", cfg.TUI.Theme.Primary)
+	}
+
+	styles := cfg.TUI.Theme.BuildStyles()
+
+	// Title style should still have a foreground (from palette)
+	fg := styles.Title.GetForeground()
+	if fg == nil {
+		t.Fatal("Title style has no foreground color — palette default not applied")
+	}
 }
 
 func TestGetStyles_AfterLoad(t *testing.T) {

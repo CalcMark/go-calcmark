@@ -11,9 +11,10 @@ import (
 )
 
 var (
-	convertFormat   string
-	convertOutput   string
-	convertTemplate string
+	convertFormat       string
+	convertOutput       string
+	convertTemplate     string
+	convertShowTemplate bool
 )
 
 var convertCmd = &cobra.Command{
@@ -21,13 +22,24 @@ var convertCmd = &cobra.Command{
 	Short: "Convert CalcMark to another format",
 	Long: `Convert a CalcMark file to HTML, Markdown, JSON, text, or CalcMark format.
 
+Use --show-template to print the default HTML template. This is useful as a
+starting point for custom templates passed via --template.
+
 Examples:
   cm convert doc.cm --to=html              Convert to HTML (stdout)
   cm convert doc.cm --to=md -o doc.md      Convert to Markdown file
   cm convert doc.cm --to=json              Convert to JSON
-  cm convert doc.cm --to=html -T tpl.html  Use custom HTML template`,
-	Args: cobra.ExactArgs(1),
+  cm convert doc.cm --to=html -T tpl.html  Use custom HTML template
+  cm convert --show-template               Print default HTML template`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if convertShowTemplate {
+			fmt.Print(format.DefaultHTMLTemplate())
+			return nil
+		}
+		if len(args) == 0 {
+			return fmt.Errorf("requires a file argument (or use --show-template)")
+		}
 		return runConvert(args[0])
 	},
 }
@@ -36,12 +48,17 @@ func init() {
 	convertCmd.Flags().StringVarP(&convertFormat, "to", "t", "", "Output format: html, md, json, text, cm (required)")
 	convertCmd.Flags().StringVarP(&convertOutput, "output", "o", "", "Write to file instead of stdout")
 	convertCmd.Flags().StringVarP(&convertTemplate, "template", "T", "", "Custom Go template (html only)")
-	_ = convertCmd.MarkFlagRequired("to")
+	convertCmd.Flags().BoolVar(&convertShowTemplate, "show-template", false, "Print the default HTML template and exit")
 	rootCmd.AddCommand(convertCmd)
 }
 
 // runConvert handles the convert subcommand
 func runConvert(filename string) error {
+	// --to is required for conversion
+	if convertFormat == "" {
+		return fmt.Errorf("required flag \"to\" not set")
+	}
+
 	// Validate file path
 	if err := validateFilePath(filename); err != nil {
 		return fmt.Errorf("invalid file: %w", err)

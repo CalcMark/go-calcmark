@@ -6,8 +6,6 @@
 # Color mode: "light" or "dark"
 # Set to "light" if you use a light terminal background.
 color_mode = "dark"
-# Deprecated: use color_mode instead
-dark_mode = true
 
 [tui.theme]
 # These overrides replace the corresponding palette color for your color_mode.
