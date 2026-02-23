@@ -260,11 +260,11 @@ Run all 5 example `.cm` files through `cm eval` and fix failures:
 
 #### Phase 8: Final validation
 
-- [ ] Run `task test` -- all tests pass
-- [ ] Run `task quality` -- lint/vet pass
-- [ ] Run `task generate-docs` -- produces valid JSON
-- [ ] Run `task site:build` -- Hugo builds without errors
-- [ ] Manually check deep links work: `/docs/language-reference/#avg`, `#as-napkin`, `#over`, etc.
+- [x] Run `task test` -- all tests pass (2 pre-existing TUI failures unrelated to docs changes)
+- [x] Run `task quality` -- lint/vet pass (modernize suggestions are pre-existing)
+- [x] Run `task generate-docs` -- produces valid JSON (39KB, 8 categories)
+- [x] Run `task site:build` -- Hugo builds without errors (14 pages)
+- [x] Manually check deep links work: `/docs/language-reference/#avg`, `#as-napkin`, `#over`, etc.
 
 ## Acceptance Criteria
 
