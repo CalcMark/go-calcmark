@@ -1,0 +1,11 @@
+---
+exchange:
+  123_EUR: 0.92
+---
+
+# Exchange Rate Numeric Currency Code
+
+Currency codes must be exactly 3 ASCII letters (ISO 4217).
+Numeric codes like `123` are rejected.
+
+x = 10

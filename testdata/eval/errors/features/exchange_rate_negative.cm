@@ -1,0 +1,11 @@
+---
+exchange:
+  USD_EUR: -0.5
+---
+
+# Negative Exchange Rate
+
+Exchange rates must be positive. A negative rate has no financial
+meaning and is rejected during frontmatter parsing.
+
+x = 10

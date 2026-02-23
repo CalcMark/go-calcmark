@@ -1,0 +1,11 @@
+---
+exchange:
+  EUR/GBP: 0.86
+---
+
+# Exchange Rate Invalid Key Format
+
+The exchange rate key uses a slash separator instead of an underscore.
+The correct format is `FROM_TO` (e.g., `USD_EUR`).
+
+x = 10

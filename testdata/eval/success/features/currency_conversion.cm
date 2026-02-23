@@ -3,6 +3,8 @@ exchange:
   USD_EUR: 0.92
   EUR_GBP: 0.86
   GBP_JPY: 191.50
+  CNY_INR: 11.55
+  INR_KRW: 16.20
 globals:
   budget: 5000 EUR
 ---
@@ -25,6 +27,17 @@ price_in_euros = price in EUR
 
 total = $200 in EUR
 
+## Currencies without special symbols
+
+Not every currency has a keyboard symbol like `$` or `€`.
+Chinese Yuan (CNY) and Indian Rupee (INR) display as their
+3-letter ISO code in the result.
+
+yuan_amount = 1000 CNY
+rupee_amount = yuan_amount in INR
+
+korean_amount = 5000 INR in KRW
+
 ## Using a global variable with conversion
 
 budget_gbp = budget in GBP
@@ -35,9 +48,18 @@ yen_price = 1000 GBP in JPY
 
 ## Inline exchange rate assignment
 
+The `@exchange.` prefix lets you define or redefine rates mid-document.
+Here we first convert at the frontmatter rate, then override it and
+convert again to show the new rate takes effect.
+
 @exchange.USD_GBP = 0.79
 salary = 3000 USD
 salary_gbp = salary in GBP
+
+Now override the rate with a stronger pound:
+
+@exchange.USD_GBP = 0.72
+same_salary_new_rate = salary in GBP
 
 ## Same currency is a no-op
 

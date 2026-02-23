@@ -1,0 +1,8 @@
+# Exchange Rate Without Frontmatter
+
+Currency conversion requires exchange rates defined in the frontmatter
+`exchange:` block. Without frontmatter, any `in CURRENCY` conversion
+will fail with a helpful error.
+
+100 USD in EUR
+$50 in GBP

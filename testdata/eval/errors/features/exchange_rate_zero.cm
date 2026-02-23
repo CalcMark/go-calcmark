@@ -1,0 +1,11 @@
+---
+exchange:
+  USD_EUR: 0
+---
+
+# Zero Exchange Rate
+
+Exchange rates must be positive. A zero rate would lose all value
+during conversion and is rejected during frontmatter parsing.
+
+x = 10
