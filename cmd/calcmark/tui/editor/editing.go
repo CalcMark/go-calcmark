@@ -119,8 +119,7 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 		} else {
 			m.frontmatterErr = nil
 			m.doc = newDoc
-			m.eval = implDoc.NewEvaluator()
-			_ = m.eval.Evaluate(m.doc)
+			m.fullReEvaluate()
 		}
 		m.cursorLine = beforeLine + 1
 		m.cursorCol = 0
@@ -415,8 +414,7 @@ func (m *Model) saveCurrentLine(save bool) {
 			newDoc, err := document.NewDocument(m.editBuf)
 			if err == nil {
 				m.doc = newDoc
-				m.eval = implDoc.NewEvaluator()
-				_ = m.eval.Evaluate(m.doc)
+				m.fullReEvaluate()
 				m.modified = true
 				m.autoPinVariables()
 			}
@@ -496,8 +494,7 @@ func (m *Model) redetectBlockTypes() {
 	m.doc = newDoc
 
 	// Re-evaluate the new document
-	m.eval = implDoc.NewEvaluator()
-	_ = m.eval.Evaluate(m.doc)
+	m.fullReEvaluate()
 
 	// Restore cursor (clamped to valid range)
 	total := m.TotalLines()
@@ -545,8 +542,7 @@ func (m *Model) updateCurrentLine(newContent string) {
 		}
 		m.frontmatterErr = nil
 		m.doc = newDoc
-		m.eval = implDoc.NewEvaluator()
-		_ = m.eval.Evaluate(m.doc)
+		m.fullReEvaluate()
 		m.autoPinVariables()
 		return
 	}
@@ -619,16 +615,13 @@ func (m *Model) insertLine(at int) {
 	content := strings.Join(newLines, "\n") + "\n"
 	newDoc, err := document.NewDocument(content)
 	if err != nil {
-		// DEBUG: log error if document creation fails
-		// In production, this shouldn't happen but helps debug
-		_ = err // Keep for future debugging
+		// Document creation failed — leave existing document unchanged.
 		return
 	}
 
 	// Replace document
 	m.doc = newDoc
-	m.eval = implDoc.NewEvaluator()
-	_ = m.eval.Evaluate(m.doc)
+	m.fullReEvaluate()
 
 	// Set cursor to new line
 	m.cursorLine = at
@@ -640,6 +633,17 @@ func (m *Model) insertLine(at int) {
 
 	// Auto-pin any new variables
 	m.autoPinVariables()
+}
+
+// fullReEvaluate creates a fresh evaluator and evaluates the entire document.
+// Called after document rebuilds (NewDocument) where the evaluator must be reset.
+// Errors are reported to the status bar rather than silently swallowed.
+func (m *Model) fullReEvaluate() {
+	m.eval = implDoc.NewEvaluator()
+	if err := m.eval.Evaluate(m.doc); err != nil {
+		m.statusMsg = "Document has errors — see preview pane"
+		m.statusIsErr = true
+	}
 }
 
 // reEvaluate re-evaluates affected blocks after an edit.
@@ -706,8 +710,7 @@ func (m *Model) deleteLine() {
 		}
 		m.frontmatterErr = nil
 		m.doc = newDoc
-		m.eval = implDoc.NewEvaluator()
-		_ = m.eval.Evaluate(m.doc)
+		m.fullReEvaluate()
 		m.modified = true
 		// Adjust cursor
 		total := m.TotalLines()
@@ -813,8 +816,7 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 
 	m.doc = newDoc
 	m.frontmatterErr = nil
-	m.eval = implDoc.NewEvaluator()
-	_ = m.eval.Evaluate(m.doc)
+	m.fullReEvaluate()
 
 	// Set cursor to the exchange rate value line (line 2, 0-indexed) so user can edit immediately
 	m.cursorLine = 2
