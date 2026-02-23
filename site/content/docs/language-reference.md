@@ -141,7 +141,7 @@ From **highest** to **lowest**:
 
 ---
 
-## Type System
+## Type System {#type-system}
 
 ### Data Types
 
@@ -150,6 +150,10 @@ From **highest** to **lowest**:
 | **Number** | `42`, `3.14`, `1,000` | Arbitrary-precision decimal |
 | **Currency** | `$100`, `€50.99` | Symbol + decimal |
 | **Boolean** | `true`, `false`, `yes`, `no` | Boolean |
+| **Quantity** | `10 meters`, `5 kg`, `100 MB` | Value + unit |
+| **Duration** | `5 days`, `2 weeks`, `1 year` | Value + time unit |
+| **Rate** | `100 MB/s`, `$50/hour`, `1000 req/s` | Numerator / time unit |
+| **Date** | `Jan 15 2025`, `today` | Calendar date |
 
 ### Type Compatibility
 
@@ -161,6 +165,10 @@ Currency + Number -> Currency  (unit preserved)
 Number + Currency -> Currency  (unit preserved)
 Currency + Currency (same symbol) -> Currency
 Currency + Currency (different symbols) -> Number  (units dropped)
+Quantity + Quantity (same unit) -> Quantity
+Date + Duration -> Date
+Date - Date -> Duration
+Rate * Duration -> Quantity  (via "over" keyword)
 ```
 
 **Functions (drop units when mixed):**
@@ -175,6 +183,7 @@ sqrt($100) -> $10.00  (single unit preserved)
 
 ```cm
 Boolean + Number -> ERROR (no boolean arithmetic)
+Quantity + Currency -> ERROR (incompatible types)
 ```
 
 ### Literals
@@ -191,6 +200,15 @@ Boolean + Number -> ERROR (no boolean arithmetic)
 1.2.3           Invalid (multiple decimal points)
 ```
 
+#### Multiplier Suffixes
+
+```cm
+10K             -> 10000
+5M              -> 5000000
+2B              -> 2000000000
+1.5K            -> 1500
+```
+
 #### Currency
 
 ```
@@ -205,6 +223,14 @@ $ 100           Invalid (no space between symbol and number)
 
 **Supported symbols:** `$`, `€`, `£`, `¥`
 
+#### Percentages
+
+```cm
+50%             -> 0.5 (Number)
+8.25%           -> 0.0825
+15% of 200      -> 30
+```
+
 #### Booleans
 
 Case-insensitive keywords:
@@ -215,6 +241,42 @@ yes, no         Natural language
 t, f            Single letter
 y, n            Single letter
 True, FALSE     Any case
+```
+
+#### Quantities
+
+```cm
+10 meters       Quantity: 10 in meters
+5 kg            Quantity: 5 in kilograms
+100 MB          Quantity: 100 in megabytes
+```
+
+#### Rates
+
+```cm
+100 MB/s        Rate: 100 megabytes per second
+$50/hour        Rate: $50 per hour
+1000 req/s      Rate: 1000 requests per second
+$120000/year    Rate: $120,000 per year
+```
+
+#### Dates
+
+```cm
+Jan 15 2025     Date literal
+Dec 25 2025     Date literal
+today           Current date
+tomorrow        Tomorrow's date
+yesterday       Yesterday's date
+```
+
+#### Durations
+
+```cm
+5 days          Duration
+2 weeks         Duration
+3 months        Duration
+1 year          Duration
 ```
 
 #### Identifiers
@@ -318,36 +380,27 @@ let, const
 
 ### Function Names
 
-```
-avg, sqrt
-```
-
-### Multi-Token Function Keywords
-
-These sequences are combined during tokenization:
+All built-in function names are reserved:
 
 ```
-average of      -> avg
-square root of  -> sqrt
+avg, sqrt, accumulate, convert_rate, capacity,
+downtime, rtt, throughput, transfer_time,
+read, seek, compress
 ```
 
-Both forms produce the same result:
+### Language Keywords
 
-```cm
-avg(1, 2, 3)
-average of 1, 2, 3
+```
+in, as, of, per, over, at, from, with, napkin
 ```
 
 ---
 
-## Functions
+## Functions {#functions}
 
-### Implemented Functions
+### Math Functions {#math-functions}
 
-| Function | Aliases | Signature | Description |
-|----------|---------|-----------|-------------|
-| `avg()` | `average of` | `avg(x, y, ...)` | Average of numbers (variadic) |
-| `sqrt()` | `square root of` | `sqrt(x)` | Square root (single argument) |
+{{< feature-table category="function" >}}
 
 ### Unit Handling in Functions
 
@@ -363,6 +416,228 @@ sqrt($100) -> $10.00
 ```cm
 avg($100, €200) -> 150  (no units)
 average of $50, €100, £150 -> 100  (no units)
+```
+
+---
+
+## Natural Language Syntax {#natural-language-syntax}
+
+CalcMark supports natural language forms for several functions. These are equivalent to the function-call syntax.
+
+### Function Aliases
+
+| Natural Language | Equivalent | Example |
+|-----------------|------------|---------|
+| `average of X, Y, Z` | `avg(X, Y, Z)` | `average of 10, 20, 30` |
+| `square root of X` | `sqrt(X)` | `square root of 144` |
+| `read X from Y` | `read(X, Y)` | `read 100 MB from ssd` |
+| `compress X using Y` | `compress(X, Y)` | `compress 1 GB using gzip` |
+| `transfer X across Y Z` | `transfer_time(X, Y, Z)` | `transfer 1 GB across regional gigabit` |
+
+### Capacity Planning Syntax {#capacity-syntax}
+
+The `at...per` syntax is a natural language form for the `capacity()` function:
+
+```cm
+demand at capacity per unit
+demand at capacity per unit with N% buffer
+```
+
+Examples:
+
+```cm
+10 TB at 2 TB per disk                         -> 5 disks
+10000 req/s at 450 req/s per server             -> 23 servers
+10000 req/s at 450 req/s per server with 20%    -> 27 servers
+100 apples at 30 per crate                      -> 4 crates
+```
+
+The slash syntax also works: `10 TB at 2 TB/disk`.
+
+### Rate Accumulation {#over}
+
+The `over` keyword accumulates a rate over a time duration:
+
+```cm
+rate over duration
+```
+
+This is equivalent to `accumulate(rate, duration)`:
+
+```cm
+100 MB/s over 1 day         -> total data transferred
+$75/hour over 8 hours       -> daily earnings
+1000 req/s over 1 hour      -> total requests
+```
+
+### Rate Conversion
+
+The `per` keyword in a rate context creates a rate literal:
+
+```cm
+1000 requests per second    -> 1000 req/s
+$50 per hour                -> $50/hour
+```
+
+---
+
+## Napkin Math {#as-napkin}
+
+The `as napkin` modifier rounds results to 2 significant figures and normalizes units. It adds a `~` prefix to signal the result is an approximation.
+
+**Syntax:** `expression as napkin`
+
+**Works with:** Number, Quantity, Currency, Duration, Rate
+
+```cm
+432000 MB as napkin                 -> ~400 GB
+100 MB/s over 30 days as napkin    -> ~300 TB
+86400 seconds as napkin             -> ~1 day
+```
+
+This is useful for quick back-of-the-envelope calculations where exact precision is not needed.
+
+---
+
+## Rates {#rates}
+
+### Rate Literals
+
+Create rates using the slash syntax:
+
+```cm
+bandwidth = 100 MB/s
+salary = $120000/year
+load = 1000 req/s
+```
+
+### Rate Accumulation with `over`
+
+Use `over` to calculate the total from a rate over time:
+
+```cm
+bandwidth = 100 MB/s
+daily_transfer = bandwidth over 1 day
+
+hourly_rate = $75/hour
+daily_earnings = hourly_rate over 8 hours
+```
+
+### Rate Conversion
+
+Convert rates to different time units using `convert_rate()`:
+
+```cm
+convert_rate(1000 req/s, minute)    -> 60000 req/min
+convert_rate($120000/year, month)   -> $10000/month
+```
+
+---
+
+## Date Arithmetic {#dates}
+
+### Date Literals
+
+```cm
+project_start = Jan 15 2025
+christmas = Dec 25 2025
+now = today
+```
+
+CalcMark recognizes `today`, `tomorrow`, and `yesterday` as date keywords.
+
+### Duration Arithmetic
+
+```cm
+project_start = Jan 15 2025
+duration = 12 weeks
+project_end = project_start + duration
+
+deadline = Jun 1 2025
+launch = deadline - 2 weeks
+```
+
+### The `from` Keyword
+
+```cm
+7 days from Dec 25       -> Jan 1 2026
+2 weeks from today       -> (today + 14 days)
+```
+
+---
+
+## Network Functions {#network}
+
+### Round-Trip Time
+
+```cm
+rtt(local)          -> 0.5 ms   (same datacenter)
+rtt(regional)       -> 10 ms    (same region)
+rtt(continental)    -> 50 ms    (cross-continent)
+rtt(global)         -> 150 ms   (worldwide)
+```
+
+### Throughput
+
+```cm
+throughput(gigabit)      -> 125 MB/s
+throughput(ten_gig)      -> 1250 MB/s
+throughput(hundred_gig)  -> 12500 MB/s
+throughput(wifi)         -> 12.5 MB/s
+throughput(four_g)       -> 2.5 MB/s
+throughput(five_g)       -> 50 MB/s
+```
+
+### Transfer Time
+
+Calculate data transfer time across a network:
+
+```cm
+transfer_time(1 GB, regional, gigabit)
+transfer 1 GB across regional gigabit       (NL form)
+```
+
+### Downtime from Availability
+
+```cm
+downtime(99.9%, year)     -> ~8.76 hours
+downtime(99.99%, month)   -> ~4.32 minutes
+```
+
+---
+
+## Storage Functions {#storage}
+
+### Read Time
+
+```cm
+read(1 GB, ssd)       read from SATA SSD (~550 MB/s)
+read(1 GB, nvme)      read from NVMe SSD (~3.5 GB/s)
+read(1 GB, pcie_ssd)  read from PCIe Gen4 SSD (~7 GB/s)
+read(1 GB, hdd)       read from 7200 RPM HDD (~150 MB/s)
+
+read 100 MB from ssd  (NL form)
+```
+
+### Seek Latency
+
+```cm
+seek(ssd)       -> 0.1 ms
+seek(nvme)      -> 0.01 ms
+seek(pcie_ssd)  -> 0.01 ms
+seek(hdd)       -> 10 ms
+```
+
+### Compression
+
+```cm
+compress(1 GB, gzip)     -> ~333 MB  (3:1 ratio)
+compress(1 GB, lz4)      -> ~500 MB  (2:1 ratio)
+compress(1 GB, zstd)     -> ~286 MB  (3.5:1 ratio)
+compress(1 GB, bzip2)    -> ~250 MB  (4:1 ratio)
+compress(1 GB, snappy)   -> ~400 MB  (2.5:1 ratio)
+
+compress 1 GB using gzip (NL form)
 ```
 
 ---
@@ -441,6 +716,21 @@ months = years * 12
 
 monthly_rate = rate / 12
 payment = principal * (monthly_rate * (1 + monthly_rate) ^ months) / ((1 + monthly_rate) ^ months - 1)
+```
+
+### System Sizing
+
+```cm
+# Server Capacity Planning
+
+peak_load = 50000 req/s
+server_capacity = 2000 req/s
+servers = peak_load at server_capacity per server with 25% buffer
+
+# Storage
+daily_data = 100 MB/s over 1 day
+monthly_storage = daily_data * 30
+disks = monthly_storage at 2 TB per disk
 ```
 
 ### Mixed Markdown

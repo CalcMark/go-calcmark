@@ -177,14 +177,14 @@ Major rewrite of `site/content/docs/user-guide.md`:
 
 Major update to `site/content/docs/language-reference.md`:
 
-- [ ] **Update Reserved Keywords section** (lines 299-340) to include ALL keywords: `over`, `napkin`, `from`, `at`, `per`, function names (all 12, not just avg/sqrt)
-- [ ] **Replace Functions section** (lines 343-367) with comprehensive coverage using `feature-table` shortcode, plus hand-written prose for each category:
+- [x] **Update Reserved Keywords section** (lines 299-340) to include ALL keywords: `over`, `napkin`, `from`, `at`, `per`, function names (all 12, not just avg/sqrt)
+- [x] **Replace Functions section** (lines 343-367) with comprehensive coverage using `feature-table` shortcode, plus hand-written prose for each category:
   - Math: `avg`, `sqrt`, `accumulate`
   - Conversion: `convert_rate`
   - Network: `downtime`, `rtt`, `throughput`, `transfer_time`
   - Storage: `read`, `seek`, `compress`
   - Capacity: `capacity`/`requires`
-- [ ] **Add Natural Language Syntax section** documenting all parseable NL forms:
+- [x] **Add Natural Language Syntax section** documenting all parseable NL forms:
   - `average of X, Y, Z` -- alias for `avg(X, Y, Z)`
   - `square root of X` -- alias for `sqrt(X)`
   - `read X from Y` -- alias for `read(X, Y)`
@@ -193,15 +193,15 @@ Major update to `site/content/docs/language-reference.md`:
   - `X at Y per Z [with N% buffer]` -- alias for `capacity(X, Y, Z[, N%])`
   - `rate over duration` -- alias for `accumulate(rate, duration)`
   - `rate per unit` -- context-dependent: rate conversion
-- [ ] **Add `as napkin` section** with anchor `#as-napkin`:
+- [x] **Add `as napkin` section** with anchor `#as-napkin`:
   - Syntax: `expression as napkin`
   - Behavior: rounds to 2 significant figures, normalizes units, adds `~` prefix
   - Works with: Number, Quantity, Currency, Duration, Rate
   - Example: `432000 MB as napkin` -> `~400 GB`
-- [ ] **Add Rates section** documenting rate literals (`100 MB/s`, `$50/hour`) and `over` keyword
-- [ ] **Add Date Arithmetic section** documenting date literals, duration math, `from` keyword
-- [ ] **Add anchor IDs to every function and keyword** for deep linking (e.g., `## avg {#avg}`, `## as napkin {#as-napkin}`)
-- [ ] **Update Type System section** to include Quantity, Rate, Duration types (currently only Number, Currency, Boolean)
+- [x] **Add Rates section** documenting rate literals (`100 MB/s`, `$50/hour`) and `over` keyword
+- [x] **Add Date Arithmetic section** documenting date literals, duration math, `from` keyword
+- [x] **Add anchor IDs to every function and keyword** for deep linking (e.g., `## avg {#avg}`, `## as napkin {#as-napkin}`)
+- [x] **Update Type System section** to include Quantity, Rate, Duration types (currently only Number, Currency, Boolean)
 
 **Modified files:**
 - `site/content/docs/language-reference.md`
