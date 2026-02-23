@@ -13,6 +13,7 @@ Unlike spreadsheets, CalcMark files are human-readable, diffable, and live in yo
 **macOS/Linux (Homebrew):**
 
 ```bash
+brew tap calcmark/tap https://github.com/CalcMark/homebrew-tap
 brew install calcmark/tap/calcmark
 ```
 
