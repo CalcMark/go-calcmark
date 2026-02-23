@@ -1,6 +1,7 @@
 package calcmark
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -333,7 +334,7 @@ exchange:
 					t.Errorf("expected error, got result: %v", result.Value)
 					return
 				}
-				if tt.wantErrContain != "" && !containsSubstring(err.Error(), tt.wantErrContain) {
+				if tt.wantErrContain != "" && !strings.Contains(err.Error(), tt.wantErrContain) {
 					t.Errorf("error %q should contain %q", err.Error(), tt.wantErrContain)
 				}
 				return
@@ -441,6 +442,42 @@ exchange:
 x = 10`,
 			wantErr: "must be positive",
 		},
+		{
+			name: "short currency code (2 letters)",
+			input: `---
+exchange:
+  US_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
+		{
+			name: "long currency code (4 letters)",
+			input: `---
+exchange:
+  USDD_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
+		{
+			name: "numeric currency code",
+			input: `---
+exchange:
+  123_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
+		{
+			name: "mixed alphanumeric currency code",
+			input: `---
+exchange:
+  U1D_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
 	}
 
 	for _, tt := range tests {
@@ -450,20 +487,11 @@ x = 10`,
 				t.Error("expected error")
 				return
 			}
-			if !containsSubstring(err.Error(), tt.wantErr) {
+			if !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("error %q should contain %q", err.Error(), tt.wantErr)
 			}
 		})
 	}
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // Test globals in frontmatter

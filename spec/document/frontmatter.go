@@ -67,7 +67,8 @@ func ExchangeRateKey(from, to string) string {
 }
 
 // ParseExchangeRateKey splits a key like "USD_EUR" into (from, to) parts.
-// Returns an error if the key format is invalid.
+// Returns an error if the key format is invalid. Currency codes must be
+// exactly 3 ASCII letters (ISO 4217 format, e.g., USD, EUR, GBP).
 func ParseExchangeRateKey(key string) (from, to string, err error) {
 	parts := strings.Split(key, "_")
 	if len(parts) != 2 {
@@ -78,7 +79,27 @@ func ParseExchangeRateKey(key string) (from, to string, err error) {
 	if from == "" || to == "" {
 		return "", "", fmt.Errorf("invalid exchange rate key '%s': currency codes cannot be empty", key)
 	}
+	if !isValidCurrencyCode(from) {
+		return "", "", fmt.Errorf("invalid currency code '%s' in exchange rate key '%s': must be exactly 3 letters (e.g., USD, EUR)", from, key)
+	}
+	if !isValidCurrencyCode(to) {
+		return "", "", fmt.Errorf("invalid currency code '%s' in exchange rate key '%s': must be exactly 3 letters (e.g., USD, EUR)", to, key)
+	}
 	return from, to, nil
+}
+
+// isValidCurrencyCode checks if a string looks like a valid currency code:
+// exactly 3 ASCII letters (already expected to be uppercase after normalization).
+func isValidCurrencyCode(code string) bool {
+	if len(code) != 3 {
+		return false
+	}
+	for _, r := range code {
+		if !isLetter(r) {
+			return false
+		}
+	}
+	return true
 }
 
 // validateExchangeRate rejects NaN, Inf, zero, and negative exchange rate values.

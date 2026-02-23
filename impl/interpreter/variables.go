@@ -36,6 +36,10 @@ func (interp *Interpreter) evalFrontmatterAssignment(f *ast.FrontmatterAssignmen
 		if err != nil {
 			return nil, fmt.Errorf("@exchange.%s: rate must be a number, got %T", f.Property, value)
 		}
+		// Reject zero and negative rates (same validation as frontmatter parser)
+		if rate.IsZero() || rate.IsNegative() {
+			return nil, fmt.Errorf("@exchange.%s: exchange rate must be positive, got %s", f.Property, rate.String())
+		}
 		// Parse FROM_TO format
 		from, to, err := parseExchangeKey(f.Property)
 		if err != nil {
@@ -57,7 +61,8 @@ func (interp *Interpreter) evalFrontmatterAssignment(f *ast.FrontmatterAssignmen
 
 // parseExchangeKey parses an exchange key like "USD_EUR" into (from, to).
 // NOTE: This mirrors document.ParseExchangeRateKey in spec/document/frontmatter.go.
-// We cannot import spec/document here due to an import cycle via test files.
+// We cannot import spec/document here because spec/document/eval_flow_debug_test.go
+// (internal test package) imports impl/interpreter, which would create a cycle.
 func parseExchangeKey(key string) (from, to string, err error) {
 	parts := strings.Split(key, "_")
 	if len(parts) != 2 {
@@ -68,7 +73,27 @@ func parseExchangeKey(key string) (from, to string, err error) {
 	if from == "" || to == "" {
 		return "", "", fmt.Errorf("invalid exchange rate key '%s': currency codes cannot be empty", key)
 	}
+	if !isValidCurrencyCode(from) {
+		return "", "", fmt.Errorf("invalid currency code '%s' in exchange rate key '%s': must be exactly 3 letters (e.g., USD, EUR)", from, key)
+	}
+	if !isValidCurrencyCode(to) {
+		return "", "", fmt.Errorf("invalid currency code '%s' in exchange rate key '%s': must be exactly 3 letters (e.g., USD, EUR)", to, key)
+	}
 	return from, to, nil
+}
+
+// isValidCurrencyCode checks if a string looks like a valid currency code:
+// exactly 3 ASCII letters.
+func isValidCurrencyCode(code string) bool {
+	if len(code) != 3 {
+		return false
+	}
+	for _, r := range code {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
 }
 
 func (interp *Interpreter) evalIdentifier(id *ast.Identifier) (types.Type, error) {

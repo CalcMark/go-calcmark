@@ -312,6 +312,14 @@ func TestParseExchangeRateKey(t *testing.T) {
 		{"_EUR", "", "", true},
 		{"USD_", "", "", true},
 		{"A_B_C", "", "", true},
+		// Currency code format validation (must be exactly 3 letters)
+		{"AB_EUR", "", "", true},   // Too short
+		{"ABCD_EUR", "", "", true}, // Too long
+		{"USD_AB", "", "", true},   // Too short on right
+		{"USD_ABCD", "", "", true}, // Too long on right
+		{"12_EUR", "", "", true},   // Digits, not letters
+		{"USD_34", "", "", true},   // Digits on right
+		{"U1D_EUR", "", "", true},  // Mixed digits and letters
 	}
 
 	for _, tt := range tests {
