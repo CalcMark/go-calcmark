@@ -76,17 +76,36 @@ func DefaultStatusBarStyle() StatusBarStyle {
 	}
 }
 
-// statusBarHeight is the fixed height for all status bar renderings.
+// StatusBarHeight is the fixed height for all status bar renderings.
 // This must be consistent to avoid bubbletea rendering artifacts.
 // See: https://github.com/charmbracelet/bubbletea/issues/1004
-const statusBarHeight = 2
+const StatusBarHeight = 2
 
 // RenderStatusBar renders a status bar as a string.
 // Pure function: takes state and width, returns string.
-// IMPORTANT: Always returns consistent height (statusBarHeight lines) to avoid
+// IMPORTANT: Always returns consistent height (StatusBarHeight lines) to avoid
 // bubbletea rendering artifacts when view height changes between renders.
+//
+// Background strategy: each segment and all padding is rendered with explicit
+// backgrounds. We do NOT rely on lipgloss outer Render() for background
+// coverage because inner ANSI resets from sub-components clear the outer
+// background, causing terminal color bleed-through.
 func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) string {
-	// If there's a status message, show it prominently
+	barBg := style.Bar.GetBackground()
+
+	// Helper: build a line from styled segments, padded to full width with barBg
+	buildLine := func(content string, contentVisualWidth int) string {
+		// Add 1-char padding on each side (matching Bar's Padding(0,1))
+		line := StyledPadding(1, barBg) + content
+		currentWidth := 1 + contentVisualWidth
+		remaining := width - currentWidth
+		if remaining > 0 {
+			line += StyledPadding(remaining, barBg)
+		}
+		return line
+	}
+
+	// Status message takes the full line
 	if state.StatusMsg != "" {
 		var msgStyle lipgloss.Style
 		if state.StatusIsErr {
@@ -94,7 +113,10 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 		} else {
 			msgStyle = style.StatusOK
 		}
-		return style.Bar.Width(width).Height(statusBarHeight).Render(msgStyle.Render(state.StatusMsg))
+		msgStr := msgStyle.Render(state.StatusMsg)
+		line1 := buildLine(msgStr, lipgloss.Width(state.StatusMsg))
+		line2 := StyledPadding(width, barBg)
+		return line1 + "\n" + line2
 	}
 
 	// Build left section: filename + modified indicator
@@ -132,29 +154,35 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 	rightWidth := lipgloss.Width(rightStr)
 	totalContent := leftWidth + centerWidth + rightWidth
 
-	// Get the background from Bar style for padding
-	barBg := style.Bar.GetBackground()
-
-	// Account for Bar style's horizontal padding when computing content width.
-	// Bar has Padding(0, 1) = 2 chars total, so content must fit in (width - 2).
+	// Content width = total width minus Bar's horizontal padding (1 on each side)
 	barHPad := style.Bar.GetHorizontalPadding()
 	contentWidth := width - barHPad
 
-	// If there's room, space things out
+	// Assemble line 1 with explicit styled padding between segments
+	var line1 string
 	if totalContent < contentWidth-4 {
+		// Spread: left | pad | center | pad | right
 		padding := (contentWidth - totalContent) / 2
 		leftPad := StyledPadding(padding, barBg)
 		rightPad := StyledPadding(contentWidth-totalContent-padding, barBg)
-		return style.Bar.Width(width).Height(statusBarHeight).Render(leftStr + leftPad + center + rightPad + rightStr)
+		line1 = buildLine(leftStr+leftPad+center+rightPad+rightStr, contentWidth)
+	} else {
+		// Tight: left | 1sp | center | 1sp | right
+		styledSpace := StyledPadding(1, barBg)
+		visWidth := totalContent + 2
+		line1 = buildLine(leftStr+styledSpace+center+styledSpace+rightStr, visWidth)
 	}
 
-	// Otherwise, truncate hints first - use styled spaces
-	styledSpace := StyledPadding(1, barBg)
-	return style.Bar.Width(width).Height(statusBarHeight).Render(leftStr + styledSpace + center + styledSpace + rightStr)
+	// Line 2: empty line with full background (consistent StatusBarHeight)
+	line2 := StyledPadding(width, barBg)
+
+	return line1 + "\n" + line2
 }
 
 // RenderMinimalStatusBar renders a compact status bar for narrow terminals.
 func RenderMinimalStatusBar(state StatusBarState, width int, style StatusBarStyle) string {
+	barBg := style.Bar.GetBackground()
+
 	// Just show filename (truncated if needed) and modified indicator
 	name := state.Filename
 	if name == "" {
@@ -166,10 +194,18 @@ func RenderMinimalStatusBar(state StatusBarState, width int, style StatusBarStyl
 		name = name[:maxNameLen-3] + "..."
 	}
 
-	result := style.Filename.Render(name)
+	content := style.Filename.Render(name)
+	contentWidth := lipgloss.Width(name)
 	if state.Modified {
-		result += style.Modified.Render(" [+]")
+		content += style.Modified.Render(" [+]")
+		contentWidth += 4
 	}
 
-	return style.Bar.Width(width).Render(result)
+	// Build with explicit padding — 1 char left pad, then content, then fill
+	line := StyledPadding(1, barBg) + content
+	remaining := width - 1 - contentWidth
+	if remaining > 0 {
+		line += StyledPadding(remaining, barBg)
+	}
+	return line
 }

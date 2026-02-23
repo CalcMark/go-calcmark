@@ -134,15 +134,71 @@ func (m Model) renderGlobalsPanel(width int) string {
 	return strings.Join(allLines, "\n")
 }
 
-// renderAutocompletePopup renders the autocomplete popup box.
-// Returns the popup as a styled string with border.
+// renderAutocompletePopup renders the autocomplete popup box using manual borders
+// with explicit backgrounds on every cell, matching the OverlayStyle pattern used
+// by command menu, help, file picker, and export overlays. This prevents terminal
+// colors from bleeding through the popup.
 func (m Model) renderAutocompletePopup() string {
 	if !m.autocompleteState.Visible || len(m.autocompleteState.Suggestions) == 0 {
 		return ""
 	}
 
-	style := components.DefaultPopupStyle()
-	return components.RenderPopupBox(m.autocompleteState, style)
+	state := m.autocompleteState
+
+	// Inner width = popup width minus 2 border characters (left + right)
+	innerWidth := max(state.PopupWidth-2, 15)
+	o := NewOverlayStyle(innerWidth)
+
+	maxVisible := state.PopupHeight
+	if maxVisible <= 0 {
+		maxVisible = min(len(state.Suggestions), 8)
+	}
+
+	// Ensure scroll keeps selected item visible
+	scrollTop := min(state.ScrollTop, state.Selected)
+	if state.Selected >= scrollTop+maxVisible {
+		scrollTop = state.Selected - maxVisible + 1
+	}
+
+	var lines []string
+	lines = append(lines, o.TopBorder)
+
+	// Render visible suggestion items
+	for i := scrollTop; i < scrollTop+maxVisible && i < len(state.Suggestions); i++ {
+		s := state.Suggestions[i]
+
+		// Format: prefer syntax (function signature) over description
+		name := s.Name
+		detail := ""
+		if s.Syntax != "" {
+			detail = " " + s.Syntax
+		} else if s.Description != "" {
+			detail = " " + s.Description
+		}
+
+		content := " " + name + detail
+		if len(content) > innerWidth {
+			content = content[:innerWidth-1] + "…"
+		}
+
+		if i == state.Selected {
+			lines = append(lines, o.WrapRow(o.PadLine(content, theme.PopupSelectedFg, o.SelectedBg, true)))
+		} else {
+			lines = append(lines, o.WrapRow(o.PadLine(content, theme.Text, o.ItemBg, false)))
+		}
+	}
+
+	// Scroll indicator if needed
+	if len(state.Suggestions) > maxVisible {
+		indicator := fmt.Sprintf(" (%d/%d)", state.Selected+1, len(state.Suggestions))
+		lines = append(lines, o.HintRow(indicator))
+	}
+
+	// Keyboard hints
+	lines = append(lines, o.HintRow(" Tab ↑↓ Esc"))
+
+	lines = append(lines, o.BottomBorder)
+	return strings.Join(lines, "\n")
 }
 
 // calculatePopupScreenPosition computes where to place the popup on screen.
@@ -162,7 +218,12 @@ func (m Model) calculatePopupScreenPosition(contentHeight int) (row, col int) {
 	row = headerRows + visualCursorRow + 1
 
 	// Ensure popup fits on screen
-	popupHeight := m.autocompleteState.PopupHeight + 2 // +2 for hint and border
+	// Height = top border (1) + items + hint (1) + bottom border (1) + optional scroll indicator (1)
+	hasScroll := len(m.autocompleteState.Suggestions) > m.autocompleteState.PopupHeight
+	popupHeight := m.autocompleteState.PopupHeight + 3 // borders (2) + hint (1)
+	if hasScroll {
+		popupHeight++ // scroll indicator line
+	}
 	if row+popupHeight > contentHeight {
 		// Place above cursor instead
 		row = max(headerRows+visualCursorRow-popupHeight, headerRows)

@@ -74,8 +74,8 @@ func (m Model) View() string {
 	totalWidth := m.width
 	totalHeight := m.height
 
-	// Reserve space: status bar (2) + context footer (2) + separator (1) + empty line (1)
-	contentHeight := max(totalHeight-6, 5)
+	// Reserve space: status bar + context footer (2) + separator (1) + empty line (1)
+	contentHeight := max(totalHeight-components.StatusBarHeight-4, 5)
 
 	// Calculate pane widths based on preview mode using centralized configuration
 	leftWidth, rightWidth := m.GetPaneWidths(totalWidth)

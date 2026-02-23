@@ -141,26 +141,44 @@ func overlayPopupOnLines(lines []string, popup string, row, col int) []string {
 
 // overlayStringAt overlays overlay on base starting at column col.
 // Handles ANSI escape codes properly using lipgloss.Width for visual width.
+// Preserves ANSI state from the base line so that text after the overlay
+// retains its original styling (backgrounds, colors).
+//
+// The base line may use either multi-segment ANSI (separate style per component)
+// or single-envelope ANSI (one background wrapping the entire line, as produced
+// by SideBySide.padLine()). Both cases are handled correctly by tracking ALL
+// ANSI sequences seen while scanning the base, then replaying them after the
+// overlay's reset to re-establish the base line's styling context.
 func overlayStringAt(base, overlay string, col int) string {
-	// Convert to runes for proper unicode handling
 	baseRunes := []rune(base)
 	overlayRunes := []rune(overlay)
 
-	// Build result: base up to col, then overlay, then rest of base
+	// Collect all non-reset ANSI escape sequences from the base as we scan.
+	// After the overlay, we replay these to restore the base's styling context.
+	// This handles the single-envelope case where stripResetCodes() removed all
+	// internal resets, leaving only the opening \x1b[48;2;R;G;Bm at the start.
+	var baseANSIState []rune
+
 	var result []rune
 
-	// Copy base characters up to col
+	// Copy base characters up to col, tracking ANSI state
 	visualCol := 0
 	baseIdx := 0
 	for baseIdx < len(baseRunes) && visualCol < col {
 		r := baseRunes[baseIdx]
 		result = append(result, r)
-		// Skip ANSI escape sequences in width calculation
 		if r == '\x1b' {
-			// Find end of escape sequence
+			// Collect this escape sequence for state tracking
+			var esc []rune
+			esc = append(esc, r)
 			for baseIdx < len(baseRunes)-1 && baseRunes[baseIdx] != 'm' {
 				baseIdx++
 				result = append(result, baseRunes[baseIdx])
+				esc = append(esc, baseRunes[baseIdx])
+			}
+			escStr := string(esc)
+			if escStr != "\x1b[0m" && escStr != "\x1b[m" {
+				baseANSIState = append(baseANSIState, esc...)
 			}
 		} else {
 			visualCol++
@@ -177,27 +195,42 @@ func overlayStringAt(base, overlay string, col int) string {
 	// Append the overlay
 	result = append(result, overlayRunes...)
 
-	// CRITICAL: Add explicit ANSI reset after overlay to prevent background bleeding.
-	// Lipgloss may set background colors that would otherwise affect subsequent text.
+	// Reset after overlay to prevent overlay styles from bleeding into base text
 	result = append(result, []rune("\x1b[0m")...)
 
-	// Skip the overlaid portion of base using VISUAL width of overlay
-	// CRITICAL: Use lipgloss.Width() to get visual width, not len(overlayRunes)
-	// which includes ANSI escape codes and would skip too many characters.
+	// Skip the overlaid portion of base using VISUAL width of overlay.
+	// Continue collecting ANSI state from the skipped region.
 	overlayVisualWidth := lipgloss.Width(overlay)
 	for baseIdx < len(baseRunes) && overlayVisualWidth > 0 {
 		r := baseRunes[baseIdx]
 		if r == '\x1b' {
-			// Keep escape sequences (they have zero visual width)
-			for baseIdx < len(baseRunes) && baseRunes[baseIdx] != 'm' {
+			var esc []rune
+			for baseIdx < len(baseRunes) {
+				esc = append(esc, baseRunes[baseIdx])
+				if baseRunes[baseIdx] == 'm' {
+					baseIdx++
+					break
+				}
 				baseIdx++
 			}
-			baseIdx++
+			escStr := string(esc)
+			if escStr == "\x1b[0m" || escStr == "\x1b[m" {
+				// Reset clears all state
+				baseANSIState = baseANSIState[:0]
+			} else {
+				baseANSIState = append(baseANSIState, esc...)
+			}
 		} else {
 			overlayVisualWidth--
 			baseIdx++
 		}
 	}
+
+	// Replay accumulated ANSI state to restore the base line's styling.
+	// This covers both cases:
+	// - Single-envelope: the opening \x1b[48;2;...m was captured in the first loop
+	// - Multi-segment: all non-reset codes from both loops are accumulated
+	result = append(result, baseANSIState...)
 
 	// Append rest of base
 	if baseIdx < len(baseRunes) {

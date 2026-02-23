@@ -83,6 +83,12 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 		return padToHeight("")
 	}
 
+	// Styled space/text helper: renders text with bg to prevent terminal bleed-through.
+	// ALL raw text between styled segments must use this.
+	bgText := func(s string) string {
+		return lipgloss.NewStyle().Background(bg).Render(s)
+	}
+
 	// Priority 0: Show autocomplete details when active
 	if state.AutocompleteActive && state.AutocompleteName != "" {
 		nameStyle := lipgloss.NewStyle().Foreground(theme.FooterFuncName).Bold(true).Background(bg)
@@ -94,13 +100,13 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 		// Line 1: Name + Syntax (function signature)
 		line1 := nameStyle.Render(state.AutocompleteName)
 		if state.AutocompleteSyntax != "" {
-			line1 += " " + syntaxStyle.Render(state.AutocompleteSyntax)
+			line1 += bgText(" ") + syntaxStyle.Render(state.AutocompleteSyntax)
 		}
 		lines = append(lines, line1)
 
 		// Line 2: Description
 		if state.AutocompleteDesc != "" {
-			line2 := "  " + descStyle.Render(state.AutocompleteDesc)
+			line2 := bgText("  ") + descStyle.Render(state.AutocompleteDesc)
 			lines = append(lines, line2)
 		} else {
 			lines = append(lines, StyledPadding(width, bg))
@@ -125,12 +131,12 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 		var lines []string
 
 		// Line 1: function(arg1, arg2, ►current_arg◄, ...)
-		line1 := funcStyle.Render(state.FunctionName) + "(" + paramStyle.Render("►"+state.ParamName+"◄") + ")"
+		line1 := funcStyle.Render(state.FunctionName) + bgText("(") + paramStyle.Render("►"+state.ParamName+"◄") + bgText(")")
 		lines = append(lines, line1)
 
 		// Line 2: Examples for this argument type
 		if state.ParamExamples != "" {
-			line2 := "  " + exampleStyle.Render(state.ParamExamples)
+			line2 := bgText("  ") + exampleStyle.Render(state.ParamExamples)
 			lines = append(lines, line2)
 		} else {
 			lines = append(lines, StyledPadding(width, bg))
@@ -177,7 +183,7 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 
 		// Line 2: Hint/suggestion if available
 		if hint != "" {
-			line2 := "  " + hintStyle.Render(hint)
+			line2 := bgText("  ") + hintStyle.Render(hint)
 			lines = append(lines, line2)
 		} else {
 			lines = append(lines, StyledPadding(width, bg))
