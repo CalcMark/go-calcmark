@@ -26,14 +26,32 @@ Examples:
   cm help functions     Show all available functions
   cm help constants     Show all unit constants`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// When run without subcommand, show available topics
-		fmt.Println("CalcMark Help")
+		// Show the root command description and examples
+		fmt.Println(rootCmd.Long)
 		fmt.Println()
-		fmt.Println("Available topics:")
-		fmt.Println("  functions   List all CalcMark functions")
-		fmt.Println("  constants   List all built-in unit constants")
+
+		// Show available commands (skip hidden and help itself)
+		fmt.Println("Commands:")
+		for _, c := range rootCmd.Commands() {
+			if c.Hidden || c.Name() == "help" {
+				continue
+			}
+			fmt.Printf("  %-14s%s\n", c.Name(), c.Short)
+		}
 		fmt.Println()
-		fmt.Println("Use \"cm help <topic>\" for more information.")
+
+		// Show flags
+		fmt.Println("Flags:")
+		fmt.Println("  --color-mode string   Color mode: 'auto', 'light', or 'dark'")
+		fmt.Println()
+
+		// Show CalcMark-specific topics
+		fmt.Println("Topics:")
+		fmt.Println("  functions     List all CalcMark functions")
+		fmt.Println("  constants     List all built-in unit constants")
+		fmt.Println()
+		fmt.Println("Use \"cm [command] --help\" for command details.")
+		fmt.Println("Use \"cm help <topic>\" for topic details.")
 	},
 }
 

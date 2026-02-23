@@ -104,17 +104,38 @@ func TestHelpOutputPipeable(t *testing.T) {
 	})
 }
 
-// TestHelpCmdTopics verifies that help command shows available topics.
-func TestHelpCmdTopics(t *testing.T) {
+// TestHelpCmdShowsCLIOverview verifies that help command shows the full CLI
+// overview (description, commands, flags, topics) — not just topics.
+func TestHelpCmdShowsCLIOverview(t *testing.T) {
 	output := captureStdout(t, func() {
 		helpCmd.Run(helpCmd, []string{})
 	})
 
-	if !strings.Contains(output, "functions") {
-		t.Error("help output missing 'functions' topic")
+	// Verify root description is included
+	if !strings.Contains(output, "CalcMark is an interpreted language") {
+		t.Error("help output missing root command description")
 	}
-	if !strings.Contains(output, "constants") {
-		t.Error("help output missing 'constants' topic")
+
+	// Verify commands section
+	for _, cmd := range []string{"eval", "convert", "edit", "version"} {
+		if !strings.Contains(output, cmd) {
+			t.Errorf("help output missing command %q", cmd)
+		}
+	}
+
+	// Verify topics section
+	for _, topic := range []string{"functions", "constants"} {
+		if !strings.Contains(output, topic) {
+			t.Errorf("help output missing topic %q", topic)
+		}
+	}
+
+	// Verify usage hints
+	if !strings.Contains(output, "cm help <topic>") {
+		t.Error("help output missing topic usage hint")
+	}
+	if !strings.Contains(output, "cm [command] --help") {
+		t.Error("help output missing command usage hint")
 	}
 }
 
