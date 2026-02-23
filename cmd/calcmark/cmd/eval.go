@@ -44,7 +44,7 @@ func runEval(args []string) error {
 		hasFile = true
 
 		// Read from file
-		if err := validateFilePath(filename); err != nil {
+		if err := validateReadFilePath(filename); err != nil {
 			return fmt.Errorf("invalid file: %w", err)
 		}
 

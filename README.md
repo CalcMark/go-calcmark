@@ -105,6 +105,25 @@ Press Ctrl+H (or F1) in the TUI editor for keybindings.
 - [Documentation](https://calcmark.org/docs/) - Complete documentation with examples
 - [Language Reference](https://calcmark.org/docs/language-reference/) - Formal language specification
 
+## Development
+
+**Prerequisites:**
+
+- [Go](https://go.dev/) 1.24+
+- [Task](https://taskfile.dev/) — task runner (`brew install go-task`)
+
+**Optional (for recording demo GIFs):**
+
+- [VHS](https://github.com/charmbracelet/vhs) — terminal recorder (`brew install vhs`)
+- VHS requires `ttyd` and `ffmpeg`, installed automatically by Homebrew
+
+```bash
+task test       # Run all tests
+task quality    # Lint, vet, staticcheck
+task build      # Build the cm binary
+task record-demos  # Regenerate all demo GIFs (requires VHS)
+```
+
 ## License
 
 MIT

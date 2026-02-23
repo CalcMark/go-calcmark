@@ -191,6 +191,13 @@
   border: 1px solid var(--color-border);
 }
 
+.feature-gif {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  margin-top: var(--space-3);
+}
+
 /* Buttons */
 .btn {
   display: inline-block;

@@ -60,7 +60,7 @@ func runConvert(filename string) error {
 	}
 
 	// Validate file path
-	if err := validateFilePath(filename); err != nil {
+	if err := validateReadFilePath(filename); err != nil {
 		return fmt.Errorf("invalid file: %w", err)
 	}
 
