@@ -166,9 +166,12 @@ tasks:
   security:
     desc: Run security-focused tests
     cmds:
-      - go test -v -run TestFileSizeLimit ./cmd/calcmark
-      - go test -v -run TestPathValidation ./cmd/calcmark
-      - echo '✓ Security tests passed (add more as implemented)'
+      - go test -v -run "TestValidateFilePath|TestValidateReadFilePath" ./cmd/calcmark/cmd
+      - go test -v -run "TestSecurity" ./spec/parser
+      - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/lexer
+      - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/parser
+      - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/document
+      - echo '✓ Security tests passed'
 
   # Benchmark tasks  
   bench:
