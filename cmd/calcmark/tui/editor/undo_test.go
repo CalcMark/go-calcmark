@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -861,3 +862,333 @@ func TestUndoResetsEditBufLoaded(t *testing.T) {
 		t.Errorf("After undo: editBuf=%q, want empty (matching document)", m.editBuf)
 	}
 }
+
+// --- Tests moved from model_test.go ---
+
+func TestUndoManager(t *testing.T) {
+	doc, _ := document.NewDocument("x = 10\n")
+	m := New(doc)
+
+	// Initial undo stack should be empty (no operations recorded yet)
+	if m.undoManager.HistorySize() != 0 {
+		t.Errorf("Expected 0 undo entries, got %d", m.undoManager.HistorySize())
+	}
+
+	// UndoManager is initialized
+	if m.undoManager == nil {
+		t.Error("UndoManager should be initialized")
+	}
+
+	// Test that HasUndo returns false when empty
+	if m.undoManager.HasUndo() {
+		t.Error("Should not have undo available when history is empty")
+	}
+}
+
+// TestUndoRedoIntegration tests the FULL undo/redo flow through Update().
+// This test explicitly verifies that Ctrl+Z actually modifies the document,
+// catching value/pointer receiver bugs that would cause changes to be lost.
+func TestUndoRedoIntegration(t *testing.T) {
+	// Use multi-line document so navigation commits edits
+	doc, _ := document.NewDocument("# Header\nx = 10\n")
+	m := New(doc)
+
+	// Get initial content
+	initialLines := m.GetLines()
+	if len(initialLines) == 0 || initialLines[0] != "# Header" {
+		t.Fatalf("Expected initial line '# Header', got %v", initialLines)
+	}
+
+	// Step 1: Type "abc" by sending KeyRunes through Update()
+	// This simulates actual user typing
+	typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("abc")}
+	newModel, _ := m.Update(typeMsg)
+	m = newModel.(Model)
+
+	// Verify typing was recorded in editBuf
+	if !strings.HasPrefix(m.editBuf, "abc") {
+		t.Errorf("Expected editBuf to start with 'abc', got %q", m.editBuf)
+	}
+
+	// Step 2: Force a boundary by navigating down (commits the edit)
+	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ = m.Update(downMsg)
+	m = newModel.(Model)
+
+	// Verify the document now contains the typed text
+	linesAfterType := m.GetLines()
+	if len(linesAfterType) == 0 || !strings.HasPrefix(linesAfterType[0], "abc") {
+		t.Errorf("Expected first line to start with 'abc' after typing, got %v", linesAfterType)
+	}
+
+	// Step 3: Press Ctrl+Z to undo
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	// CRITICAL ASSERTION: Document should be restored to original state
+	linesAfterUndo := m.GetLines()
+	if len(linesAfterUndo) == 0 {
+		t.Fatal("Expected lines after undo, got empty")
+	}
+	if linesAfterUndo[0] != "# Header" {
+		t.Errorf("UNDO FAILED: Expected first line to be '# Header' after undo, got %q", linesAfterUndo[0])
+	}
+
+	// Step 4: Press Ctrl+Y to redo
+	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	newModel, _ = m.Update(redoMsg)
+	m = newModel.(Model)
+
+	// CRITICAL ASSERTION: Document should have the typed text again
+	linesAfterRedo := m.GetLines()
+	if len(linesAfterRedo) == 0 {
+		t.Fatal("Expected lines after redo, got empty")
+	}
+	if !strings.HasPrefix(linesAfterRedo[0], "abc") {
+		t.Errorf("REDO FAILED: Expected first line to start with 'abc' after redo, got %q", linesAfterRedo[0])
+	}
+
+	// Step 5: Verify undo again works
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+	linesAfterUndo2 := m.GetLines()
+	if linesAfterUndo2[0] != "# Header" {
+		t.Errorf("UNDO (2nd) FAILED: Expected '# Header', got %q", linesAfterUndo2[0])
+	}
+}
+
+// TestUndoStatusMessage verifies undo sets the status message.
+// This catches the case where undo appears to work but doesn't update UI feedback.
+func TestUndoStatusMessage(t *testing.T) {
+	doc, _ := document.NewDocument("test\n")
+	m := New(doc)
+
+	// Type something
+	typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")}
+	newModel, _ := m.Update(typeMsg)
+	m = newModel.(Model)
+
+	// Navigate to commit
+	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ = m.Update(downMsg)
+	m = newModel.(Model)
+
+	// Undo
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	// Check status message
+	if m.statusMsg != "Undo" {
+		t.Errorf("Expected status message 'Undo', got %q", m.statusMsg)
+	}
+}
+
+// TestUndoNothingToUndo verifies correct behavior when undo stack is empty.
+func TestUndoNothingToUndo(t *testing.T) {
+	doc, _ := document.NewDocument("test\n")
+	m := New(doc)
+
+	// Immediately try to undo without any edits
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ := m.Update(undoMsg)
+	m = newModel.(Model)
+
+	// Should show "Nothing to undo"
+	if m.statusMsg != "Nothing to undo" {
+		t.Errorf("Expected status 'Nothing to undo', got %q", m.statusMsg)
+	}
+}
+
+// TestUndoAfterTypeAndEnter reproduces the bug where:
+// 1. User types "hello" then Enter
+// 2. User presses Ctrl+Z
+// 3. BUG: Content becomes "hellohello" instead of being undone
+// This test MUST FAIL until the bug is fixed.
+func TestUndoAfterTypeAndEnter(t *testing.T) {
+	// Start with empty document
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	initialLines := m.GetLines()
+	t.Logf("Initial lines: %v", initialLines)
+
+	// Step 1: Type "hello"
+	for _, ch := range "hello" {
+		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		newModel, _ := m.Update(typeMsg)
+		m = newModel.(Model)
+	}
+
+	linesAfterHello := m.GetLines()
+	t.Logf("After typing 'hello': %v, editBuf=%q", linesAfterHello, m.editBuf)
+
+	// Step 2: Press Enter (this should commit "hello" and create newline)
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := m.Update(enterMsg)
+	m = newModel.(Model)
+
+	linesAfterEnter := m.GetLines()
+	t.Logf("After Enter: %v (total=%d)", linesAfterEnter, len(linesAfterEnter))
+
+	// Verify state before undo
+	if len(linesAfterEnter) < 2 {
+		t.Fatalf("Expected at least 2 lines after Enter, got %d: %v", len(linesAfterEnter), linesAfterEnter)
+	}
+	if linesAfterEnter[0] != "hello" {
+		t.Errorf("Expected first line to be 'hello', got %q", linesAfterEnter[0])
+	}
+
+	// Step 3: Press Ctrl+Z to undo
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	linesAfterUndo := m.GetLines()
+	t.Logf("After Ctrl+Z: %v", linesAfterUndo)
+
+	// CRITICAL BUG CHECK: Content should NOT be "hellohello"
+	if len(linesAfterUndo) > 0 && strings.Contains(linesAfterUndo[0], "hellohello") {
+		t.Errorf("BUG REPRODUCED: Undo duplicated content! Got %q", linesAfterUndo[0])
+	}
+
+	// After undo, we should be back to empty or have "hello" without newline
+	// (depending on what the last committed batch was)
+	// The key assertion is that content should NEVER be duplicated
+	totalContent := strings.Join(linesAfterUndo, "\n")
+	helloCount := strings.Count(totalContent, "hello")
+	if helloCount > 1 {
+		t.Errorf("BUG: 'hello' appears %d times after undo (should be 0 or 1). Content: %q", helloCount, totalContent)
+	}
+}
+
+// TestUTF8TypeAndUndo verifies undo works correctly with multi-byte UTF-8 characters.
+// This tests that cursorCol is handled as rune position, not byte position.
+func TestUTF8TypeAndUndo(t *testing.T) {
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	// Type "世界" (two 3-byte UTF-8 characters)
+	for _, ch := range "世界" {
+		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		newModel, _ := m.Update(typeMsg)
+		m = newModel.(Model)
+	}
+
+	t.Logf("After typing '世界': editBuf=%q, cursorCol=%d", m.editBuf, m.cursorCol)
+
+	// editBuf should be "世界" (6 bytes, 2 runes)
+	if m.editBuf != "世界" {
+		t.Errorf("Expected editBuf='世界', got %q", m.editBuf)
+	}
+
+	// cursorCol should be 2 (2 characters), not 6 (6 bytes)
+	if m.cursorCol != 2 {
+		t.Errorf("Expected cursorCol=2 (rune position), got %d", m.cursorCol)
+	}
+
+	// Press Enter to commit and create undo point
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := m.Update(enterMsg)
+	m = newModel.(Model)
+
+	linesAfterEnter := m.GetLines()
+	t.Logf("After Enter: lines=%v", linesAfterEnter)
+
+	if len(linesAfterEnter) < 1 || linesAfterEnter[0] != "世界" {
+		t.Errorf("Expected first line='世界', got %v", linesAfterEnter)
+	}
+
+	// Undo the Enter
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	newModel, _ = m.Update(undoMsg)
+	m = newModel.(Model)
+
+	linesAfterUndo := m.GetLines()
+	t.Logf("After Ctrl+Z: lines=%v", linesAfterUndo)
+
+	// Should be back to "世界" on one line, not corrupted
+	if len(linesAfterUndo) != 1 {
+		t.Errorf("Expected 1 line after undo, got %d", len(linesAfterUndo))
+	}
+	if len(linesAfterUndo) > 0 && linesAfterUndo[0] != "世界" {
+		t.Errorf("UTF-8 CORRUPTION: Expected '世界', got %q", linesAfterUndo[0])
+	}
+}
+
+// TestRepeatedUndoRedoNoPanic verifies that pressing Ctrl+Z or Ctrl+Y repeatedly
+// doesn't panic when the undo/redo stack is exhausted.
+func TestRepeatedUndoRedoNoPanic(t *testing.T) {
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	// Type something
+	for _, ch := range "hello" {
+		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		newModel, _ := m.Update(typeMsg)
+		m = newModel.(Model)
+	}
+
+	// Press Enter to commit
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := m.Update(enterMsg)
+	m = newModel.(Model)
+
+	// Press Ctrl+Z many times (should not panic)
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	for range 20 {
+		newModel, _ = m.Update(undoMsg)
+		m = newModel.(Model)
+	}
+
+	// The undo stack should be exhausted, status should say "Nothing to undo"
+	t.Logf("After 20 undos: statusMsg=%q", m.statusMsg)
+
+	// Press Ctrl+Y many times (should not panic)
+	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	for range 20 {
+		newModel, _ = m.Update(redoMsg)
+		m = newModel.(Model)
+	}
+
+	// The redo stack should be exhausted, status should say "Nothing to redo"
+	t.Logf("After 20 redos: statusMsg=%q", m.statusMsg)
+}
+
+// TestUndoRedoAlternating tests alternating undo/redo operations.
+// This can trigger edge cases where cursor positions become invalid.
+func TestUndoRedoAlternating(t *testing.T) {
+	doc, _ := document.NewDocument("")
+	m := New(doc)
+
+	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+
+	// Type and enter multiple times
+	for range 3 {
+		for _, ch := range "hello" {
+			typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+			newModel, _ := m.Update(typeMsg)
+			m = newModel.(Model)
+		}
+		newModel, _ := m.Update(enterMsg)
+		m = newModel.(Model)
+	}
+
+	t.Logf("After typing: lines=%v", m.GetLines())
+
+	// Undo, redo, undo, redo pattern
+	for i := range 10 {
+		newModel, _ := m.Update(undoMsg)
+		m = newModel.(Model)
+		t.Logf("After undo %d: lines=%d, status=%q", i, len(m.GetLines()), m.statusMsg)
+
+		newModel, _ = m.Update(redoMsg)
+		m = newModel.(Model)
+		t.Logf("After redo %d: lines=%d, status=%q", i, len(m.GetLines()), m.statusMsg)
+	}
+}
+
+// TestUTF8CursorMovement verifies cursor movement is rune-based, not byte-based.

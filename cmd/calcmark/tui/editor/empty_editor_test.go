@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"strings"
 	"testing"
 
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
@@ -764,3 +765,216 @@ func TestEmptyEditorLoadEditBuffer(t *testing.T) {
 		t.Errorf("Expected editBuf='test' after loading, got %q", m2.editBuf)
 	}
 }
+
+// --- Tests moved from model_test.go ---
+
+func TestEscInEmptyDocument(t *testing.T) {
+	m := New(nil)
+
+	// Empty document has 1 empty line (not 0)
+	if m.TotalLines() != 1 {
+		t.Errorf("Expected 1 line for empty document, got %d lines", m.TotalLines())
+	}
+
+	// Blank documents start in editing mode already
+	if m.Mode() != StateDefault {
+		t.Errorf("Expected StateDefault for blank document, got %v", m.Mode())
+	}
+
+	// Press ESC - should do nothing in normal mode (ESC is only for canceling special modes)
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = newModel.(Model)
+
+	if m.Mode() != StateDefault {
+		t.Errorf("Expected StateDefault after ESC, got %v", m.Mode())
+	}
+
+	// ESC should not change the document - still 1 line
+	if m.TotalLines() != 1 {
+		t.Errorf("Expected 1 line after ESC (no change), got %d lines", m.TotalLines())
+	}
+}
+
+// Test typing in empty document then ESC
+func TestTypingInEmptyDocument(t *testing.T) {
+	m := New(nil)
+
+	// Blank documents start in editing mode, so we can type immediately
+	// Type "hello"
+	var newModel tea.Model
+	for _, ch := range "hello" {
+		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		m = newModel.(Model)
+	}
+
+	t.Logf("Before ESC: editBuf=%q, cursorLine=%d", m.editBuf, m.cursorLine)
+
+	// Press ESC - should do nothing in normal mode
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = newModel.(Model)
+
+	t.Logf("After ESC: editBuf=%q, cursorLine=%d, userIsTyping=%v", m.editBuf, m.cursorLine, m.userIsTyping)
+
+	// ESC should not affect the editBuf or document - content is only saved on navigation or explicit save
+	// The editBuf still contains "hello" but isn't saved yet
+	if m.editBuf != "hello" {
+		t.Errorf("Expected editBuf to still contain 'hello' after ESC, got %q", m.editBuf)
+	}
+
+	// Should still be in edit mode
+	if m.Mode() != StateDefault {
+		t.Errorf("Expected to remain in StateDefault, got %v", m.Mode())
+	}
+}
+
+// Test continuing to edit after creating document from empty
+func TestContinueEditingAfterCreation(t *testing.T) {
+	m := New(nil)
+
+	// Blank documents start in editing mode, type "first"
+	var newModel tea.Model
+	for _, ch := range "first" {
+		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		m = newModel.(Model)
+	}
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = newModel.(Model)
+
+	// Navigate back to line 0 to edit it
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m = newModel.(Model)
+
+	// Move cursor to end of line
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m = newModel.(Model)
+
+	// Type " second" to append to "first"
+	for _, ch := range " second" {
+		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		m = newModel.(Model)
+	}
+
+	// Update is debounced, so trigger immediate update
+	m.updateCurrentLine(m.editBuf)
+	m.redetectBlockTypes()
+	m.reEvaluate()
+	m.userIsTyping = false
+
+	lines := m.GetLines()
+	if len(lines) == 0 {
+		t.Fatal("Expected at least one line")
+	}
+
+	if lines[0] != "first second" {
+		t.Errorf("Expected 'first second', got %q", lines[0])
+	}
+}
+
+// Test empty edit buffer doesn't create empty lines
+func TestEmptyEditBufferNoEmptyLines(t *testing.T) {
+	doc, _ := document.NewDocument("line1\nline2\n")
+	m := New(doc)
+
+	initialLines := m.TotalLines()
+
+	// Enter edit mode, clear the line, save
+	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	m = newModel.(Model)
+
+	// Clear buffer by pressing backspace multiple times
+	for range 10 {
+		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		m = newModel.(Model)
+	}
+
+	// Save with ESC
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = newModel.(Model)
+
+	// Should still have lines (empty line becomes text block)
+	if m.TotalLines() < initialLines {
+		t.Logf("Initial lines: %d, After clearing: %d", initialLines, m.TotalLines())
+		// This is actually OK - redetection might merge/remove blocks
+	}
+}
+
+func TestBlankDocumentRendering(t *testing.T) {
+	// Create a blank document (like ./cm edit)
+	m := New(nil)
+
+	// Set window size for rendering
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = newModel.(Model)
+
+	// Get the view
+	view := m.View()
+
+	// Verify headers are visible
+	if !strings.Contains(view, "Source") {
+		t.Error("Expected 'Source' header to be visible in blank document")
+	}
+	if !strings.Contains(view, "Results") {
+		t.Error("Expected 'Results' header to be visible in blank document")
+	}
+
+	// Verify document starts in editing mode
+	if m.mode != StateDefault {
+		t.Errorf("Expected blank document to start in StateDefault, got %v", m.mode)
+	}
+
+	// Verify cursor is at position 0
+	if m.cursorCol != 0 || m.cursorLine != 0 {
+		t.Errorf("Expected cursor at (0,0), got (%d,%d)", m.cursorLine, m.cursorCol)
+	}
+
+	// Verify edit buffer is empty
+	if m.editBuf != "" {
+		t.Errorf("Expected empty edit buffer, got %q", m.editBuf)
+	}
+
+	// Note: We can't easily test cursor visibility without rendering styles,
+	// but the logic in renderEditLine should render a cursor when editBuf is empty
+}
+
+func TestBlankDocumentTyping(t *testing.T) {
+	// Create a blank document
+	m := New(nil)
+
+	// Set window size
+	newModel, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = newModel.(Model)
+
+	// Type some text
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m = newModel.(Model)
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m = newModel.(Model)
+
+	// Verify edit buffer contains the text
+	if m.editBuf != "hi" {
+		t.Errorf("Expected edit buffer 'hi', got %q", m.editBuf)
+	}
+
+	// Verify still in editing mode
+	if m.mode != StateDefault {
+		t.Errorf("Expected to remain in StateDefault, got %v", m.mode)
+	}
+
+	// Save with ESC
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = newModel.(Model)
+
+	// Verify document was created
+	if m.TotalLines() == 0 {
+		t.Error("Expected document to have lines after typing and saving")
+	}
+
+	// Verify we're back in normal mode
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after saving, got %v", m.mode)
+	}
+}
+
+// TestExportFlowThroughUpdate tests the complete export flow through the
+// Update chain (Ctrl+E → select format → file picker → type filename → Enter)
+// to verify that state transitions work correctly end-to-end.
