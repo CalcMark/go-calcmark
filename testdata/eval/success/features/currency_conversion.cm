@@ -9,7 +9,12 @@ globals:
 
 # Currency Conversion
 
-Exchange rates are defined in frontmatter and used with the `in` keyword.
+Exchange rates are defined in the frontmatter `exchange:` block.
+Each key uses the format `FROM_TO` where FROM and TO are 3-letter
+ISO 4217 currency codes separated by an underscore.
+
+The rate is a multiplier: `USD_EUR: 0.92` means 1 USD = 0.92 EUR,
+so `100 USD in EUR` computes `100 * 0.92 = 92 EUR`.
 
 ## Basic conversion
 
@@ -20,11 +25,11 @@ price_in_euros = price in EUR
 
 total = $200 in EUR
 
-## Variable with conversion
+## Using a global variable with conversion
 
 budget_gbp = budget in GBP
 
-## Multiple rates in one document
+## Chaining rates across currencies
 
 yen_price = 1000 GBP in JPY
 
@@ -34,6 +39,10 @@ yen_price = 1000 GBP in JPY
 salary = 3000 USD
 salary_gbp = salary in GBP
 
-## Same currency no-op
+## Same currency is a no-op
 
 unchanged = 100 USD in USD
+
+## Lowercase keys normalize to uppercase
+
+Frontmatter keys like `usd_eur` are normalized to `USD_EUR`.
