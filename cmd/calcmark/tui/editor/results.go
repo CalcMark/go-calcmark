@@ -36,7 +36,7 @@ func (m *Model) GetLineResults() []LineResult {
 	fmCount := m.frontmatterLineCount()
 	if fmCount > 0 {
 		allLines := m.GetLines()
-		for i := 0; i < fmCount; i++ {
+		for i := range fmCount {
 			source := ""
 			if i < len(allLines) {
 				source = allLines[i]
@@ -206,7 +206,7 @@ func (m *Model) GetLineResults() []LineResult {
 // countNonEmptyLinesBefore counts non-empty lines before index i.
 func countNonEmptyLinesBefore(lines []string, i int) int {
 	count := 0
-	for j := 0; j < i; j++ {
+	for j := range i {
 		if strings.TrimSpace(lines[j]) != "" {
 			count++
 		}

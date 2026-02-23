@@ -45,10 +45,7 @@ func (m Model) renderGlobalsPanel(width int) string {
 			Render(hint)
 
 		// Space between left and right with background
-		space := width - lipgloss.Width(left) - lipgloss.Width(right)
-		if space < 0 {
-			space = 0
-		}
+		space := max(width-lipgloss.Width(left)-lipgloss.Width(right), 0)
 
 		// Use centralized StyledPadding utility
 		header := left + components.StyledPadding(space, paneBg) + right
@@ -79,10 +76,7 @@ func (m Model) renderGlobalsPanel(width int) string {
 		Background(paneBg).
 		Render(hint)
 
-	space := width - lipgloss.Width(left) - lipgloss.Width(right)
-	if space < 0 {
-		space = 0
-	}
+	space := max(width-lipgloss.Width(left)-lipgloss.Width(right), 0)
 
 	// Use centralized StyledPadding utility
 	headerLine := left + components.StyledPadding(space, paneBg) + right
@@ -171,10 +165,7 @@ func (m Model) calculatePopupScreenPosition(contentHeight int) (row, col int) {
 	popupHeight := m.autocompleteState.PopupHeight + 2 // +2 for hint and border
 	if row+popupHeight > contentHeight {
 		// Place above cursor instead
-		row = headerRows + visualCursorRow - popupHeight
-		if row < headerRows {
-			row = headerRows
-		}
+		row = max(headerRows+visualCursorRow-popupHeight, headerRows)
 	}
 
 	// Column: align with cursor, adjusted for line number gutter
@@ -274,9 +265,8 @@ func (m Model) renderFilePickerOverlay() string {
 	// coloring and cursor highlighting, so we use overlayPadLine which strips
 	// ANSI resets and applies background consistently.
 	pickerView := m.filePicker.View()
-	pickerLines := strings.Split(pickerView, "\n")
 
-	for _, pl := range pickerLines {
+	for pl := range strings.SplitSeq(pickerView, "\n") {
 		content := " " + pl
 		if m.filePickerFocus == FocusFilename {
 			// Dim the browser when filename has focus

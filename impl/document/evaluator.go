@@ -2,6 +2,7 @@ package document
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
@@ -144,7 +145,7 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 
 			for _, varName := range currentlyDefining {
 				// Skip if this block previously defined this variable
-				if hasBeenEvaluated && containsString(previouslyDefined, varName) {
+				if hasBeenEvaluated && slices.Contains(previouslyDefined, varName) {
 					continue
 				}
 				// Check for conflict with other blocks
@@ -274,7 +275,7 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	previouslyDefinedVars := block.Variables()
 	for varName, value := range env.GetAllVariables() {
 		// Skip variables that this block previously defined successfully
-		if !containsString(previouslyDefinedVars, varName) {
+		if !slices.Contains(previouslyDefinedVars, varName) {
 			checker.GetEnvironment().Set(varName, value)
 		}
 	}
@@ -382,7 +383,7 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 
 	for varName, value := range e.env.GetAllVariables() {
 		// Skip variables that this block previously evaluated successfully
-		if hasBeenEvaluated && containsString(previouslyDefinedVars, varName) {
+		if hasBeenEvaluated && slices.Contains(previouslyDefinedVars, varName) {
 			continue
 		}
 		checker.GetEnvironment().Set(varName, value)
@@ -507,14 +508,4 @@ func (e *Evaluator) updateFrontmatterFromNodes(doc *document.Document, nodes []a
 			}
 		}
 	}
-}
-
-// containsString checks if a string slice contains a given string.
-func containsString(slice []string, str string) bool {
-	for _, s := range slice {
-		if s == str {
-			return true
-		}
-	}
-	return false
 }

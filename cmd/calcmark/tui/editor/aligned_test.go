@@ -50,7 +50,7 @@ func TestComputeAlignedModel_Simple(t *testing.T) {
 	}
 
 	// Check source-to-visual mapping
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if v, ok := model.SourceToVisual[i]; !ok || v != i {
 			t.Errorf("SourceToVisual[%d] = %d, %v, want %d, true", i, v, ok, i)
 		}
@@ -225,7 +225,7 @@ func TestComputeAlignedModel_MultipleBlocks(t *testing.T) {
 	}
 
 	// Check each source line has a mapping
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		if _, ok := model.SourceToVisual[i]; !ok {
 			t.Errorf("Source line %d has no visual mapping", i)
 		}

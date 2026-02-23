@@ -422,11 +422,7 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 	}
 
 	// Try to preserve column position, clamp to line length
-	if savedCol > runeLen(m.editBuf) {
-		m.cursorCol = runeLen(m.editBuf)
-	} else {
-		m.cursorCol = savedCol
-	}
+	m.cursorCol = min(savedCol, runeLen(m.editBuf))
 
 	// Adjust scroll to keep cursor visible with margin
 	m.adjustScrollForCursor()
@@ -715,10 +711,7 @@ func (m *Model) deleteLine() {
 
 				// Adjust scroll offset if it's now past document end
 				if m.scrollOffset > 0 && m.scrollOffset >= total {
-					m.scrollOffset = total - 1
-					if m.scrollOffset < 0 {
-						m.scrollOffset = 0
-					}
+					m.scrollOffset = max(total-1, 0)
 				}
 
 				return

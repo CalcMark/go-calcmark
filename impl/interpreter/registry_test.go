@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"slices"
 	"sort"
 	"testing"
 )
@@ -135,14 +136,7 @@ func TestGetFunctionNames(t *testing.T) {
 	// Should include primary names
 	expectedPrimary := []string{"avg", "sqrt", "accumulate", "convert_rate", "downtime", "rtt", "throughput", "transfer_time", "read", "seek", "compress", "capacity"}
 	for _, name := range expectedPrimary {
-		found := false
-		for _, n := range names {
-			if n == name {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(names, name) {
 			t.Errorf("expected primary name %q in GetFunctionNames result", name)
 		}
 	}
@@ -150,14 +144,7 @@ func TestGetFunctionNames(t *testing.T) {
 	// Should include synonyms
 	expectedSynonyms := []string{"average", "mean"}
 	for _, syn := range expectedSynonyms {
-		found := false
-		for _, n := range names {
-			if n == syn {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(names, syn) {
 			t.Errorf("expected synonym %q in GetFunctionNames result", syn)
 		}
 	}

@@ -200,10 +200,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	if !hasFrontmatter {
 		// No frontmatter: render globals as fixed header at top (original behavior)
 		allLines = append(allLines, globalsPanelLines...)
-		resultsHeight = height - len(globalsPanelLines)
-		if resultsHeight < 1 {
-			resultsHeight = 1
-		}
+		resultsHeight = max(height-len(globalsPanelLines), 1)
 	}
 
 	// Convert cursor's source line to visual line index for proper scrolling

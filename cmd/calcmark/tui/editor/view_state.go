@@ -216,10 +216,7 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 	// Cache miss - recompute
 	// Calculate content width for source pane (accounting for line numbers)
 	lineNumWidth := 4
-	sourceContentWidth := sourceWidth - lineNumWidth - 2
-	if sourceContentWidth < 10 {
-		sourceContentWidth = 10
-	}
+	sourceContentWidth := max(sourceWidth-lineNumWidth-2, 10)
 
 	input := AlignedModelInput{
 		Lines:              m.GetLines(),

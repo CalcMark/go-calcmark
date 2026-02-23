@@ -76,12 +76,9 @@ func levenshteinClose(a, b string, maxDist int) bool {
 
 	// Simple character diff count for similar-length strings
 	diffs := 0
-	minLen := len(a)
-	if len(b) < minLen {
-		minLen = len(b)
-	}
+	minLen := min(len(a), len(b))
 
-	for i := 0; i < minLen; i++ {
+	for i := range minLen {
 		if a[i] != b[i] {
 			diffs++
 			if diffs > maxDist {

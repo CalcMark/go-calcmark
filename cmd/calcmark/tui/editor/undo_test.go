@@ -366,7 +366,7 @@ func TestUndoManager_CircularBufferOverwrite(t *testing.T) {
 	m := NewUndoManager(3)
 
 	// Add 3 batches
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		m.AddOperation(EditOperation{Type: OpInsert, NewText: string(rune('a' + i))})
 		m.CommitBatch()
 	}

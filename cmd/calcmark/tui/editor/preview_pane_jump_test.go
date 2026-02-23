@@ -174,7 +174,7 @@ savings_rate = 0.20`
 	m.previewMode = PreviewFull
 
 	allLines := m.GetLines()
-	for cursorLine := 0; cursorLine < len(allLines); cursorLine++ {
+	for cursorLine := range len(allLines) {
 		m.cursorLine = cursorLine
 		m.cursorCol = 0
 		m.editBuf = "" // Clear first to avoid stale state
@@ -261,7 +261,7 @@ savings = $5000 * savings_rate`
 			paneHeight := m.height - 7 // Approximate content height
 
 			var referenceSourceCount, referencePreviewCount int
-			for cursorLine := 0; cursorLine < len(allLines); cursorLine++ {
+			for cursorLine := range len(allLines) {
 				m.cursorLine = cursorLine
 				m.cursorCol = 0
 				m.editBuf = ""

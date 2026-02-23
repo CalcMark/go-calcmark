@@ -422,7 +422,7 @@ func isOrderedListItem(line string) bool {
 	}
 
 	// Check that everything before the dot is digits
-	for i := 0; i < dotIdx; i++ {
+	for i := range dotIdx {
 		if line[i] < '0' || line[i] > '9' {
 			return false
 		}

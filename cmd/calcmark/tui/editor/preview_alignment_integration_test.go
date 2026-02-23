@@ -372,7 +372,7 @@ func TestGlamourBrittnessMonitoring(t *testing.T) {
 				sourceIndices[pl.SourceLineIdx] = true
 			}
 
-			for i := 0; i < sourceLineCount; i++ {
+			for i := range sourceLineCount {
 				if !sourceIndices[i] {
 					t.Errorf("Source line %d has no corresponding preview line", i)
 				}

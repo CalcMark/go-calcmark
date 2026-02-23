@@ -84,12 +84,9 @@ result = very_long_variable_name_that_will_definitely_wrap_in_narrow_pane * 2
 					len(aligned.sourceLines), len(aligned.previewLines)))
 
 				// Show side-by-side alignment
-				maxLines := len(aligned.sourceLines)
-				if len(aligned.previewLines) > maxLines {
-					maxLines = len(aligned.previewLines)
-				}
+				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
 
-				for i := 0; i < maxLines; i++ {
+				for i := range maxLines {
 					var srcContent, prvContent string
 					var srcLineNum, prvLineNum int
 					var srcWrapped bool

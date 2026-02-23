@@ -113,10 +113,7 @@ func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
 	m.ClearSelection()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
-	lastLine := m.TotalLines() - 1
-	if lastLine < 0 {
-		lastLine = 0
-	}
+	lastLine := max(m.TotalLines()-1, 0)
 	m.saveCurrentLineAndMoveTo(lastLine)
 	m.cursorCol = runeLen(m.editBuf)
 	return m, nil
@@ -148,9 +145,7 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 	col := m.cursorCol
 
 	// Clamp col to valid range to prevent index out of bounds
-	if col > len(runes) {
-		col = len(runes)
-	}
+	col = min(col, len(runes))
 
 	// Skip whitespace backwards
 	for col > 0 && unicode.IsSpace(runes[col-1]) {

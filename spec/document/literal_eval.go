@@ -220,8 +220,7 @@ func expandNumber(s string) (decimal.Decimal, error) {
 	}
 
 	// Check for percentage
-	if strings.HasSuffix(s, "%") {
-		numStr := strings.TrimSuffix(s, "%")
+	if numStr, ok := strings.CutSuffix(s, "%"); ok {
 		val, err := decimal.NewFromString(numStr)
 		if err != nil {
 			return decimal.Zero, err

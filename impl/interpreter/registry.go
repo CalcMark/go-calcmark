@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"slices"
 	"sort"
 )
 
@@ -73,10 +74,8 @@ func GetFunctionByName(name string) (FunctionInfo, bool) {
 		if fn.Name == name {
 			return toFunctionInfo(fn), true
 		}
-		for _, syn := range fn.Synonyms {
-			if syn == name {
-				return toFunctionInfo(fn), true
-			}
+		if slices.Contains(fn.Synonyms, name) {
+			return toFunctionInfo(fn), true
 		}
 	}
 	return FunctionInfo{}, false

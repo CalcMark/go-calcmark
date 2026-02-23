@@ -542,7 +542,7 @@ func TestRepeatedUndoRedoNoPanic(t *testing.T) {
 
 	// Press Ctrl+Z many times (should not panic)
 	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		newModel, _ = m.Update(undoMsg)
 		m = newModel.(Model)
 	}
@@ -552,7 +552,7 @@ func TestRepeatedUndoRedoNoPanic(t *testing.T) {
 
 	// Press Ctrl+Y many times (should not panic)
 	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		newModel, _ = m.Update(redoMsg)
 		m = newModel.(Model)
 	}
@@ -572,7 +572,7 @@ func TestUndoRedoAlternating(t *testing.T) {
 	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
 
 	// Type and enter multiple times
-	for round := 0; round < 3; round++ {
+	for range 3 {
 		for _, ch := range "hello" {
 			typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
 			newModel, _ := m.Update(typeMsg)
@@ -585,7 +585,7 @@ func TestUndoRedoAlternating(t *testing.T) {
 	t.Logf("After typing: lines=%v", m.GetLines())
 
 	// Undo, redo, undo, redo pattern
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		newModel, _ := m.Update(undoMsg)
 		m = newModel.(Model)
 		t.Logf("After undo %d: lines=%d, status=%q", i, len(m.GetLines()), m.statusMsg)
@@ -610,7 +610,7 @@ func TestUTF8CursorMovement(t *testing.T) {
 	}
 
 	// Move right 3 times should reach end of "日本語"
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		rightMsg := tea.KeyMsg{Type: tea.KeyRight}
 		newModel, _ := m.Update(rightMsg)
 		m = newModel.(Model)
@@ -1747,9 +1747,7 @@ func TestMinimalModeLeftJustified(t *testing.T) {
 	sourceWidth, _ := m.GetPaneWidths(m.width)
 	previewStart := sourceWidth
 
-	lines := strings.Split(view, "\n")
-
-	for _, line := range lines {
+	for line := range strings.SplitSeq(view, "\n") {
 		if strings.Contains(line, "→") && strings.Contains(line, "42") {
 			arrowIdx := strings.Index(line, "→")
 
@@ -1834,7 +1832,7 @@ func TestSourceToVisualMapping_BasicCase(t *testing.T) {
 	t.Logf("Document has %d source lines", totalSourceLines)
 
 	// With no wrapping, sourceToVisual should map each source line to sequential visual lines
-	for i := 0; i < totalSourceLines; i++ {
+	for i := range totalSourceLines {
 		visualIdx, ok := aligned.sourceToVisual[i]
 		if !ok {
 			t.Errorf("sourceToVisual missing entry for source line %d", i)
@@ -1897,7 +1895,7 @@ func TestSourceToVisualMapping_PreviewWraps(t *testing.T) {
 
 	// Verify sourceToVisual contains entries for all source lines
 	sourceLineCount := m2.TotalLines()
-	for i := 0; i < sourceLineCount; i++ {
+	for i := range sourceLineCount {
 		if _, ok := aligned.sourceToVisual[i]; !ok {
 			t.Errorf("sourceToVisual missing entry for source line %d", i)
 		}
@@ -3103,7 +3101,7 @@ line4 = 4`
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 
 	// For each line, insert below and verify mapping stays consistent
-	for insertAt := 0; insertAt < 3; insertAt++ {
+	for insertAt := range 3 {
 		t.Run(fmt.Sprintf("InsertAt%d", insertAt), func(t *testing.T) {
 			// Reset
 			doc, _ := document.NewDocument(content)
@@ -3207,14 +3205,7 @@ x = 10`
 
 	// Verify saved
 	lines := m.GetLines()
-	found := false
-	for _, line := range lines {
-		if line == "- bullet" {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(lines, "- bullet") {
 		t.Errorf("Bullet not saved. Lines: %v", lines)
 	}
 }
@@ -3470,7 +3461,7 @@ short = 5`
 	t.Logf("scrollOffset before navigation: %d", m.scrollOffset)
 
 	// Navigate down - this sets scrollOffset based on cursorLine (source)
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		m.cursorLine++
 		// Simulate the moveCursor scroll adjustment
 		visibleHeight := m.height - 6
@@ -3744,7 +3735,7 @@ lz4_compressed = compress(100 MB, lz4)`
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 	aligned := m.computeAlignedModelFresh(leftWidth, rightWidth)
 
-	for lineNum := 0; lineNum < len(lines); lineNum++ {
+	for lineNum := range len(lines) {
 		found := false
 		for _, sl := range aligned.SourceLines {
 			if sl.SourceLineIdx == lineNum && sl.Kind != AlignedLinePadding {
@@ -4593,7 +4584,7 @@ func TestEmptyEditBufferNoEmptyLines(t *testing.T) {
 	m = newModel.(Model)
 
 	// Clear buffer by pressing backspace multiple times
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
 		m = newModel.(Model)
 	}

@@ -35,8 +35,7 @@ func NewNumber(value any) (*Number, error) {
 		d = decimal.NewFromFloat(v)
 	case string:
 		// Handle percentage literals (e.g., "20%" → 0.20)
-		if strings.HasSuffix(v, "%") {
-			percentStr := strings.TrimSuffix(v, "%")
+		if percentStr, ok := strings.CutSuffix(v, "%"); ok {
 			percent, err := decimal.NewFromString(percentStr)
 			if err != nil {
 				return nil, fmt.Errorf("invalid percentage string: can't convert %s to decimal", v)
