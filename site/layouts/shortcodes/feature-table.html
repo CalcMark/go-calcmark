@@ -1,0 +1,28 @@
+{{- $category := .Get "category" -}}
+{{- $features := index .Site.Data.features $category -}}
+{{- if $features -}}
+<div class="feature-table">
+{{- range $features }}
+  <div class="feature-entry" id="{{ .anchor }}">
+    <h4><code>{{ .name }}</code></h4>
+    <p>{{ .description }}</p>
+    <dl>
+      <dt>Syntax</dt>
+      <dd><code>{{ .syntax }}</code></dd>
+      {{- with .aliases }}
+      <dt>Aliases</dt>
+      <dd>
+        {{- range $i, $a := . }}{{- if $i }}, {{ end -}}
+        <code>{{ $a.name }}</code>{{ if $a.parseable }} <small>(input syntax)</small>{{ end }}
+        {{- end }}
+      </dd>
+      {{- end }}
+      <dt>Example</dt>
+      <dd><code>{{ .example }}</code></dd>
+    </dl>
+  </div>
+{{- end }}
+</div>
+{{- else -}}
+<p><em>No features found for category "{{ $category }}".</em></p>
+{{- end -}}

@@ -129,11 +129,11 @@ site:
 
 Create a Hugo shortcode that renders function tables from generated data:
 
-- [ ] Create `site/layouts/shortcodes/feature-table.html` -- renders features from `.Site.Data.features` grouped by a specified category, with anchor IDs on each entry
-- [ ] Shortcode interface: `{{< feature-table category="function" >}}` -- the `category` param selects which group from the JSON to render
-- [ ] Each function/keyword renders with an `id` attribute for deep linking (e.g., `<h4 id="avg">`)
-- [ ] Include: name, syntax, description, aliases (marking parseable ones with a label), example
-- [ ] Verify the shortcode works with a minimal test page before using it in Phase 4/5 content
+- [x] Create `site/layouts/shortcodes/feature-table.html` -- renders features from `.Site.Data.features` grouped by a specified category, with anchor IDs on each entry
+- [x] Shortcode interface: `{{< feature-table category="function" >}}` -- the `category` param selects which group from the JSON to render
+- [x] Each function/keyword renders with an `id` attribute for deep linking (e.g., `<h4 id="avg">`)
+- [x] Include: name, syntax, description, aliases (marking parseable ones with a label), example
+- [x] Verify the shortcode works with a minimal test page before using it in Phase 4/5 content
 
 **New files:**
 - `site/layouts/shortcodes/feature-table.html`
