@@ -63,14 +63,14 @@ changelog:
       - Merge pull request
       - Merge branch
 
-brews:
+homebrew_casks:
   - name: calcmark
     repository:
       owner: CalcMark
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/CalcMark/go-calcmark"
     description: "CalcMark - calculations embedded in markdown"
     license: "MIT"
