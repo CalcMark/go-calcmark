@@ -4,11 +4,32 @@ summary: "Complete guide to CalcMark features, editor shortcuts, and workflows."
 weight: 20
 ---
 
-## Editor Shortcuts
+## Contents {#contents}
+
+- [Editor Shortcuts](#editor-shortcuts) -- Keyboard shortcuts for the CalcMark editor
+- [Exporting Results](#exporting-results) -- `cm convert` and `cm eval`
+- [Language Features](#language-features)
+  - [Supported Units](#units) -- Physical, data, and currency units
+  - [Unit Conversion](#unit-conversion) -- `in` and `as` keywords
+  - [Currency Conversion](#currency-conversion) -- Exchange rates in frontmatter
+  - [Global Variables](#global-variables) -- Reusable values in frontmatter
+  - [Built-in Functions](#built-in-functions) -- All 12 functions
+  - [Rates and `over`](#rates) -- Rate literals and accumulation
+  - [Napkin Math](#napkin-math) -- Quick estimates with `as napkin`
+  - [Date Arithmetic](#date-arithmetic) -- Date literals and duration math
+  - [Capacity Planning](#capacity-planning) -- `at...per` syntax
+  - [Multiplier Suffixes](#multiplier-suffixes) -- K, M, B shortcuts
+  - [Percentages](#percentages) -- Percentage calculations
+- [Tips](#tips) -- Organize with markdown, preview pane, getting help
+- [Troubleshooting](#troubleshooting) -- Common errors and fixes
+
+---
+
+## Editor Shortcuts {#editor-shortcuts}
 
 The CalcMark editor provides keyboard shortcuts for common actions. Press **F1** for full help inside the editor.
 
-### File
+### File {#shortcuts-file}
 
 | Shortcut | Action |
 |----------|--------|
@@ -17,7 +38,7 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Ctrl+E | Export to format |
 | Ctrl+Q | Quit editor |
 
-### Edit
+### Edit {#shortcuts-edit}
 
 | Shortcut | Action |
 |----------|--------|
@@ -26,13 +47,13 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Ctrl+K | Delete current line |
 | Ctrl+F | Add YAML frontmatter |
 
-### View
+### View {#shortcuts-view}
 
 | Shortcut | Action |
 |----------|--------|
 | Ctrl+P | Cycle preview mode |
 
-### Navigation
+### Navigation {#shortcuts-navigation}
 
 | Shortcut | Action |
 |----------|--------|
@@ -43,7 +64,7 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Ctrl+D | Scroll down half page |
 | Ctrl+U | Scroll up half page |
 
-## Exporting Results
+## Exporting Results {#exporting-results}
 
 Convert CalcMark files to other formats using `cm convert`:
 
@@ -62,9 +83,9 @@ cm eval -v budget.cm         # Show all intermediate values
 echo "1 + 2" | cm eval      # Evaluate from stdin
 ```
 
-## Language Features
+## Language Features {#language-features}
 
-### Supported Units
+### Supported Units {#units}
 
 CalcMark supports a wide range of units across categories:
 
@@ -80,7 +101,7 @@ CalcMark supports a wide range of units across categories:
 
 Run `cm help constants` for the complete list.
 
-### Unit Conversion
+### Unit Conversion {#unit-conversion}
 
 Convert between compatible units using `in` or `as`:
 
@@ -95,7 +116,7 @@ file_size = 1.5 GB
 file_size_mb = file_size in MB
 ```
 
-### Currency Conversion
+### Currency Conversion {#currency-conversion}
 
 Convert between currencies using `in` with exchange rates defined in YAML frontmatter:
 
@@ -117,7 +138,7 @@ salary_gbp = salary in GBP
 
 Exchange rates use the format `FROM/TO: rate` where 1 unit of FROM equals `rate` units of TO.
 
-### Global Variables
+### Global Variables {#global-variables}
 
 Define reusable values in the frontmatter that can be referenced throughout your document:
 
@@ -150,7 +171,7 @@ Globals support all CalcMark literal types:
 
 Globals must be literal values. Expressions like `1 + 1` are not allowed.
 
-### Built-in Functions
+### Built-in Functions {#built-in-functions}
 
 {{< feature-table category="function" >}}
 
@@ -182,7 +203,7 @@ exact_servers as napkin
 
 The `as napkin` modifier normalizes units and adds a `~` prefix to signal the result is an approximation.
 
-### Date Arithmetic
+### Date Arithmetic {#date-arithmetic}
 
 Work with dates and durations:
 
@@ -205,7 +226,7 @@ servers = 10000 req/s at 450 req/s per server
 servers_buffered = 10000 req/s at 450 req/s per server with 20% buffer
 ```
 
-### Multiplier Suffixes
+### Multiplier Suffixes {#multiplier-suffixes}
 
 Use K, M, B for large numbers:
 
@@ -215,7 +236,7 @@ revenue = $5B
 requests = 100K
 ```
 
-### Percentages
+### Percentages {#percentages}
 
 Percentages work naturally in calculations:
 
@@ -228,9 +249,9 @@ tax_rate = 8.25%
 tax = price * tax_rate
 ```
 
-## Tips
+## Tips {#tips}
 
-### Organize with Markdown
+### Organize with Markdown {#tip-markdown}
 
 Use headers and prose to structure your thinking:
 
@@ -248,28 +269,28 @@ variable_pct = 30%
 variable_costs = total_revenue * variable_pct
 ```
 
-### Use the Preview Pane
+### Use the Preview Pane {#tip-preview}
 
 Press **Ctrl+P** in the editor to toggle the preview pane, which shows evaluated results alongside your source.
 
-### Get Help on Functions
+### Get Help on Functions {#tip-help}
 
 Run `cm help functions` to see all available functions with descriptions and usage patterns. Run `cm help constants` for unit constants.
 
-## Troubleshooting
+## Troubleshooting {#troubleshooting}
 
-### "Undefined variable"
+### "Undefined variable" {#error-undefined}
 
 Variables must be defined before use. Check that:
 1. The variable is spelled correctly
 2. It's defined on an earlier line
 3. No typos in the name
 
-### "Incompatible units"
+### "Incompatible units" {#error-incompatible}
 
 You can't add meters to kilograms. Check that operations make physical sense.
 
-### "Parse error"
+### "Parse error" {#error-parse}
 
 The line isn't valid CalcMark syntax. Common issues:
 - Missing operator between values
