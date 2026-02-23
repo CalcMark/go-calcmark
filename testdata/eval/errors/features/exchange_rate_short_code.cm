@@ -1,0 +1,11 @@
+---
+exchange:
+  US_EUR: 0.92
+---
+
+# Exchange Rate Short Currency Code
+
+Currency codes must be exactly 3 ASCII letters (ISO 4217).
+`US` is only 2 letters and should be rejected.
+
+x = 10

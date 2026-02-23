@@ -90,3 +90,48 @@ func TestEvalErrorFilesShouldFailEval(t *testing.T) {
 		})
 	}
 }
+
+// TestEvalErrorFilesDocumentLevel tests that eval/errors .cm files with frontmatter
+// produce errors at either the document parse or eval stage.
+// This complements TestEvalErrorFilesShouldFailEval which uses parser.Parse()
+// (no frontmatter support) for simple expression-level errors.
+func TestEvalErrorFilesDocumentLevel(t *testing.T) {
+	errorDir := "../../testdata/eval/errors/features"
+
+	files, err := os.ReadDir(errorDir)
+	if err != nil {
+		t.Fatalf("failed to read error dir: %v", err)
+	}
+
+	for _, file := range files {
+		if !strings.HasSuffix(file.Name(), ".cm") {
+			continue
+		}
+
+		t.Run(file.Name(), func(t *testing.T) {
+			path := filepath.Join(errorDir, file.Name())
+			content, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("failed to read file: %v", err)
+			}
+
+			// Try document-level parsing (handles frontmatter)
+			doc, docErr := document.NewDocument(string(content))
+			if docErr != nil {
+				// Document parse error is expected for invalid frontmatter
+				t.Logf("Document parse error (expected): %v", docErr)
+				return
+			}
+
+			// Document parsed OK — eval should fail
+			eval := implDoc.NewEvaluator()
+			evalErr := eval.Evaluate(doc)
+			if evalErr != nil {
+				t.Logf("Eval error (expected): %v", evalErr)
+				return
+			}
+
+			t.Errorf("Expected error for %s but document parsed and evaluated successfully", file.Name())
+		})
+	}
+}

@@ -1,0 +1,12 @@
+---
+exchange:
+  EUR_GBP: 0.86
+---
+
+# Exchange Rate Missing Pair
+
+The frontmatter defines `EUR_GBP` but the calculation needs `USD_EUR`.
+The error should name the missing pair in `FROM_TO` format.
+
+price = 100 USD
+price_in_euros = price in EUR

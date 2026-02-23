@@ -1,0 +1,12 @@
+---
+exchange:
+  USD_EUR: 0.92
+---
+
+# Reverse Direction Not Auto-Computed
+
+Defining `USD_EUR` does not automatically make `EUR_USD` available.
+Users must explicitly define each direction they need.
+
+amount = 100 EUR
+amount_in_usd = amount in USD
