@@ -244,6 +244,7 @@ type Model struct {
 	mode            InputState      // Which UI component receives input (NOT a vim-style editing mode)
 	userIsTyping    bool            // True when user is actively typing (for debounce)
 	editBuf         string          // Buffer for line being edited
+	editBufLoaded   bool            // True when editBuf has been loaded for current line (distinguishes "" from "not loaded")
 	lineWrap        bool            // Whether to wrap long lines
 	changedBlockIDs map[string]bool // Track changed blocks for highlighting
 

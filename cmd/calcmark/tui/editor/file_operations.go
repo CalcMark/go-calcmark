@@ -216,6 +216,7 @@ func (m *Model) openFile(filename string) {
 
 	// Editing state
 	m.editBuf = ""
+	m.editBufLoaded = false // New file — needs loading
 	m.userIsTyping = false
 	m.frontmatterErr = nil
 	m.changedBlockIDs = make(map[string]bool)

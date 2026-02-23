@@ -218,6 +218,7 @@ func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
 	// insertLineBelow() sets cursor to the new line, so no need to increment
 	m.insertLineBelow()
 	m.editBuf = ""
+	m.editBufLoaded = false // New line — needs loading
 	m.cursorCol = 0
 
 	// Process document changes immediately on ESC

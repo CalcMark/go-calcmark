@@ -159,6 +159,7 @@ func TestFunctionHelp_ViewRendering(t *testing.T) {
 
 	// Directly set up the state as if user just accepted "accumulate(" from autocomplete
 	m.editBuf = "accumulate("
+	m.editBufLoaded = true
 	m.cursorCol = len("accumulate(")
 	m.mode = StateDefault
 
@@ -222,6 +223,7 @@ func TestFunctionHelp_ContextFooterState(t *testing.T) {
 
 	// Set up state
 	m.editBuf = "accumulate("
+	m.editBufLoaded = true
 	m.cursorCol = len("accumulate(")
 	m.mode = StateDefault
 

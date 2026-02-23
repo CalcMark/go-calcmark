@@ -82,8 +82,8 @@ func (m *Model) transitionToEditing() {
 		return
 	}
 
-	// Entry action: Load current line if editBuf is empty
-	if m.editBuf == "" {
+	// Entry action: Load current line if not yet loaded
+	if !m.editBufLoaded {
 		m.loadCurrentLineIntoEditBuffer()
 	}
 
@@ -98,11 +98,14 @@ func (m *Model) transitionToProcessing() {
 	m.state = StateProcessing
 
 	// Save current editBuf to document and mark as modified.
-	// CRITICAL: Must save even when editBuf is empty - user may have deleted
-	// all content from the line. Without this, the document retains old content
-	// and transitionToEditing() will reload stale data.
-	m.updateCurrentLine(m.editBuf)
-	m.modified = true
+	// Only save when editBufLoaded is true — this means editBuf has been loaded
+	// or modified for the current line. When editBufLoaded is false (e.g., after
+	// undo/redo reset), there is nothing to save and writing editBuf="" would
+	// destroy the document's actual content.
+	if m.editBufLoaded {
+		m.updateCurrentLine(m.editBuf)
+		m.modified = true
+	}
 
 	// Process document: re-detect block types and re-evaluate
 	m.redetectBlockTypes()
