@@ -1,0 +1,39 @@
+---
+exchange:
+  USD_EUR: 0.92
+  EUR_GBP: 0.86
+  GBP_JPY: 191.50
+globals:
+  budget: 5000 EUR
+---
+
+# Currency Conversion
+
+Exchange rates are defined in frontmatter and used with the `in` keyword.
+
+## Basic conversion
+
+price = 100 USD
+price_in_euros = price in EUR
+
+## Dollar symbol conversion
+
+total = $200 in EUR
+
+## Variable with conversion
+
+budget_gbp = budget in GBP
+
+## Multiple rates in one document
+
+yen_price = 1000 GBP in JPY
+
+## Inline exchange rate assignment
+
+@exchange.USD_GBP = 0.79
+salary = 3000 USD
+salary_gbp = salary in GBP
+
+## Same currency no-op
+
+unchanged = 100 USD in USD

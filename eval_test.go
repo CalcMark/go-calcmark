@@ -186,10 +186,11 @@ func hasErrorDiagnostic(result *Result) bool {
 // Test currency conversion with frontmatter exchange rates
 func TestCurrencyConversion(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		want    string
-		wantErr bool
+		name           string
+		input          string
+		want           string
+		wantErr        bool
+		wantErrContain string // substring that must appear in error message
 	}{
 		{
 			name: "USD to EUR",
@@ -225,7 +226,8 @@ exchange:
   USD_EUR: 0.92
 ---
 100 USD in GBP`,
-			wantErr: true,
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for USD",
 		},
 		{
 			name: "same currency no-op with code",
@@ -255,6 +257,63 @@ price = $1000
 price in EUR`,
 			want: "€920.00",
 		},
+		{
+			name:           "no frontmatter at all",
+			input:          "100 USD in EUR",
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for USD",
+		},
+		{
+			name: "wrong pair defined",
+			input: `---
+exchange:
+  EUR_JPY: 130.50
+---
+100 USD in EUR`,
+			wantErr:        true,
+			wantErrContain: "USD",
+		},
+		{
+			name: "reverse direction not auto-computed",
+			input: `---
+exchange:
+  USD_EUR: 0.92
+---
+100 EUR in USD`,
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for EUR",
+		},
+		{
+			name: "@exchange inline then convert",
+			input: `---
+exchange:
+  EUR_GBP: 0.86
+---
+@exchange.USD_EUR = 0.92
+100 USD in EUR`,
+			want: "€92.00",
+		},
+		{
+			name: "multiple sequential conversions",
+			input: `---
+exchange:
+  USD_EUR: 0.92
+  EUR_GBP: 0.86
+---
+price_eur = 100 USD in EUR
+price_gbp = 50 EUR in GBP`,
+			want: "£43.00", // last value
+		},
+		{
+			name: "error message suggests correct underscore format",
+			input: `---
+exchange:
+  EUR_GBP: 0.86
+---
+100 USD in EUR`,
+			wantErr:        true,
+			wantErrContain: "USD_EUR", // must use underscore, not slash
+		},
 	}
 
 	for _, tt := range tests {
@@ -263,6 +322,10 @@ price in EUR`,
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error, got result: %v", result.Value)
+					return
+				}
+				if tt.wantErrContain != "" && !containsSubstring(err.Error(), tt.wantErrContain) {
+					t.Errorf("error %q should contain %q", err.Error(), tt.wantErrContain)
 				}
 				return
 			}
@@ -305,6 +368,51 @@ exchange:
 ---
 x = 10`,
 			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "too many underscores in exchange key",
+			input: `---
+exchange:
+  USD_EUR_GBP: 0.5
+---
+x = 10`,
+			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "NaN exchange rate",
+			input: `---
+exchange:
+  USD_EUR: .nan
+---
+x = 10`,
+			wantErr: "not a finite number",
+		},
+		{
+			name: "Inf exchange rate",
+			input: `---
+exchange:
+  USD_EUR: .inf
+---
+x = 10`,
+			wantErr: "not a finite number",
+		},
+		{
+			name: "negative exchange rate",
+			input: `---
+exchange:
+  USD_EUR: -0.5
+---
+x = 10`,
+			wantErr: "must be positive",
+		},
+		{
+			name: "zero exchange rate",
+			input: `---
+exchange:
+  USD_EUR: 0
+---
+x = 10`,
+			wantErr: "must be positive",
 		},
 	}
 

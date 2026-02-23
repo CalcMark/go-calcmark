@@ -33,7 +33,7 @@ var EditorCommands = []Command{
 	{Name: "Undo", Accelerator: "Ctrl+Z", Description: "Undo last change", Category: "edit"},
 	{Name: "Redo", Accelerator: "Ctrl+Y", Description: "Redo last change", Category: "edit"},
 	{Name: "Delete Line", Accelerator: "Ctrl+K", Description: "Delete current line", Category: "edit"},
-	{Name: "Insert Frontmatter", Accelerator: "Ctrl+F", Description: "Add YAML frontmatter", Category: "edit"},
+	{Name: "Insert Frontmatter", Accelerator: "Ctrl+F", Description: "Add exchange rates and globals", Category: "edit"},
 
 	// View commands
 	{Name: "Toggle Preview", Accelerator: "Ctrl+P", Description: "Cycle preview mode", Category: "view"},

@@ -56,15 +56,17 @@ func (interp *Interpreter) evalFrontmatterAssignment(f *ast.FrontmatterAssignmen
 }
 
 // parseExchangeKey parses an exchange key like "USD_EUR" into (from, to).
+// NOTE: This mirrors document.ParseExchangeRateKey in spec/document/frontmatter.go.
+// We cannot import spec/document here due to an import cycle via test files.
 func parseExchangeKey(key string) (from, to string, err error) {
 	parts := strings.Split(key, "_")
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid format: expected FROM_TO (e.g., 'USD_EUR')")
+		return "", "", fmt.Errorf("invalid exchange rate key '%s': expected format 'FROM_TO' (e.g., 'USD_EUR')", key)
 	}
 	from = strings.TrimSpace(strings.ToUpper(parts[0]))
 	to = strings.TrimSpace(strings.ToUpper(parts[1]))
 	if from == "" || to == "" {
-		return "", "", fmt.Errorf("currency codes cannot be empty")
+		return "", "", fmt.Errorf("invalid exchange rate key '%s': currency codes cannot be empty", key)
 	}
 	return from, to, nil
 }

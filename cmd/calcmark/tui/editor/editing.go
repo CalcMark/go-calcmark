@@ -754,7 +754,7 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	}
 
 	// Build new content with default frontmatter prepended
-	fmBlock := "---\nglobals:\n  my_var: 42\n---\n"
+	fmBlock := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\n"
 	content := fmBlock + m.getDocumentContent()
 
 	// Rebuild document via the spec layer (parsing stays in spec/document)
@@ -770,7 +770,7 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	m.eval = implDoc.NewEvaluator()
 	_ = m.eval.Evaluate(m.doc)
 
-	// Set cursor to the my_var line (line 2, 0-indexed) so user can edit immediately
+	// Set cursor to the exchange rate value line (line 2, 0-indexed) so user can edit immediately
 	m.cursorLine = 2
 	m.cursorCol = 0
 	m.editBuf = ""

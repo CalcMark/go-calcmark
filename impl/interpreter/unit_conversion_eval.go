@@ -68,7 +68,7 @@ func (interp *Interpreter) evalCurrencyConversion(currency *types.Currency, targ
 	// Look up exchange rate
 	rate, found := interp.env.GetExchangeRate(currency.Code, normalizedTarget)
 	if !found {
-		return nil, fmt.Errorf("no exchange rate defined for %s → %s; add to frontmatter: exchange: { %s/%s: <rate> }",
+		return nil, fmt.Errorf("no exchange rate defined for %s → %s; add to frontmatter: exchange:\n  %s_%s: <rate>",
 			currency.Code, normalizedTarget, currency.Code, normalizedTarget)
 	}
 

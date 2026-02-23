@@ -3,6 +3,7 @@ package document
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -78,6 +79,18 @@ func ParseExchangeRateKey(key string) (from, to string, err error) {
 		return "", "", fmt.Errorf("invalid exchange rate key '%s': currency codes cannot be empty", key)
 	}
 	return from, to, nil
+}
+
+// validateExchangeRate rejects NaN, Inf, zero, and negative exchange rate values.
+// These are all invalid in a financial context and would produce silently wrong results.
+func validateExchangeRate(key string, rate float64) error {
+	if math.IsNaN(rate) || math.IsInf(rate, 0) {
+		return fmt.Errorf("exchange rate for '%s' is not a finite number", key)
+	}
+	if rate <= 0 {
+		return fmt.Errorf("exchange rate for '%s' must be positive, got %g", key, rate)
+	}
+	return nil
 }
 
 // GetExchangeRate looks up the rate to convert from one currency to another.
@@ -256,6 +269,9 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		if err != nil {
 			return nil, "", err
 		}
+		if err := validateExchangeRate(key, rate); err != nil {
+			return nil, "", err
+		}
 		normalizedKey := ExchangeRateKey(from, to)
 		fm.Exchange[normalizedKey] = decimal.NewFromFloat(rate)
 		fm.exchangeKeys = append(fm.exchangeKeys, normalizedKey)
@@ -268,6 +284,9 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		}
 		normalizedKey := ExchangeRateKey(from, to)
 		if _, exists := fm.Exchange[normalizedKey]; !exists {
+			if err := validateExchangeRate(key, rate); err != nil {
+				return nil, "", err
+			}
 			fm.Exchange[normalizedKey] = decimal.NewFromFloat(rate)
 			fm.exchangeKeys = append(fm.exchangeKeys, normalizedKey)
 		}
