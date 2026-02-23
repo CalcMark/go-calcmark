@@ -168,12 +168,12 @@ func getFunctions() []Feature {
 			Example:     "convert_rate(1000 req/s, minute) → 60000 req/min",
 		},
 		{
-			Name:        "requires",
+			Name:        "capacity",
 			Category:    CategoryFunction,
-			Syntax:      "requires(load, capacity) or requires(load, capacity, buffer)",
+			Syntax:      "capacity(demand, capacity_per_unit, unit) or capacity(demand, capacity_per_unit, unit, buffer)",
 			Description: "Calculate how many units needed for a given load",
-			Aliases:     []Alias{{Name: "capacity", Parseable: false}},
-			Example:     "requires(10000 req/s, 500 req/s) → 20",
+			Aliases:     []Alias{{Name: "requires", Parseable: false}},
+			Example:     "capacity(10000 req/s, 500 req/s, server) → 20 servers",
 		},
 		{
 			Name:        "downtime",
@@ -538,6 +538,30 @@ func getKeywords() []Feature {
 			Description: "Create a rate",
 			Aliases:     nil,
 			Example:     "1000 requests per second",
+		},
+		{
+			Name:        "over",
+			Category:    CategoryKeyword,
+			Syntax:      "rate over duration",
+			Description: "Accumulate a rate over time",
+			Aliases:     nil,
+			Example:     "100 MB/s over 1 day",
+		},
+		{
+			Name:        "as napkin",
+			Category:    CategoryKeyword,
+			Syntax:      "expression as napkin",
+			Description: "Round to 2 significant figures for estimates",
+			Aliases:     []Alias{{Name: "napkin", Parseable: false}},
+			Example:     "432000 MB as napkin → ~400 GB",
+		},
+		{
+			Name:        "at",
+			Category:    CategoryKeyword,
+			Syntax:      "demand at capacity per unit [with N% buffer]",
+			Description: "Capacity planning: calculate how many units needed",
+			Aliases:     nil,
+			Example:     "10 TB at 2 TB per disk → 5 disks",
 		},
 	}
 }

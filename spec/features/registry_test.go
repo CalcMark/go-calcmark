@@ -74,7 +74,7 @@ func TestRegistryByCategory(t *testing.T) {
 		{CategoryNetwork, 5},     // local, regional, gigabit, etc.
 		{CategoryStorage, 3},     // ssd, nvme, hdd
 		{CategoryCompression, 4}, // gzip, lz4, zstd, bzip2
-		{CategoryKeyword, 3},     // in, as, of
+		{CategoryKeyword, 6},     // in, as, of, per, over, as napkin, at
 		{CategoryOperator, 5},    // +, -, *, /, ^
 	}
 
@@ -180,7 +180,7 @@ func TestNonParseableAliases(t *testing.T) {
 		aliasName string
 	}{
 		{"rtt", "round trip time"},
-		{"requires", "capacity"},
+		{"capacity", "requires"},
 	}
 
 	for _, tt := range tests {
