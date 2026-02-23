@@ -512,58 +512,6 @@ func TestEmptyEditorTyping(t *testing.T) {
 	}
 }
 
-// TestEmptyEditorEnterCreatesLine verifies that pressing ENTER
-// in an empty editor creates content and processes the document.
-func SKIP_TestEmptyEditorEnterCreatesLine_OBSOLETE_MODAL(t *testing.T) {
-	m := New(nil)
-
-	// Type 'x = 10'
-	for _, r := range []rune{'x', ' ', '=', ' ', '1', '0'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
-		m = result.(Model)
-	}
-
-	if m.editBuf != "x = 10" {
-		t.Fatalf("Expected editBuf='x = 10', got %q", m.editBuf)
-	}
-
-	// Press ENTER to commit the line
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m = result.(Model)
-
-	// After ENTER:
-	// - userIsTyping should be false (committed)
-	if m.userIsTyping {
-		t.Error("userIsTyping should be false after ENTER")
-	}
-
-	// - Document should have content
-	totalLines := m.TotalLines()
-	if totalLines < 1 {
-		t.Errorf("Expected at least 1 line after ENTER, got %d", totalLines)
-	}
-
-	// - Document should contain our line
-	lines := m.GetLines()
-	if len(lines) < 1 {
-		t.Fatal("Expected at least 1 line in document")
-	}
-
-	// First line should be "x = 10"
-	if lines[0] != "x = 10" {
-		t.Errorf("Expected first line 'x = 10', got %q", lines[0])
-	}
-
-	// - Cursor should have moved to next line (line 2 because we started with 1 empty line)
-	if m.cursorLine != 2 {
-		t.Errorf("Expected cursorLine=2 after ENTER, got %d", m.cursorLine)
-	}
-
-	// - editBuf should be empty (new line)
-	if m.editBuf != "" {
-		t.Errorf("Expected empty editBuf for new line, got %q", m.editBuf)
-	}
-}
 
 // TestEmptyEditorCursorVisibility ensures the cursor is always visible.
 func TestEmptyEditorCursorVisibility(t *testing.T) {

@@ -56,10 +56,15 @@ func runEval(args []string) error {
 	}
 
 	if !hasFile {
-		// Read from stdin
-		bytes, err := io.ReadAll(os.Stdin)
+		// Read from stdin with same 1MB size limit as file input.
+		// Without a limit, a piped input could exhaust memory.
+		const maxStdinSize = 1*1024*1024 + 1 // 1MB + 1 byte to detect overflow
+		bytes, err := io.ReadAll(io.LimitReader(os.Stdin, maxStdinSize))
 		if err != nil {
 			return fmt.Errorf("read stdin: %w", err)
+		}
+		if len(bytes) >= maxStdinSize {
+			return fmt.Errorf("stdin input too large (max 1MB)")
 		}
 		input = string(bytes)
 
