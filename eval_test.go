@@ -305,6 +305,15 @@ price_gbp = 50 EUR in GBP`,
 			want: "£43.00", // last value
 		},
 		{
+			name: "lowercase exchange key normalizes",
+			input: `---
+exchange:
+  usd_eur: 0.92
+---
+100 USD in EUR`,
+			want: "€92.00",
+		},
+		{
 			name: "error message suggests correct underscore format",
 			input: `---
 exchange:
@@ -365,6 +374,24 @@ x = 10`,
 			input: `---
 exchange:
   USDEUR: 0.92
+---
+x = 10`,
+			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "slash separator instead of underscore",
+			input: `---
+exchange:
+  EUR/GBP: 0.86
+---
+x = 10`,
+			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "dot separator instead of underscore",
+			input: `---
+exchange:
+  EUR.GBP: 0.86
 ---
 x = 10`,
 			wantErr: "expected format 'FROM_TO'",
