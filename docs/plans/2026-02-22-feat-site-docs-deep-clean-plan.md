@@ -243,14 +243,14 @@ New page `site/content/docs/cli-reference.md`:
 
 Run all 5 example `.cm` files through `cm eval` and fix failures:
 
-- [ ] `cm eval docs/examples/household-budget.cm`
-- [ ] `cm eval docs/examples/job-offer.cm`
-- [ ] `cm eval docs/examples/project-workback.cm` -- known issue: `risk_buffer` undefined on line 110
-- [ ] `cm eval docs/examples/recipe-scaling.cm`
-- [ ] `cm eval docs/examples/system-sizing.cm`
-- [ ] Fix any failures (e.g., define `risk_buffer` in project-workback.cm)
-- [ ] Sync the `.cm` file content with the corresponding `site/content/docs/examples/*.md` page
-- [ ] Review getting-started.md for minor CLI accuracy fixes
+- [x] `cm eval docs/examples/household-budget.cm`
+- [x] `cm eval docs/examples/job-offer.cm`
+- [x] `cm eval docs/examples/project-workback.cm` -- `risk_buffer` was already defined; no fix needed
+- [x] `cm eval docs/examples/recipe-scaling.cm`
+- [x] `cm eval docs/examples/system-sizing.cm`
+- [x] Fix any failures (e.g., define `risk_buffer` in project-workback.cm) -- all 5 examples pass
+- [x] Sync the `.cm` file content with the corresponding `site/content/docs/examples/*.md` page
+- [x] Review getting-started.md for minor CLI accuracy fixes -- fixed "REPL" → "Editor"
 
 **Modified files:**
 - `docs/examples/project-workback.cm` (fix undefined variable)

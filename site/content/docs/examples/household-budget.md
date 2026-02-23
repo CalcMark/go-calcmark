@@ -108,6 +108,14 @@ target_months = 6
 target_fund = monthly_expenses * target_months
 shortfall = target_fund - current_emergency
 months_to_goal = shortfall / emergency_fund_contribution
+
+## Daily Discretionary
+
+Per-day discretionary spending as a rate:
+
+daily_dining = $300/month per day
+daily_entertainment = $200/month per day
+daily_discretionary = $500/month per day
 ```
 
 ## What This Demonstrates
@@ -117,6 +125,7 @@ months_to_goal = shortfall / emergency_fund_contribution
 - Derived calculations (savings rate as percentage of net income)
 - Budget rule analysis (50/30/20)
 - Emergency fund runway and goal planning
+- Rate conversions (`$300/month per day`)
 
 ## Try It
 

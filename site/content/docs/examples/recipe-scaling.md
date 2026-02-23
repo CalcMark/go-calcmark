@@ -92,6 +92,14 @@ yeast_cost = scaled_yeast_g / 100 * yeast_price_per_100g
 total_ingredient_cost = flour_cost + salt_cost + yeast_cost
 cost_per_loaf = total_ingredient_cost / target_yield
 
+## Shopping List Summary
+
+Rounding up for practical shopping:
+
+flour_to_buy_kg = 2
+salt_to_buy_g = 50
+yeast_packets = 1
+
 ## Nutritional Estimate (per loaf)
 
 calories_per_gram_flour = 3.64

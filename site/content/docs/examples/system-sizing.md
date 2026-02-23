@@ -61,7 +61,7 @@ avg_image_size = 500 KB
 daily_media_storage = daily_posts * posts_with_media_pct * avg_image_size
 yearly_media_storage = daily_media_storage * 365
 
-Total storage with compression:
+Total storage with compression (gzip typically achieves 3:1 on text):
 
 compressed_posts = compress(yearly_post_storage, gzip)
 total_yearly_storage = compressed_posts + yearly_media_storage
@@ -83,6 +83,8 @@ hdd_query_time = seek(hdd) + read(query_data, hdd)
 ssd_query_time = seek(ssd) + read(query_data, ssd)
 nvme_query_time = seek(nvme) + read(query_data, nvme)
 
+NVMe is clearly the right choice for hot data.
+
 ## Network Latency Budget
 
 API response latency breakdown for regional users:
@@ -94,7 +96,7 @@ total_latency = network_rtt + db_query + app_processing
 
 ## Bandwidth Requirements
 
-Average response is 10KB, peak bandwidth:
+Average response is 10KB, peak bandwidth in MB/s:
 
 avg_response_kb = 10
 peak_bandwidth_kbs = peak_read_rate * avg_response_kb
@@ -104,6 +106,18 @@ Compare to network capacity:
 
 gigabit_capacity = throughput(gigabit)
 ten_gig_capacity = throughput(ten_gig)
+
+## CDN and Caching
+
+Cache hit ratio target and origin traffic:
+
+cache_hit_target = 0.95
+cache_miss_rate = 1 - cache_hit_target
+origin_read_rate = read_rate * cache_miss_rate
+
+Media transfer time from origin to CDN edge:
+
+media_transfer = transfer_time(avg_image_size, continental, ten_gig)
 
 ## Availability and Downtime
 
@@ -128,10 +142,11 @@ servers_napkin = total_db_servers as napkin
 ## What This Demonstrates
 
 - Multiplier suffixes (`10M` users)
-- Built-in functions: `capacity()`, `compress()`, `rtt()`, `throughput()`, `downtime()`
+- Built-in functions: `capacity()`, `compress()`, `rtt()`, `throughput()`, `downtime()`, `transfer_time()`
 - Storage I/O comparison: `seek()`, `read()` across HDD/SSD/NVMe
 - Rate conversion (daily totals to per-second rates)
 - Napkin rounding for human-readable estimates
+- CDN cache hit ratio and origin traffic analysis
 - Back-of-envelope infrastructure planning
 
 ## Try It

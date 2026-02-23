@@ -26,13 +26,13 @@ After downloading, extract and move `cm` to a directory in your PATH.
 
 ## Quick Start
 
-### Interactive REPL
+### Interactive Editor
 
-Start the interactive environment:
+Open the CalcMark editor:
 
 ```bash
-cm                    # Empty REPL
-cm budget.cm          # Load a file and explore
+cm                    # New document
+cm budget.cm          # Open existing file
 ```
 
 ### Evaluate a File

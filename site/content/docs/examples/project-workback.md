@@ -51,7 +51,7 @@ dev_start = qa_start - development_time
 
 ## Sprint Planning
 
-Assuming 2-week sprints during development:
+Assuming 2-week sprints during development (4 weeks = 2 sprints):
 
 num_sprints = 2
 sprint_duration = 2 weeks
@@ -63,7 +63,7 @@ total_points = num_sprints * team_velocity
 
 ## Key Milestones
 
-Using "X from Y" syntax:
+Using "X from Y" syntax (works with date literals):
 
 one_week_from_now = 1 week from today
 two_weeks_from_now = 2 weeks from today
@@ -81,6 +81,8 @@ code_complete = qa_start
 developers = 4
 qa_engineers = 2
 devops = 1
+
+Person-weeks calculation (4 weeks dev, 2 weeks QA, ~2 weeks devops):
 
 dev_person_weeks = developers * 4
 qa_person_weeks = qa_engineers * 2
@@ -101,6 +103,23 @@ Team cost over development phase:
 dev_cost = dev_daily_rate * developers over development_time
 qa_cost = qa_daily_rate * qa_engineers over qa_time
 devops_cost = devops_daily_rate * devops over (staging_time + launch_prep)
+
+## Risk Assessment
+
+Add contingency for unknowns (~15% buffer = 8 days):
+
+risk_buffer = 8 days
+adjusted_dev_start = dev_start - risk_buffer
+
+## Calendar Summary
+
+Key dates for your calendar:
+
+project_kickoff = adjusted_dev_start
+dev_complete = qa_start
+qa_complete = staging_start
+staging_complete = launch_prep_start
+go_live = launch_date
 
 ## Schedule Feasibility
 

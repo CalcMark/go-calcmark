@@ -64,6 +64,8 @@ fica_rate = 0.0765
 
 total_tax_rate = federal_rate + state_rate + fica_rate
 
+Note: Stock comp has different tax treatment, simplified here.
+
 after_tax_a = annual_comp_a * (1 - total_tax_rate)
 after_tax_b = annual_comp_b * (1 - total_tax_rate)
 
@@ -72,6 +74,19 @@ after_tax_b = annual_comp_b * (1 - total_tax_rate)
 monthly_a = after_tax_a / 12
 monthly_b = after_tax_b / 12
 monthly_difference = monthly_a - monthly_b
+
+## First Year Analysis
+
+Year 1 includes signing bonus (Offer A only):
+
+year1_gross_a = annual_comp_a + signing_bonus_a
+year1_gross_b = annual_comp_b + signing_bonus_b
+
+year1_net_a = year1_gross_a * (1 - total_tax_rate)
+year1_net_b = year1_gross_b * (1 - total_tax_rate)
+
+year1_monthly_a = year1_net_a / 12
+year1_monthly_b = year1_net_b / 12
 
 ## Four Year Total
 
@@ -91,6 +106,24 @@ startup_risk_discount = 0.40
 risk_adjusted_stock_b = annual_stock_b * (1 - startup_risk_discount)
 risk_adjusted_annual_b = base_salary_b + annual_bonus_b + risk_adjusted_stock_b
 risk_adjusted_monthly_b = risk_adjusted_annual_b * (1 - total_tax_rate) / 12
+
+## Benefits Comparison
+
+Annual value of benefits (estimated):
+
+benefits_a = 15000
+benefits_b = 8000
+
+total_value_a = annual_comp_a + benefits_a
+total_value_b = annual_comp_b + benefits_b
+
+## Summary Metrics
+
+cash_comp_a = base_salary_a + annual_bonus_a
+cash_comp_b = base_salary_b + annual_bonus_b
+
+equity_pct_a = annual_stock_a / annual_comp_a * 100
+equity_pct_b = annual_stock_b / annual_comp_b * 100
 
 ## Decision Factors
 
