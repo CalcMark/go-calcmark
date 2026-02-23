@@ -73,11 +73,8 @@ homebrew_casks:
     directory: Casks
     homepage: "https://calcmark.org"
     description: "CalcMark - calculations embedded in markdown"
-    license: "MIT"
-    install: |
-      bin.install "cm"
-    test: |
-      system "#{bin}/cm", "version"
+    binaries:
+      - cm
 
 release:
   github:
