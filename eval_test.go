@@ -1,6 +1,7 @@
 package calcmark
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -186,10 +187,11 @@ func hasErrorDiagnostic(result *Result) bool {
 // Test currency conversion with frontmatter exchange rates
 func TestCurrencyConversion(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		want    string
-		wantErr bool
+		name           string
+		input          string
+		want           string
+		wantErr        bool
+		wantErrContain string // substring that must appear in error message
 	}{
 		{
 			name: "USD to EUR",
@@ -225,7 +227,8 @@ exchange:
   USD_EUR: 0.92
 ---
 100 USD in GBP`,
-			wantErr: true,
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for USD",
 		},
 		{
 			name: "same currency no-op with code",
@@ -255,6 +258,72 @@ price = $1000
 price in EUR`,
 			want: "€920.00",
 		},
+		{
+			name:           "no frontmatter at all",
+			input:          "100 USD in EUR",
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for USD",
+		},
+		{
+			name: "wrong pair defined",
+			input: `---
+exchange:
+  EUR_JPY: 130.50
+---
+100 USD in EUR`,
+			wantErr:        true,
+			wantErrContain: "USD",
+		},
+		{
+			name: "reverse direction not auto-computed",
+			input: `---
+exchange:
+  USD_EUR: 0.92
+---
+100 EUR in USD`,
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for EUR",
+		},
+		{
+			name: "@exchange inline then convert",
+			input: `---
+exchange:
+  EUR_GBP: 0.86
+---
+@exchange.USD_EUR = 0.92
+100 USD in EUR`,
+			want: "€92.00",
+		},
+		{
+			name: "multiple sequential conversions",
+			input: `---
+exchange:
+  USD_EUR: 0.92
+  EUR_GBP: 0.86
+---
+price_eur = 100 USD in EUR
+price_gbp = 50 EUR in GBP`,
+			want: "£43.00", // last value
+		},
+		{
+			name: "lowercase exchange key normalizes",
+			input: `---
+exchange:
+  usd_eur: 0.92
+---
+100 USD in EUR`,
+			want: "€92.00",
+		},
+		{
+			name: "error message suggests correct underscore format",
+			input: `---
+exchange:
+  EUR_GBP: 0.86
+---
+100 USD in EUR`,
+			wantErr:        true,
+			wantErrContain: "USD_EUR", // must use underscore, not slash
+		},
 	}
 
 	for _, tt := range tests {
@@ -263,6 +332,10 @@ price in EUR`,
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error, got result: %v", result.Value)
+					return
+				}
+				if tt.wantErrContain != "" && !strings.Contains(err.Error(), tt.wantErrContain) {
+					t.Errorf("error %q should contain %q", err.Error(), tt.wantErrContain)
 				}
 				return
 			}
@@ -306,6 +379,105 @@ exchange:
 x = 10`,
 			wantErr: "expected format 'FROM_TO'",
 		},
+		{
+			name: "slash separator instead of underscore",
+			input: `---
+exchange:
+  EUR/GBP: 0.86
+---
+x = 10`,
+			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "dot separator instead of underscore",
+			input: `---
+exchange:
+  EUR.GBP: 0.86
+---
+x = 10`,
+			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "too many underscores in exchange key",
+			input: `---
+exchange:
+  USD_EUR_GBP: 0.5
+---
+x = 10`,
+			wantErr: "expected format 'FROM_TO'",
+		},
+		{
+			name: "NaN exchange rate",
+			input: `---
+exchange:
+  USD_EUR: .nan
+---
+x = 10`,
+			wantErr: "not a finite number",
+		},
+		{
+			name: "Inf exchange rate",
+			input: `---
+exchange:
+  USD_EUR: .inf
+---
+x = 10`,
+			wantErr: "not a finite number",
+		},
+		{
+			name: "negative exchange rate",
+			input: `---
+exchange:
+  USD_EUR: -0.5
+---
+x = 10`,
+			wantErr: "must be positive",
+		},
+		{
+			name: "zero exchange rate",
+			input: `---
+exchange:
+  USD_EUR: 0
+---
+x = 10`,
+			wantErr: "must be positive",
+		},
+		{
+			name: "short currency code (2 letters)",
+			input: `---
+exchange:
+  US_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
+		{
+			name: "long currency code (4 letters)",
+			input: `---
+exchange:
+  USDD_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
+		{
+			name: "numeric currency code",
+			input: `---
+exchange:
+  123_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
+		{
+			name: "mixed alphanumeric currency code",
+			input: `---
+exchange:
+  U1D_EUR: 0.92
+---
+x = 10`,
+			wantErr: "must be exactly 3 letters",
+		},
 	}
 
 	for _, tt := range tests {
@@ -315,20 +487,11 @@ x = 10`,
 				t.Error("expected error")
 				return
 			}
-			if !containsSubstring(err.Error(), tt.wantErr) {
+			if !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("error %q should contain %q", err.Error(), tt.wantErr)
 			}
 		})
 	}
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // Test globals in frontmatter

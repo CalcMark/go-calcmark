@@ -414,6 +414,11 @@ func TestParseExchangeKey(t *testing.T) {
 		{"empty from", "_EUR", "", "", true},
 		{"empty to", "USD_", "", "", true},
 		{"both empty", "_", "", "", true},
+		// Currency code format (must be exactly 3 letters)
+		{"short code", "AB_EUR", "", "", true},
+		{"long code", "ABCD_EUR", "", "", true},
+		{"digits", "123_EUR", "", "", true},
+		{"mixed alphanum", "U1D_EUR", "", "", true},
 	}
 
 	for _, tt := range tests {

@@ -3,6 +3,7 @@ package document
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -66,7 +67,8 @@ func ExchangeRateKey(from, to string) string {
 }
 
 // ParseExchangeRateKey splits a key like "USD_EUR" into (from, to) parts.
-// Returns an error if the key format is invalid.
+// Returns an error if the key format is invalid. Currency codes must be
+// exactly 3 ASCII letters (ISO 4217 format, e.g., USD, EUR, GBP).
 func ParseExchangeRateKey(key string) (from, to string, err error) {
 	parts := strings.Split(key, "_")
 	if len(parts) != 2 {
@@ -77,7 +79,39 @@ func ParseExchangeRateKey(key string) (from, to string, err error) {
 	if from == "" || to == "" {
 		return "", "", fmt.Errorf("invalid exchange rate key '%s': currency codes cannot be empty", key)
 	}
+	if !isValidCurrencyCode(from) {
+		return "", "", fmt.Errorf("invalid currency code '%s' in exchange rate key '%s': must be exactly 3 letters (e.g., USD, EUR)", from, key)
+	}
+	if !isValidCurrencyCode(to) {
+		return "", "", fmt.Errorf("invalid currency code '%s' in exchange rate key '%s': must be exactly 3 letters (e.g., USD, EUR)", to, key)
+	}
 	return from, to, nil
+}
+
+// isValidCurrencyCode checks if a string looks like a valid currency code:
+// exactly 3 ASCII letters (already expected to be uppercase after normalization).
+func isValidCurrencyCode(code string) bool {
+	if len(code) != 3 {
+		return false
+	}
+	for _, r := range code {
+		if !isLetter(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// validateExchangeRate rejects NaN, Inf, zero, and negative exchange rate values.
+// These are all invalid in a financial context and would produce silently wrong results.
+func validateExchangeRate(key string, rate float64) error {
+	if math.IsNaN(rate) || math.IsInf(rate, 0) {
+		return fmt.Errorf("exchange rate for '%s' is not a finite number", key)
+	}
+	if rate <= 0 {
+		return fmt.Errorf("exchange rate for '%s' must be positive, got %g", key, rate)
+	}
+	return nil
 }
 
 // GetExchangeRate looks up the rate to convert from one currency to another.
@@ -256,6 +290,9 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		if err != nil {
 			return nil, "", err
 		}
+		if err := validateExchangeRate(key, rate); err != nil {
+			return nil, "", err
+		}
 		normalizedKey := ExchangeRateKey(from, to)
 		fm.Exchange[normalizedKey] = decimal.NewFromFloat(rate)
 		fm.exchangeKeys = append(fm.exchangeKeys, normalizedKey)
@@ -268,6 +305,9 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		}
 		normalizedKey := ExchangeRateKey(from, to)
 		if _, exists := fm.Exchange[normalizedKey]; !exists {
+			if err := validateExchangeRate(key, rate); err != nil {
+				return nil, "", err
+			}
 			fm.Exchange[normalizedKey] = decimal.NewFromFloat(rate)
 			fm.exchangeKeys = append(fm.exchangeKeys, normalizedKey)
 		}

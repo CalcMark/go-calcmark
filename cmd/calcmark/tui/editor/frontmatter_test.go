@@ -227,15 +227,26 @@ y = 20
 		t.Fatal("Document should have frontmatter after insert")
 	}
 
-	// Verify cursor is on the my_var line (line 2, 0-indexed)
+	// Verify cursor is on the exchange rate value line (line 2, 0-indexed)
 	if m.cursorLine != 2 {
-		t.Errorf("Cursor should be on line 2 (my_var), got %d", m.cursorLine)
+		t.Errorf("Cursor should be on line 2 (USD_EUR), got %d", m.cursorLine)
 	}
 
 	// Verify frontmatter lines in GetLines()
 	lines := m.GetLines()
 	if lines[0] != "---" {
 		t.Errorf("First line should be '---', got %q", lines[0])
+	}
+
+	// Verify exchange rate is in template
+	fm := m.doc.GetFrontmatter()
+	if _, ok := fm.Exchange["USD_EUR"]; !ok {
+		t.Error("Frontmatter should contain USD_EUR exchange rate")
+	}
+
+	// Verify globals are also in template
+	if _, ok := fm.Globals["my_var"]; !ok {
+		t.Error("Frontmatter should contain my_var global")
 	}
 
 	// Verify status message
@@ -509,14 +520,14 @@ func TestFrontmatterEditSurvivesNavigation(t *testing.T) {
 	result, _ := m.insertFrontmatter()
 	m = result.(Model)
 
-	// Cursor should be on line 2 ("  my_var: 42")
+	// Cursor should be on line 2 ("  USD_EUR: 0.92" — exchange rate line)
 	if m.cursorLine != 2 {
 		t.Fatalf("Expected cursor on line 2, got %d", m.cursorLine)
 	}
 
-	// 2. Simulate editing: load line, change content
+	// 2. Simulate editing: load line, change content (replace exchange rate)
 	m.loadCurrentLineIntoEditBuffer()
-	m.editBuf = "  growth_rate: 5%"
+	m.editBuf = "  EUR_GBP: 0.86"
 
 	// 3. Navigate down (triggers saveCurrentLineAndMoveTo)
 	resultDown, _ := m.handleDownKey()
@@ -529,17 +540,17 @@ func TestFrontmatterEditSurvivesNavigation(t *testing.T) {
 
 	// 5. Verify the frontmatter edit persisted (not reverted)
 	lines := m.GetLines()
-	foundGrowthRate := false
+	foundEurGbp := false
 	for _, line := range lines {
-		if strings.Contains(line, "growth_rate") {
-			foundGrowthRate = true
+		if strings.Contains(line, "EUR_GBP") {
+			foundEurGbp = true
 		}
-		if strings.Contains(line, "my_var") {
-			t.Error("Frontmatter should NOT contain 'my_var' — edit was reverted!")
+		if strings.Contains(line, "USD_EUR") {
+			t.Error("Frontmatter should NOT contain 'USD_EUR' — edit was reverted!")
 		}
 	}
-	if !foundGrowthRate {
-		t.Error("Frontmatter should contain 'growth_rate' after edit + navigation")
+	if !foundEurGbp {
+		t.Error("Frontmatter should contain 'EUR_GBP' after edit + navigation")
 	}
 }
 
