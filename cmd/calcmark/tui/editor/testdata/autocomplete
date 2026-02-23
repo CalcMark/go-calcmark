@@ -90,3 +90,53 @@ type g
 ----
 -- debug:
 mode=StateAutocomplete cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# --- Regression: backspace in autocomplete must delete char AND update suggestions ---
+# Bug: pressing backspace while autocomplete popup was visible required ESC first;
+# user expects backspace to both delete the character and refresh/dismiss suggestions.
+
+# First clear state: we have "avg" with autocomplete active
+# Backspace should delete "g", leaving "av", and re-filter suggestions
+run observe=debug
+key backspace
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Backspace again: deletes "v", leaving "a", autocomplete should still have matches
+run observe=debug
+key backspace
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="a# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Backspace again: deletes "a", prefix is now empty, autocomplete must dismiss
+run observe=debug
+key backspace
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test "ca" → backspace narrows to "c" scenario
+# Type "ca" to trigger capacity suggestion
+run observe=debug
+type ca
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="ca# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Backspace: delete "a", autocomplete re-filters with "c" prefix
+run observe=debug
+key backspace
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="c# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# --- Bug report: first character on line not deleted by backspace ---
+# Backspace the last prefix char "c": must delete it AND dismiss autocomplete.
+# editBuf "c# Header" → "# Header", not "c# Header" with cursor at col 0.
+run observe=debug
+key backspace
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

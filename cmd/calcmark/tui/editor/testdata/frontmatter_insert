@@ -68,3 +68,43 @@ frontmatterLineCount=6
 totalLines=9
 statusMsg="Frontmatter already exists"
 globalsCount=1
+
+# --- Regression: Enter on globals: line at col 0 ---
+# Bug: pressing Enter at start of "globals:" caused it to appear twice
+# because the first updateCurrentLine("") produced invalid YAML and silently
+# failed, leaving the original globals: in place while textAfter also wrote it.
+
+# Navigate to globals: line (line 3). Cursor is currently on USD_EUR (line 2).
+run observe=debug
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=9 totalVisual=9 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Enter at col 0 on globals: — should insert empty line ABOVE globals:
+run observe=lines
+key enter
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7 8:8 9:9]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="exchange:"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="  USD_EUR: 0.92"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content=""
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="globals:" <CURSOR>
+  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="  my_var: 42"
+  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="---"
+  [7] srcIdx=7 lineNum=8 wrap=false pad=false content="x = 10"
+  [8] srcIdx=8 lineNum=9 wrap=false pad=false content="y = 20"
+  [9] srcIdx=9 lineNum=10 wrap=false pad=false content="z = x + y"
+
+# Verify frontmatter is intact with no duplication
+run observe=frontmatter
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=7
+totalLines=10
+statusMsg=""
+globalsCount=1

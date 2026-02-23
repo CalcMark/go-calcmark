@@ -54,6 +54,12 @@ func (m Model) handleUndo() (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Reload editBuf from the document for the restored cursor line.
+	// applyOperationReverse may have set editBuf for a different line than
+	// cursorLine, so we clear and eagerly reload to keep them in sync.
+	m.editBufLoaded = false
+	m.loadCurrentLineIntoEditBuffer()
+
 	// Re-evaluate document
 	m.redetectBlockTypes()
 	m.reEvaluate()
@@ -109,6 +115,12 @@ func (m Model) handleRedo() (tea.Model, tea.Cmd) {
 			m.cursorCol = 0
 		}
 	}
+
+	// Reload editBuf from the document for the restored cursor line.
+	// applyOperationForward may have set editBuf for a different line than
+	// cursorLine, so we clear and eagerly reload to keep them in sync.
+	m.editBufLoaded = false
+	m.loadCurrentLineIntoEditBuffer()
 
 	// Re-evaluate document
 	m.redetectBlockTypes()

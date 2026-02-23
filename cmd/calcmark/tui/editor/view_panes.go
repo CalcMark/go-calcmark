@@ -70,7 +70,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 
 		// In edit mode, skip pre-computed wrapped lines for the cursor line
 		// since we'll render the edit buffer with its own wrapping
-		if m.editBuf != "" && sl.isWrapped && sl.sourceLineIdx == m.cursorLine {
+		if m.editBufLoaded && sl.isWrapped && sl.sourceLineIdx == m.cursorLine {
 			continue
 		}
 
@@ -89,7 +89,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 		}
 
 		var content string
-		if m.editBuf != "" && sl.isCursorLine {
+		if m.editBufLoaded && sl.isCursorLine {
 			// Show edit buffer with cursor - handle wrapping
 			editLines := m.renderEditLineWrapped(contentWidth)
 			for j, editLine := range editLines {
@@ -237,7 +237,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	// 3. Adjust by skipping pre-computed wrapped lines or adding empty lines
 	var editLineCount int
 	var preComputedCursorLineCount int
-	if m.editBuf != "" {
+	if m.editBufLoaded {
 		// Count how many lines the edit buffer would produce
 		contentWidth := width // approximate
 		editLines := geometry.WrapText(m.editBuf, contentWidth)
@@ -286,7 +286,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 
 		// In edit mode, handle cursor line specially to match source pane's edit rendering.
 		// This only applies to non-frontmatter lines (calc blocks, markdown).
-		if m.editBuf != "" && pl.sourceLineNum == m.cursorLine {
+		if m.editBufLoaded && pl.sourceLineNum == m.cursorLine {
 			if !cursorLineProcessed {
 				// First occurrence of cursor line - output editLineCount lines
 				// to match the source pane's edit buffer rendering.

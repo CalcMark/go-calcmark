@@ -754,6 +754,7 @@ func TestEmptyEditorLoadEditBuffer(t *testing.T) {
 
 	// Clear editBuf to simulate not having loaded yet
 	m2.editBuf = ""
+	m2.editBufLoaded = false
 
 	// Load the line
 	m2.loadCurrentLineIntoEditBuffer()

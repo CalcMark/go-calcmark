@@ -2,6 +2,10 @@ package editor
 
 import (
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
@@ -247,6 +251,163 @@ func TestCombinedSuggestionSource_GetSuggestions(t *testing.T) {
 	}
 	if foundFunc != -1 && foundVar != -1 && foundFunc > foundVar {
 		t.Error("expected functions to appear before variables in suggestions")
+	}
+}
+
+// TestBackspaceLastCharAfterDebounce reproduces the bug where pressing backspace
+// in autocomplete mode to delete the last prefix character leaves the character
+// visible. The root cause: after the debounce fires, the typed character is saved
+// to the document. When backspace clears editBuf to "", the view falls back to
+// document content (which still has the character) instead of showing empty.
+func TestBackspaceLastCharAfterDebounce(t *testing.T) {
+	content := "x = 10\n"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Move to line 0, col 0
+	m.cursorLine = 0
+	m.cursorCol = 0
+	m.editBuf = ""
+
+	// 1. Type "a" — triggers autocomplete
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	result, cmd := m.Update(keyMsg)
+	m = result.(Model)
+
+	if m.editBuf != "ax = 10" {
+		t.Fatalf("After typing 'a': editBuf=%q, want %q", m.editBuf, "ax = 10")
+	}
+	if m.mode != StateAutocomplete {
+		t.Fatalf("After typing 'a': mode=%v, want StateAutocomplete", m.mode)
+	}
+
+	// 2. Simulate debounce firing (as happens in real app between key presses)
+	// Extract the evalDebounceMsg from the returned command
+	if cmd != nil {
+		// Process the batch — find and fire the evalDebounceMsg
+		m.transitionToProcessing() // This is what the debounce does
+	}
+
+	// Document should now have "ax = 10" saved
+	lines := m.GetLines()
+	if lines[0] != "ax = 10" {
+		t.Fatalf("After debounce: line 0=%q, want %q", lines[0], "ax = 10")
+	}
+
+	// editBuf should still have the content
+	if m.editBuf != "ax = 10" {
+		t.Fatalf("After debounce: editBuf=%q, want %q", m.editBuf, "ax = 10")
+	}
+
+	// 3. Re-trigger autocomplete mode (debounce transitions to Ready, which
+	// clears autocomplete mode; simulate user state where popup is still showing)
+	m.mode = StateAutocomplete
+	m.autocompleteState.Visible = true
+	m.autocompleteState.Prefix = "a"
+
+	// 4. Press backspace to delete "a" — this is the bug trigger
+	bsMsg := tea.KeyMsg{Type: tea.KeyBackspace}
+	result, _ = m.Update(bsMsg)
+	m = result.(Model)
+
+	// editBuf MUST be "x = 10" (the "a" deleted), NOT "ax = 10"
+	if m.editBuf != "x = 10" {
+		t.Errorf("After backspace: editBuf=%q, want %q", m.editBuf, "x = 10")
+	}
+
+	// Cursor must be at col 0
+	if m.cursorCol != 0 {
+		t.Errorf("After backspace: cursorCol=%d, want 0", m.cursorCol)
+	}
+
+	// Mode must be StateDefault (autocomplete dismissed, prefix is empty)
+	// Note: "x" at col 0 is not a word prefix (cursor is before it, not after)
+	if m.mode != StateDefault {
+		t.Errorf("After backspace: mode=%v, want StateDefault", m.mode)
+	}
+
+	// THE CRITICAL CHECK: The view must NOT show the deleted "a".
+	// In the buggy code, the view falls back to GetLines() when editBuf=="",
+	// but here editBuf="x = 10" (not empty), so this particular case works.
+	// The REAL problem is when the typed char is the ONLY content on the line.
+}
+
+// TestBackspaceLastCharOnEmptyLine reproduces the bug on an initially empty line.
+// This is the critical case: editBuf becomes "" after backspace, and the view
+// falls back to document content which has the stale character.
+func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
+	// Start with a two-line doc, second line is just a calc
+	content := "x = 10\n\n" // line 0: "x = 10", line 1: ""
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Move to the empty line
+	m.cursorLine = 1
+	m.cursorCol = 0
+	m.editBuf = ""
+
+	// 1. Type "a" — inserts on empty line, triggers autocomplete
+	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	result, _ := m.Update(keyMsg)
+	m = result.(Model)
+
+	if m.editBuf != "a" {
+		t.Fatalf("After typing 'a' on empty line: editBuf=%q, want %q", m.editBuf, "a")
+	}
+
+	// 2. Simulate debounce firing — saves "a" to document
+	m.transitionToProcessing()
+
+	// Document line 1 should now be "a"
+	lines := m.GetLines()
+	if lines[1] != "a" {
+		t.Fatalf("After debounce: line 1=%q, want %q", lines[1], "a")
+	}
+
+	// 3. Re-trigger autocomplete mode
+	m.mode = StateAutocomplete
+	m.autocompleteState.Visible = true
+	m.autocompleteState.Prefix = "a"
+	m.state = StateReady // debounce transitions through Processing → Ready
+
+	// 4. Press backspace — deletes "a", editBuf becomes ""
+	bsMsg := tea.KeyMsg{Type: tea.KeyBackspace}
+	result, _ = m.Update(bsMsg)
+	m = result.(Model)
+
+	// editBuf MUST be "" (the "a" was deleted)
+	if m.editBuf != "" {
+		t.Errorf("After backspace on empty line: editBuf=%q, want empty", m.editBuf)
+	}
+
+	// Cursor at col 0
+	if m.cursorCol != 0 {
+		t.Errorf("After backspace: cursorCol=%d, want 0", m.cursorCol)
+	}
+
+	// The document still has "a" because debounce hasn't fired yet — that's expected.
+	// The critical fix is that editBufLoaded=true so the view renders editBuf=""
+	// instead of falling back to the stale GetLines() content.
+	docLines := m.GetLines()
+	if docLines[m.cursorLine] != "a" {
+		t.Errorf("Expected document to still have 'a' (debounce not fired), got %q", docLines[m.cursorLine])
+	}
+
+	// editBufLoaded MUST be true so the view uses editBuf="" instead of stale doc
+	if !m.editBufLoaded {
+		t.Error("editBufLoaded must be true so view renders editBuf instead of stale document content")
 	}
 }
 
