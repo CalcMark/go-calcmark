@@ -92,15 +92,17 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 	// Priority 0: Show autocomplete details when active
 	if state.AutocompleteActive && state.AutocompleteName != "" {
 		nameStyle := lipgloss.NewStyle().Foreground(theme.FooterFuncName).Bold(true).Background(bg)
-		syntaxStyle := lipgloss.NewStyle().Foreground(theme.Text).Background(bg)
 		descStyle := lipgloss.NewStyle().Foreground(theme.TextMuted).Italic(true).Background(bg)
 
 		var lines []string
 
-		// Line 1: Name + Syntax (function signature)
-		line1 := nameStyle.Render(state.AutocompleteName)
+		// Line 1: Syntax already includes the function name (e.g. "capacity(demand, ...)"),
+		// so render it directly to avoid showing the name twice.
+		var line1 string
 		if state.AutocompleteSyntax != "" {
-			line1 += bgText(" ") + syntaxStyle.Render(state.AutocompleteSyntax)
+			line1 = nameStyle.Render(state.AutocompleteSyntax)
+		} else {
+			line1 = nameStyle.Render(state.AutocompleteName)
 		}
 		lines = append(lines, line1)
 

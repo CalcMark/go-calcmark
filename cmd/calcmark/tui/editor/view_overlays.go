@@ -167,16 +167,22 @@ func (m Model) renderAutocompletePopup() string {
 	for i := scrollTop; i < scrollTop+maxVisible && i < len(state.Suggestions); i++ {
 		s := state.Suggestions[i]
 
-		// Format: prefer syntax (function signature) over description
-		name := s.Name
-		detail := ""
+		// Format: prefer syntax (function signature) over description.
+		// Syntax already includes the function name (e.g. "capacity(demand, ...)"),
+		// so we use it directly to avoid showing the name twice.
+		// Synonym info in Name (e.g. "avg (average)") is appended separately.
+		var content string
 		if s.Syntax != "" {
-			detail = " " + s.Syntax
+			content = " " + s.Syntax
+			// Preserve synonym hint from Name if present, e.g. " (average)"
+			if idx := strings.Index(s.Name, " ("); idx >= 0 {
+				content += " " + s.Name[idx+1:]
+			}
 		} else if s.Description != "" {
-			detail = " " + s.Description
+			content = " " + s.Name + " " + s.Description
+		} else {
+			content = " " + s.Name
 		}
-
-		content := " " + name + detail
 		if len(content) > innerWidth {
 			content = content[:innerWidth-1] + "…"
 		}
