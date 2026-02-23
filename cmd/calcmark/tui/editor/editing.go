@@ -90,16 +90,52 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 		ScrollOffset: beforeScroll,
 	}
 
-	// Save current line with text before cursor
-	m.editBuf = textBefore
-	m.updateCurrentLine(m.editBuf)
+	// Frontmatter lines need atomic handling: the three-step sequence
+	// (updateCurrentLine → insertLineBelow → updateCurrentLine) rebuilds the
+	// document three times, and an intermediate state can produce invalid YAML
+	// that silently fails, leaving stale data in the document.
+	// Instead, do the line split as a single document rebuild.
+	if m.cursorLine < m.frontmatterLineCount() {
+		lines := m.GetLines()
+		// Split: replace current line with textBefore, insert textAfter below
+		newLines := make([]string, 0, len(lines)+1)
+		newLines = append(newLines, lines[:m.cursorLine]...)
+		newLines = append(newLines, textBefore)
+		newLines = append(newLines, textAfter)
+		newLines = append(newLines, lines[m.cursorLine+1:]...)
 
-	// Insert new line below with text after cursor
-	// insertLineBelow() sets cursor to the new line, so no need to increment
-	m.insertLineBelow()
-	m.editBuf = textAfter
-	m.cursorCol = 0
-	m.updateCurrentLine(m.editBuf) // Save textAfter to the new line
+		content := strings.Join(newLines, "\n") + "\n"
+		newDoc, err := document.NewDocument(content)
+		if err != nil {
+			// YAML is invalid, but Enter must still work — preserve the split
+			// in rawSource so the user can keep editing.
+			m.frontmatterErr = err
+			if fm := m.doc.GetFrontmatter(); fm != nil {
+				fmCount := m.frontmatterLineCount()
+				// newLines has one extra line from the split, so frontmatter is fmCount+1
+				newRaw := strings.Join(newLines[:fmCount+1], "\n") + "\n"
+				fm.SetRawSource(newRaw)
+			}
+		} else {
+			m.frontmatterErr = nil
+			m.doc = newDoc
+			m.eval = implDoc.NewEvaluator()
+			_ = m.eval.Evaluate(m.doc)
+		}
+		m.cursorLine = beforeLine + 1
+		m.cursorCol = 0
+		m.editBuf = textAfter
+		m.adjustScrollForCursor()
+		m.autoPinVariables()
+	} else {
+		// Non-frontmatter: use the standard three-step approach
+		m.editBuf = textBefore
+		m.updateCurrentLine(m.editBuf)
+		m.insertLineBelow()
+		m.editBuf = textAfter
+		m.cursorCol = 0
+		m.updateCurrentLine(m.editBuf)
+	}
 
 	// Process document changes immediately on ENTER
 	m.redetectBlockTypes()
@@ -357,19 +393,22 @@ func (m *Model) recordEdit(op EditOperation) tea.Cmd {
 
 // loadCurrentLineIntoEditBuffer ensures editBuf is loaded with current line content.
 // This makes the user ALWAYS able to edit - no mode switching needed.
+// Uses editBufLoaded to distinguish "not yet loaded" from "user emptied the line".
 func (m *Model) loadCurrentLineIntoEditBuffer() {
-	if m.editBuf == "" {
-		lines := m.GetLines()
-		if m.cursorLine < len(lines) {
-			m.editBuf = lines[m.cursorLine]
-		}
+	if m.editBufLoaded {
+		return // Already loaded — editBuf="" means user intentionally emptied the line
 	}
+	lines := m.GetLines()
+	if m.cursorLine < len(lines) {
+		m.editBuf = lines[m.cursorLine]
+	}
+	m.editBufLoaded = true
 }
 
 // saveCurrentLine saves the edit buffer to the current line without changing mode.
 // The user is ALWAYS able to edit - no mode switching needed.
 func (m *Model) saveCurrentLine(save bool) {
-	if save && m.editBuf != "" {
+	if save && m.editBufLoaded {
 		// Special case: empty document with content in edit buffer
 		// Create the document from the buffer content
 		if len(m.GetLines()) == 0 {
@@ -420,6 +459,7 @@ func (m *Model) saveCurrentLineAndMoveTo(newLine int) {
 	} else {
 		m.editBuf = ""
 	}
+	m.editBufLoaded = true // Explicitly loaded for the new line
 
 	// Try to preserve column position, clamp to line length
 	m.cursorCol = min(savedCol, runeLen(m.editBuf))
@@ -493,8 +533,14 @@ func (m *Model) updateCurrentLine(newContent string) {
 		content := strings.Join(lines, "\n") + "\n"
 		newDoc, err := document.NewDocument(content)
 		if err != nil {
-			// Capture parse error (e.g., malformed YAML) but keep old document
+			// YAML is invalid, but we must preserve the user's text.
+			// Update the raw source so GetLines()/Serialize() reflects the edit,
+			// while keeping the old parsed data (globals, exchange) intact.
 			m.frontmatterErr = err
+			if fm := m.doc.GetFrontmatter(); fm != nil {
+				newRaw := strings.Join(lines[:fmCount], "\n") + "\n"
+				fm.SetRawSource(newRaw)
+			}
 			return
 		}
 		m.frontmatterErr = nil
@@ -774,6 +820,7 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	m.cursorLine = 2
 	m.cursorCol = 0
 	m.editBuf = ""
+	m.editBufLoaded = false // New line — needs loading
 
 	m.globalsExpanded = true
 	m.modified = true

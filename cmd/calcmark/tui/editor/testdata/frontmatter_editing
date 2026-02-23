@@ -120,3 +120,113 @@ frontmatterLineCount=5
 frontmatterErr=<nil>
 global: growth_rate=42
 global: tax_rate=10%
+
+# --- Regression: invalid YAML must not silently discard user text ---
+# Bug: typing invalid YAML (e.g. duplicate "globals:") and navigating away
+# caused the text to vanish because updateCurrentLine discarded the edit
+# on parse failure instead of preserving it in rawSource.
+
+# Navigate to globals: line (line 1)
+run observe=debug
+key up
+key up
+key up
+key up
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=3 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=6 totalVisual=6 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Enter at col 0 to create a line above globals, then type "globals:" (invalid — duplicate key)
+run observe=debug
+key home
+key enter
+key up
+type globals:
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=8 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=7 totalVisual=7 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down — the typed text MUST be preserved even though YAML is invalid
+run observe=lines
+key down
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="globals:"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="globals:" <CURSOR>
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="  growth_rate: 42"
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="  tax_rate: 10%"
+  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="---"
+  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="x = my_var + 1"
+
+# Verify the error is shown but text is preserved
+run observe=frontmatter
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=6
+frontmatterErr=frontmatter: frontmatter YAML error:
+  line 2: mapping key "globals" already defined at line 1
+global: growth_rate=42
+global: tax_rate=10%
+
+# --- Regression: Enter must work on lines with invalid YAML ---
+# Bug: pressing Enter on a frontmatter line when YAML was already invalid
+# (e.g. unknown key "exchange_rates:") was silently blocked because
+# NewDocument failed and the handler returned without splitting the line.
+
+# Fix the duplicate globals first — rename to exchange_rates: (still invalid key, but no dup)
+# Cursor is at line 2 after previous down-key; 1 UP reaches line 1 (first globals:)
+run observe=debug
+key up
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=8 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=7 totalVisual=7 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Clear the line and type exchange_rates: (unknown key → YAML error)
+# Type replacement at col 0, then delete old text from end.
+# Must NOT backspace to empty editBuf first — loadCurrentLineIntoEditBuffer()
+# would reload the stale document content ("globals:") on next insertRune.
+run observe=debug
+key home
+type exchange_rates:
+key end
+key backspace
+key backspace
+key backspace
+key backspace
+key backspace
+key backspace
+key backspace
+key backspace
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=15 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=7 totalVisual=7 editBuf="exchange_rates:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down to persist, then back up
+# Column clamps to line 2 length (8 for "globals:"), then preserves 8 on return
+run observe=debug
+key down
+key up
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=8 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=7 totalVisual=7 editBuf="exchange_rates:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Enter at end of exchange_rates: — MUST work even though YAML is invalid
+run observe=lines
+key end
+key enter
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="exchange_rates:"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="" <CURSOR>
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="globals:"
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="  growth_rate: 42"
+  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="  tax_rate: 10%"
+  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="---"
+  [7] srcIdx=7 lineNum=8 wrap=false pad=false content="x = my_var + 1"

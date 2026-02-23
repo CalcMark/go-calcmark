@@ -151,6 +151,14 @@ func (f *Frontmatter) SetGlobal(name, valueExpr string) {
 	f.rawSource = "" // Invalidate raw source — Serialize() will reconstruct
 }
 
+// SetRawSource replaces the serialized frontmatter text (including --- delimiters
+// and trailing newline) without re-parsing YAML. This allows the TUI editor to
+// preserve user-typed text even when intermediate edits produce invalid YAML.
+// Parsed data (Globals, Exchange) remains unchanged until a valid parse succeeds.
+func (f *Frontmatter) SetRawSource(raw string) {
+	f.rawSource = raw
+}
+
 // GlobalKeys returns global variable names in insertion order.
 // Falls back to sorted keys for backward compatibility when frontmatter
 // is created via struct literals rather than ParseFrontmatter or SetGlobal.
