@@ -71,7 +71,7 @@ homebrew_casks:
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
-    homepage: "https://github.com/CalcMark/go-calcmark"
+    homepage: "https://calcmark.org"
     description: "CalcMark - calculations embedded in markdown"
     license: "MIT"
     install: |
