@@ -38,21 +38,36 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 				continue
 			}
 
-			// Format calculation blocks in fenced code blocks
+			// Format calculation blocks in fenced code blocks with per-line results
 			fmt.Fprintf(w, "```calcmark\n")
-			for _, line := range block.Source() {
+			sourceLines := block.Source()
+			results := block.Results()
+
+			// Trim trailing empty lines to avoid blank line before closing fence
+			for len(sourceLines) > 0 && strings.TrimSpace(sourceLines[len(sourceLines)-1]) == "" {
+				sourceLines = sourceLines[:len(sourceLines)-1]
+			}
+
+			for i, line := range sourceLines {
 				// Skip result lines from previous saves
 				if isResultLine(line) {
 					continue
 				}
-				fmt.Fprintln(w, line)
+				if line == "" {
+					fmt.Fprintln(w)
+					continue
+				}
+				fmt.Fprint(w, line)
+				// Append inline result if available
+				if i < len(results) && results[i] != nil {
+					fmt.Fprintf(w, " → %s", display.Format(results[i]))
+				}
+				fmt.Fprintln(w)
 			}
 			fmt.Fprintf(w, "```\n\n")
 
 			if block.Error() != nil {
 				fmt.Fprintf(w, "**Error:** %v\n\n", block.Error())
-			} else if block.LastValue() != nil {
-				fmt.Fprintf(w, "**Result:** %s\n\n", display.Format(block.LastValue()))
 			}
 
 		case *document.TextBlock:

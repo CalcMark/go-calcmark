@@ -36,13 +36,50 @@ func TestMarkdownFormatterSimple(t *testing.T) {
 	if !strings.Contains(output, "```calcmark") {
 		t.Errorf("Expected output to contain calcmark code fence, got: %s", output)
 	}
-	// Should contain result
-	if !strings.Contains(output, "15") {
-		t.Errorf("Expected output to contain result, got: %s", output)
+	// Should show per-line result with arrow
+	if !strings.Contains(output, "→ 15") {
+		t.Errorf("Expected output to contain per-line result '→ 15', got: %s", output)
 	}
-	// Should have "Result:" prefix
-	if !strings.Contains(output, "**Result:**") {
-		t.Errorf("Expected output to have Result prefix, got: %s", output)
+}
+
+// TestMarkdownFormatterPerLineResults tests that every calculation line gets its result.
+func TestMarkdownFormatterPerLineResults(t *testing.T) {
+	source := "x = 10 + 5\ny = x * 2\nz = y + 1\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Every line should have its result, not just the last
+	if !strings.Contains(output, "x = 10 + 5 → 15") {
+		t.Errorf("Expected per-line result for x, got: %s", output)
+	}
+	if !strings.Contains(output, "y = x * 2 → 30") {
+		t.Errorf("Expected per-line result for y, got: %s", output)
+	}
+	if !strings.Contains(output, "z = y + 1 → 31") {
+		t.Errorf("Expected per-line result for z, got: %s", output)
+	}
+
+	// Should NOT have a separate **Result:** line
+	if strings.Contains(output, "**Result:**") {
+		t.Errorf("Should not have separate Result line, got: %s", output)
 	}
 }
 
@@ -193,9 +230,9 @@ func TestMarkdownFormatterFiltersResultComments(t *testing.T) {
 		t.Errorf("Expected output to contain x = 10, got: %s", output)
 	}
 
-	// Should have Result rendered
-	if !strings.Contains(output, "**Result:**") {
-		t.Errorf("Expected output to have Result prefix, got: %s", output)
+	// Should have per-line result with arrow
+	if !strings.Contains(output, "→") {
+		t.Errorf("Expected output to have per-line result arrow, got: %s", output)
 	}
 }
 
