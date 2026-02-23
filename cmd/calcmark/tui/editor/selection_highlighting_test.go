@@ -291,7 +291,6 @@ savings = total_income * savings_rate`
 	}
 }
 
-
 // TestPaste_PreservesLineNumbersAndStyling verifies that after pasting
 // multi-line content, line numbers remain visible and text styling is consistent.
 // Bug: Pasting breaks things significantly - missing virtual line numbers and different text color.
