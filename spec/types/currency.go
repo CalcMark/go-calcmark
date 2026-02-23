@@ -52,8 +52,10 @@ func NewCurrencyFromString(s string, symbolOrCode string) (*Currency, error) {
 	return NewCurrency(value, symbolOrCode), nil
 }
 
-// String returns the string representation with symbol and value.
-// For display purposes, formats the value with standard decimal formatting.
+// String returns the precise string representation with symbol and value.
+// This is the machine-readable form used by the JSON formatter.
+// Unlike FormatCurrency() in format/display, String() does NOT add a space
+// between ISO codes and amounts (e.g., "CNY1000.00" not "CNY 1,000.00").
 func (c *Currency) String() string {
 	// Format with appropriate decimals (most currencies use 2)
 	formatted := c.Value.StringFixed(2)

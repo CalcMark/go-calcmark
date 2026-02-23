@@ -255,6 +255,22 @@ func TestUnifiedCurrencyFormat(t *testing.T) {
 		{"negative small", "-50.00", "$", "-$50.00"},
 		{"negative mid", "-1500", "$", "-$1,500.00"},
 		{"negative large", "-15000", "$", "-$15K"},
+
+		// ISO code currencies — space between code and amount
+		{"ISO code small", "42.50", "CNY", "CNY 42.50"},
+		{"ISO code mid-range", "1500", "CNY", "CNY 1,500.00"},
+		{"ISO code large K", "15000", "CNY", "CNY 15K"},
+		{"ISO code large M", "1500000", "CNY", "CNY 1.5M"},
+		{"ISO code zero", "0", "CNY", "CNY 0.00"},
+		{"ISO code negative small", "-50.00", "CNY", "-CNY 50.00"},
+		{"ISO code negative large", "-15000", "CNY", "-CNY 15K"},
+		{"VND zero-decimal", "5000", "VND", "VND 5,000"},
+		{"KRW zero-decimal", "5000", "KRW", "KRW 5,000"},
+
+		// Regression: symbol currencies must NOT gain a space
+		{"JPY symbol unaffected", "5000", "JPY", "¥5,000"},
+		{"EUR symbol unaffected", "100", "EUR", "€100.00"},
+		{"GBP symbol unaffected", "100", "GBP", "£100.00"},
 	}
 
 	for _, tt := range tests {

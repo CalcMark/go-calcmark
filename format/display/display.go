@@ -138,6 +138,7 @@ func FormatRate(r *types.Rate) string {
 //	FormatCurrency($42.50) → "$42.50"
 //	FormatCurrency($1500) → "$1,500.00"
 //	FormatCurrency(USD100) → "$100.00"
+//	FormatCurrency(CNY1000) → "CNY 1,000.00"
 func FormatCurrency(c *types.Currency) string {
 	if c == nil {
 		return ""
@@ -145,6 +146,13 @@ func FormatCurrency(c *types.Currency) string {
 
 	// Normalize code to symbol (USD -> $, etc.)
 	symbol := types.GetCurrencySymbol(c.Code)
+
+	// Code currencies (CNY, INR) get a space; symbol currencies ($, €) do not.
+	// Do NOT use len(symbol) > 1: € is 3 bytes, £ and ¥ are 2 bytes in UTF-8.
+	sep := ""
+	if symbol == c.Code {
+		sep = " "
+	}
 
 	absValue, _ := c.Value.Abs().Float64()
 	isNegative := c.Value.IsNegative()
@@ -167,9 +175,9 @@ func FormatCurrency(c *types.Currency) string {
 
 	// Build result with proper sign positioning: -$50.00, not $-50.00
 	if isNegative {
-		return "-" + symbol + numStr
+		return "-" + symbol + sep + numStr
 	}
-	return symbol + numStr
+	return symbol + sep + numStr
 }
 
 // getCurrencyDecimals returns the number of decimal places for a currency.
