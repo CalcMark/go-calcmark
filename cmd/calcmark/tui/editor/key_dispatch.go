@@ -26,51 +26,27 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.statusIsErr = false
 	}
 
-	// Global quit handlers
+	// Global shortcuts that work in all modes.
+	// Delegated to executeCommandByName to avoid duplicating dispatch logic.
 	switch msg.Type {
 	case tea.KeyCtrlC:
-		// Ctrl+C: copy if selection exists, quit if no selection
-		// This preserves Unix interrupt behavior while enabling copy
+		// Ctrl+C: copy if selection exists, quit if no selection.
+		// This preserves Unix interrupt behavior while enabling copy.
 		newModel, cmd, handled := m.handleCopy()
 		if handled {
 			return newModel, cmd
 		}
-		// No selection - fall through to quit behavior
+		// No selection — fall through to quit behavior.
 		m.quitting = true
 		return m, tea.Quit
 	case tea.KeyCtrlQ:
-		if m.promptSaveIfNeeded(PendingQuit, "Unsaved changes! Save before quit? (y/n/c)") {
-			return m, nil
-		}
-		m.quitting = true
-		return m, tea.Quit
+		return m.executeCommandByName("Quit")
 	case tea.KeyCtrlS:
-		// Save (Ctrl+S works in all modes)
-		// If no filename, show file picker
-		if m.filepath == "" {
-			m.filePicker = initFilePicker()
-			m.filePickerFocus = FocusFilename
-			m.filePickerPurpose = PickerForSave
-			m.mode = StateFilePicker
-			m.statusMsg = ""
-			return m, m.filePicker.Init()
-		}
-		// Existing file - save directly
-		m.saveFile("")
-		return m, nil
+		return m.executeCommandByName("Save")
 	case tea.KeyCtrlE:
-		// Export (Ctrl+E works in all modes)
-		m.enterExportMode()
-		return m, nil
+		return m.executeCommandByName("Export")
 	case tea.KeyCtrlO:
-		if m.promptSaveIfNeeded(PendingOpen, "Unsaved changes! Save before open? (y/n/c)") {
-			return m, nil
-		}
-		m.filePicker = initFilePicker()
-		m.filePickerFocus = FocusFileBrowser
-		m.filePickerPurpose = PickerForOpen
-		m.mode = StateFilePicker
-		return m, m.filePicker.Init()
+		return m.executeCommandByName("Open")
 	}
 
 	// Ctrl+F: Insert Frontmatter (global shortcut)
@@ -207,31 +183,3 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleEscKey handles ESC in content context (inserts new line below).
-func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
-	m.loadCurrentLineIntoEditBuffer()
-
-	// Save current line
-	m.updateCurrentLine(m.editBuf)
-
-	// Insert new line below
-	// insertLineBelow() sets cursor to the new line, so no need to increment
-	m.insertLineBelow()
-	m.editBuf = ""
-	m.editBufLoaded = false // New line — needs loading
-	m.cursorCol = 0
-
-	// Process document changes immediately on ESC
-	m.redetectBlockTypes()
-	m.reEvaluate()
-	m.modified = true
-	m.userIsTyping = false
-
-	return m, nil
-}
-
-// handleEscape is a no-op in normal mode. Mode-specific handlers
-// handle ESC for their own cancel behavior.
-func (m Model) handleEscape() (tea.Model, tea.Cmd) {
-	return m, nil
-}

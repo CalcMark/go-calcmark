@@ -3,7 +3,7 @@ package editor
 // model.go — Model definition, constructors, types, accessors, Init/Update.
 //
 // Method implementations are split across focused files:
-//   key_dispatch.go      — handleKey, handleDefaultKey, handleEscKey, handleEscape
+//   key_dispatch.go      — handleKey, handleDefaultKey
 //   navigation.go        — Arrow keys, scroll, search, goto
 //   editing.go           — Text editing (rune input, Enter, Backspace, Delete, line ops)
 //   undo_operations.go   — handleUndo/Redo, apply ops
