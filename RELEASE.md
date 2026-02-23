@@ -4,12 +4,16 @@ This document describes how to create and publish releases for go-calcmark.
 
 ## Overview
 
-Releases are automated via **GoReleaser** and **GitHub Actions**. Pushing a semver tag triggers the full pipeline:
+Two things happen automatically when you push to `main` and when you push a tag:
 
+**Push to `main`** (when `site/**` changes):
+- The **Hugo site** at [calcmark.org](https://calcmark.org) is built and deployed to GitHub Pages via `.github/workflows/site.yml`
+
+**Push a semver tag** (`v*.*.*`):
 1. **Git tag is the single source of truth** for the version number
 2. **GoReleaser** builds cross-platform CLI binaries, creates archives with checksums, and generates a changelog
 3. **Homebrew tap** is updated automatically (`CalcMark/homebrew-tap`)
-4. **No manual scripts** — the entire process is driven by `.goreleaser.yaml` and `.github/workflows/release.yml`
+4. **No manual scripts** — the release is driven by `.goreleaser.yaml` and `.github/workflows/release.yml`
 
 ## Quick Start
 
@@ -28,7 +32,9 @@ git tag -a "v0.3.0" -m "Release v0.3.0"
 git push origin v0.3.0
 ```
 
-GitHub Actions will automatically:
+Pushing commits to `main` will automatically deploy the site if any `site/**` files changed.
+
+Pushing the tag will automatically:
 - Build `cm` binary for all platforms (macOS, Linux, Windows × amd64/arm64)
 - Create `.tar.gz` (unix) and `.zip` (windows) archives
 - Generate SHA-256 checksums
@@ -76,6 +82,40 @@ GoReleaser auto-detects pre-releases from the tag format:
 
 This is controlled by `prerelease: auto` in `.goreleaser.yaml`.
 
+## Website (calcmark.org)
+
+The documentation site lives in `site/` and is built with [Hugo](https://gohugo.io/).
+
+### Local Development
+
+```bash
+# Start the dev server with live reload
+task site
+
+# Build the site without serving (output in site/public/)
+task site:build
+```
+
+### How Deployment Works
+
+The site workflow (`.github/workflows/site.yml`) deploys to GitHub Pages:
+
+1. **Trigger**: Push to `main` when files in `site/**` or `.github/workflows/site.yml` change
+2. **Build**: Hugo v0.156.0 builds and minifies the site
+3. **Deploy**: The built site is uploaded and deployed to GitHub Pages
+4. **Domain**: Served at [calcmark.org](https://calcmark.org) via the `site/static/CNAME` file
+
+The site deployment is independent of the release workflow — updating docs does not require a new version tag, and tagging a release does not redeploy the site unless `site/**` files were also changed.
+
+### Updating Docs for a Release
+
+If a release includes user-facing changes, update the site content before tagging:
+
+1. Edit pages under `site/content/docs/`
+2. Preview locally with `task site`
+3. Commit and push to `main` (triggers site deploy)
+4. Then tag and push the release
+
 ## Dry Run (Local Testing)
 
 To test what GoReleaser would produce without publishing:
@@ -89,24 +129,32 @@ This builds all archives locally in `dist/` without creating a GitHub release or
 
 ## CI/CD Details
 
-### GitHub Actions Workflow
+### GitHub Actions Workflows
 
-The release workflow (`.github/workflows/release.yml`):
+**Release** (`.github/workflows/release.yml`):
 
 1. **Trigger**: Push of tags matching `v*.*.*`
 2. **Setup**: Checks out code (full history), installs Go from `go.mod`
 3. **Execute**: Runs GoReleaser v2
 
+**Site deploy** (`.github/workflows/site.yml`):
+
+1. **Trigger**: Push to `main` when `site/**` or the workflow file itself changes
+2. **Build**: Installs Hugo, runs `hugo --source site --minify`
+3. **Deploy**: Uploads to GitHub Pages via `actions/deploy-pages`
+4. **Concurrency**: Only one site deploy runs at a time (`cancel-in-progress: true`)
+
 ### Required Secrets
 
 | Secret | Purpose |
 |--------|---------|
-| `GITHUB_TOKEN` | Provided automatically by GitHub Actions. Creates the release and uploads artifacts. |
+| `GITHUB_TOKEN` | Provided automatically by GitHub Actions. Creates releases, uploads artifacts, and deploys the site. |
 | `HOMEBREW_TAP_GITHUB_TOKEN` | Personal access token with write access to `CalcMark/homebrew-tap`. Required for updating the Homebrew formula. |
 
 ### Permissions
 
-The workflow requires `contents: write` to create releases and upload artifacts.
+- **Release workflow**: `contents: write` to create releases and upload artifacts.
+- **Site workflow**: `contents: read`, `pages: write`, and `id-token: write` for GitHub Pages deployment.
 
 ## Troubleshooting
 
@@ -128,6 +176,18 @@ task quality
    - **Permission denied**: Check repository Settings → Actions → Workflow permissions
    - **Homebrew tap push fails**: Verify `HOMEBREW_TAP_GITHUB_TOKEN` secret exists and has write access
 
+### Site deploy fails
+
+1. Check the Actions tab: `https://github.com/CalcMark/go-calcmark/actions`
+2. Common issues:
+   - **Hugo version mismatch**: The workflow pins Hugo v0.156.0 — ensure `site/` content is compatible
+   - **Pages not enabled**: Check repository Settings → Pages → Source is set to "GitHub Actions"
+   - **CNAME missing**: `site/static/CNAME` must contain `calcmark.org`
+
+### Site didn't update after push
+
+The site workflow only triggers when `site/**` files change. If you only changed Go source code, the site will not redeploy. To force a redeploy, make a trivial change to a file under `site/` or re-run the workflow manually from the Actions tab.
+
 ### Need to redo a release
 
 ```bash
@@ -147,6 +207,7 @@ Before pushing a tag:
 
 - [ ] All tests pass: `task test`
 - [ ] Quality checks pass: `task quality`
+- [ ] Site docs updated for user-facing changes: `task site` to preview
 - [ ] All changes committed and pushed to `main`
 - [ ] Tag created: `git tag -a "vX.Y.Z" -m "Release vX.Y.Z"`
 - [ ] Breaking changes documented (for major versions)
@@ -165,5 +226,6 @@ go-calcmark follows [Semantic Versioning 2.0.0](https://semver.org/):
 After a successful release:
 
 1. Verify the release at `https://github.com/CalcMark/go-calcmark/releases`
-2. Test Homebrew installation: `brew install calcmark/tap/calcmark`
-3. Update downstream projects that consume go-calcmark
+2. Test Homebrew installation: `brew upgrade calcmark/tap/calcmark`
+3. Verify the site at [calcmark.org](https://calcmark.org) reflects any doc updates
+4. Update downstream projects that consume go-calcmark
