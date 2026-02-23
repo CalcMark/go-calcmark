@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/spf13/cobra"
 )
@@ -68,6 +69,9 @@ func printFunctions() {
 	fmt.Fprintln(w, "CalcMark Functions")
 	fmt.Fprintln(w)
 
+	// Build NL alias lookup from the spec/features registry
+	nlAliases := buildNLAliasMap()
+
 	// Get functions by category
 	byCategory := interpreter.GetFunctionsByCategory()
 
@@ -92,8 +96,57 @@ func printFunctions() {
 			fmt.Fprintf(w, "  %s\n", name)
 			fmt.Fprintf(w, "    %s\n", fn.Description)
 			fmt.Fprintf(w, "    Usage: %s\n", fn.Signature)
+
+			// Print NL syntax if available
+			if aliases, ok := nlAliases[fn.Name]; ok {
+				for _, nl := range aliases {
+					fmt.Fprintf(w, "    NL:    %s\n", nl)
+				}
+			}
 			fmt.Fprintln(w)
 		}
+	}
+}
+
+// buildNLAliasMap returns NL usage examples for each function name.
+// Combines parseable aliases from the spec/features registry with
+// keyword-based alternatives (over, at...per, per).
+func buildNLAliasMap() map[string][]string {
+	registry := features.NewRegistry()
+	result := make(map[string][]string)
+
+	// NL examples for functions with parseable aliases in the registry
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		for _, alias := range f.Aliases {
+			if alias.Parseable {
+				result[f.Name] = append(result[f.Name], nlExample(f.Name, alias.Name))
+			}
+		}
+	}
+
+	// Keyword-based NL forms not represented as aliases
+	result["accumulate"] = append(result["accumulate"], "100 MB/s over 1 day")
+	result["convert_rate"] = append(result["convert_rate"], "1000 req/s per minute")
+	result["capacity"] = append(result["capacity"], "10 TB at 2 TB per disk")
+
+	return result
+}
+
+// nlExample returns a concrete NL usage example for a function alias.
+func nlExample(funcName, alias string) string {
+	switch alias {
+	case "average of":
+		return "average of 10, 20, 30"
+	case "square root of":
+		return "square root of 16"
+	case "read...from":
+		return "read 100 MB from ssd"
+	case "compress...using":
+		return "compress 1 GB using gzip"
+	case "transfer...across":
+		return "transfer 1 GB across regional gigabit"
+	default:
+		return alias
 	}
 }
 

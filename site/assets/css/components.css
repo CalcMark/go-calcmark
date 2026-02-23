@@ -326,6 +326,31 @@
   border-color: var(--color-success);
 }
 
+/* Heading anchors */
+.heading-anchor {
+  opacity: 0;
+  margin-left: 0.5rem;
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+h1:hover .heading-anchor,
+h2:hover .heading-anchor,
+h3:hover .heading-anchor,
+h4:hover .heading-anchor,
+h5:hover .heading-anchor,
+h6:hover .heading-anchor {
+  opacity: 1;
+}
+
+.heading-anchor:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
 /* Page meta (last updated) */
 .page-meta {
   margin-top: var(--space-12);

@@ -47,6 +47,9 @@ var (
 )
 
 func init() {
+	// Disable Cobra's auto-generated help command; we provide our own in help.go
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
 	// Persistent flags available to all subcommands
 	rootCmd.PersistentFlags().StringVar(&colorModeFlag, "color-mode", "",
 		"Color mode: 'auto' (detect from terminal), 'light', or 'dark'")

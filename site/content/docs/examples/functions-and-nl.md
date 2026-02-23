@@ -1,0 +1,99 @@
+---
+title: "Functions & Natural Language"
+summary: "All function call styles: traditional, natural language, nested, and mixed."
+weight: 10
+---
+
+From [`testdata/eval/success/features/functions.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/functions.cm)
+and [`testdata/eval/success/features/natural_language.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/natural_language.cm).
+
+## Traditional Function Syntax
+
+```cm
+avg(10, 20, 30)
+avg(1, 2, 3, 4, 5)
+sqrt(16)
+sqrt(2)
+```
+
+## Natural Language Function Syntax
+
+```cm
+average of 10, 20, 30
+average of 1, 2, 3, 4, 5
+square root of 16
+square root of 2
+```
+
+## read...from / compress...using / transfer...across
+
+```cm
+read 100 MB from ssd
+read 1 GB from nvme
+read 500 MB from hdd
+read 10 GB from pcie_ssd
+
+compress 1 GB using gzip
+compress 500 MB using lz4
+compress 2 GB using zstd
+compress 100 MB using snappy
+
+transfer 1 GB across regional gigabit
+transfer 500 MB across global wifi
+transfer 100 MB across local ten_gig
+transfer 10 GB across continental hundred_gig
+```
+
+## Functions with Expressions
+
+```cm
+x = 10
+y = 20
+z = 30
+a = 5
+b = 4
+
+avg(x, y, z)
+avg(10 + 5, 20 * 2, 30 - 10)
+sqrt(x + y)
+square root of (a + b)
+```
+
+## Nested Functions
+
+```cm
+avg(sqrt(16), sqrt(25))
+sqrt(avg(1, 2, 3))
+average of square root of 4, square root of 9
+```
+
+## Functions in Assignments
+
+```cm
+mean = avg(10, 20, 30)
+root = sqrt(16)
+calculated = average of 100, 200, 300
+side = square root of 25
+```
+
+## Mixed Syntax in Same Document
+
+```cm
+Traditional syntax:
+total1 = avg(1, 2, 3)
+
+Natural language syntax:
+total2 = average of 1, 2, 3
+
+Both should produce same result:
+same = total1 == total2
+```
+
+### What This Demonstrates
+
+- Traditional `fn(args)` and natural language `name of args` syntax
+- Multi-argument `read...from`, `compress...using`, `transfer...across` patterns
+- Expressions and variables as function arguments
+- Nested function calls
+- Assignment from function results
+- Both syntaxes produce identical results

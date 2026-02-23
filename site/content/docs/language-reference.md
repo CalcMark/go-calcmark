@@ -402,6 +402,116 @@ in, as, of, per, over, at, from, with, napkin
 
 {{< feature-table category="function" >}}
 
+### Function Examples {#function-examples}
+
+Each function with at least two usage examples:
+
+#### `avg` / `average of` {#avg-examples}
+
+```cm
+avg(10, 20, 30)                    -> 20
+avg(1, 2, 3, 4, 5)                -> 3
+average of 100, 200, 300           -> 200  (NL form)
+avg($100, $200, $300)              -> $200.00  (preserves currency)
+```
+
+#### `sqrt` / `square root of` {#sqrt-examples}
+
+```cm
+sqrt(16)                           -> 4
+sqrt(2)                            -> 1.4142...
+square root of 144                 -> 12  (NL form)
+sqrt($100)                         -> $10.00  (preserves currency)
+```
+
+#### `accumulate` / `over` {#accumulate-examples}
+
+```cm
+accumulate(100 MB/s, 1 hour)       -> 360000 MB
+accumulate($75/hour, 8 hours)      -> $600
+100 MB/s over 1 day                -> ~8.64 TB  (keyword form)
+$120000/year over 1 month          -> $10000
+```
+
+#### `convert_rate` {#convert-rate-examples}
+
+```cm
+convert_rate(1000 req/s, minute)   -> 60000 req/min
+convert_rate($120000/year, month)  -> $10000/month
+```
+
+#### `capacity` / `at...per` {#capacity-examples}
+
+```cm
+capacity(10 TB, 2 TB, disk)              -> 5 disks
+capacity(10000 req/s, 500 req/s, server) -> 20 servers
+10 TB at 2 TB per disk                   -> 5 disks  (NL form)
+10000 req/s at 450 req/s per server with 20% buffer -> 27 servers
+```
+
+#### `downtime` {#downtime-examples}
+
+```cm
+downtime(0.999, year)              -> 8.76 hours
+downtime(0.999, month)             -> 43.2 minutes
+downtime(0.9999, month)            -> 4.32 minutes
+```
+
+#### `rtt` {#rtt-examples}
+
+```cm
+rtt(local)                         -> 0.5 ms
+rtt(regional)                      -> 10 ms
+rtt(continental)                   -> 50 ms
+rtt(global)                        -> 150 ms
+```
+
+#### `throughput` {#throughput-examples}
+
+```cm
+throughput(gigabit)                 -> 125 MB/s
+throughput(ten_gig)                -> 1250 MB/s
+throughput(wifi)                   -> 12.5 MB/s
+throughput(five_g)                 -> 50 MB/s
+```
+
+#### `transfer_time` / `transfer...across` {#transfer-time-examples}
+
+```cm
+transfer_time(1 GB, regional, gigabit)   -> ~8 seconds
+transfer_time(500 MB, continental, gigabit)
+transfer 1 GB across regional gigabit    -> (NL form)
+transfer 100 MB across local ten_gig
+```
+
+#### `read` / `read...from` {#read-examples}
+
+```cm
+read(100 MB, ssd)                  -> ~0.18 seconds
+read(1 GB, nvme)                   -> ~0.29 seconds
+read 100 MB from ssd               -> (NL form)
+read 10 GB from pcie_ssd
+```
+
+#### `seek` {#seek-examples}
+
+```cm
+seek(hdd)                          -> 10 ms
+seek(ssd)                          -> 0.1 ms
+seek(nvme)                         -> 0.01 ms
+db_query_hdd = seek(hdd) + read(5 MB, hdd)
+```
+
+#### `compress` / `compress...using` {#compress-examples}
+
+```cm
+compress(1 GB, gzip)               -> ~333 MB
+compress(500 MB, lz4)              -> ~250 MB
+compress(2 GB, zstd)               -> ~571 MB
+compress 1 GB using gzip            -> (NL form)
+compress 500 MB using lz4
+```
+
 ### Unit Handling in Functions
 
 **Same units are preserved:**
