@@ -76,8 +76,10 @@ func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.Termin
 		return strings.Join(lines, "\n")
 	}
 
-	// Empty footer for non-calc lines (unless autocomplete is showing)
-	if !state.IsCalcLine && !state.AutocompleteActive {
+	// Empty footer for non-calc lines (unless autocomplete or function help is showing).
+	// Incomplete function calls like "accumulate(" aren't parsed as calc lines,
+	// but should still show parameter help.
+	if !state.IsCalcLine && !state.AutocompleteActive && !state.InFunctionCall {
 		return padToHeight("")
 	}
 
