@@ -196,10 +196,7 @@ func TestFunctionHelp_ViewRendering(t *testing.T) {
 		// Print a portion of the view to debug
 		lines := strings.Split(view, "\n")
 		t.Logf("Last 10 lines of view:")
-		start := len(lines) - 10
-		if start < 0 {
-			start = 0
-		}
+		start := max(len(lines)-10, 0)
 		for i := start; i < len(lines); i++ {
 			t.Logf("  [%d] %q", i, lines[i])
 		}

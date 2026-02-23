@@ -451,14 +451,10 @@ func TestSC5_ResizeReflowsCorrectly(t *testing.T) {
 
 	// Verify wrapping changed: header that fit on 1 line at 120 may need 2+ at 60
 	sourceContentWidth60 := leftWidth2 - 4 - 2 // lineNum(4) + gutter(2)
-	if sourceContentWidth60 < 10 {
-		sourceContentWidth60 = 10
-	}
+	sourceContentWidth60 = max(sourceContentWidth60, 10)
 	wrappedAt60 := geometry.WrapText("# A header that is somewhat long to test wrapping behavior at different widths", sourceContentWidth60)
 	sourceContentWidth120 := leftWidth1 - 4 - 2
-	if sourceContentWidth120 < 10 {
-		sourceContentWidth120 = 10
-	}
+	sourceContentWidth120 = max(sourceContentWidth120, 10)
 	wrappedAt120 := geometry.WrapText("# A header that is somewhat long to test wrapping behavior at different widths", sourceContentWidth120)
 
 	t.Logf("Header wraps: %d lines at width-120 content=%d, %d lines at width-60 content=%d",

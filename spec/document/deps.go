@@ -2,6 +2,7 @@ package document
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/parser"
@@ -24,10 +25,7 @@ func (da *DependencyAnalyzer) AnalyzeBlock(block *CalcBlock) error {
 	}
 
 	// Join source lines for parsing
-	source := ""
-	for _, line := range block.source {
-		source += line + "\n"
-	}
+	source := strings.Join(block.source, "\n") + "\n"
 
 	// Parse the source
 	nodes, err := parser.Parse(source)

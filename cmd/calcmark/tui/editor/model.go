@@ -77,10 +77,7 @@ func runeDelete(s string, runePos, count int) (result string, deleted string) {
 	if runePos >= len(runes) {
 		return s, ""
 	}
-	endPos := runePos + count
-	if endPos > len(runes) {
-		endPos = len(runes)
-	}
+	endPos := min(runePos+count, len(runes))
 	deleted = string(runes[runePos:endPos])
 	result = string(runes[:runePos]) + string(runes[endPos:])
 	return result, deleted
@@ -878,19 +875,13 @@ func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (w
 	}
 
 	// Allow up to 70% of screen width for function signatures
-	maxWidth := m.width * 7 / 10
-	if maxWidth < 40 {
-		maxWidth = 40 // minimum usable width
-	}
+	maxWidth := max(m.width*7/10, 40) // minimum usable width
 	if width > maxWidth {
 		width = maxWidth
 	}
 
 	// Height is number of items, capped at 8
-	height = len(suggestions)
-	if height > 8 {
-		height = 8
-	}
+	height = min(len(suggestions), 8)
 
 	return width, height
 }
@@ -953,10 +944,7 @@ func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 
 	// Replace prefix with selected suggestion (UTF-8 safe)
 	prefix := m.autocompleteState.Prefix
-	prefixStart := m.cursorCol - runeLen(prefix)
-	if prefixStart < 0 {
-		prefixStart = 0
-	}
+	prefixStart := max(m.cursorCol-runeLen(prefix), 0)
 
 	// Delete the prefix, then insert the completion text
 	beforePrefix, _ := runeSlice(m.editBuf, prefixStart)

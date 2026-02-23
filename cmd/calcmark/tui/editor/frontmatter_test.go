@@ -765,7 +765,7 @@ x = my_var + 1`
 
 				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
 
-				for i := 0; i < maxLines; i++ {
+				for i := range maxLines {
 					var srcContent string
 					var srcLineNum int
 					var srcIsPadding bool

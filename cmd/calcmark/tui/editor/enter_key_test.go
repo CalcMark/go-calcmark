@@ -354,7 +354,7 @@ func TestMultipleEntersCreateMultipleLines(t *testing.T) {
 	t.Logf("Starting with %d lines", startingLines)
 
 	// Press ENTER 3 times
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		beforeEnter := m.TotalLines()
 		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 		m = result.(Model)

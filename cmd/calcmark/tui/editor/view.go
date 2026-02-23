@@ -115,7 +115,7 @@ func (m Model) View() string {
 	if !hasFrontmatter && m.previewMode != PreviewHidden {
 		// No frontmatter: globals panel is a fixed header, needs source padding
 		globalsHeight := m.computeGlobalsHeight()
-		for i := 0; i < globalsHeight; i++ {
+		for range globalsHeight {
 			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftContentWidth, m.sourcePaneBg()))
 		}
 		sourceContentHeight = paneContentHeight - globalsHeight
@@ -284,10 +284,7 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
 func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int) AlignedModel {
 	// Calculate content width for source pane (accounting for line numbers)
 	lineNumWidth := 4
-	sourceContentWidth := sourceWidth - lineNumWidth - 2
-	if sourceContentWidth < 10 {
-		sourceContentWidth = 10
-	}
+	sourceContentWidth := max(sourceWidth-lineNumWidth-2, 10)
 
 	input := AlignedModelInput{
 		Lines:              m.GetLines(),

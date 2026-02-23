@@ -102,10 +102,7 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 	// Now the key test: render each pane separately and count lines
 	// Match View()'s calculations exactly
 	contentHeight := m.height - 3 // status bar, footer, separator
-	paneContentHeight := contentHeight - 1
-	if paneContentHeight < 3 {
-		paneContentHeight = 3
-	}
+	paneContentHeight := max(contentHeight-1, 3)
 
 	globalsHeight := 1 // collapsed state
 	if m.globalsExpanded {
@@ -216,7 +213,7 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 	// Each visual line in source should correspond to the same visual line in preview
 	t.Log("=== Line-by-Line Alignment Verification ===")
 	maxCheck := min(len(aligned.sourceLines), 10)
-	for i := 0; i < maxCheck; i++ {
+	for i := range maxCheck {
 		srcLine := aligned.sourceLines[i]
 		prvLine := aligned.previewLines[i]
 

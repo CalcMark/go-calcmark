@@ -28,10 +28,7 @@ func (m Model) View() string {
 
 	// Calculate available height for history
 	// 1 line for title, 2 lines for input area, 1 line for help footer
-	historyHeight := m.height - 4 - 2
-	if historyHeight < 3 {
-		historyHeight = 3
-	}
+	historyHeight := max(m.height-4-2, 3)
 
 	// Mode indicator for command mode (takes 1 line if shown)
 	if m.inputMode == shared.InputCommand {

@@ -114,12 +114,9 @@ z = 30`
 					len(aligned.sourceLines), len(aligned.previewLines)))
 
 				// Show side-by-side alignment
-				maxLines := len(aligned.sourceLines)
-				if len(aligned.previewLines) > maxLines {
-					maxLines = len(aligned.previewLines)
-				}
+				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
 
-				for i := 0; i < maxLines; i++ {
+				for i := range maxLines {
 					var srcContent, prvContent string
 					var srcLineNum, prvLineNum int
 					var srcWrapped bool
@@ -344,12 +341,9 @@ z = 30`
 				buf.WriteString(fmt.Sprintf("Source lines count: %d, Preview lines count: %d\n",
 					len(aligned.sourceLines), len(aligned.previewLines)))
 
-				maxLines := len(aligned.sourceLines)
-				if len(aligned.previewLines) > maxLines {
-					maxLines = len(aligned.previewLines)
-				}
+				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
 
-				for i := 0; i < maxLines; i++ {
+				for i := range maxLines {
 					var srcContent, prvContent string
 					var srcLineNum, prvLineNum int
 					var srcWrapped bool
@@ -1183,12 +1177,9 @@ large = 1500 USD`,
 					len(aligned.sourceLines), len(aligned.previewLines)))
 
 				// Show side-by-side alignment
-				maxLines := len(aligned.sourceLines)
-				if len(aligned.previewLines) > maxLines {
-					maxLines = len(aligned.previewLines)
-				}
+				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
 
-				for i := 0; i < maxLines; i++ {
+				for i := range maxLines {
 					var srcInfo, prvInfo string
 					if i < len(aligned.sourceLines) {
 						sl := aligned.sourceLines[i]

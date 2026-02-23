@@ -215,7 +215,7 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 				remainder := numRenderedLines % numSourceLines
 
 				renderedIdx := 0
-				for i := 0; i < numSourceLines; i++ {
+				for i := range numSourceLines {
 					// Some source lines get an extra line to account for remainder
 					count := linesPerSource
 					if i < remainder {
@@ -332,10 +332,7 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 			//   Result: 3 aligned visual line pairs, with source padded with 2 empty lines
 			numSourceVisualLines := len(wrappedSourceLines)
 			numPreviewVisualLines := len(wrappedPreviewLines)
-			numAlignedVisualLines := numSourceVisualLines
-			if numPreviewVisualLines > numAlignedVisualLines {
-				numAlignedVisualLines = numPreviewVisualLines
-			}
+			numAlignedVisualLines := max(numSourceVisualLines, numPreviewVisualLines)
 
 			// Record mapping: document source line number -> first visual line index
 			firstVisualLineIdx := len(sourceLines)
@@ -344,7 +341,7 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 			}
 
 			// Emit pairs of aligned visual lines (source pane + preview pane)
-			for visualLineOffset := 0; visualLineOffset < numAlignedVisualLines; visualLineOffset++ {
+			for visualLineOffset := range numAlignedVisualLines {
 				// Record reverse mapping: visual line index -> document source line number
 				visualToSource[len(sourceLines)] = lineResult.LineNum
 
@@ -457,18 +454,12 @@ func (a *AlignedModel) SourceLineAt(visualLine int) int {
 // VisibleRange calculates the range of visual lines to display given scroll offset and height.
 // Returns (start, end) indices where end is exclusive.
 func (a *AlignedModel) VisibleRange(scrollOffset, height int) (start, end int) {
-	start = scrollOffset
-	if start < 0 {
-		start = 0
-	}
+	start = max(scrollOffset, 0)
 	if start >= a.TotalVisualLines {
 		start = max(0, a.TotalVisualLines-1)
 	}
 
-	end = start + height
-	if end > a.TotalVisualLines {
-		end = a.TotalVisualLines
-	}
+	end = min(start+height, a.TotalVisualLines)
 
 	return start, end
 }

@@ -56,7 +56,7 @@ func (s *SideBySide) Render(left, right string) string {
 
 	// Build output line by line
 	var result strings.Builder
-	for i := 0; i < maxLines; i++ {
+	for i := range maxLines {
 		if i > 0 {
 			result.WriteString("\n")
 		}
