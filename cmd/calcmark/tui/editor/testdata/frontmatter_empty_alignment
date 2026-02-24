@@ -1,0 +1,9 @@
+# Test: Empty frontmatter (just --- delimiters)
+# Verifies: structural-only frontmatter renders as blank preview rows
+
+run observe=alignment
+----
+-- alignment:
+Source and Preview Alignment:
+Source lines: 1, Preview lines: 1
+[0] SRC(ln=1 pad=false): "x = 42"                            | PRV(ln=0 fm=false): "x → 42"

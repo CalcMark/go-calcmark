@@ -467,4 +467,3 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 
 	return nil
 }
-

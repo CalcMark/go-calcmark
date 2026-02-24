@@ -278,4 +278,3 @@ func TestBuiltinConstantsUsage(t *testing.T) {
 		t.Errorf("2 * PI = %v, want ~6.28", val)
 	}
 }
-

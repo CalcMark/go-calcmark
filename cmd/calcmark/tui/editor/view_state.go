@@ -5,29 +5,13 @@ package editor
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
-
-// computeGlobalsHeight returns the visual height of the globals panel + separator.
-// Must exactly mirror renderGlobalsPanel logic to avoid mismatches.
-func (m Model) computeGlobalsHeight() int {
-	globalsHeight := 1 // collapsed state (always 1 line)
-	if m.globalsExpanded {
-		if m.frontmatterErr != nil {
-			globalsHeight = 2 // header + error detail
-		} else if m.getGlobalsCount() == 0 {
-			globalsHeight = 2 // header + "(no globals defined)"
-		} else {
-			globalsHeight = 1 + m.getGlobalsCount()
-		}
-	}
-	globalsHeight++ // +1 for separator line
-	return globalsHeight
-}
 
 // getGlobalsCount returns the number of global variables.
 func (m *Model) getGlobalsCount() int {
@@ -36,6 +20,53 @@ func (m *Model) getGlobalsCount() int {
 		return 0
 	}
 	return len(fm.Globals) + len(fm.Exchange)
+}
+
+// isFrontmatterStructuralLine returns true if a frontmatter source line is
+// structural (should render as a blank row in the preview pane) rather than
+// a value line (should render with the corresponding formatted value).
+//
+// Structural: --- delimiters, section headers (exchange:, globals:), blanks, comments.
+// Value: indented key-value pairs like "  USD_EUR: 0.6".
+func isFrontmatterStructuralLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "---" || trimmed == "" {
+		return true
+	}
+	if strings.HasPrefix(trimmed, "#") {
+		return true // YAML comment
+	}
+	if trimmed == "exchange:" || trimmed == "globals:" {
+		return true
+	}
+	return false
+}
+
+// buildFrontmatterValueMap builds a map from YAML key names to their formatted
+// display values, using the globals panel state. Keys are normalized (trimmed).
+func (m *Model) buildFrontmatterValueMap() map[string]formattedGlobal {
+	result := make(map[string]formattedGlobal)
+	state := m.GetGlobalsPanelState()
+	for _, g := range state.Globals {
+		result[g.Name] = formattedGlobal{value: g.Value, isExchange: g.IsExchange}
+	}
+	return result
+}
+
+// formattedGlobal holds a formatted global value and its type for rendering.
+type formattedGlobal struct {
+	value      string
+	isExchange bool
+}
+
+// extractFrontmatterKey extracts the YAML key name from a frontmatter value line.
+// For "  USD_EUR: 0.6" returns "USD_EUR". For "  tax_rate: 0.32" returns "tax_rate".
+func extractFrontmatterKey(line string) string {
+	trimmed := strings.TrimSpace(line)
+	if idx := strings.Index(trimmed, ":"); idx > 0 {
+		return trimmed[:idx]
+	}
+	return ""
 }
 
 // GetStatusBarState returns state for the status bar.

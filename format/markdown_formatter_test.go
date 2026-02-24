@@ -279,4 +279,3 @@ func TestMarkdownFormatterFiltersResultCommentBlocks(t *testing.T) {
 		t.Errorf("Result appears too many times, possible duplicate: %s", output)
 	}
 }
-

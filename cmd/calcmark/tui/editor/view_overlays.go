@@ -8,109 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// renderGlobalsPanel renders the collapsible globals panel.
-func (m Model) renderGlobalsPanel(width int) string {
-	state := m.GetGlobalsPanelState()
-	globalsCount := len(state.Globals)
-	hasError := state.Error != ""
-
-	paneBg := m.previewPaneBg()
-
-	if !state.Expanded {
-		// Collapsed: show count (or warning if error)
-		indicator := "▸"
-		var text string
-		if hasError {
-			text = " Globals ⚠"
-		} else {
-			text = fmt.Sprintf(" Globals (%d)", globalsCount)
-		}
-
-		var headerFg lipgloss.TerminalColor = theme.TextBright
-		if hasError {
-			headerFg = theme.Warning
-		}
-
-		header := lipgloss.NewStyle().
-			Bold(true).
-			Foreground(headerFg).
-			Background(paneBg).
-			Render(indicator + text)
-
-		return ensureFullWidth(header, width, paneBg)
-	}
-
-	// Expanded: show all globals
-	var allLines []string
-
-	indicator := "▾"
-	text := " Globals"
-
-	var headerFg lipgloss.TerminalColor = theme.TextBright
-	if hasError {
-		headerFg = theme.Warning
-		text = " Globals ⚠"
-	}
-
-	headerLine := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(headerFg).
-		Background(paneBg).
-		Render(indicator + text)
-	headerLine = ensureFullWidth(headerLine, width, paneBg)
-	allLines = append(allLines, headerLine)
-
-	// Show error details when YAML is malformed
-	if hasError {
-		errStyle := lipgloss.NewStyle().
-			Foreground(theme.Warning).
-			Background(paneBg).
-			Italic(true)
-		errLine := errStyle.Render("  " + state.Error)
-		errLine = ensureFullWidth(errLine, width, paneBg)
-		allLines = append(allLines, errLine)
-		return strings.Join(allLines, "\n")
-	}
-
-	if globalsCount == 0 {
-		noGlobalsLine := lipgloss.NewStyle().
-			Foreground(theme.Hint).
-			Background(paneBg).
-			Italic(true).
-			Render("  (no globals defined)")
-		noGlobalsLine = ensureFullWidth(noGlobalsLine, width, paneBg)
-		allLines = append(allLines, noGlobalsLine)
-		return strings.Join(allLines, "\n")
-	}
-
-	prefixStyle := lipgloss.NewStyle().Background(paneBg)
-	for i, g := range state.Globals {
-		prefix := "  "
-		if state.Focused && i == state.FocusIndex {
-			prefix = "> "
-		}
-
-		nameStyle := lipgloss.NewStyle().
-			Foreground(theme.GlobalsVarName).
-			Background(paneBg)
-		valueStyle := lipgloss.NewStyle().
-			Foreground(theme.Result).
-			Background(paneBg)
-
-		if g.IsExchange {
-			nameStyle = nameStyle.Foreground(theme.GlobalsExchange)
-		}
-
-		// Format: "  name          value"
-		name := fmt.Sprintf("%-18s", g.Name)
-		globalLine := prefixStyle.Render(prefix) + nameStyle.Render(name) + valueStyle.Render(g.Value)
-		globalLine = ensureFullWidth(globalLine, width, paneBg)
-		allLines = append(allLines, globalLine)
-	}
-
-	return strings.Join(allLines, "\n")
-}
-
 // renderAutocompletePopup renders the autocomplete popup box using manual borders
 // with explicit backgrounds on every cell, matching the OverlayStyle pattern used
 // by command menu, help, file picker, and export overlays. This prevents terminal
@@ -190,12 +87,8 @@ func (m Model) calculatePopupScreenPosition(contentHeight int) (row, col int) {
 	// The cursor visual position in the content area
 	visualCursorRow := m.cursorLine - m.scrollOffset
 
-	// Account for headers: source header (1) + globals padding when no frontmatter.
-	// When frontmatter exists, globals are rendered inline (no extra header rows).
+	// Account for source header row (1 line: "Source")
 	headerRows := 1
-	if m.previewMode != PreviewHidden && m.frontmatterLineCount() == 0 {
-		headerRows += m.computeGlobalsHeight()
-	}
 
 	// Screen row for popup (below cursor)
 	row = headerRows + visualCursorRow + 1

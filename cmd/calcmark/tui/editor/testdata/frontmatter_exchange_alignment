@@ -1,0 +1,14 @@
+# Test: Frontmatter with exchange rates aligns 1:1 with preview pane
+# Verifies: structural lines (---, exchange:) → blank, value lines → formatted
+
+run observe=alignment
+----
+-- alignment:
+Source and Preview Alignment:
+Source lines: 6, Preview lines: 6
+[0] SRC(ln=1 pad=false): "---"                               | PRV(ln=0 fm=true): ""
+[1] SRC(ln=2 pad=false): "exchange:"                         | PRV(ln=1 fm=true): ""
+[2] SRC(ln=3 pad=false): "  USD_EUR: 0.85"                   | PRV(ln=2 fm=true): ""
+[3] SRC(ln=4 pad=false): "  USD_JPY: 110.0"                  | PRV(ln=3 fm=true): ""
+[4] SRC(ln=5 pad=false): "---"                               | PRV(ln=4 fm=true): ""
+[5] SRC(ln=6 pad=false): "price = 100 USD in EUR"            | PRV(ln=5 fm=false): "price → €85.00"

@@ -104,26 +104,11 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 	contentHeight := m.height - 3 // status bar, footer, separator
 	paneContentHeight := max(contentHeight-1, 3)
 
-	globalsHeight := 1 // collapsed state
-	if m.globalsExpanded {
-		globalsHeight = 1 + m.getGlobalsCount()
-		if m.getGlobalsCount() == 0 {
-			globalsHeight = 2
-		}
-	}
-	globalsHeight++ // +1 for separator
-
-	sourceContentHeight := paneContentHeight
-	if m.previewMode != PreviewHidden {
-		sourceContentHeight = paneContentHeight - globalsHeight
-	}
-	if sourceContentHeight < 1 {
-		sourceContentHeight = 1
-	}
+	// Both panes use the same content height (no globals header offset)
+	sourceContentHeight := max(paneContentHeight, 1)
 
 	t.Logf("=== Height Calculations ===")
 	t.Logf("m.height=%d, contentHeight=%d, paneContentHeight=%d", m.height, contentHeight, paneContentHeight)
-	t.Logf("globalsHeight=%d (expanded=%v)", globalsHeight, m.globalsExpanded)
 	t.Logf("sourceContentHeight=%d (passed to renderSourcePaneAligned)", sourceContentHeight)
 	t.Logf("paneContentHeight=%d (passed to renderPreviewPaneAligned)", paneContentHeight)
 	t.Logf("rightWidth=%d, geometry.WrapText(editBuf=%q, rightWidth)=%v", rightWidth, m.editBuf, geometry.WrapText(m.editBuf, rightWidth))
@@ -154,59 +139,33 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 	// so the rendered total heights should match after View() joins them.
 	// Here we test the raw render functions which DON'T include that padding.
 	//
-	// Source renders: sourceContentHeight lines (content + tilde fills)
-	// Preview renders: globalsHeight + results lines (globals + sep + content + fills)
-	//
-	// The correct check is that:
-	// sourceContentHeight + globalsHeight == paneContentHeight (what preview is passed)
-	//
-	// Since sourceContentHeight = paneContentHeight - globalsHeight (when preview visible),
-	// the equation is: (paneContentHeight - globalsHeight) + globalsHeight == paneContentHeight ✓
-	//
-	// What we actually want to verify is that CONTENT aligns.
-	// Count non-tilde, non-fill lines in source and compare with content lines in preview.
+	// Both panes use the same content height — no globals header offset.
+	// Count non-tilde, non-fill lines in source.
 	sourceContentCount := 0
 	for _, l := range sourceLines {
-		// Tilde lines start with "~"
 		if !strings.HasPrefix(l, "~") && l != "" {
 			sourceContentCount++
 		}
 	}
 
-	// Preview content starts after globals (1 line) and separator (1 line)
+	// Preview has no globals header — all lines are content.
 	previewContentCount := 0
-	globalsAndSepLines := 2 // collapsed globals + separator
-	for i, l := range previewLines {
-		if i < globalsAndSepLines {
-			continue // skip globals and separator
-		}
-		// Empty lines in preview are either padding or edit mode - still count
-		// We just want to count how many result lines there are
+	for _, l := range previewLines {
 		if l != "" {
 			previewContentCount++
 		}
 	}
 
 	t.Logf("Source content lines (non-tilde): %d", sourceContentCount)
-	t.Logf("Preview content lines (after globals, non-empty): %d", previewContentCount)
+	t.Logf("Preview content lines (non-empty): %d", previewContentCount)
 
-	// The AlignedModel guarantees source and preview have same visual line count
-	// So content counts should match (excluding padding/empty lines which balance out)
-	// Actually, the key is that len(aligned.sourceLines) == len(aligned.previewLines)
-	// which we already checked above.
+	// Both panes get the same height — verify.
+	t.Logf("Visual alignment check: sourceContentHeight=%d, paneContentHeight=%d",
+		sourceContentHeight, paneContentHeight)
 
-	// For visual alignment in the final View(), what matters is that:
-	// - Source pane renders sourceContentHeight lines
-	// - Preview pane renders paneContentHeight lines
-	// - View() prepends globalsHeight padding to source
-	// - Both end up same height: sourceContentHeight + globalsHeight == paneContentHeight ✓
-	t.Logf("Visual alignment check: sourceContentHeight(%d) + globalsHeight(%d) = %d, paneContentHeight = %d",
-		sourceContentHeight, globalsHeight, sourceContentHeight+globalsHeight, paneContentHeight)
-
-	// Verify the padding math is correct
-	if sourceContentHeight+globalsHeight != paneContentHeight {
-		t.Errorf("Height math broken: sourceContentHeight(%d) + globalsHeight(%d) = %d, but paneContentHeight = %d",
-			sourceContentHeight, globalsHeight, sourceContentHeight+globalsHeight, paneContentHeight)
+	if sourceContentHeight != paneContentHeight {
+		t.Errorf("Height math broken: sourceContentHeight(%d) != paneContentHeight(%d)",
+			sourceContentHeight, paneContentHeight)
 	}
 
 	// The most important test: verify line-by-line alignment using AlignedModel
