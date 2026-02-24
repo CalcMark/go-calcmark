@@ -20,7 +20,7 @@ run observe=view
 ----
 -- view:
  Source                                        │ Results                        ␤
-                                               │▸ Globals (0)                [g]␤
+                                               │▸ Globals (0)                   ␤
                                                │────────────────────────────────␤
    1 av# Header                                │[97;1m[97;1m[97;1mHeader                          ␤
    2 ╭──────────────────────────────────────────╮[0m → 10                          ␤

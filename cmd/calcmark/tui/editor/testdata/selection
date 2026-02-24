@@ -100,7 +100,7 @@ key ctrl+a
 ----
 -- view:
  Source                                        │ Results                        ␤
-                                               │▸ Globals (0)                [g]␤
+                                               │▸ Globals (0)                   ␤
                                                │────────────────────────────────␤
    1 # Header                                  │[97;1m[97;1m[97;1mHeader                          ␤
    2 x = 10                                    │x → 10                          ␤

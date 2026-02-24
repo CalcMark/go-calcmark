@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -26,29 +25,18 @@ func (m Model) renderGlobalsPanel(width int) string {
 		} else {
 			text = fmt.Sprintf(" Globals (%d)", globalsCount)
 		}
-		hint := "[g]"
 
 		var headerFg lipgloss.TerminalColor = theme.TextBright
 		if hasError {
 			headerFg = theme.Warning
 		}
 
-		left := lipgloss.NewStyle().
+		header := lipgloss.NewStyle().
 			Bold(true).
 			Foreground(headerFg).
 			Background(paneBg).
 			Render(indicator + text)
 
-		right := lipgloss.NewStyle().
-			Foreground(theme.Hint).
-			Background(paneBg).
-			Render(hint)
-
-		// Space between left and right with background
-		space := max(width-lipgloss.Width(left)-lipgloss.Width(right), 0)
-
-		// Use centralized StyledPadding utility
-		header := left + components.StyledPadding(space, paneBg) + right
 		return ensureFullWidth(header, width, paneBg)
 	}
 
@@ -57,7 +45,6 @@ func (m Model) renderGlobalsPanel(width int) string {
 
 	indicator := "▾"
 	text := " Globals"
-	hint := "[g]"
 
 	var headerFg lipgloss.TerminalColor = theme.TextBright
 	if hasError {
@@ -65,21 +52,11 @@ func (m Model) renderGlobalsPanel(width int) string {
 		text = " Globals ⚠"
 	}
 
-	left := lipgloss.NewStyle().
+	headerLine := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(headerFg).
 		Background(paneBg).
 		Render(indicator + text)
-
-	right := lipgloss.NewStyle().
-		Foreground(theme.Hint).
-		Background(paneBg).
-		Render(hint)
-
-	space := max(width-lipgloss.Width(left)-lipgloss.Width(right), 0)
-
-	// Use centralized StyledPadding utility
-	headerLine := left + components.StyledPadding(space, paneBg) + right
 	headerLine = ensureFullWidth(headerLine, width, paneBg)
 	allLines = append(allLines, headerLine)
 
