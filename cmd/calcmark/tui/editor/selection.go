@@ -255,30 +255,3 @@ func (m *Model) SelectAll() {
 	lastLine := lines[m.cursorLine]
 	m.cursorCol = runeLen(lastLine)
 }
-
-// StartVisualMode enters visual selection mode.
-// Sets the selection anchor at the current cursor position.
-func (m *Model) StartVisualMode() {
-	m.visualMode = true
-	m.SetSelectionAnchor()
-}
-
-// ExitVisualMode exits visual selection mode.
-// Preserves the selection for operations like copy/cut.
-func (m *Model) ExitVisualMode() {
-	m.visualMode = false
-	// Selection is preserved for operations
-}
-
-// IsVisualMode returns true if in visual selection mode.
-func (m *Model) IsVisualMode() bool {
-	return m.visualMode
-}
-
-// ExtendSelection updates the selection based on cursor movement.
-// Called when moving cursor in visual mode.
-func (m *Model) ExtendSelection() {
-	// In visual mode, the selection automatically extends
-	// from anchor to current cursor position
-	// The GetSelectionRange() method already handles this
-}

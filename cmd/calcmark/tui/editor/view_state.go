@@ -75,21 +75,10 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 	// Status bar shows minimal hints - full command list discoverable via Ctrl+H
 
 	hints := ""
-	modeDisplay := "" // Show visual mode when active
-
-	// Check for visual mode first
-	if m.IsVisualMode() {
-		modeDisplay = "-- VISUAL --"
-	}
-
 	switch m.mode {
 	case StateDefault:
 		// Minimal hints - other commands discoverable via Ctrl+H
-		if m.IsVisualMode() {
-			hints = "Ctrl+C copy | Ctrl+X cut | Ctrl+G exit"
-		} else {
-			hints = "Ctrl+Q quit | Ctrl+H help"
-		}
+		hints = "Ctrl+Q quit | Ctrl+H help"
 	case StateCommandMenu:
 		hints = "Enter select | Esc close"
 	case StateHelp:
@@ -121,7 +110,7 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 		TotalLines:     m.TotalLines(),
 		CalcCount:      m.CalcBlockCount(),
 		Modified:       m.modified,
-		Mode:           modeDisplay, // Show visual mode when active
+		Mode:           "", // Mode is internal - not shown to users
 		Hints:          hints,
 		StatusMsg:      m.statusMsg,
 		StatusIsErr:    m.statusIsErr,

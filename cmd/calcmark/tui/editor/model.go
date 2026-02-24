@@ -284,9 +284,8 @@ type Model struct {
 	searchIdx     int    // Current match index
 
 	// Selection state
-	selectionAnchorLine int  // Line of selection anchor, -1 if no selection
-	selectionAnchorCol  int  // Column of selection anchor
-	visualMode          bool // True when in visual selection mode
+	selectionAnchorLine int // Line of selection anchor, -1 if no selection
+	selectionAnchorCol  int // Column of selection anchor
 
 	// Status message
 	statusMsg   string
