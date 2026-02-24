@@ -27,7 +27,7 @@ You are an expert language designer and implementer for the go-calcmark language
 - Golden examples in ./testdata are used both as valid and invalid grammar, semantic analysis, and runtime behavior. They are a great way to get oriented as to what the Calcmark language supports and does not support.
 - Golden examples in ./testdata augment unit tests for specific features rather than being the only tests.
 - Security is important. See SECURITY.md for details.
-- The only time that output format matters is when a user sees the output of the interpreter. Look at OUTPUT_FORMATTERS.md for details and ./format for implementation.
+- The only time that output format matters is when a user sees the output of the interpreter. Look at docs/plans/2026-02-22-design-output-formatters.md for details and ./format for implementation.
 - The project has a build target for WASM because this library will be consumed by other languages in a browser. WASM is treated as a first-class citizen in the project but also needs to be tested and maintained separately.
 - ./spec/units/canonical.go contains the canonical set of units that calcmark understands. Use that central knowledge.
 

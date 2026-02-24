@@ -151,5 +151,5 @@ required_appreciation = required_total_stock / option_value_b
 ## Try It
 
 ```bash
-cm docs/examples/job-offer.cm
+cm testdata/examples/job-offer.cm
 ```

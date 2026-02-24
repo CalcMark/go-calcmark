@@ -1,7 +1,7 @@
 # feature-autocomplete.tape - Shows autocomplete popup appearing
-# Regenerate: vhs docs/images/feature-autocomplete.tape
+# Regenerate: vhs scripts/feature-autocomplete.tape
 # For the "Terminal-native" feature card on the homepage.
-Output docs/images/feature-autocomplete.gif
+Output site/static/images/feature-autocomplete.gif
 
 Set Shell "bash"
 Set FontSize 16

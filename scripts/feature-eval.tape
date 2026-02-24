@@ -1,7 +1,7 @@
 # feature-eval.tape - Shows cm eval with a budget calculation
-# Regenerate: vhs docs/images/feature-eval.tape
+# Regenerate: vhs scripts/feature-eval.tape
 # For the "Terminal-native" feature card on the homepage.
-Output docs/images/feature-eval.gif
+Output site/static/images/feature-eval.gif
 
 Set Shell "bash"
 Set FontSize 16

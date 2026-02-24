@@ -244,17 +244,13 @@ tasks:
   record-demos:
     desc: Regenerate all demo GIFs for the website
     cmds:
-      - vhs docs/images/hero.tape
-      - vhs docs/images/feature-variables.tape
-      - vhs docs/images/feature-eval.tape
-      - vhs docs/images/feature-export.tape
-      - cp docs/images/hero.gif site/static/images/
-      - cp docs/images/feature-variables.gif site/static/images/
-      - cp docs/images/feature-eval.gif site/static/images/
-      - cp docs/images/feature-export.gif site/static/images/
-      - echo '✓ All demo GIFs regenerated and copied to site/static/images/'
+      - vhs scripts/hero.tape
+      - vhs scripts/feature-variables.tape
+      - vhs scripts/feature-eval.tape
+      - vhs scripts/feature-export.tape
+      - echo '✓ All demo GIFs regenerated to site/static/images/'
     sources:
-      - docs/images/*.tape
+      - scripts/*.tape
     generates:
       - site/static/images/hero.gif
       - site/static/images/feature-variables.gif

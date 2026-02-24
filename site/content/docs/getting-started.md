@@ -43,7 +43,7 @@ cm budget.cm          # Open existing file
 Process a file and see results:
 
 ```bash
-cm eval docs/examples/system-sizing.cm
+cm eval testdata/examples/system-sizing.cm
 ```
 
 ### Pipe Expressions

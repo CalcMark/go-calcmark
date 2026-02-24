@@ -1,3 +1,10 @@
+---
+title: "design: Output formatter architecture and io.Writer pattern"
+type: design
+status: completed
+date: 2026-02-22
+---
+
 # CalcMark Output Formatter Design (Revised)
 
 ## Overview

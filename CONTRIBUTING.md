@@ -195,5 +195,5 @@ return fmt.Errorf("syntax error")
 
 - See the [Architecture Overview](#architecture-overview) section above for system design
 - See [LANGUAGE_SPEC.md](spec/LANGUAGE_SPEC.md) for language details
-- See [OUTPUT_FORMATTERS.md](OUTPUT_FORMATTERS.md) for output format details
+- See [Output Formatters Design](docs/plans/2026-02-22-design-output-formatters.md) for output format details
 - Review existing code for patterns

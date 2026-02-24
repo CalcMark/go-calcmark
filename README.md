@@ -2,7 +2,7 @@
 
 **Calculations embedded in markdown documents.**
 
-![CalcMark TUI](docs/images/hero.gif)
+![CalcMark TUI](site/static/images/hero.gif)
 
 CalcMark is a terminal-based calculation notepad. Write your thinking in plain text, add calculations that reference each other, and watch results update as you type.
 
@@ -63,7 +63,7 @@ cm eval budget.cm
 cm convert budget.cm --to=html -o budget.html
 ```
 
-![CalcMark TUI](docs/images/tui-screenshot.png)
+![CalcMark TUI](site/static/images/tui-screenshot.png)
 
 ## Examples
 

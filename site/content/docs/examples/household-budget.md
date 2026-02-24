@@ -130,5 +130,5 @@ daily_discretionary = $500/month per day
 ## Try It
 
 ```bash
-cm docs/examples/household-budget.cm
+cm testdata/examples/household-budget.cm
 ```

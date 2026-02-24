@@ -1,3 +1,10 @@
+---
+title: "design: Language extensions for system architecture functions"
+type: design
+status: completed
+date: 2026-02-22
+---
+
 # CalcMark Language Extensions for System Architecture
 
 Based on Jeff Dean's "Numbers Everyone Should Know" (originally presented at Google, circa 2010, with updates for modern hardware), these extensions provide system architects with intuitive functions for back-of-the-envelope calculations.

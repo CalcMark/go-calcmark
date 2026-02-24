@@ -1,7 +1,7 @@
 # hero.tape - CalcMark hero demo GIF (TUI editor session)
-# Regenerate: vhs docs/images/hero.tape
+# Regenerate: vhs scripts/hero.tape
 # Shows the TUI editor with live-updating variables and results pane.
-Output docs/images/hero.gif
+Output site/static/images/hero.gif
 
 Set Shell "bash"
 Set FontSize 18

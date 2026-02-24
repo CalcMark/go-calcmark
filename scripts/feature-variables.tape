@@ -1,7 +1,7 @@
 # feature-variables.tape - Shows TUI live preview updating as variables are typed
-# Regenerate: vhs docs/images/feature-variables.tape
+# Regenerate: vhs scripts/feature-variables.tape
 # For the "Variables flow downward" feature card on the homepage.
-Output docs/images/feature-variables.gif
+Output site/static/images/feature-variables.gif
 
 Set Shell "bash"
 Set FontSize 16

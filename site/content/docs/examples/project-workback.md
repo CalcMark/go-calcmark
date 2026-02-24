@@ -140,5 +140,5 @@ needed_time = total_planned + risk_buffer
 ## Try It
 
 ```bash
-cm docs/examples/project-workback.cm
+cm testdata/examples/project-workback.cm
 ```

@@ -1,3 +1,10 @@
+---
+title: "design: TUI color theming specification with adaptive light/dark palette"
+type: design
+status: completed
+date: 2026-02-22
+---
+
 # CalcMark TUI Color Theming Specification
 
 **Version:** 1.0.0  

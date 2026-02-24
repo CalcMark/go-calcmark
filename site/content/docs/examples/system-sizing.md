@@ -152,5 +152,5 @@ servers_napkin = total_db_servers as napkin
 ## Try It
 
 ```bash
-cm docs/examples/system-sizing.cm
+cm testdata/examples/system-sizing.cm
 ```

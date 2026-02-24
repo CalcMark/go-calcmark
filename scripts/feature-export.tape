@@ -1,7 +1,7 @@
 # feature-export.tape - Shows export format overlay
-# Regenerate: vhs docs/images/feature-export.tape
+# Regenerate: vhs scripts/feature-export.tape
 # For the "Export anywhere" feature card on the homepage.
-Output docs/images/feature-export.gif
+Output site/static/images/feature-export.gif
 
 Set Shell "bash"
 Set FontSize 16

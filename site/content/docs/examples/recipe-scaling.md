@@ -123,5 +123,5 @@ calories_per_slice = calories_per_loaf / slices_per_loaf
 ## Try It
 
 ```bash
-cm docs/examples/recipe-scaling.cm
+cm testdata/examples/recipe-scaling.cm
 ```
