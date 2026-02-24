@@ -14,16 +14,12 @@ tasks:
     cmds:
       - task --list
 
-  # Testing tasks
+  # ── Testing ────────────────────────────────────────────────────────
+
   test:
     desc: Run all tests
     cmds:
       - go test ./... -v
-
-  test:short:
-    desc: Run tests in short mode
-    cmds:
-      - go test ./... -short
 
   test:coverage:
     desc: Run tests with coverage report
@@ -32,37 +28,8 @@ tasks:
       - go tool cover -html=coverage.out -o coverage.html
       - echo 'Coverage report generated at coverage.html'
 
-  test:lexer:
-    desc: Run lexer tests only
-    cmds:
-      - go test ./spec/lexer/... -v
+  # ── Build ──────────────────────────────────────────────────────────
 
-  test:parser:
-    desc: Run parser tests only
-    cmds:
-      - go test ./spec/parser/... -v
-
-  test:semantic:
-    desc: Run semantic validation tests
-    cmds:
-      - go test ./spec/semantic/... -v
-
-  test:interpreter:
-    desc: Run interpreter tests
-    cmds:
-      - go test ./impl/interpreter/... -v
-
-  test:integration:
-    desc: Run integration tests
-    cmds:
-      - go test ./spec/document/... -v
-
-  test:e2e:
-    desc: Run golden file e2e tests (validates testdata/*.cm files)
-    cmds:
-      - go test ./cmd/calcmark/... -run "Golden" -v
-
-  # Build tasks
   build:
     desc: Build CLI for current platform
     cmds:
@@ -70,7 +37,7 @@ tasks:
       - echo 'Built {{.BINARY_NAME}}'
 
   build:all:
-    desc: Build for all platforms
+    internal: true
     deps:
       - build:linux
       - build:darwin
@@ -99,23 +66,15 @@ tasks:
       - GOOS=windows GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o dist/{{.BINARY_NAME}}-windows-amd64.exe ./cmd/calcmark
       - echo 'Built Windows binary'
 
-  # Development tasks
+  # ── Development ────────────────────────────────────────────────────
+
   dev:
-    desc: Run in development mode
+    desc: Run in development mode (use -- to pass args, e.g. task dev -- eval file.cm)
     cmds:
       - go run ./cmd/calcmark {{.CLI_ARGS}}
 
-  dev:repl:
-    desc: Start REPL
-    cmds:
-      - go run ./cmd/calcmark
+  # ── Quality ────────────────────────────────────────────────────────
 
-  dev:eval:
-    desc: Evaluate example file
-    cmds:
-      - go run ./cmd/calcmark eval examples/dates_and_units.cm
-
-  # Quality tasks
   lint:
     desc: Run basic linters (fmt, vet)
     cmds:
@@ -123,28 +82,17 @@ tasks:
       - go vet ./...
       - echo '✓ Basic linting passed'
 
-  vet:
-    desc: Run go vet with verbose output
-    cmds:
-      - go vet -v ./...
-
   modernize:
-    desc: Run Go modernize analyzer (suggests modern Go idioms)
+    internal: true
     cmds:
       - go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest ./...
       - echo '✓ Modernize check passed'
 
   staticcheck:
-    desc: Run staticcheck (uses go run, no global install needed)
+    internal: true
     cmds:
       - go run honnef.co/go/tools/cmd/staticcheck@latest ./...
       - echo '✓ Staticcheck passed'
-
-  lint:strict:
-    desc: Run golangci-lint (install from https://golangci-lint.run/usage/install/)
-    cmds:
-      - golangci-lint run ./...
-      - echo '✓ Golangci-lint passed'
 
   quality:
     desc: Run all quality checks (recommended before commit)
@@ -153,15 +101,6 @@ tasks:
       - task: modernize
       - task: staticcheck
       - echo '✓ All quality checks passed'
-
-  quality:full:
-    desc: Run complete quality gate including strict linting
-    cmds:
-      - task: lint
-      - task: staticcheck
-      - task: lint:strict
-      - task: test
-      - echo '✓ Full quality gate passed'
 
   security:
     desc: Run security-focused tests
@@ -173,23 +112,15 @@ tasks:
       - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/document
       - echo '✓ Security tests passed'
 
-  # Benchmark tasks  
+  # ── Benchmarks ─────────────────────────────────────────────────────
+
   bench:
-    desc: Run benchmarks
+    internal: true
     cmds:
-      - go test ./... -bench=. -benchmem
+      - go test ./... -run='^$' -bench=. -benchmem
 
-  bench:lexer:
-    desc: Benchmark lexer
-    cmds:
-      - go test ./spec/lexer/... -bench=. -benchmem
+  # ── Maintenance ────────────────────────────────────────────────────
 
-  bench:parser:
-    desc: Benchmark parser
-    cmds:
-      - go test ./spec/parser/... -bench=. -benchmem
-
-  # Clean tasks
   clean:
     desc: Clean build artifacts
     cmds:
@@ -198,27 +129,16 @@ tasks:
       - rm -f coverage.out coverage.html
       - go clean -cache
 
-  # Install task
-  install:
-    desc: Install to GOPATH/bin
-    cmds:
-      - go install -ldflags "{{.LDFLAGS}}" ./cmd/calcmark
-
-  # Dependency tasks
-  deps:
-    desc: Download dependencies
-    cmds:
-      - go mod download
-
   deps:update:
     desc: Update dependencies
     cmds:
       - go get -u ./...
       - go mod tidy
 
-  # Website tasks
+  # ── Website ────────────────────────────────────────────────────────
+
   generate-docs:
-    desc: Generate site data from feature registry
+    internal: true
     cmds:
       - go run ./cmd/docgen
     sources:
@@ -261,7 +181,8 @@ tasks:
       - site/static/images/feature-eval.gif
       - site/static/images/feature-export.gif
 
-  # Example/Demo tasks
+  # ── Examples ───────────────────────────────────────────────────────
+
   example:dates:
     internal: true
     cmds:
@@ -282,16 +203,15 @@ tasks:
       - task: example:dates
       - task: example:units
 
-  # Release task
+  # ── Release ────────────────────────────────────────────────────────
+
   release:
     desc: Build release binaries (runs all quality checks first)
-    deps:
-      - clean
-      - test          # All tests must pass
-      - vet           # Go vet must pass
-      - staticcheck   # Static analysis must pass
-      - security      # Security tests must pass
     cmds:
+      - task: clean
+      - task: quality       # lint + modernize + staticcheck
+      - task: test          # All tests must pass
+      - task: bench         # Benchmark regressions
+      - task: security      # Security tests + fuzzing
       - task: build:all
-      - echo '✓ All quality checks passed'
       - echo 'Release binaries built in dist/'

@@ -148,7 +148,7 @@ env := eval.GetEnvironment()
 Run interpreter tests:
 
 ```bash
-task test:interpreter
+go test ./impl/interpreter/... -v
 ```
 
 Run document evaluation tests:

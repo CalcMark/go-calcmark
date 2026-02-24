@@ -512,7 +512,6 @@ func TestEmptyEditorTyping(t *testing.T) {
 	}
 }
 
-
 // TestEmptyEditorCursorVisibility ensures the cursor is always visible.
 func TestEmptyEditorCursorVisibility(t *testing.T) {
 	m := New(nil)
