@@ -209,13 +209,8 @@ func (p *RecursiveDescentParser) parseProgram() ([]ast.Node, error) {
 }
 
 // parseStatement parses a single statement.
-// Statement → FrontmatterAssignment | Assignment | Expression
+// Statement → Assignment | Expression
 func (p *RecursiveDescentParser) parseStatement() (ast.Node, error) {
-	// Try frontmatter assignment first (@namespace.property = value)
-	if p.check(lexer.AT_PREFIX) {
-		return p.parseFrontmatterAssignment()
-	}
-
 	// Try assignment (identifier '=' expression)
 	if p.check(lexer.IDENTIFIER) && p.peekAhead(1).Type == lexer.ASSIGN {
 		return p.parseAssignment()
@@ -252,56 +247,6 @@ func (p *RecursiveDescentParser) parseAssignment() (ast.Node, error) {
 				Column: name.Column + len(name.Value),
 			},
 		},
-	}, nil
-}
-
-// parseFrontmatterAssignment parses a frontmatter variable assignment.
-// FrontmatterAssignment → '@' IDENTIFIER '.' IDENTIFIER '=' Expression
-// Examples: @exchange.USD_EUR = 0.92, @global.tax_rate = 0.32
-func (p *RecursiveDescentParser) parseFrontmatterAssignment() (ast.Node, error) {
-	// Consume '@'
-	if _, err := p.consume(lexer.AT_PREFIX, "expected '@' for frontmatter assignment"); err != nil {
-		return nil, err
-	}
-
-	// Consume namespace (exchange or global)
-	namespace, err := p.consume(lexer.IDENTIFIER, "expected namespace after '@' (e.g., 'exchange' or 'global')")
-	if err != nil {
-		return nil, err
-	}
-	namespaceStr := string(namespace.Value)
-
-	// Validate namespace
-	if namespaceStr != "exchange" && namespaceStr != "global" {
-		return nil, p.error(fmt.Sprintf("unknown frontmatter namespace '@%s': expected 'exchange' or 'global'", namespaceStr))
-	}
-
-	// Consume '.'
-	if _, err := p.consume(lexer.DOT, "expected '.' after namespace"); err != nil {
-		return nil, err
-	}
-
-	// Consume property name
-	property, err := p.consume(lexer.IDENTIFIER, "expected property name after '.'")
-	if err != nil {
-		return nil, err
-	}
-
-	// Consume '='
-	if _, err := p.consume(lexer.ASSIGN, "expected '=' in frontmatter assignment"); err != nil {
-		return nil, err
-	}
-
-	// Parse the value expression
-	value, err := p.parseExpression()
-	if err != nil {
-		return nil, err
-	}
-
-	return &ast.FrontmatterAssignment{
-		Namespace: namespaceStr,
-		Property:  string(property.Value),
-		Value:     value,
 	}, nil
 }
 

@@ -257,8 +257,6 @@ func getAssignmentVarName(node ast.Node) string {
 	switch n := node.(type) {
 	case *ast.Assignment:
 		return n.Name
-	case *ast.FrontmatterAssignment:
-		return n.Property
 	}
 	return ""
 }
