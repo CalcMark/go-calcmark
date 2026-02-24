@@ -281,7 +281,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 	// Get visual state before insert
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth)
-	visualBefore, _ := alignedBefore.sourceToVisual[m.cursorLine]
+	visualBefore := alignedBefore.sourceToVisual[m.cursorLine]
 	t.Logf("Before insert: cursorLine=%d, visual=%d", m.cursorLine, visualBefore)
 
 	// Press 'o' to insert line below
@@ -531,7 +531,7 @@ line4 = 4`
 			}
 
 			// Verify cursor highlight is on correct visual line
-			cursorVisualIdx, _ := aligned.sourceToVisual[m.cursorLine]
+			cursorVisualIdx := aligned.sourceToVisual[m.cursorLine]
 			foundCursorAt := -1
 			for i, sl := range aligned.sourceLines {
 				if sl.isCursorLine {
@@ -640,7 +640,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 		}
 	}
 
-	visualIdxBefore, _ := alignedBefore.sourceToVisual[m.cursorLine]
+	visualIdxBefore := alignedBefore.sourceToVisual[m.cursorLine]
 	t.Logf("Before insert: cursor source=%d, cursor visual=%d, mapping says=%d",
 		m.cursorLine, cursorVisualBefore, visualIdxBefore)
 
@@ -663,7 +663,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 		}
 	}
 
-	visualIdxAfter, _ := alignedAfter.sourceToVisual[m.cursorLine]
+	visualIdxAfter := alignedAfter.sourceToVisual[m.cursorLine]
 	t.Logf("After insert: cursor source=%d, cursor visual=%d, mapping says=%d",
 		m.cursorLine, cursorVisualAfter, visualIdxAfter)
 
@@ -685,7 +685,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 		}
 	}
 
-	visualIdxNav, _ := alignedNav.sourceToVisual[m.cursorLine]
+	visualIdxNav := alignedNav.sourceToVisual[m.cursorLine]
 	t.Logf("After navigation: cursor source=%d, cursor visual=%d, mapping says=%d",
 		m.cursorLine, cursorVisualNav, visualIdxNav)
 
@@ -760,7 +760,7 @@ line3 = 3`
 		}
 	}
 
-	visualFromMap, _ := aligned.sourceToVisual[m.cursorLine]
+	visualFromMap := aligned.sourceToVisual[m.cursorLine]
 	t.Logf("Cursor: source=%d, visualFound=%d, visualMap=%d",
 		m.cursorLine, cursorVisual, visualFromMap)
 
@@ -787,7 +787,7 @@ line3 = 3`
 		}
 	}
 
-	visualFromMapNav, _ := alignedNav.sourceToVisual[m.cursorLine]
+	visualFromMapNav := alignedNav.sourceToVisual[m.cursorLine]
 	t.Logf("After nav: cursor source=%d, visualFound=%d, visualMap=%d",
 		m.cursorLine, cursorVisualNav, visualFromMapNav)
 
@@ -890,7 +890,7 @@ another = 2`
 	m.cursorLine = 1
 
 	// Get visual mapping for the wrapped line
-	visualForLine1, _ := alignedBefore.sourceToVisual[1]
+	visualForLine1 := alignedBefore.sourceToVisual[1]
 	t.Logf("Source line 1 maps to visual %d", visualForLine1)
 
 	// Insert below the wrapped line
@@ -936,7 +936,7 @@ another = 2`
 		}
 	}
 
-	expectedVisual, _ := alignedAfter.sourceToVisual[m.cursorLine]
+	expectedVisual := alignedAfter.sourceToVisual[m.cursorLine]
 	if cursorVisual != expectedVisual {
 		t.Errorf("Cursor highlight bug: found at visual %d, mapping says %d",
 			cursorVisual, expectedVisual)

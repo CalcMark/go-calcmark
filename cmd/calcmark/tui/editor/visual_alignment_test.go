@@ -248,8 +248,8 @@ z = 3`
 	}
 
 	// Source line 2 should map to visual index after line 1's visual lines
-	v1, _ := aligned.sourceToVisual[1]
-	v2, _ := aligned.sourceToVisual[2]
+	v1 := aligned.sourceToVisual[1]
+	v2 := aligned.sourceToVisual[2]
 	if v2 <= v1 {
 		t.Errorf("Source line 2 visual (%d) should be > source line 1 visual (%d)", v2, v1)
 	}
@@ -352,9 +352,9 @@ another_short = 3`
 	t.Logf("Line 1 actual visual lines: %d", line1VisualCount)
 
 	// Source line 2 should start at visual index = line0 visuals + line1 visuals
-	v0, _ := aligned.sourceToVisual[0]
-	v1, _ := aligned.sourceToVisual[1]
-	v2, _ := aligned.sourceToVisual[2]
+	v0 := aligned.sourceToVisual[0]
+	v1 := aligned.sourceToVisual[1]
+	v2 := aligned.sourceToVisual[2]
 
 	t.Logf("Visual indices: line0=%d, line1=%d, line2=%d", v0, v1, v2)
 
@@ -412,7 +412,7 @@ short = 5`
 		m.cursorLine, m.scrollOffset)
 
 	// Now check: what visual line does this source line map to?
-	visualIdx, _ := aligned.sourceToVisual[m.cursorLine]
+	visualIdx := aligned.sourceToVisual[m.cursorLine]
 	t.Logf("Source line %d maps to visual line %d", m.cursorLine, visualIdx)
 
 	// THE BUG: if scrollOffset=3 (source), but source line 3 is visual line 5,
