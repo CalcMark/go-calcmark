@@ -17,8 +17,7 @@ This guide is for developers who want to extend the CalcMark language or contrib
 
 - Go 1.21 or later
 - [Task](https://taskfile.dev/) for running development commands
-- (Optional) [golangci-lint](https://golangci-lint.run/) for strict linting
-- (Optional) [staticcheck](https://staticcheck.io/) for advanced analysis
+- (Optional) [golangci-lint](https://golangci-lint.run/) for additional strict linting
 
 ### Setup
 
@@ -26,9 +25,6 @@ This guide is for developers who want to extend the CalcMark language or contrib
 # Clone the repository
 git clone https://github.com/CalcMark/go-calcmark
 cd go-calcmark
-
-# Install dependencies
-task deps
 
 # Run tests to verify setup
 task test
@@ -43,31 +39,21 @@ task quality
 
 ```bash
 # Run tests
-task test
-
-# Run specific package tests
-task test:lexer
-task test:parser
-task test:semantic
-task test:interpreter
-
-# Run with coverage
-task test:coverage
+task test                # All tests
+task test:coverage       # With coverage report
+go test ./spec/lexer/... -v  # Single package (use go test directly)
 
 # Quality checks
-task lint            # Basic formatting and vet
-task vet             # Go vet only
-task staticcheck     # Advanced static analysis
-task quality         # All quality checks
-
-# Benchmarks
-task bench
-task bench:parser
-task bench:lexer
+task lint            # Format + vet
+task quality         # lint + modernize + staticcheck
+task security        # Security tests + fuzzing
 
 # Build
 task build           # Current platform
-task build:all       # All platforms
+
+# Development
+task dev             # REPL
+task dev -- eval file.cm  # Evaluate a file
 ```
 
 ### Before Committing
@@ -81,7 +67,8 @@ task quality
 This runs:
 1. `go fmt` - Format code
 2. `go vet` - Static analysis
-3. `staticcheck` - Advanced checks
+3. `modernize` - Modern Go idioms
+4. `staticcheck` - Advanced checks
 
 ## Architecture Overview
 
