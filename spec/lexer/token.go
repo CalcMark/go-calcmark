@@ -34,8 +34,6 @@ const (
 	MODULUS
 	EXPONENT
 	ASSIGN
-	AT_PREFIX // "@" - prefix for frontmatter variables: @exchange.USD_EUR, @global.tax_rate
-
 	// Comparison operators
 	GREATER_THAN
 	LESS_THAN
@@ -56,7 +54,7 @@ const (
 
 	// Punctuation
 	COMMA // ","
-	DOT   // "." - for qualified names like @exchange.USD_EUR
+	DOT   // "." - for qualified names
 
 	// Reserved keywords for future control flow
 	IF
@@ -162,8 +160,6 @@ func (tt TokenType) String() string {
 		return "EXPONENT"
 	case ASSIGN:
 		return "ASSIGN"
-	case AT_PREFIX:
-		return "AT_PREFIX"
 	case GREATER_THAN:
 		return "GREATER_THAN"
 	case LESS_THAN:

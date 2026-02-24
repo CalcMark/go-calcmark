@@ -26,13 +26,13 @@ key delete
 ----
 -- view:
  Source                                        │ Results                        
-                                               │▸ Globals (0)                [g]
-                                               │────────────────────────────────
    1 line 1                                    │                                
    2 line 2# Header                            │                                
    3 x = 10                                    │x → 10                          
    4 y = 20                                    │y → 20                          
    5 z = 30                                    │z → 30                          
+~                                              │                                
+~                                              │                                
 ~                                              │                                
 ~                                              │                                
 ~                                              │                                

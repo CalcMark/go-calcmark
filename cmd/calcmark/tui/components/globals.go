@@ -78,7 +78,7 @@ func RenderGlobalsPanel(state GlobalsPanelState, width int, style GlobalsPanelSt
 	if !state.Expanded {
 		// Collapsed view
 		count := len(state.Globals)
-		hint := style.Collapsed.Render(fmt.Sprintf("(%d items, press g to expand)", count))
+		hint := style.Collapsed.Render(fmt.Sprintf("(%d items)", count))
 		return style.Container.Width(width).Render(header + " " + hint)
 	}
 

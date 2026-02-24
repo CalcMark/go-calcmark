@@ -285,12 +285,12 @@ exchange:
 			wantErrContain: "no exchange rate defined for EUR",
 		},
 		{
-			name: "@exchange inline then convert",
+			name: "frontmatter exchange then convert",
 			input: `---
 exchange:
   EUR_GBP: 0.86
+  USD_EUR: 0.92
 ---
-@exchange.USD_EUR = 0.92
 100 USD in EUR`,
 			want: "€92.00",
 		},

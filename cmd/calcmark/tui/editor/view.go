@@ -105,31 +105,15 @@ func (m Model) View() string {
 	// Ensure header is exactly leftContentWidth
 	sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, m.sourcePaneBg())
 
-	// When frontmatter exists, its lines naturally align with the Globals panel
-	// rendered inline in the preview pane — no source padding needed.
-	// When no frontmatter, we need source padding to match the fixed Globals header.
-	hasFrontmatter := m.frontmatterLineCount() > 0
-	var sourcePaddingLines []string
-	sourceContentHeight := paneContentHeight
-
-	if !hasFrontmatter && m.previewMode != PreviewHidden {
-		// No frontmatter: globals panel is a fixed header, needs source padding
-		globalsHeight := m.computeGlobalsHeight()
-		for range globalsHeight {
-			sourcePaddingLines = append(sourcePaddingLines, ensureFullWidth("", leftContentWidth, m.sourcePaneBg()))
-		}
-		sourceContentHeight = paneContentHeight - globalsHeight
-	}
-	if sourceContentHeight < 1 {
-		sourceContentHeight = 1
-	}
+	// No source padding needed — globals/exchange rates are only defined in frontmatter,
+	// and frontmatter lines provide natural alignment in the preview pane.
+	sourceContentHeight := max(paneContentHeight, 1)
 
 	sourceContent := m.renderSourcePaneAligned(leftContentWidth, sourceContentHeight, aligned)
 
-	// Assemble source pane with header (and padding when no frontmatter)
+	// Assemble source pane with header
 	var sourcePaneLines []string
 	sourcePaneLines = append(sourcePaneLines, sourceHeader)
-	sourcePaneLines = append(sourcePaneLines, sourcePaddingLines...)
 	sourcePaneLines = append(sourcePaneLines, strings.Split(sourceContent, "\n")...)
 	sourcePane := strings.Join(sourcePaneLines, "\n")
 

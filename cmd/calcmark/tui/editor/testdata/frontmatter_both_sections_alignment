@@ -1,0 +1,16 @@
+# Test: Frontmatter with both exchange and globals sections
+# Verifies: structural lines → blank, value lines → formatted, all 1:1 aligned
+
+run observe=alignment
+----
+-- alignment:
+Source and Preview Alignment:
+Source lines: 8, Preview lines: 8
+[0] SRC(ln=1 pad=false): "---"                               | PRV(ln=0 fm=true): ""
+[1] SRC(ln=2 pad=false): "globals:"                          | PRV(ln=1 fm=true): ""
+[2] SRC(ln=3 pad=false): "  tax_rate: 0.2"                   | PRV(ln=2 fm=true): ""
+[3] SRC(ln=4 pad=false): "exchange:"                         | PRV(ln=3 fm=true): ""
+[4] SRC(ln=5 pad=false): "  USD_EUR: 0.85"                   | PRV(ln=4 fm=true): ""
+[5] SRC(ln=6 pad=false): "---"                               | PRV(ln=5 fm=true): ""
+[6] SRC(ln=7 pad=false): "price = 100"                       | PRV(ln=6 fm=false): "price → 100"
+[7] SRC(ln=8 pad=false): "tax = price * tax_rate"            | PRV(ln=7 fm=false): "tax → 20"

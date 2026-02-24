@@ -5,6 +5,7 @@ exchange:
   GBP_JPY: 191.50
   CNY_INR: 11.55
   INR_KRW: 16.20
+  USD_GBP: 0.79
 globals:
   budget: 5000 EUR
 ---
@@ -46,20 +47,10 @@ budget_gbp = budget in GBP
 
 yen_price = 1000 GBP in JPY
 
-## Inline exchange rate assignment
+## Frontmatter exchange rate usage
 
-The `@exchange.` prefix lets you define or redefine rates mid-document.
-Here we first convert at the frontmatter rate, then override it and
-convert again to show the new rate takes effect.
-
-@exchange.USD_GBP = 0.79
 salary = 3000 USD
 salary_gbp = salary in GBP
-
-Now override the rate with a stronger pound:
-
-@exchange.USD_GBP = 0.72
-same_salary_new_rate = salary in GBP
 
 ## Same currency is a no-op
 

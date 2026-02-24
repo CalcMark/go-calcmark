@@ -462,50 +462,8 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 		return evalErr
 	}
 
-	// 4. Update document frontmatter for @global and @exchange assignments
-	if doc != nil {
-		e.updateFrontmatterFromNodes(doc, nodes, results)
-	}
-
 	// Mark as clean (evaluated successfully)
 	block.SetDirty(false)
 
 	return nil
-}
-
-// updateFrontmatterFromNodes updates the document's frontmatter based on
-// FrontmatterAssignment nodes that were just evaluated.
-func (e *Evaluator) updateFrontmatterFromNodes(doc *document.Document, nodes []ast.Node, results []types.Type) {
-	resultIdx := 0
-	for _, node := range nodes {
-		fmAssign, ok := node.(*ast.FrontmatterAssignment)
-		if !ok {
-			// Non-frontmatter nodes also produce results
-			if resultIdx < len(results) {
-				resultIdx++
-			}
-			continue
-		}
-
-		// Get the result value for this assignment
-		if resultIdx >= len(results) {
-			continue
-		}
-		result := results[resultIdx]
-		resultIdx++
-
-		fm := doc.EnsureFrontmatter()
-
-		switch fmAssign.Namespace {
-		case "global":
-			// Store the result's string representation as the expression
-			fm.SetGlobal(fmAssign.Property, result.String())
-
-		case "exchange":
-			// Store the exchange rate
-			if dec, err := types.ToDecimal(result); err == nil {
-				fm.SetExchangeRate(fmAssign.Property, dec)
-			}
-		}
-	}
 }

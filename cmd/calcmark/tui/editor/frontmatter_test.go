@@ -12,6 +12,51 @@ import (
 	"github.com/knz/catwalk"
 )
 
+func TestIsFrontmatterStructuralLine(t *testing.T) {
+	tests := []struct {
+		line     string
+		expected bool
+	}{
+		{"---", true},
+		{"  ---  ", true},
+		{"", true},
+		{"   ", true},
+		{"# comment", true},
+		{"  # indented comment", true},
+		{"exchange:", true},
+		{"globals:", true},
+		{"  USD_EUR: 0.85", false},
+		{"  tax_rate: 0.2", false},
+		{"  my_var: 42", false},
+	}
+	for _, tt := range tests {
+		got := isFrontmatterStructuralLine(tt.line)
+		if got != tt.expected {
+			t.Errorf("isFrontmatterStructuralLine(%q) = %v, want %v", tt.line, got, tt.expected)
+		}
+	}
+}
+
+func TestExtractFrontmatterKey(t *testing.T) {
+	tests := []struct {
+		line     string
+		expected string
+	}{
+		{"  USD_EUR: 0.85", "USD_EUR"},
+		{"  tax_rate: 0.2", "tax_rate"},
+		{"  my_var: 42", "my_var"},
+		{"---", ""},
+		{"exchange:", "exchange"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		got := extractFrontmatterKey(tt.line)
+		if got != tt.expected {
+			t.Errorf("extractFrontmatterKey(%q) = %q, want %q", tt.line, got, tt.expected)
+		}
+	}
+}
+
 // TestFrontmatterRoundTrip verifies that frontmatter is preserved through edit cycles.
 // This is the core regression test for the bug: frontmatter was lost after first edit
 // because getDocumentContent() and GetLines() only iterated blocks, not frontmatter.
@@ -734,6 +779,60 @@ x = my_var + 1`
 	})
 }
 
+// alignmentObserver returns a catwalk observer that dumps source↔preview alignment.
+func alignmentObserver() catwalk.Option {
+	return catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+		model := m.(Model)
+		leftWidth, rightWidth := model.GetPaneWidths(model.width)
+		aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+
+		var buf strings.Builder
+		buf.WriteString("Source and Preview Alignment:\n")
+		buf.WriteString(fmt.Sprintf("Source lines: %d, Preview lines: %d\n",
+			len(aligned.sourceLines), len(aligned.previewLines)))
+
+		maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
+
+		for i := range maxLines {
+			var srcContent string
+			var srcLineNum int
+			var srcIsPadding bool
+			var prvIsFrontmatter bool
+
+			if i < len(aligned.sourceLines) {
+				src := aligned.sourceLines[i]
+				srcContent = src.content
+				srcLineNum = src.lineNum
+				srcIsPadding = src.isPadding
+			}
+
+			var prvContent string
+			var prvLineNum int
+			if i < len(aligned.previewLines) {
+				prv := aligned.previewLines[i]
+				prvContent = prv.content
+				prvLineNum = prv.sourceLineNum
+				prvIsFrontmatter = prv.isFrontmatter
+			}
+
+			// Truncate for readability
+			if len(srcContent) > 30 {
+				srcContent = srcContent[:30] + "..."
+			}
+			if len(prvContent) > 30 {
+				prvContent = prvContent[:30] + "..."
+			}
+
+			buf.WriteString(fmt.Sprintf("[%d] SRC(ln=%d pad=%v): %-35s | PRV(ln=%d fm=%v): %q\n",
+				i, srcLineNum, srcIsPadding, fmt.Sprintf("%q", srcContent),
+				prvLineNum, prvIsFrontmatter, prvContent))
+		}
+
+		_, err := out.Write([]byte(buf.String()))
+		return err
+	})
+}
+
 // TestEditorCatwalkFrontmatterGlobalsAlignment tests that the Globals panel renders
 // inline with frontmatter lines in the preview pane (not as a fixed header).
 func TestEditorCatwalkFrontmatterGlobalsAlignment(t *testing.T) {
@@ -764,56 +863,108 @@ x = my_var + 1`
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
-			catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
-				model := m.(Model)
-				leftWidth, rightWidth := model.GetPaneWidths(model.width)
-				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+			alignmentObserver(),
+		)
+	})
+}
 
-				var buf strings.Builder
-				buf.WriteString("Source and Preview Alignment:\n")
-				buf.WriteString(fmt.Sprintf("Source lines: %d, Preview lines: %d\n",
-					len(aligned.sourceLines), len(aligned.previewLines)))
+// TestEditorCatwalkFrontmatterExchangeAlignment tests exchange-rate-only frontmatter alignment.
+func TestEditorCatwalkFrontmatterExchangeAlignment(t *testing.T) {
+	content := `---
+exchange:
+  USD_EUR: 0.85
+  USD_JPY: 110.0
+---
+price = 100 USD in EUR`
 
-				maxLines := max(len(aligned.sourceLines), len(aligned.previewLines))
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
 
-				for i := range maxLines {
-					var srcContent string
-					var srcLineNum int
-					var srcIsPadding bool
-					var prvIsFrontmatter bool
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "frontmatter_exchange_alignment") {
+			return
+		}
 
-					if i < len(aligned.sourceLines) {
-						src := aligned.sourceLines[i]
-						srcContent = src.content
-						srcLineNum = src.lineNum
-						srcIsPadding = src.isPadding
-					}
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
 
-					var prvContent string
-					var prvLineNum int
-					if i < len(aligned.previewLines) {
-						prv := aligned.previewLines[i]
-						prvContent = prv.content
-						prvLineNum = prv.sourceLineNum
-						prvIsFrontmatter = prv.isFrontmatter
-					}
-
-					// Truncate for readability
-					if len(srcContent) > 30 {
-						srcContent = srcContent[:30] + "..."
-					}
-					if len(prvContent) > 30 {
-						prvContent = prvContent[:30] + "..."
-					}
-
-					buf.WriteString(fmt.Sprintf("[%d] SRC(ln=%d pad=%v): %-35s | PRV(ln=%d fm=%v): %q\n",
-						i, srcLineNum, srcIsPadding, fmt.Sprintf("%q", srcContent),
-						prvLineNum, prvIsFrontmatter, prvContent))
-				}
-
-				_, err := out.Write([]byte(buf.String()))
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
+			alignmentObserver(),
+		)
+	})
+}
+
+// TestEditorCatwalkFrontmatterBothSectionsAlignment tests frontmatter with both exchange and globals.
+func TestEditorCatwalkFrontmatterBothSectionsAlignment(t *testing.T) {
+	content := `---
+globals:
+  tax_rate: 0.2
+exchange:
+  USD_EUR: 0.85
+---
+price = 100
+tax = price * tax_rate`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "frontmatter_both_sections_alignment") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			alignmentObserver(),
+		)
+	})
+}
+
+// TestEditorCatwalkFrontmatterEmptyAlignment tests empty frontmatter (just delimiters).
+func TestEditorCatwalkFrontmatterEmptyAlignment(t *testing.T) {
+	content := `---
+---
+x = 42`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "frontmatter_empty_alignment") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		catwalk.RunModel(t, path, m,
+			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			alignmentObserver(),
 		)
 	})
 }

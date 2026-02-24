@@ -139,8 +139,6 @@ func (c *Checker) checkNode(node ast.Node) {
 	switch n := node.(type) {
 	case *ast.Assignment:
 		c.checkAssignment(n)
-	case *ast.FrontmatterAssignment:
-		c.checkFrontmatterAssignment(n)
 	case *ast.Expression:
 		c.checkExpression(n.Expr)
 	case *ast.BinaryOp:
@@ -203,16 +201,6 @@ func (c *Checker) checkAssignment(a *ast.Assignment) {
 	// We don't know the actual type yet (that's the interpreter's job),
 	// but we mark it as defined
 	c.env.SetWithRange(a.Name, nil, a.Range)
-}
-
-// checkFrontmatterAssignment validates frontmatter variable assignments.
-// Syntax: @namespace.property = value
-func (c *Checker) checkFrontmatterAssignment(f *ast.FrontmatterAssignment) {
-	// Check the value expression
-	c.checkExpression(f.Value)
-
-	// Namespace validation is done at parse time (only "exchange" or "global" allowed)
-	// No additional semantic checks needed here
 }
 
 // checkExpression validates an expression node.

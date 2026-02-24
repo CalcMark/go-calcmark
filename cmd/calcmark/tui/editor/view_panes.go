@@ -177,31 +177,20 @@ func (m Model) previewPaneBg() lipgloss.TerminalColor {
 func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes) string {
 	previewLines := aligned.previewLines
 
-	// Pre-compute Globals panel lines (used in both modes).
-	globalsPanel := m.renderGlobalsPanel(width)
-	globalsPanelLines := strings.Split(globalsPanel, "\n")
-
 	pvBg := m.previewPaneBg()
-
-	// Add separator after globals content
-	separatorStyle := lipgloss.NewStyle().
-		Foreground(theme.DividerFg).
-		Background(pvBg)
-	separatorLine := separatorStyle.Render(strings.Repeat("─", width))
-	separatorLine = ensureFullWidth(separatorLine, width, pvBg)
-	globalsPanelLines = append(globalsPanelLines, separatorLine)
 
 	hasFrontmatter := m.frontmatterLineCount() > 0
 	resultsHeight := height
 
+	// Build a value map for frontmatter 1:1 alignment.
+	// When frontmatter is present, each value line maps to a formatted global.
+	var fmValueMap map[string]formattedGlobal
+	if hasFrontmatter {
+		fmValueMap = m.buildFrontmatterValueMap()
+	}
+
 	// Build complete lines to avoid bare newlines
 	var allLines []string
-
-	if !hasFrontmatter {
-		// No frontmatter: render globals as fixed header at top (original behavior)
-		allLines = append(allLines, globalsPanelLines...)
-		resultsHeight = max(height-len(globalsPanelLines), 1)
-	}
 
 	// Convert cursor's source line to visual line index for proper scrolling
 	// Must use same scroll offset as source pane to keep them aligned
@@ -254,29 +243,35 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		}
 	}
 
-	// Track which globals panel line to render next for frontmatter positions.
-	// Frontmatter preview lines (blockID == "") get globals content instead of blanks.
-	globalsPanelIdx := 0
-
 	linesWritten := 0
 	cursorLineProcessed := false
+	sourceLines := m.GetLines()
 	for j := start; j < end && linesWritten < resultsHeight; j++ {
 		if j >= len(previewLines) {
 			break
 		}
 		pl := previewLines[j]
 
-		// Frontmatter lines: always render globals panel content inline,
-		// regardless of cursor position. The globals panel is an overlay that
-		// replaces the empty preview content of frontmatter lines — the editBuf
-		// cursor-line path must not interfere with this substitution.
+		// Frontmatter lines: render 1:1 aligned with source YAML.
+		// Structural lines (---, exchange:, globals:) → blank preview rows.
+		// Value lines (USD_EUR: 0.6) → formatted value from globals state.
 		if pl.isFrontmatter {
 			var completeLine string
-			if globalsPanelIdx < len(globalsPanelLines) {
-				completeLine = ensureFullWidth(globalsPanelLines[globalsPanelIdx], width, pvBg)
-				globalsPanelIdx++
+			if pl.sourceLineNum < len(sourceLines) {
+				srcLine := sourceLines[pl.sourceLineNum]
+				if isFrontmatterStructuralLine(srcLine) {
+					completeLine = ensureFullWidth("", width, pvBg)
+				} else if fmValueMap != nil {
+					key := extractFrontmatterKey(srcLine)
+					if fg, ok := fmValueMap[key]; ok {
+						completeLine = m.renderFrontmatterValueLine(key, fg, width)
+					} else {
+						completeLine = ensureFullWidth("", width, pvBg)
+					}
+				} else {
+					completeLine = ensureFullWidth("", width, pvBg)
+				}
 			} else {
-				// More frontmatter lines than globals content — fill with background
 				completeLine = ensureFullWidth("", width, pvBg)
 			}
 			allLines = append(allLines, completeLine)
@@ -328,6 +323,26 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 
 	// Join all lines - newlines between fully-styled lines prevent bleed-through
 	return strings.Join(allLines, "\n")
+}
+
+// renderFrontmatterValueLine renders a single frontmatter value in the preview pane,
+// formatted as "name    value" with appropriate styling for exchange rates vs globals.
+func (m Model) renderFrontmatterValueLine(name string, fg formattedGlobal, width int) string {
+	pvBg := m.previewPaneBg()
+
+	nameStyle := lipgloss.NewStyle().
+		Foreground(theme.GlobalsVarName).
+		Background(pvBg)
+	valueStyle := lipgloss.NewStyle().
+		Foreground(theme.Result).
+		Background(pvBg)
+
+	if fg.isExchange {
+		nameStyle = nameStyle.Foreground(theme.GlobalsExchange)
+	}
+
+	formatted := nameStyle.Render(fmt.Sprintf("%-18s", name)) + valueStyle.Render(fg.value)
+	return ensureFullWidth(formatted, width, pvBg)
 }
 
 // renderCalcLine renders a single calculation line result.
