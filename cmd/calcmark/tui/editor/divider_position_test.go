@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/muesli/termenv"
 )
 

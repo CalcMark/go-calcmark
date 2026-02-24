@@ -2,11 +2,12 @@ package components
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // ContextFooterHeight is the fixed height for the context footer / helper area.
@@ -53,7 +54,7 @@ type ContextFooterState struct {
 // RenderContextFooter renders the context footer from the given state.
 // Pure function: takes state, width, and background color, returns string.
 // IMPORTANT: Always returns exactly ContextFooterHeight lines.
-func RenderContextFooter(state ContextFooterState, width int, bg lipgloss.TerminalColor) string {
+func RenderContextFooter(state ContextFooterState, width int, bg color.Color) string {
 	// Helper to pad output to exactly ContextFooterHeight lines
 	padToHeight := func(content string) string {
 		lines := strings.Split(content, "\n")

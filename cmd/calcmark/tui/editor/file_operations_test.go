@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestSaveFile(t *testing.T) {
@@ -139,7 +139,7 @@ func TestExportModeTransitions(t *testing.T) {
 	}
 
 	// Test selecting format with key '1' (text) — transitions to file picker
-	newModel, _ := m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	newModel, _ := m.handleExportOverlayKey(tea.KeyPressMsg{Code: '1', Text: "1"})
 	m = newModel.(Model)
 
 	if m.mode != StateFilePicker {
@@ -155,7 +155,7 @@ func TestExportModeTransitions(t *testing.T) {
 	// Test canceling export
 	m = New(nil)
 	m.enterExportMode()
-	newModel, _ = m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ = m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	if m.mode != StateDefault {
@@ -220,7 +220,7 @@ func TestSavePromptMode(t *testing.T) {
 	m.saveCurrentLine(true)
 
 	// Trigger quit with unsaved changes using Ctrl+Q
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'q', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.mode != StateSavePrompt {
@@ -228,7 +228,7 @@ func TestSavePromptMode(t *testing.T) {
 	}
 
 	// Test pressing 'n' (quit without save)
-	newModel, cmd := m.handleSavePromptKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	newModel, cmd := m.handleSavePromptKey(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	m = newModel.(Model)
 
 	if !m.quitting {
@@ -249,7 +249,7 @@ func TestSavePromptMode(t *testing.T) {
 	m.saveCurrentLine(true)
 	m.mode = StateSavePrompt
 
-	newModel, _ = m.handleSavePromptKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	newModel, _ = m.handleSavePromptKey(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	m = newModel.(Model)
 
 	if m.mode != StateDefault {
@@ -263,7 +263,7 @@ func TestSavePromptMode(t *testing.T) {
 func TestCtrlEExportCommand(t *testing.T) {
 	m := New(nil)
 
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlE})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.mode != StateExport {
@@ -277,7 +277,7 @@ func TestExportFlowThroughUpdate(t *testing.T) {
 	m := New(doc)
 
 	// Step 1: Ctrl+E enters export format selection
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlE})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.mode != StateExport {
@@ -285,7 +285,7 @@ func TestExportFlowThroughUpdate(t *testing.T) {
 	}
 
 	// Step 2: Press '1' to select text format → transitions to file picker
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: '1', Text: "1"})
 	m = newModel.(Model)
 
 	if m.mode != StateFilePicker {
@@ -303,7 +303,7 @@ func TestExportFlowThroughUpdate(t *testing.T) {
 	m.filePicker.CurrentDirectory = tmpDir
 
 	for _, ch := range "output" {
-		newModel, _ = m.handleFilePickerKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.handleFilePickerKey(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
@@ -312,7 +312,7 @@ func TestExportFlowThroughUpdate(t *testing.T) {
 	}
 
 	// Step 4: Enter exports the file
-	newModel, _ = m.handleFilePickerKey(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.handleFilePickerKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	if m.mode != StateDefault {
@@ -331,10 +331,10 @@ func TestExportFlowEscCancel(t *testing.T) {
 
 	t.Run("cancel at format selection", func(t *testing.T) {
 		m := New(doc)
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlE})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 		m = newModel.(Model)
 
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 		m = newModel.(Model)
 
 		if m.mode != StateDefault {
@@ -344,11 +344,11 @@ func TestExportFlowEscCancel(t *testing.T) {
 
 	t.Run("cancel at file picker after format selection", func(t *testing.T) {
 		m := New(doc)
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlE})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 		m = newModel.(Model)
 
 		// Select format → transitions to file picker
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: '1', Text: "1"})
 		m = newModel.(Model)
 
 		if m.mode != StateFilePicker {
@@ -356,7 +356,7 @@ func TestExportFlowEscCancel(t *testing.T) {
 		}
 
 		// Cancel from file picker
-		newModel, _ = m.handleFilePickerKey(tea.KeyMsg{Type: tea.KeyEsc})
+		newModel, _ = m.handleFilePickerKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 		m = newModel.(Model)
 
 		if m.mode != StateDefault {
@@ -375,7 +375,7 @@ func TestExportOverlayNumberShortcuts(t *testing.T) {
 	for num := 1; num <= len(m.exportFormatOpts); num++ {
 		m.enterExportMode() // reset
 		key := rune('0' + num)
-		newModel, _ := m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
+		newModel, _ := m.handleExportOverlayKey(tea.KeyPressMsg{Code: key, Text: string(key)})
 		m = newModel.(Model)
 
 		if m.exportState.FormatIdx != num-1 {
@@ -401,21 +401,21 @@ func TestExportOverlayFormatNavigation(t *testing.T) {
 	}
 
 	// Down moves to next format
-	newModel, _ := m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyDown})
+	newModel, _ := m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = newModel.(Model)
 	if m.exportState.FormatIdx != 1 {
 		t.Errorf("Expected format index 1 after down, got %d", m.exportState.FormatIdx)
 	}
 
 	// Up moves back
-	newModel, _ = m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyUp})
+	newModel, _ = m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = newModel.(Model)
 	if m.exportState.FormatIdx != 0 {
 		t.Errorf("Expected format index 0 after up, got %d", m.exportState.FormatIdx)
 	}
 
 	// Up at top stays at top
-	newModel, _ = m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyUp})
+	newModel, _ = m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = newModel.(Model)
 	if m.exportState.FormatIdx != 0 {
 		t.Errorf("Expected format index 0 (clamped), got %d", m.exportState.FormatIdx)
@@ -428,9 +428,9 @@ func TestExportOverlayEnterOnFormat(t *testing.T) {
 	m.enterExportMode()
 
 	// Navigate to index 2 (json)
-	newModel, _ := m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyDown})
+	newModel, _ := m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = newModel.(Model)
-	newModel, _ = m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyDown})
+	newModel, _ = m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = newModel.(Model)
 
 	if m.exportState.FormatIdx != 2 {
@@ -438,7 +438,7 @@ func TestExportOverlayEnterOnFormat(t *testing.T) {
 	}
 
 	// Enter opens file picker with the selected format preserved
-	newModel, _ = m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	if m.mode != StateFilePicker {
@@ -462,7 +462,7 @@ func TestExportViaFilePickerFlow(t *testing.T) {
 	m.exportState.FormatIdx = 3 // html
 
 	// Open file picker
-	newModel, _ := m.handleExportOverlayKey(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := m.handleExportOverlayKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	// Set directory and type filename
@@ -470,12 +470,12 @@ func TestExportViaFilePickerFlow(t *testing.T) {
 	m.filePicker.CurrentDirectory = tmpDir
 
 	for _, ch := range "report" {
-		newModel, _ = m.handleFilePickerKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.handleFilePickerKey(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
 	// Enter exports with correct format extension
-	newModel, _ = m.handleFilePickerKey(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.handleFilePickerKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	if m.mode != StateDefault {
@@ -495,7 +495,7 @@ func TestCtrlOOpensFilePicker(t *testing.T) {
 	m.width = 80
 	m.height = 24
 
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.mode != StateFilePicker {
@@ -523,7 +523,7 @@ func TestCtrlOWithUnsavedChanges(t *testing.T) {
 	m.saveCurrentLine(true)
 
 	// Ctrl+O should show save prompt instead of file picker
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.mode != StateSavePrompt {
@@ -537,7 +537,7 @@ func TestCtrlOWithUnsavedChanges(t *testing.T) {
 	}
 
 	// Press 'n' — should proceed to file picker for open (not quit)
-	newModel, cmd := m.handleSavePromptKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	newModel, cmd := m.handleSavePromptKey(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	m = newModel.(Model)
 
 	if m.mode != StateFilePicker {
@@ -566,11 +566,11 @@ func TestCtrlOWithUnsavedChangesCancel(t *testing.T) {
 	m.saveCurrentLine(true)
 
 	// Trigger Ctrl+O → save prompt
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	// Press 'c' — should cancel and return to editing
-	newModel, _ = m.handleSavePromptKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	newModel, _ = m.handleSavePromptKey(tea.KeyPressMsg{Code: 'c', Text: "c"})
 	m = newModel.(Model)
 
 	if m.mode != StateDefault {
@@ -658,7 +658,7 @@ func TestTypeThenCtrlODetectsUnsaved(t *testing.T) {
 
 	// Type "hello world" through Update (simulates catwalk)
 	for _, r := range "hello world" {
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = newModel.(Model)
 	}
 
@@ -666,7 +666,7 @@ func TestTypeThenCtrlODetectsUnsaved(t *testing.T) {
 	t.Logf("After typing: hasUnsavedChanges=%v", m.hasUnsavedChanges())
 
 	// Ctrl+O should show save prompt
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.mode != StateSavePrompt {
@@ -759,7 +759,7 @@ func TestSaveAsUsesFilePicker(t *testing.T) {
 		m := New(doc)
 
 		// Open command menu
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 
 		// Navigate to Save As by name
@@ -767,7 +767,7 @@ func TestSaveAsUsesFilePicker(t *testing.T) {
 			if EditorCommands[m.commandMenuState.Selected].Name == "Save As" {
 				break
 			}
-			newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+			newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			m = newModel.(Model)
 		}
 		if EditorCommands[m.commandMenuState.Selected].Name != "Save As" {
@@ -775,7 +775,7 @@ func TestSaveAsUsesFilePicker(t *testing.T) {
 		}
 
 		// Execute
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 
 		if m.mode != StateFilePicker {
@@ -793,7 +793,7 @@ func TestOpenViaCommandMenu(t *testing.T) {
 	m := New(doc)
 
 	// Open command menu
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 	m = newModel.(Model)
 
 	// Navigate to Open by name
@@ -801,7 +801,7 @@ func TestOpenViaCommandMenu(t *testing.T) {
 		if EditorCommands[m.commandMenuState.Selected].Name == "Open" {
 			break
 		}
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		m = newModel.(Model)
 	}
 	if EditorCommands[m.commandMenuState.Selected].Name != "Open" {
@@ -809,7 +809,7 @@ func TestOpenViaCommandMenu(t *testing.T) {
 	}
 
 	// Execute
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	if m.mode != StateFilePicker {

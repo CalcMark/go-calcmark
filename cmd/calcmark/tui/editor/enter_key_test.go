@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestDocumentBlockStructure verifies how different document contents create blocks

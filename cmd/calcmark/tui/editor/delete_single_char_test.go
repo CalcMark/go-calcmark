@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestDeleteSingleChar_TypeThenDelete verifies that DELETE key can delete

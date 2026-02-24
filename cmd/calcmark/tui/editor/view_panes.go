@@ -2,13 +2,14 @@ package editor
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // renderSourcePaneAligned renders the source pane using pre-computed aligned lines.
@@ -150,7 +151,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 }
 
 // sourcePaneBg returns the background color for the source pane.
-func (m Model) sourcePaneBg() lipgloss.TerminalColor {
+func (m Model) sourcePaneBg() color.Color {
 	color := m.styles.SourcePane.GetBackground()
 	if _, ok := color.(lipgloss.NoColor); ok {
 		return theme.SourcePaneBg // Fallback to palette
@@ -159,7 +160,7 @@ func (m Model) sourcePaneBg() lipgloss.TerminalColor {
 }
 
 // previewPaneBg returns the background color for the preview pane.
-func (m Model) previewPaneBg() lipgloss.TerminalColor {
+func (m Model) previewPaneBg() color.Color {
 	color := m.styles.PreviewPane.GetBackground()
 	if _, ok := color.(lipgloss.NoColor); ok {
 		return theme.PreviewPaneBg // Fallback to palette
@@ -431,12 +432,12 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 // applyBlockTint applies a subtle foreground color tint to source line text
 // based on the block type: frontmatter (muted gray), calc (subtle blue),
 // or markdown (default text color — no tint applied).
-func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool, bg lipgloss.TerminalColor) string {
+func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool, bg color.Color) string {
 	if content == "" {
 		return content
 	}
 
-	var fg lipgloss.TerminalColor
+	var fg color.Color
 	switch {
 	case sourceLineIdx < fmCount:
 		fg = theme.SourceFrontmatter

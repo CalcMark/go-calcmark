@@ -1,17 +1,18 @@
 package editor
 
 import (
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // padToWidth pads a string to exactly width visual columns (no truncation).
 // Uses lipgloss.Width for correct unicode handling.
 // Pads with styled spaces using the given background color to prevent terminal bleed-through.
-func padToWidth(s string, width int, bg lipgloss.TerminalColor) string {
+func padToWidth(s string, width int, bg color.Color) string {
 	visualWidth := lipgloss.Width(s)
 	if visualWidth >= width {
 		return s
@@ -23,7 +24,7 @@ func padToWidth(s string, width int, bg lipgloss.TerminalColor) string {
 
 // ensureFullWidth ensures a complete line (with all components) is exactly the target width.
 // This should be called on the FINAL assembled line, not on individual components.
-func ensureFullWidth(line string, width int, bg lipgloss.TerminalColor) string {
+func ensureFullWidth(line string, width int, bg color.Color) string {
 	currentWidth := lipgloss.Width(line)
 	if currentWidth >= width {
 		return line
@@ -34,7 +35,7 @@ func ensureFullWidth(line string, width int, bg lipgloss.TerminalColor) string {
 }
 
 // ensureLinesAreFullWidth ensures every line in a multi-line string is exactly the target width.
-func ensureLinesAreFullWidth(content string, width int, bg lipgloss.TerminalColor) string {
+func ensureLinesAreFullWidth(content string, width int, bg color.Color) string {
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		lines[i] = ensureFullWidth(line, width, bg)
@@ -50,7 +51,7 @@ func ensureLinesAreFullWidth(content string, width int, bg lipgloss.TerminalColo
 //   - Uses lipgloss.Width() to measure visual width (ignores escape sequences)
 //   - Strips ANSI reset codes to prevent them from clearing the applied background
 //   - Wraps content + padding together so background covers the full width
-func overlayPadLine(content string, targetWidth int, bg lipgloss.TerminalColor) string {
+func overlayPadLine(content string, targetWidth int, bg color.Color) string {
 	// Strip reset codes so they don't clear our background
 	content = stripResetCodes(content)
 

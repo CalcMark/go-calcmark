@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/cockroachdb/datadriven"
 	"github.com/knz/catwalk"
 	"github.com/muesli/termenv"

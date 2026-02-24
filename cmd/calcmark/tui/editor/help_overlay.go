@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // HelpItemKind distinguishes actionable items (selectable, executable)
@@ -151,32 +151,32 @@ func prevActionableIndex(indices []int, pos int) int {
 }
 
 // handleHelpOverlayKey processes keys when the interactive help overlay is visible.
-func (m Model) handleHelpOverlayKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleHelpOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	indices := actionableIndices()
 	if len(indices) == 0 {
 		// No actionable items — only Esc closes
-		if msg.Type == tea.KeyEsc {
+		if msg.String() == "esc" {
 			m.mode = StateDefault
 		}
 		return m, nil
 	}
 
-	switch msg.Type {
-	case tea.KeyEsc:
+	switch msg.String() {
+	case "esc":
 		m.mode = StateDefault
 		return m, nil
 
-	case tea.KeyUp:
+	case "up":
 		// Move to previous actionable item
 		m.helpState.Selected = prevActionableIndex(indices, m.helpState.Selected-1)
 		return m, nil
 
-	case tea.KeyDown:
+	case "down":
 		// Move to next actionable item
 		m.helpState.Selected = nextActionableIndex(indices, m.helpState.Selected+1)
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		// Execute selected actionable item
 		items := flatHelpItems()
 		if m.helpState.Selected >= 0 && m.helpState.Selected < len(items) {

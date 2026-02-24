@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2/compat"
 	"github.com/spf13/viper"
 )
 
@@ -144,24 +144,24 @@ func warnDeprecatedColorMode(colorMode string, darkModeExplicit bool) {
 func applyColorMode(colorMode string, darkMode bool) {
 	switch strings.ToLower(colorMode) {
 	case "light":
-		lipgloss.SetHasDarkBackground(false)
+		compat.HasDarkBackground = false
 	case "dark":
-		lipgloss.SetHasDarkBackground(true)
+		compat.HasDarkBackground = true
 	case "auto":
 		// Deprecated: "auto" resolves to dark
-		lipgloss.SetHasDarkBackground(true)
+		compat.HasDarkBackground = true
 	case "":
 		// Legacy fallback: use dark_mode setting
-		lipgloss.SetHasDarkBackground(darkMode)
+		compat.HasDarkBackground = darkMode
 	default:
 		// Invalid color_mode, fall back to dark
-		lipgloss.SetHasDarkBackground(true)
+		compat.HasDarkBackground = true
 	}
 }
 
 // IsDarkMode returns whether we're rendering for dark background.
 func IsDarkMode() bool {
-	return lipgloss.HasDarkBackground()
+	return compat.HasDarkBackground
 }
 
 // ApplyColorModeOverride applies a color mode override (from CLI flag or env var).

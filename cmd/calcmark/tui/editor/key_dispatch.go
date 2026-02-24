@@ -4,15 +4,15 @@ package editor
 // Routes key events to mode-specific handlers and global shortcuts.
 
 import (
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 // handleKey is the main key dispatch. It routes key events based on:
 // 1. Global shortcuts (Ctrl+C, Ctrl+Q, Ctrl+S, Ctrl+E, Ctrl+O, Ctrl+H)
 // 2. Mode-specific handlers (help, autocomplete, command menu, file picker, etc.)
 // 3. Default editing mode
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Invalidate aligned model cache - state may change
 	m.InvalidateAlignedCache()
 
@@ -28,8 +28,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Global shortcuts that work in all modes.
 	// Delegated to executeCommandByName to avoid duplicating dispatch logic.
-	switch msg.Type {
-	case tea.KeyCtrlC:
+	switch msg.String() {
+	case "ctrl+c":
 		// Ctrl+C: copy if selection exists, quit if no selection.
 		// This preserves Unix interrupt behavior while enabling copy.
 		newModel, cmd, handled := m.handleCopy()
@@ -39,18 +39,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// No selection — fall through to quit behavior.
 		m.quitting = true
 		return m, tea.Quit
-	case tea.KeyCtrlQ:
+	case "ctrl+q":
 		return m.executeCommandByName("Quit")
-	case tea.KeyCtrlS:
+	case "ctrl+s":
 		return m.executeCommandByName("Save")
-	case tea.KeyCtrlE:
+	case "ctrl+e":
 		return m.executeCommandByName("Export")
-	case tea.KeyCtrlO:
+	case "ctrl+o":
 		return m.executeCommandByName("Open")
-	}
-
-	// Ctrl+F: Insert Frontmatter (global shortcut)
-	if msg.Type == tea.KeyCtrlF {
+	case "ctrl+f":
 		return m.insertFrontmatter()
 	}
 
@@ -89,95 +86,95 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleDefaultKey processes keys in the default editing mode.
 // The user is ALWAYS able to type and edit - this is the only mode they experience.
-func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Handle Alt+Arrow for word navigation (Option+Arrow on macOS)
 	// This is an alternative to Ctrl+Arrow which is often captured by macOS
-	if msg.Alt {
-		switch msg.Type {
-		case tea.KeyLeft:
+	if msg.Mod.Contains(tea.ModAlt) {
+		switch msg.String() {
+		case "alt+left":
 			return m.handleCtrlLeftKey()
-		case tea.KeyRight:
+		case "alt+right":
 			return m.handleCtrlRightKey()
-		case tea.KeyRunes:
-			// On macOS terminals, Option+Arrow often sends ESC+b or ESC+f
-			// These appear as Alt+b and Alt+f (standard readline/emacs bindings)
-			if len(msg.Runes) == 1 {
-				switch msg.Runes[0] {
-				case 'b', 'B':
-					return m.handleCtrlLeftKey() // backward word
-				case 'f', 'F':
-					return m.handleCtrlRightKey() // forward word
-				}
-			}
+		}
+		// On macOS terminals, Option+Arrow often sends ESC+b or ESC+f
+		// These appear as Alt+b and Alt+f (standard readline/emacs bindings)
+		if msg.Text == "b" || msg.Text == "B" {
+			return m.handleCtrlLeftKey() // backward word
+		}
+		if msg.Text == "f" || msg.Text == "F" {
+			return m.handleCtrlRightKey() // forward word
 		}
 	}
 
-	switch msg.Type {
-	case tea.KeyTab:
+	switch msg.String() {
+	case "tab":
 		// Tab triggers autocomplete
 		return m.triggerAutocomplete()
-	case tea.KeyUp:
+	case "up":
 		return m.handleUpKey()
-	case tea.KeyDown:
+	case "down":
 		return m.handleDownKey()
-	case tea.KeyLeft:
+	case "left":
 		return m.handleLeftKey()
-	case tea.KeyRight:
+	case "right":
 		return m.handleRightKey()
-	case tea.KeyCtrlLeft:
+	case "ctrl+left":
 		return m.handleCtrlLeftKey()
-	case tea.KeyCtrlRight:
+	case "ctrl+right":
 		return m.handleCtrlRightKey()
-	case tea.KeyPgUp:
+	case "pgup":
 		return m.handlePageUpKey()
-	case tea.KeyPgDown:
+	case "pgdown":
 		return m.handlePageDownKey()
-	case tea.KeyHome:
+	case "home":
 		return m.handleHomeKey()
-	case tea.KeyEnd:
+	case "end":
 		return m.handleEndKey()
-	case tea.KeyCtrlHome:
+	case "ctrl+home":
 		return m.handleCtrlHomeKey()
-	case tea.KeyCtrlEnd:
+	case "ctrl+end":
 		return m.handleCtrlEndKey()
-	case tea.KeyEsc:
+	case "esc":
 		// ESC does nothing in normal editing mode - it's only for canceling special modes
 		// (like globals panel, export mode, save-as dialog, etc.)
 		return m, nil
-	case tea.KeyEnter:
+	case "enter":
 		return m.handleEnterKey()
-	case tea.KeyBackspace:
+	case "backspace":
 		return m.handleBackspaceKey()
-	case tea.KeyDelete:
+	case "delete":
 		return m.handleDeleteKey()
-	case tea.KeyCtrlP:
+	case "ctrl+p":
 		return m.handleCtrlP()
-	case tea.KeyCtrlD:
+	case "ctrl+d":
 		return m.handleCtrlD()
-	case tea.KeyCtrlU:
+	case "ctrl+u":
 		return m.handleCtrlU()
-	case tea.KeyCtrlK:
+	case "ctrl+k":
 		// Delete current line
 		m.deleteLine()
 		return m, nil
-	case tea.KeyCtrlZ:
+	case "ctrl+z":
 		return m.handleUndo()
-	case tea.KeyCtrlY:
+	case "ctrl+y":
 		return m.handleRedo()
-	case tea.KeyCtrlA:
+	case "ctrl+a":
 		// Select all - Ctrl+A
 		m.SelectAll()
 		return m, nil
-	case tea.KeyCtrlX:
+	case "ctrl+x":
 		// Cut - Ctrl+X
 		return m.handleCut()
-	case tea.KeyCtrlV:
+	case "ctrl+v":
 		// Paste - Ctrl+V
 		return m.handlePaste()
-	case tea.KeySpace:
+	case "space":
 		return m.handleSpaceKey()
-	case tea.KeyRunes:
-		return m.handleRuneInput(msg.Runes)
+	default:
+		// Handle text input (printable characters)
+		if msg.Text != "" {
+			return m.handleRuneInput([]rune(msg.Text))
+		}
 	}
 
 	return m, nil

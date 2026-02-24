@@ -6,7 +6,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // renderContextFooter renders the context footer showing errors or referenced variables.

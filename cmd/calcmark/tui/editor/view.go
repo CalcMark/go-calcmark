@@ -6,7 +6,8 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // alignedPanes holds pre-computed line structures for both panes.
@@ -22,52 +23,48 @@ type alignedPanes struct {
 // The Document Editor is a split-pane TUI for working with CalcMark documents.
 // Left pane: editable source, Right pane: computed results.
 // CRITICAL: Both panes must maintain exact 1:1 vertical line alignment.
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	if m.quitting {
-		return "Goodbye!\n"
+		return tea.NewView("Goodbye!\n")
 	}
 
 	// Modal overlays - render centered on screen with consistent background
 	switch m.mode {
 	case StateHelp:
 		helpView := m.renderHelpOverlay()
-		return lipgloss.Place(m.width, m.height,
+		return tea.NewView(lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			helpView,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
-			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
-		)
+			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
+		))
 
 	case StateCommandMenu:
 		menuPopup := m.renderCommandMenuPopup()
-		return lipgloss.Place(m.width, m.height,
+		return tea.NewView(lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			menuPopup,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
-			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
-		)
+			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
+		))
 
 	case StateFilePicker:
 		pickerOverlay := m.renderFilePickerOverlay()
-		return lipgloss.Place(m.width, m.height,
+		return tea.NewView(lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			pickerOverlay,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
-			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
-		)
+			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
+		))
 
 	case StateExport:
 		exportOverlay := m.renderExportOverlay()
-		return lipgloss.Place(m.width, m.height,
+		return tea.NewView(lipgloss.Place(m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			exportOverlay,
 			lipgloss.WithWhitespaceChars(" "),
-			lipgloss.WithWhitespaceForeground(theme.OverlayWhitespaceFg),
-			lipgloss.WithWhitespaceBackground(theme.OverlayWhitespaceFg),
-		)
+			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
+		))
 	}
 
 	// Calculate layout
@@ -218,7 +215,7 @@ func (m Model) View() string {
 	}
 
 	// Join all lines - no bare newlines, all fully styled
-	return strings.Join(allUILines, "\n")
+	return tea.NewView(strings.Join(allUILines, "\n"))
 }
 
 // computeAlignedPanes computes both pane line structures once with fixed widths.

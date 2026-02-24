@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ExportOverlayState holds the state for the export format selection overlay.
@@ -16,54 +16,54 @@ type ExportOverlayState struct {
 
 // handleExportOverlayKey processes keys when the export format overlay is visible.
 // Up/Down navigate formats; Enter or number key selects format and opens file picker.
-func (m Model) handleExportOverlayKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m Model) handleExportOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = StateDefault
 		m.statusMsg = "Export cancelled"
 		return m, nil
 
-	case tea.KeyUp:
+	case "up":
 		if m.exportState.FormatIdx > 0 {
 			m.exportState.FormatIdx--
 		}
 		return m, nil
 
-	case tea.KeyDown:
+	case "down":
 		if m.exportState.FormatIdx < len(m.exportFormatOpts)-1 {
 			m.exportState.FormatIdx++
 		}
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		// Format selected — open file picker for export destination
 		return m.openExportFilePicker()
 
-	case tea.KeyRunes:
+	case "1", "2", "3", "4", "5":
 		// Number key shortcuts for format selection (1-5)
-		if len(msg.Runes) > 0 {
-			key := msg.Runes[0]
-			if key >= '1' && key <= '5' {
-				idx := int(key - '1')
-				if idx < len(m.exportFormatOpts) {
-					m.exportState.FormatIdx = idx
-					return m.openExportFilePicker()
-				}
-			}
+		idx := int(msg.Text[0] - '1')
+		if idx < len(m.exportFormatOpts) {
+			m.exportState.FormatIdx = idx
+			return m.openExportFilePicker()
 		}
-		// For any other rune, cancel Export mode
+		return m, nil
+
+	// For any navigation keys (arrows with modifiers, home, end, etc.),
+	// cancel Export mode and process the key normally
+	case "left", "right", "ctrl+left", "ctrl+right",
+		"home", "end", "ctrl+home", "ctrl+end",
+		"pgup", "pgdown":
 		m.mode = StateDefault
 		m.statusMsg = "Export cancelled"
 		return m.handleDefaultKey(msg)
 
-	// For any navigation keys (arrows with modifiers, home, end, etc.),
-	// cancel Export mode and process the key normally
-	case tea.KeyLeft, tea.KeyRight, tea.KeyCtrlLeft, tea.KeyCtrlRight,
-		tea.KeyHome, tea.KeyEnd, tea.KeyCtrlHome, tea.KeyCtrlEnd,
-		tea.KeyPgUp, tea.KeyPgDown:
-		m.mode = StateDefault
-		m.statusMsg = "Export cancelled"
-		return m.handleDefaultKey(msg)
+	default:
+		if msg.Text != "" {
+			// For any other rune, cancel Export mode
+			m.mode = StateDefault
+			m.statusMsg = "Export cancelled"
+			return m.handleDefaultKey(msg)
+		}
 	}
 
 	// For any other unexpected keys, just ignore them (don't exit Export mode)

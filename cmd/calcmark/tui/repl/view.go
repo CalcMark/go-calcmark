@@ -7,13 +7,14 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // View implements tea.Model.
 // The Simple REPL is a minimal, scrolling history view.
 // No split panes, no pinned panel - just input → output in a list.
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	var b strings.Builder
 
 	// Title bar
@@ -95,7 +96,7 @@ func (m Model) View() string {
 	helpText := RenderHelpLine(m.inputMode == shared.InputCommand, m.width)
 	b.WriteString(helpStyle.Render(helpText))
 
-	return b.String()
+	return tea.NewView(b.String())
 }
 
 // renderScrollingHistory renders the scrolling output history.

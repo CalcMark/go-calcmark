@@ -1,0 +1,31 @@
+# Test: Arrow keys don't work in Export mode
+# Bug: Once Export mode is accidentally triggered, navigation keys don't work
+
+# Initialize with some content
+run observe=debug
+type hello world test
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=16 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world test# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Trigger Export mode with Ctrl+E
+run observe=debug
+key ctrl+e
+----
+-- debug:
+mode=StateExport cursorLine=0 cursorCol=16 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world test# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Now try CTRL+Left - it should exit Export mode and move cursor
+# After fix: Export mode cancelled, cursor moves by word
+run observe=debug
+key ctrl+left
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=12 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world test# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Try regular left arrow - with fix, this also exits Export mode
+run observe=debug
+key left
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=15 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world test# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

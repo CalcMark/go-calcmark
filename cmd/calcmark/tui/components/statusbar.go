@@ -2,16 +2,17 @@ package components
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // StyledPadding creates styled spaces with the given background color.
 // This is a pure function that prevents terminal default background bleed-through.
 // Use this whenever you need spacing/padding between UI elements.
-func StyledPadding(width int, bg lipgloss.TerminalColor) string {
+func StyledPadding(width int, bg color.Color) string {
 	if width <= 0 {
 		return ""
 	}
@@ -78,7 +79,7 @@ func DefaultStatusBarStyle() StatusBarStyle {
 
 // StatusBarHeight is the fixed height for all status bar renderings.
 // This must be consistent to avoid bubbletea rendering artifacts.
-// See: https://github.com/charmbracelet/bubbletea/issues/1004
+// See: https://charm.land/bubbletea/v2/issues/1004
 const StatusBarHeight = 2
 
 // RenderStatusBar renders a status bar as a string.

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // renderAutocompletePopup renders the autocomplete popup box using manual borders

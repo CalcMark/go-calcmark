@@ -6,19 +6,16 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/repl"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 // initializeColorProfile sets up lipgloss color settings.
 // MUST be called after alternate screen is entered to avoid terminal artifacts.
 func initializeColorProfile() {
-	// IMPORTANT: Do NOT call lipgloss.SetColorProfile() here, as it may
-	// trigger terminal queries even after alternate screen is entered.
-	// Lipgloss will use a reasonable default (ANSI256 or TrueColor based on env).
-
-	// Just set the background mode from config without triggering detection
-	lipgloss.SetHasDarkBackground(config.IsDarkMode())
+	// Set the background mode from config. In lipgloss v2, adaptive colors
+	// use compat.HasDarkBackground to resolve Light/Dark slots.
+	compat.HasDarkBackground = config.IsDarkMode()
 }
 
 // App represents the root TUI application.
@@ -130,19 +127,26 @@ func (a *App) switchMode(msg shared.SwitchModeMsg) (tea.Model, tea.Cmd) {
 }
 
 // View implements tea.Model.
-func (a *App) View() string {
+func (a *App) View() tea.View {
 	if a.quitting {
-		return ""
+		return tea.NewView("")
 	}
 
+	var v tea.View
 	switch a.mode {
 	case shared.ModeREPL:
-		return a.repl.View()
+		v = a.repl.View()
 	case shared.ModeEditor:
-		return a.editor.View()
+		v = a.editor.View()
+	default:
+		v = tea.NewView("Unknown mode")
 	}
 
-	return "Unknown mode"
+	// Declarative terminal configuration (replaces v1 program options)
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+
+	return v
 }
 
 // SetMode switches to a different mode.

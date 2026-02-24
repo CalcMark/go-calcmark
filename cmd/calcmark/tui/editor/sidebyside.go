@@ -1,10 +1,11 @@
 package editor
 
 import (
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // SideBySide renders two panes side-by-side with a vertical divider and guaranteed
@@ -17,12 +18,12 @@ import (
 type SideBySide struct {
 	leftWidth  int
 	rightWidth int
-	leftBg     lipgloss.TerminalColor
-	rightBg    lipgloss.TerminalColor
+	leftBg     color.Color
+	rightBg    color.Color
 }
 
 // NewSideBySide creates a new side-by-side renderer.
-func NewSideBySide(leftWidth, rightWidth int, leftBg, rightBg lipgloss.TerminalColor) *SideBySide {
+func NewSideBySide(leftWidth, rightWidth int, leftBg, rightBg color.Color) *SideBySide {
 	return &SideBySide{
 		leftWidth:  leftWidth,
 		rightWidth: rightWidth,
@@ -81,7 +82,7 @@ func (s *SideBySide) Render(left, right string) string {
 //
 // CRITICAL: Removes ANSI reset codes (\x1b[0m) from input before applying background.
 // Reset codes clear ALL attributes including backgrounds, causing terminal default to bleed through.
-func (s *SideBySide) padLine(line string, width int, bg lipgloss.TerminalColor) string {
+func (s *SideBySide) padLine(line string, width int, bg color.Color) string {
 	// Strip ANSI reset codes to prevent them from clearing our background
 	line = stripResetCodes(line)
 

@@ -32,8 +32,8 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/charmbracelet/bubbles/filepicker"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/filepicker"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ========================================
@@ -498,11 +498,11 @@ func (m Model) Init() tea.Cmd {
 
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// When file picker is active, pass ALL messages to it (not just KeyMsg)
+	// When file picker is active, pass ALL messages to it (not just KeyPressMsg)
 	// The filepicker needs to receive its internal messages (directory read results)
 	if m.mode == StateFilePicker {
 		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		case tea.KeyPressMsg:
 			return m.handleKey(msg)
 		case tea.WindowSizeMsg:
 			m.width = msg.Width
@@ -517,7 +517,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 
 	case tea.WindowSizeMsg:
@@ -701,57 +701,27 @@ func truncateStr(s string, maxLen int) string {
 
 // handleAutocompleteKey processes keys when autocomplete popup is visible.
 // IMPORTANT: Typing continues to work normally - we just update suggestions.
-func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyUp:
+func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up":
 		if m.autocompleteState.Selected > 0 {
 			m.autocompleteState.Selected--
 		}
 		return m, nil
-	case tea.KeyDown:
+	case "down":
 		if m.autocompleteState.Selected < len(m.autocompleteState.Suggestions)-1 {
 			m.autocompleteState.Selected++
 		}
 		return m, nil
-	case tea.KeyEsc:
+	case "esc":
 		// Dismiss autocomplete without inserting
 		m.mode = StateDefault
 		m.autocompleteState = components.AutosuggestState{}
 		return m, nil
-	case tea.KeyTab:
+	case "tab":
 		// Accept current selection
 		return m.acceptAutocomplete()
-	case tea.KeyRunes:
-		// Continue typing - insert characters and update suggestions
-		// Capture state BEFORE the edit for undo
-		beforeLine := m.cursorLine
-		beforeCol := m.cursorCol
-		beforeScroll := m.scrollOffset
-
-		m.transitionToEditing()
-		for _, r := range msg.Runes {
-			m.insertRune(r)
-		}
-
-		// Record the insert operation for undo
-		insertText := string(msg.Runes)
-		op := EditOperation{
-			Type:         OpInsert,
-			Line:         beforeLine,
-			Col:          beforeCol,
-			OldText:      "",
-			NewText:      insertText,
-			CursorLine:   beforeLine,
-			CursorCol:    beforeCol,
-			ScrollOffset: beforeScroll,
-		}
-		undoCmd := m.recordEdit(op)
-
-		// Update suggestions with new prefix (use pointer to modify)
-		(&m).updateAutocompleteState()
-		debounceModel, debounceCmd := m.debounceUpdate()
-		return debounceModel, tea.Batch(debounceCmd, undoCmd)
-	case tea.KeyBackspace:
+	case "backspace":
 		// Allow backspace to edit the prefix
 		// Capture state BEFORE the edit for undo
 		beforeLine := m.cursorLine
@@ -786,12 +756,12 @@ func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// If no character to delete, just update autocomplete state
 		(&m).updateAutocompleteState()
 		return m.debounceUpdate()
-	case tea.KeySpace:
+	case "space":
 		// Space typically ends a word - dismiss and insert space
 		m.mode = StateDefault
 		m.autocompleteState = components.AutosuggestState{}
 		return m.handleSpaceKey()
-	case tea.KeyEnter:
+	case "enter":
 		// Enter accepts if there's a selection, otherwise just inserts newline
 		if len(m.autocompleteState.Suggestions) > 0 {
 			return m.acceptAutocomplete()
@@ -800,6 +770,37 @@ func (m Model) handleAutocompleteKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.autocompleteState = components.AutosuggestState{}
 		return m.handleEnterKey()
 	default:
+		if msg.Text != "" {
+			// Continue typing - insert characters and update suggestions
+			// Capture state BEFORE the edit for undo
+			beforeLine := m.cursorLine
+			beforeCol := m.cursorCol
+			beforeScroll := m.scrollOffset
+
+			m.transitionToEditing()
+			for _, r := range msg.Text {
+				m.insertRune(r)
+			}
+
+			// Record the insert operation for undo
+			insertText := msg.Text
+			op := EditOperation{
+				Type:         OpInsert,
+				Line:         beforeLine,
+				Col:          beforeCol,
+				OldText:      "",
+				NewText:      insertText,
+				CursorLine:   beforeLine,
+				CursorCol:    beforeCol,
+				ScrollOffset: beforeScroll,
+			}
+			undoCmd := m.recordEdit(op)
+
+			// Update suggestions with new prefix (use pointer to modify)
+			(&m).updateAutocompleteState()
+			debounceModel, debounceCmd := m.debounceUpdate()
+			return debounceModel, tea.Batch(debounceCmd, undoCmd)
+		}
 		// Navigation and other keys dismiss autocomplete
 		m.mode = StateDefault
 		m.autocompleteState = components.AutosuggestState{}

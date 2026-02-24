@@ -1,0 +1,77 @@
+# Test: CMD+Arrow Navigation on macOS
+# Bug report: CMD+Right arrow opens Export popup instead of jumping to end of line
+# Expected: CMD+Right should jump to end of line, CMD+Left to start of line
+
+# Initialize with some content
+run observe=debug
+type x = 10
+key enter
+type y = 20
+key enter
+type # Long header line for testing navigation
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=43 ... editBuf="# Long header line for testing navigation" ...
+
+# Test 1: Place cursor in middle of first line
+run observe=debug
+key up
+key up
+key left
+key left
+key left
+key left
+key left
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=2 ... editBuf="x = 10" ...
+
+# Test 2: CMD+Right should jump to end of line (col 6)
+# BUG: This currently opens Export popup instead!
+# If bug is present, mode will be 6 (StateExport) instead of 0 (StateDefault)
+run observe=debug
+key cmd+right
+----
+-- debug:
+mode=6 cursorLine=0 cursorCol=2 ... editBuf="x = 10" ...
+
+# Test 3: Verify we're NOT in Export mode (mode should be 0, not 6 for StateExport)
+# If the bug is present, mode will be 6 here
+run observe=debug
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=6 ... editBuf="x = 10" ...
+
+# Test 4: CMD+Left should jump to start of line (col 0)
+run observe=debug
+key cmd+left
+----
+-- debug:
+mode=0 cursorLine=0 cursorCol=0 ... editBuf="x = 10" ...
+
+# Test 5: Test on the long header line
+run observe=debug
+key down
+key down
+key right
+key right
+key right
+key right
+key right
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=7 ... editBuf="# Long header line for testing navigation" ...
+
+# Test 6: CMD+Right from middle of long line should jump to end
+run observe=debug
+key cmd+right
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=43 ... editBuf="# Long header line for testing navigation" ...
+
+# Test 7: CMD+Left should jump back to start
+run observe=debug
+key cmd+left
+----
+-- debug:
+mode=0 cursorLine=2 cursorCol=0 ... editBuf="# Long header line for testing navigation" ...

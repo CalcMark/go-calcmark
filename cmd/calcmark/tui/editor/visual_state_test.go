@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestVisualStateAfterTypingAndEnter verifies that after typing and pressing ENTER,

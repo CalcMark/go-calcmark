@@ -10,8 +10,8 @@ import (
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Model represents the Simple REPL mode state.
@@ -63,7 +63,7 @@ func New(doc *document.Document) Model {
 	ti.Placeholder = "Enter expression (e.g., salary = $85000)"
 	ti.Focus()
 	ti.CharLimit = 200
-	ti.Width = 70
+	ti.SetWidth(70)
 
 	// Initialize evaluator
 	eval := implDoc.NewEvaluator()
@@ -134,7 +134,7 @@ func (m *Model) populateFromDocument() {
 
 // Init implements tea.Model.
 func (m Model) Init() tea.Cmd {
-	return textinput.Blink
+	return nil
 }
 
 // Update implements tea.Model.
@@ -142,13 +142,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.input.Width = m.width - 6
+		m.input.SetWidth(m.width - 6)
 	}
 
 	// Forward to text input
@@ -157,50 +157,48 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // handleKey processes keyboard input.
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyCtrlC:
+func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
 		// Ctrl+C is a standard interrupt signal - quit immediately
 		m.quitting = true
 		return m, tea.Quit
 
-	case tea.KeyCtrlQ:
+	case "ctrl+q":
 		// Ctrl+Q also quits
 		m.quitting = true
 		return m, tea.Quit
 
-	case tea.KeyEsc:
+	case "esc":
 		return m.handleEscape()
 
-	case tea.KeyUp:
+	case "up":
 		return m.handleHistoryUp()
 
-	case tea.KeyDown:
+	case "down":
 		return m.handleHistoryDown()
 
-	case tea.KeyPgUp, tea.KeyPgDown:
+	case "pgup", "pgdown":
 		// No action needed in Simple REPL - history scrolls automatically
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		return m.handleEnter()
 
-	case tea.KeyTab:
+	case "tab":
 		if m.tryCompleteVariable() {
 			return m, nil
 		}
+	}
 
-	case tea.KeyRunes:
-		// Check for ':' to enter command mode
-		if m.inputMode == shared.InputNormal &&
-			len(msg.Runes) == 1 &&
-			msg.Runes[0] == ':' &&
-			m.input.Value() == "" {
-			m.inputMode = shared.InputCommand
-			m.input.SetValue("")
-			m.input.Prompt = ": "
-			return m, nil
-		}
+	// Check for ':' to enter command mode
+	if m.inputMode == shared.InputNormal &&
+		msg.Text == ":" &&
+		m.input.Value() == "" {
+		m.inputMode = shared.InputCommand
+		m.input.SetValue("")
+		m.input.Prompt = ": "
+		return m, nil
 	}
 
 	// Default: forward to text input

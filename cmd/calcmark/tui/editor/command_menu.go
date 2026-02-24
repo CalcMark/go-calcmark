@@ -1,7 +1,7 @@
 package editor
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Command defines a single editor command displayed in the command menu.
@@ -53,27 +53,27 @@ var EditorCommands = []Command{
 // handleCommandMenuKey processes keys when the command menu popup is visible.
 // Arrow keys navigate, Enter executes, Escape dismisses.
 // Typing any character dismisses the menu (like autocomplete).
-func (m Model) handleCommandMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyUp:
+func (m Model) handleCommandMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up":
 		// Move selection up
 		if m.commandMenuState.Selected > 0 {
 			m.commandMenuState.Selected--
 		}
 		return m, nil
 
-	case tea.KeyDown:
+	case "down":
 		// Move selection down
 		if m.commandMenuState.Selected < len(EditorCommands)-1 {
 			m.commandMenuState.Selected++
 		}
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		// Execute selected command
 		return m.executeCommandMenuSelection()
 
-	case tea.KeyEsc:
+	case "esc":
 		// Dismiss menu without executing
 		m.mode = StateDefault
 		return m, nil

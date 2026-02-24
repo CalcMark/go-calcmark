@@ -703,7 +703,7 @@ line_three = 3 + 3`
 // if line count changes between renders, the terminal can show artifacts like
 // missing headers or truncated status bars.
 //
-// See: https://github.com/charmbracelet/bubbletea/issues/1004
+// See: https://charm.land/bubbletea/v2/issues/1004
 func TestViewHeightConsistency(t *testing.T) {
 	content := `gzip_compressed = compress(1 GB, gzip)
 lz4_compressed = compress(100 MB, lz4)

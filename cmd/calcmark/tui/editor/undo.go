@@ -4,7 +4,7 @@ package editor
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // undoGroupingDelay is the duration of typing pause that creates an undo boundary.

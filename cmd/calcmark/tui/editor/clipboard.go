@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/atotto/clipboard"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // handleCut cuts selected text to system clipboard (Ctrl+X).

@@ -2,7 +2,8 @@ package config
 
 import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 // Styles holds pre-built lipgloss styles derived from the semantic palette.
@@ -252,15 +253,16 @@ func (t ThemeConfig) BuildStyles() Styles {
 
 // overrideColor returns an AdaptiveColor with the user's hex override applied
 // to both slots if non-empty, otherwise returns the palette default.
-func overrideColor(palette lipgloss.AdaptiveColor, userHex string) lipgloss.AdaptiveColor {
+func overrideColor(palette compat.AdaptiveColor, userHex string) compat.AdaptiveColor {
 	if userHex == "" {
 		return palette
 	}
 	// User override applies to the slot matching their color_mode.
 	// Since we build once and AdaptiveColor resolves at render time,
 	// we set both slots — the user explicitly chose this color.
-	return lipgloss.AdaptiveColor{
-		Light: userHex,
-		Dark:  userHex,
+	c := lipgloss.Color(userHex)
+	return compat.AdaptiveColor{
+		Light: c,
+		Dark:  c,
 	}
 }

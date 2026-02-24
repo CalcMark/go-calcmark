@@ -3,7 +3,7 @@ package editor
 // save_prompt_handler.go — Save prompt and unsaved-changes guard.
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // promptSaveIfNeeded checks for unsaved changes and either enters the save
@@ -24,33 +24,31 @@ func (m *Model) promptSaveIfNeeded(action PendingAction, promptMsg string) bool 
 // The prompt is triggered by either Ctrl+Q (quit) or Ctrl+O (open),
 // with m.pendingSaveAction tracking which action to perform after
 // the user responds.
-func (m Model) handleSavePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if msg.Type == tea.KeyRunes && len(msg.Runes) > 0 {
-		switch msg.Runes[0] {
-		case 'y', 'Y':
-			// Save first, then perform the pending action
-			if m.filepath == "" {
-				m.filePicker = initFilePicker()
-				m.filePickerFocus = FocusFilename
-				m.filePickerPurpose = PickerForSave
-				m.mode = StateFilePicker
-				return m, m.filePicker.Init()
-			}
-			m.saveFile("")
-			if m.statusIsErr {
-				// Save failed — stay in prompt mode
-				return m, nil
-			}
-			return m.completePendingSaveAction()
-		case 'n', 'N':
-			// Skip saving and perform the pending action directly
-			return m.completePendingSaveAction()
-		case 'c', 'C':
-			// Cancel the pending action
-			m.mode = StateDefault
-			m.statusMsg = actionCancelledMsg(m.pendingSaveAction)
+func (m Model) handleSavePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		// Save first, then perform the pending action
+		if m.filepath == "" {
+			m.filePicker = initFilePicker()
+			m.filePickerFocus = FocusFilename
+			m.filePickerPurpose = PickerForSave
+			m.mode = StateFilePicker
+			return m, m.filePicker.Init()
 		}
-	} else if msg.Type == tea.KeyEsc {
+		m.saveFile("")
+		if m.statusIsErr {
+			// Save failed — stay in prompt mode
+			return m, nil
+		}
+		return m.completePendingSaveAction()
+	case "n", "N":
+		// Skip saving and perform the pending action directly
+		return m.completePendingSaveAction()
+	case "c", "C":
+		// Cancel the pending action
+		m.mode = StateDefault
+		m.statusMsg = actionCancelledMsg(m.pendingSaveAction)
+	case "esc":
 		// Cancel the pending action
 		m.mode = StateDefault
 		m.statusMsg = actionCancelledMsg(m.pendingSaveAction)

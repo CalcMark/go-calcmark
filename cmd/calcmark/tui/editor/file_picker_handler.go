@@ -5,13 +5,13 @@ package editor
 import (
 	"path/filepath"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
-func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleFilePickerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Global keys that work in both modes
-	switch msg.Type {
-	case tea.KeyEsc:
+	switch msg.String() {
+	case "esc":
 		// Cancel and return to editing
 		m.mode = StateDefault
 		m.statusMsg = ""
@@ -19,7 +19,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.pendingSaveAction = PendingNone
 		return m, nil
 
-	case tea.KeyTab:
+	case "tab":
 		// Toggle focus between filename and browser
 		if m.filePickerFocus == FocusFilename {
 			m.filePickerFocus = FocusFileBrowser
@@ -28,7 +28,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		if m.filePickerPurpose == PickerForSave {
 			// Save mode: Enter with filename input saves the file
 			if m.filePickerFocus == FocusFilename {
@@ -76,15 +76,17 @@ func (m Model) handleFilePickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Filename input focus - handle typing
 	if m.filePickerFocus == FocusFilename {
-		switch msg.Type {
-		case tea.KeyBackspace:
+		switch msg.String() {
+		case "backspace":
 			if len(m.newFileName) > 0 {
 				m.newFileName = m.newFileName[:len(m.newFileName)-1]
 			}
 			return m, nil
-		case tea.KeyRunes:
-			m.newFileName += string(msg.Runes)
-			return m, nil
+		default:
+			if msg.Text != "" {
+				m.newFileName += msg.Text
+				return m, nil
+			}
 		}
 		return m, nil
 	}

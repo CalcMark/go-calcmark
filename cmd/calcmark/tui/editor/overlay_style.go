@@ -1,10 +1,11 @@
 package editor
 
 import (
+	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // OverlayStyle holds the shared rendering primitives for all modal overlays
@@ -13,8 +14,8 @@ import (
 type OverlayStyle struct {
 	InnerWidth   int
 	BorderStyle  lipgloss.Style
-	ItemBg       lipgloss.TerminalColor
-	SelectedBg   lipgloss.TerminalColor
+	ItemBg       color.Color
+	SelectedBg   color.Color
 	TopBorder    string
 	BottomBorder string
 	LeftBorder   string
@@ -48,7 +49,7 @@ func NewOverlayStyle(innerWidth int) OverlayStyle {
 }
 
 // PadLine creates a line padded to InnerWidth with the given foreground/background.
-func (o OverlayStyle) PadLine(content string, fg lipgloss.TerminalColor, bg lipgloss.TerminalColor, bold bool) string {
+func (o OverlayStyle) PadLine(content string, fg color.Color, bg color.Color, bold bool) string {
 	style := lipgloss.NewStyle().Foreground(fg).Background(bg)
 	if bold {
 		style = style.Bold(true)

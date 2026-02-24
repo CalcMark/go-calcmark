@@ -7,7 +7,7 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // runEdit starts the editor mode, optionally with a file
@@ -43,14 +43,10 @@ func runTUIApp(app *tui.App) {
 		fmt.Fprint(os.Stderr, "\x1b[0m") // Reset all attributes
 	}()
 
-	// Configure TUI with:
-	// - tea.WithAltScreen(): Enter alternate screen (clean slate, no terminal history)
-	// - tea.WithMouseCellMotion(): Enable mouse support for better UX
-	// - tea.WithInput(os.Stdin): Explicitly use stdin
-	// - tea.WithOutput(os.Stderr): Use stderr for TUI output (stdout is for data)
+	// Configure TUI program. In Bubble Tea v2, terminal options like
+	// alt screen and mouse mode are set declaratively in View() instead
+	// of program options.
 	p := tea.NewProgram(app,
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
 		tea.WithInput(os.Stdin),
 		tea.WithOutput(os.Stderr),
 	)

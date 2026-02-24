@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // ErrorDisplayInfo contains parsed error information for display.

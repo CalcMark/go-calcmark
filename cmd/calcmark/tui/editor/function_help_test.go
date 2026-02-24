@@ -6,7 +6,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // TestFunctionHelp_AfterAutocompleteAccept verifies that function parameter help

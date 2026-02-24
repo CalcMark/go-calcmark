@@ -3,7 +3,7 @@ package editor
 import (
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // HasSelection returns true if there is an active text selection.

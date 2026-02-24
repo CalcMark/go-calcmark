@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
@@ -18,7 +18,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		m := New(doc)
 
 		// Open command menu (F1 / Ctrl+H)
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 		if m.mode != StateCommandMenu {
 			t.Fatalf("Expected StateCommandMenu, got %v", m.mode)
@@ -29,7 +29,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 			if EditorCommands[m.commandMenuState.Selected].Name == "Export" {
 				break
 			}
-			newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+			newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			m = newModel.(Model)
 		}
 		if EditorCommands[m.commandMenuState.Selected].Name != "Export" {
@@ -37,7 +37,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		}
 
 		// Execute Export
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 		if m.mode != StateExport {
 			t.Errorf("Expected StateExport after selecting Export from command menu, got %v", m.mode)
@@ -50,7 +50,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		origMode := m.previewMode
 
 		// Open command menu
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 
 		// Navigate to Toggle Preview by name
@@ -58,7 +58,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 			if EditorCommands[m.commandMenuState.Selected].Name == "Toggle Preview" {
 				break
 			}
-			newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+			newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			m = newModel.(Model)
 		}
 		if EditorCommands[m.commandMenuState.Selected].Name != "Toggle Preview" {
@@ -66,7 +66,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		}
 
 		// Execute
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 
 		if m.mode != StateDefault {
@@ -88,7 +88,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		m.transitionToProcessing()
 
 		// Open command menu
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 
 		// Navigate to Undo by name
@@ -96,7 +96,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 			if EditorCommands[m.commandMenuState.Selected].Name == "Undo" {
 				break
 			}
-			newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+			newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			m = newModel.(Model)
 		}
 		if EditorCommands[m.commandMenuState.Selected].Name != "Undo" {
@@ -104,7 +104,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		}
 
 		// Execute
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 
 		if m.mode != StateDefault {
@@ -118,11 +118,11 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		// No filepath set — should trigger file picker
 
 		// Open command menu
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 
 		// Execute Save (first item, index 0)
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 
 		// Should be in file picker
@@ -136,7 +136,7 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		m := New(doc)
 
 		// Open command menu
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyF1})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 
 		// Navigate to Quit by name
@@ -144,12 +144,12 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 			if EditorCommands[m.commandMenuState.Selected].Name == "Quit" {
 				break
 			}
-			newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+			newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			m = newModel.(Model)
 		}
 
 		// Execute Quit
-		newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 
 		if !m.quitting {
@@ -356,7 +356,7 @@ func TestHelpOverlayNavigation(t *testing.T) {
 		}
 
 		// Press Down to move to next actionable
-		newModel, _ := m.handleHelpOverlayKey(tea.KeyMsg{Type: tea.KeyDown})
+		newModel, _ := m.handleHelpOverlayKey(tea.KeyPressMsg{Code: tea.KeyDown})
 		m = newModel.(Model)
 
 		if m.helpState.Selected != indices[1] {
@@ -371,7 +371,7 @@ func TestHelpOverlayNavigation(t *testing.T) {
 		// Start at second actionable
 		m.helpState = HelpOverlayState{Selected: indices[1], ScrollOffset: 0}
 
-		newModel, _ := m.handleHelpOverlayKey(tea.KeyMsg{Type: tea.KeyUp})
+		newModel, _ := m.handleHelpOverlayKey(tea.KeyPressMsg{Code: tea.KeyUp})
 		m = newModel.(Model)
 
 		if m.helpState.Selected != indices[0] {
@@ -384,7 +384,7 @@ func TestHelpOverlayNavigation(t *testing.T) {
 		m.mode = StateHelp
 		m.helpState = HelpOverlayState{Selected: 0, ScrollOffset: 0}
 
-		newModel, _ := m.handleHelpOverlayKey(tea.KeyMsg{Type: tea.KeyEsc})
+		newModel, _ := m.handleHelpOverlayKey(tea.KeyPressMsg{Code: tea.KeyEsc})
 		m = newModel.(Model)
 
 		if m.mode != StateDefault {
@@ -411,7 +411,7 @@ func TestHelpOverlayNavigation(t *testing.T) {
 
 		m.helpState = HelpOverlayState{Selected: exportIdx, ScrollOffset: 0}
 
-		newModel, _ := m.handleHelpOverlayKey(tea.KeyMsg{Type: tea.KeyEnter})
+		newModel, _ := m.handleHelpOverlayKey(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 
 		// Should have executed Export, which enters StateExport
@@ -428,7 +428,7 @@ func TestHelpOverlayNavigation(t *testing.T) {
 		m.helpState = HelpOverlayState{Selected: indices[0], ScrollOffset: 0}
 
 		// Press Up — should wrap to last actionable
-		newModel, _ := m.handleHelpOverlayKey(tea.KeyMsg{Type: tea.KeyUp})
+		newModel, _ := m.handleHelpOverlayKey(tea.KeyPressMsg{Code: tea.KeyUp})
 		m = newModel.(Model)
 
 		if m.helpState.Selected != indices[len(indices)-1] {

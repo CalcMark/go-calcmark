@@ -1,0 +1,25 @@
+# Test: CMD+Right Arrow Bug
+# Bug: CMD+Right opens Export popup instead of jumping to end of line
+# Expected: CMD+Right should move cursor to end of line
+
+# Initialize with some content
+run observe=debug
+type x = 10
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=2 totalVisual=2 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Move cursor to beginning of line
+run observe=debug
+key home
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=2 totalVisual=2 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test: CMD+Right should jump to end of line, NOT open Export
+# If bug exists, mode will change to StateExport (mode=6)
+run observe=debug
+key cmd+right
+----
+-- debug:
+mode=StateExport cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=2 totalVisual=2 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

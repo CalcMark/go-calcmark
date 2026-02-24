@@ -4,7 +4,7 @@ package editor
 // The UndoManager type and EditOperation types are defined in undo.go.
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // handleUndo handles Ctrl+Z - undo last edit batch.
