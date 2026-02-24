@@ -589,14 +589,14 @@ func TestCursorVisibleWhenTyping(t *testing.T) {
 	}
 
 	// Render edit line with cursor
-	rendered := m.renderEditLine(40)
+	renderedLines := m.renderEditLineWrapped(40)
 
 	// The rendered output should contain cursor
-	if rendered == "" {
-		t.Error("renderEditLine returned empty string")
+	if len(renderedLines) == 0 || renderedLines[0] == "" {
+		t.Error("renderEditLineWrapped returned empty result")
 	}
 
-	t.Logf("Rendered edit line with cursor (typing): %q", rendered)
+	t.Logf("Rendered edit line with cursor (typing): %q", renderedLines[0])
 }
 
 // TestEmptyEditorDocumentAlwaysValid ensures that no matter what operations

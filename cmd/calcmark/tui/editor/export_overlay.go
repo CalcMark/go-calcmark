@@ -51,9 +51,22 @@ func (m Model) handleExportOverlayKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		return m, nil
+		// For any other rune, cancel Export mode
+		m.mode = StateDefault
+		m.statusMsg = "Export cancelled"
+		return m.handleDefaultKey(msg)
+
+	// For any navigation keys (arrows with modifiers, home, end, etc.),
+	// cancel Export mode and process the key normally
+	case tea.KeyLeft, tea.KeyRight, tea.KeyCtrlLeft, tea.KeyCtrlRight,
+		tea.KeyHome, tea.KeyEnd, tea.KeyCtrlHome, tea.KeyCtrlEnd,
+		tea.KeyPgUp, tea.KeyPgDown:
+		m.mode = StateDefault
+		m.statusMsg = "Export cancelled"
+		return m.handleDefaultKey(msg)
 	}
 
+	// For any other unexpected keys, just ignore them (don't exit Export mode)
 	return m, nil
 }
 

@@ -1,0 +1,39 @@
+# Visual mode status indicator test
+# Tests that "-- VISUAL --" appears in status bar when in visual mode
+
+[env]
+name = "visual_mode_status"
+directory = "."
+
+[[steps]]
+description = "Enter some text"
+input = "text:Testing visual mode status\nLine two\nLine three"
+
+[[steps]]
+description = "Move to start of document"
+keys = ["ctrl-home"]
+
+[[steps]]
+description = "Enter visual mode - should show -- VISUAL -- in status"
+keys = ["ctrl-g"]
+observer = "view"
+
+[[steps]]
+description = "Extend selection down"
+keys = ["down", "down"]
+observer = "view"
+
+[[steps]]
+description = "Exit visual mode - status should clear"
+keys = ["ctrl-g"]
+observer = "view"
+
+[[steps]]
+description = "Test visual mode preserves selection when navigating"
+keys = ["ctrl-home", "ctrl-g", "right", "right", "right", "right", "right"]
+observer = "debug"
+
+[[steps]]
+description = "Visual mode with word navigation"
+keys = ["ctrl-g", "ctrl-right", "ctrl-right"]
+observer = "debug"

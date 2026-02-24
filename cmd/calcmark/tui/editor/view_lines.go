@@ -23,7 +23,7 @@ func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
 		return lineText
 	}
 
-	// Selection style
+	// Selection style - use theme colors
 	selectionStyle := lipgloss.NewStyle().
 		Background(theme.Selection).
 		Foreground(theme.SelectionFg)
@@ -95,6 +95,11 @@ func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
 // If content is empty, uses m.GetCurrentLineText() to get the actual line content.
 // This ensures the cursor is ALWAYS visible, even when not actively typing.
 func (m Model) renderLineWithCursor(content string, col int, width int, useEditStyle bool) string {
+	// Apply selection highlighting first if needed
+	if m.HasSelection() && m.cursorLine >= 0 {
+		content = m.renderLineWithSelection(m.cursorLine, content)
+	}
+
 	// Determine which style to use (includes foreground and background)
 	var lineStyle lipgloss.Style
 	if useEditStyle {
@@ -146,57 +151,52 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 	// Cursor
 	result.WriteString(m.styles.Cursor.Inline(true).Render(cursorChar))
 
-	// After cursor
-	if col+1 < contentLen {
-		result.WriteString(lineStyle.Render(string(runes[col+1:])))
+	// After cursor (including padding to fill width)
+	afterCursorStart := col + 1
+	if afterCursorStart <= contentLen {
+		result.WriteString(lineStyle.Render(string(runes[afterCursorStart:])))
 	}
 
-	// Padding - CRITICAL FIX: lipgloss strips background from trailing spaces!
-	// We need to add the padding as part of the CONTENT, not trailing
-	// Solution: Add padding BEFORE the cursor line ends, by using Width() on the style
+	// Add padding to fill the width
 	if totalPadding > 0 {
-		bgColor := lineStyle.GetBackground()
-		paddingStyle := lipgloss.NewStyle().Background(bgColor).Width(totalPadding)
-		result.WriteString(paddingStyle.Render(""))
+		result.WriteString(lineStyle.Render(strings.Repeat(" ", totalPadding)))
 	}
 
 	return result.String()
 }
 
-// renderEditLine renders the line being edited with cursor (single line, no wrapping).
-func (m Model) renderEditLine(width int) string {
-	return m.renderLineWithCursor(m.editBuf, m.cursorCol, width, true)
-}
-
-// renderEditLineWrapped renders the edit buffer with wrapping support.
-// Returns multiple lines if the content exceeds width.
+// renderEditLineWrapped handles rendering the current editing line when it wraps
+// across multiple visual lines. Returns an array of rendered lines.
 func (m Model) renderEditLineWrapped(width int) []string {
-	if len(m.editBuf) <= width {
-		// Fits on one line
-		return []string{m.renderEditLine(width)}
-	}
+	content := []rune(m.editBuf)
+	wrappedContent := geometry.WrapText(string(content), width)
 
-	// Wrap the edit buffer content
-	wrappedContent := geometry.WrapText(m.editBuf, width)
-	var result []string
-
-	// Track which wrapped line contains the cursor
-	charsSoFar := 0
+	// Find which wrapped line contains the cursor
 	cursorLineIdx := 0
 	cursorColInLine := m.cursorCol
 
+	totalCol := 0
 	for i, seg := range wrappedContent {
-		if m.cursorCol >= charsSoFar && m.cursorCol < charsSoFar+len(seg) {
+		segLen := len([]rune(seg))
+		if m.cursorCol >= totalCol && m.cursorCol < totalCol+segLen {
 			cursorLineIdx = i
-			cursorColInLine = m.cursorCol - charsSoFar
+			cursorColInLine = m.cursorCol - totalCol
 			break
 		}
-		charsSoFar += len(seg)
-		// Handle cursor at very end
-		if i == len(wrappedContent)-1 && m.cursorCol >= charsSoFar {
+		totalCol += segLen
+		if m.cursorCol == totalCol && i == len(wrappedContent)-1 {
+			// Cursor at the very end
 			cursorLineIdx = i
-			cursorColInLine = m.cursorCol - charsSoFar + len(seg)
+			cursorColInLine = segLen
 		}
+	}
+
+	// Build the result
+	result := []string{}
+
+	// Use inline styles to maintain consistent background
+	if width <= 0 {
+		return result
 	}
 
 	lineStyle := m.styles.EditLine

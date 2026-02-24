@@ -13,7 +13,9 @@ import (
 // ========================================
 
 func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
+	if !m.IsVisualMode() {
+		m.ClearSelection()
+	}
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorLine > 0 {
@@ -23,7 +25,9 @@ func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
+	if !m.IsVisualMode() {
+		m.ClearSelection()
+	}
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorLine < m.TotalLines()-1 {
@@ -33,7 +37,9 @@ func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
+	if !m.IsVisualMode() {
+		m.ClearSelection()
+	}
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorCol > 0 {
@@ -47,7 +53,9 @@ func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
+	if !m.IsVisualMode() {
+		m.ClearSelection()
+	}
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorCol < runeLen(m.editBuf) {

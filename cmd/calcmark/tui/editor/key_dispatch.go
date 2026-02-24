@@ -177,7 +177,30 @@ func (m Model) handleDefaultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeySpace:
 		return m.handleSpaceKey()
 	case tea.KeyRunes:
+		// Check for Ctrl+Space (often sends null byte)
+		if len(msg.Runes) == 1 && msg.Runes[0] == 0 {
+			// Toggle visual selection mode - Ctrl+Space
+			if m.IsVisualMode() {
+				m.ExitVisualMode()
+				m.statusMsg = "Visual mode off"
+			} else {
+				m.StartVisualMode()
+				m.statusMsg = "-- VISUAL --"
+			}
+			return m, nil
+		}
 		return m.handleRuneInput(msg.Runes)
+	case tea.KeyCtrlG:
+		// Alternative: Use Ctrl+G for visual mode (more reliable across terminals)
+		// Toggle visual selection mode
+		if m.IsVisualMode() {
+			m.ExitVisualMode()
+			m.statusMsg = "Visual mode off"
+		} else {
+			m.StartVisualMode()
+			m.statusMsg = "-- VISUAL --"
+		}
+		return m, nil
 	}
 
 	return m, nil
