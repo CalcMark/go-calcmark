@@ -114,39 +114,6 @@ func (m Model) getLineReferences(lineNum int) []components.VarReference {
 	return components.FindLineReferences(line, knownVars, 4)
 }
 
-// extractErrorHint extracts a brief hint from an error message for inline display.
-// Returns something like `"var"?` for undefined variables, or a short description.
-func extractErrorHint(errMsg string, maxWidth int) string {
-	// Try to extract a quoted identifier from the error message
-	// Common patterns: `undefined variable "foo"`, `cannot reassign 'bar'`
-	for _, quote := range []string{`"`, `'`} {
-		start := strings.Index(errMsg, quote)
-		if start >= 0 {
-			end := strings.Index(errMsg[start+1:], quote)
-			if end > 0 && end < 30 {
-				identifier := errMsg[start : start+end+2]
-				hint := identifier + "?"
-				if len(hint) <= maxWidth {
-					return hint
-				}
-			}
-		}
-	}
-
-	// Fallback: extract error type from code prefix
-	if idx := strings.Index(errMsg, ": "); idx > 0 && idx < 25 {
-		code := errMsg[:idx]
-		// Convert snake_case to short form
-		code = strings.ReplaceAll(code, "_", " ")
-		if len(code) <= maxWidth {
-			return code
-		}
-	}
-
-	// Last resort: just say "error"
-	return "error"
-}
-
 // formatFunctionParamHint looks up a function's parameter specs and formats
 // a helpful hint showing examples for each parameter type.
 // Returns empty string if the function has no parameter specs.

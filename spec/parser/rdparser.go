@@ -1248,15 +1248,6 @@ func isNaturalSyntaxKeyword(ident string) bool {
 	}
 }
 
-// isNLFunctionKeyword checks if an identifier name triggers NL function parsing.
-func isNLFunctionKeyword(name string) bool {
-	switch strings.ToLower(name) {
-	case "read", "compress", "transfer":
-		return true
-	}
-	return false
-}
-
 // isTimeUnit checks if a string is a valid time unit for rate expressions.
 // Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), year(s), and abbreviations.
 // Uses types.NormalizeTimeUnit as the source of truth for time unit recognition.

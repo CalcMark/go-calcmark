@@ -3,8 +3,6 @@ package editor
 // navigation.go — Cursor movement, scrolling, search, and goto.
 
 import (
-	"fmt"
-	"strings"
 	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -278,108 +276,4 @@ func (m *Model) adjustScrollForCursor() {
 	// Clamp scroll offset to valid range
 	maxScroll := max(0, m.TotalLines()-visibleHeight)
 	m.scrollOffset = min(m.scrollOffset, maxScroll)
-}
-
-// adjustScroll ensures cursor is visible (legacy method for compatibility).
-// Use adjustScrollForCursor for new code to get scroll margin behavior.
-func (m *Model) adjustScroll() {
-	m.adjustScrollForCursor()
-}
-
-// ========================================
-// Search and goto
-// ========================================
-
-// searchDocument searches for a term in the document and jumps to the first match.
-func (m *Model) searchDocument(term string) {
-	m.searchTerm = term
-	m.searchMatches = nil
-	m.searchIdx = -1
-
-	lines := m.GetLines()
-	for i, line := range lines {
-		if strings.Contains(strings.ToLower(line), strings.ToLower(term)) {
-			m.searchMatches = append(m.searchMatches, i)
-		}
-	}
-
-	if len(m.searchMatches) == 0 {
-		m.statusMsg = fmt.Sprintf("No matches for: %s", term)
-		m.statusIsErr = true
-		return
-	}
-
-	// Jump to first match at or after cursor
-	for i, lineNum := range m.searchMatches {
-		if lineNum >= m.cursorLine {
-			m.searchIdx = i
-			m.cursorLine = lineNum
-			m.adjustScroll()
-			break
-		}
-	}
-	if m.searchIdx == -1 {
-		// All matches are before cursor, go to first
-		m.searchIdx = 0
-		m.cursorLine = m.searchMatches[0]
-		m.adjustScroll()
-	}
-
-	m.statusMsg = fmt.Sprintf("Match %d of %d: %s", m.searchIdx+1, len(m.searchMatches), term)
-}
-
-// nextSearchMatch jumps to the next search match.
-func (m *Model) nextSearchMatch() {
-	if len(m.searchMatches) == 0 {
-		m.statusMsg = "No search active"
-		m.statusIsErr = true
-		return
-	}
-
-	m.searchIdx = (m.searchIdx + 1) % len(m.searchMatches)
-	m.cursorLine = m.searchMatches[m.searchIdx]
-	m.adjustScroll()
-	m.statusMsg = fmt.Sprintf("Match %d of %d: %s", m.searchIdx+1, len(m.searchMatches), m.searchTerm)
-}
-
-// prevSearchMatch jumps to the previous search match.
-func (m *Model) prevSearchMatch() {
-	if len(m.searchMatches) == 0 {
-		m.statusMsg = "No search active"
-		m.statusIsErr = true
-		return
-	}
-
-	m.searchIdx--
-	if m.searchIdx < 0 {
-		m.searchIdx = len(m.searchMatches) - 1
-	}
-	m.cursorLine = m.searchMatches[m.searchIdx]
-	m.adjustScroll()
-	m.statusMsg = fmt.Sprintf("Match %d of %d: %s", m.searchIdx+1, len(m.searchMatches), m.searchTerm)
-}
-
-// gotoLine jumps to a specific line number.
-func (m *Model) gotoLine(lineStr string) {
-	var lineNum int
-	if _, err := fmt.Sscanf(lineStr, "%d", &lineNum); err != nil {
-		m.statusMsg = fmt.Sprintf("Invalid line number: %s", lineStr)
-		m.statusIsErr = true
-		return
-	}
-
-	// Convert to 0-indexed
-	lineNum--
-
-	total := m.TotalLines()
-	if lineNum < 0 {
-		lineNum = 0
-	}
-	if lineNum >= total {
-		lineNum = total - 1
-	}
-
-	m.cursorLine = lineNum
-	m.adjustScroll()
-	m.statusMsg = fmt.Sprintf("Line %d", lineNum+1)
 }

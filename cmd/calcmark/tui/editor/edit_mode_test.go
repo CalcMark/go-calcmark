@@ -618,7 +618,7 @@ y = 20`
 
 	// Get aligned panes before edit mode
 	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth)
-	visualBefore, _ := alignedBefore.sourceToVisual[m.cursorLine]
+	visualBefore := alignedBefore.sourceToVisual[m.cursorLine]
 
 	// Enter edit mode
 	// User is always able to edit - load editBuf
@@ -626,7 +626,7 @@ y = 20`
 
 	// Get aligned panes in edit mode
 	alignedDuring := m.computeAlignedPanes(leftWidth, rightWidth)
-	visualDuring, _ := alignedDuring.sourceToVisual[m.cursorLine]
+	visualDuring := alignedDuring.sourceToVisual[m.cursorLine]
 
 	t.Logf("Visual line before edit: %d, during edit: %d", visualBefore, visualDuring)
 
@@ -695,7 +695,7 @@ this_is_a_line_that_is_long_enough_to_wrap_in_narrow_terminal = 999`
 	}
 
 	// Verify the visual index matches the mapping
-	expectedVisualIdx, _ := aligned.sourceToVisual[m.cursorLine]
+	expectedVisualIdx := aligned.sourceToVisual[m.cursorLine]
 	if cursorVisualIdx != expectedVisualIdx {
 		t.Errorf("Cursor visual index %d doesn't match mapping %d",
 			cursorVisualIdx, expectedVisualIdx)

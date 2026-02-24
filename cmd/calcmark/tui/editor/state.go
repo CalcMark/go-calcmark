@@ -114,37 +114,3 @@ func (m *Model) transitionToProcessing() {
 	// Transition back to Ready
 	m.transitionToReady()
 }
-
-// checkInvariants verifies that all editor invariants hold.
-// This is used in tests and can be called in development builds.
-// In production, invariants should ALWAYS hold after ensureReadyState().
-func (m *Model) checkInvariants() []string {
-	var violations []string
-
-	if m.doc == nil {
-		violations = append(violations, "document is nil")
-	}
-
-	if m.eval == nil {
-		violations = append(violations, "evaluator is nil")
-	}
-
-	if m.doc != nil && len(m.doc.GetBlocks()) == 0 {
-		violations = append(violations, "document has 0 blocks")
-	}
-
-	totalLines := m.TotalLines()
-	if totalLines < 0 {
-		violations = append(violations, "TotalLines() returned negative value")
-	}
-
-	if m.cursorLine < 0 {
-		violations = append(violations, "cursorLine is negative")
-	}
-
-	if totalLines > 0 && m.cursorLine >= totalLines {
-		violations = append(violations, "cursorLine is out of bounds")
-	}
-
-	return violations
-}

@@ -99,10 +99,10 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 	var lineStyle lipgloss.Style
 	if useEditStyle {
 		// When typing (editBuf active)
-		lineStyle = m.styles.EditLine.Copy().ColorWhitespace(true).Inline(true)
+		lineStyle = m.styles.EditLine.Inline(true)
 	} else {
 		// When not typing (showing document content with cursor)
-		lineStyle = m.styles.CurrentLine.Copy().ColorWhitespace(true).Inline(true)
+		lineStyle = m.styles.CurrentLine.Inline(true)
 	}
 
 	// CRITICAL INSIGHT: The issue is that concatenating multiple .Render() calls

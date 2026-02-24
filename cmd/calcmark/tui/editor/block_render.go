@@ -56,7 +56,7 @@ func RenderTextBlockAligned(block *document.TextBlock, renderer *MarkdownRendere
 			})
 		} else {
 			// Non-empty source line -> take next rendered line(s)
-			previewLines := []string{}
+			var previewLines []string
 
 			if renderedIdx < len(renderedLines) {
 				// 1:1 mapping — wrapping is handled by the alignment layer (aligned.go).

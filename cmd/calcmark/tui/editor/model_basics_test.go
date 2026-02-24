@@ -135,7 +135,7 @@ func TestHandleKeyQuit(t *testing.T) {
 	doc, _ := document.NewDocument("test text\n")
 	m = New(doc)
 	m.SelectAll() // Select all text
-	newModel, cmd = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	result = newModel.(Model)
 	if result.quitting {
 		t.Error("Ctrl+C with selection should NOT quit")

@@ -584,11 +584,6 @@ func (m *Model) insertLineBelow() {
 	m.insertLine(m.cursorLine + 1)
 }
 
-// insertLineAbove inserts a new line above the cursor.
-func (m *Model) insertLineAbove() {
-	m.insertLine(m.cursorLine)
-}
-
 // insertLine inserts a new empty line at the given position.
 // This rebuilds the document with the new line inserted at the correct position.
 func (m *Model) insertLine(at int) {
@@ -770,30 +765,6 @@ func (m *Model) deleteLine() {
 	}
 }
 
-// yankLine copies the current line to the yank buffer (yy command).
-func (m *Model) yankLine() {
-	lines := m.GetLines()
-	if m.cursorLine >= len(lines) {
-		return
-	}
-	m.yankBuffer = lines[m.cursorLine]
-	m.statusMsg = "Line yanked"
-}
-
-// pasteLine pastes the yank buffer below the current line (p command).
-func (m *Model) pasteLine() {
-	if m.yankBuffer == "" {
-		return
-	}
-
-	// Insert a new line below cursor with yanked content
-	m.insertLineBelow()
-	m.updateCurrentLine(m.yankBuffer)
-	m.modified = true
-	m.reEvaluate()
-	m.statusMsg = "Line pasted"
-}
-
 // insertFrontmatter inserts a default YAML frontmatter block at the top of the document.
 // Returns the updated model and command. No-op if frontmatter already exists.
 func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
@@ -830,18 +801,4 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	m.InvalidateAlignedCache()
 	m.statusMsg = "Frontmatter inserted"
 	return m, nil
-}
-
-// pasteLineAbove pastes the yank buffer above the current line (P command).
-func (m *Model) pasteLineAbove() {
-	if m.yankBuffer == "" {
-		return
-	}
-
-	// Insert a new line above cursor with yanked content
-	m.insertLineAbove()
-	m.updateCurrentLine(m.yankBuffer)
-	m.modified = true
-	m.reEvaluate()
-	m.statusMsg = "Line pasted above"
 }
