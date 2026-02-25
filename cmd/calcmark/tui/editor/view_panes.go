@@ -117,14 +117,15 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 			// Padding line - blank (for alignment with preview wrapping)
 			content = padToWidth("", contentWidth, srcBg)
 		} else if sl.isWrapped {
-			// Wrapped continuation line - apply block-level tint then selection highlighting
-			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
-			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, tinted)
+			// Wrapped continuation line — pass raw text + tint colors to selection renderer.
+			// Selection must operate on un-styled text so rune column positions are correct.
+			fg, bg := blockTintColors(sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
+			lineWithSelection := m.renderLineWithSelection(sl.sourceLineIdx, sl.content, fg, bg)
 			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		} else {
-			// Normal source line - apply block-level tint then selection highlighting
-			tinted := applyBlockTint(sl.content, sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
-			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, tinted)
+			// Normal source line — pass raw text + tint colors to selection renderer.
+			fg, bg := blockTintColors(sl.sourceLineIdx, fmCount, sl.isCalc, srcBg)
+			lineWithSelection := m.renderLineWithSelection(sl.lineNum-1, sl.content, fg, bg)
 			content = padToWidth(lineWithSelection, contentWidth, srcBg)
 		}
 
@@ -429,27 +430,15 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	return ""
 }
 
-// applyBlockTint applies a subtle foreground color tint to source line text
-// based on the block type: frontmatter (muted gray), calc (subtle blue),
-// or markdown (default text color — no tint applied).
-func applyBlockTint(content string, sourceLineIdx, fmCount int, isCalc bool, bg color.Color) string {
-	if content == "" {
-		return content
-	}
-
-	var fg color.Color
+// blockTintColors returns the foreground and background colors for a source line
+// based on the block type: frontmatter, calc, or markdown.
+func blockTintColors(sourceLineIdx, fmCount int, isCalc bool, bg color.Color) (fg, bgOut color.Color) {
 	switch {
 	case sourceLineIdx < fmCount:
-		fg = theme.SourceFrontmatter
+		return theme.SourceFrontmatter, bg
 	case isCalc:
-		fg = theme.SourceCalc
+		return theme.SourceCalc, bg
 	default:
-		// Markdown lines — apply background to prevent terminal bleed-through
-		return lipgloss.NewStyle().
-			Foreground(theme.SourceMarkdown).
-			Background(bg).
-			Render(content)
+		return theme.SourceMarkdown, bg
 	}
-
-	return lipgloss.NewStyle().Foreground(fg).Background(bg).Render(content)
 }

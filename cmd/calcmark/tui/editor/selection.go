@@ -2,6 +2,7 @@ package editor
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -59,6 +60,59 @@ func (m *Model) GetSelectionRange() (startLine, startCol, endLine, endCol int) {
 	}
 	// Cursor is before anchor
 	return curLine, curCol, anchorLine, anchorCol
+}
+
+// selectionRuneCount returns the number of runes in the current selection
+// without materializing the full selected text string. Used by the status bar
+// to avoid the overhead of GetSelectedText() on every render frame.
+func (m *Model) selectionRuneCount() int {
+	startLine, startCol, endLine, endCol := m.GetSelectionRange()
+	if startLine < 0 {
+		return 0
+	}
+
+	lines := m.GetLines()
+	if len(lines) == 0 {
+		return 0
+	}
+
+	// Clamp to valid line range
+	if startLine >= len(lines) {
+		startLine = len(lines) - 1
+	}
+	if endLine >= len(lines) {
+		endLine = len(lines) - 1
+	}
+
+	if startLine == endLine {
+		line := lines[startLine]
+		lineRuneCount := utf8.RuneCountInString(line)
+		sc := min(max(startCol, 0), lineRuneCount)
+		ec := min(max(endCol, 0), lineRuneCount)
+		return ec - sc
+	}
+
+	// Multi-line: first partial + middle full lines + last partial + newlines
+	count := 0
+
+	// First line: from startCol to end
+	firstRuneCount := utf8.RuneCountInString(lines[startLine])
+	sc := min(max(startCol, 0), firstRuneCount)
+	count += firstRuneCount - sc
+
+	// Middle lines: full lines + newline separators
+	for i := startLine + 1; i < endLine; i++ {
+		count += 1 // newline
+		count += utf8.RuneCountInString(lines[i])
+	}
+
+	// Last line: from start to endCol + newline before it
+	count += 1 // newline
+	lastRuneCount := utf8.RuneCountInString(lines[endLine])
+	ec := min(max(endCol, 0), lastRuneCount)
+	count += ec
+
+	return count
 }
 
 // GetSelectedText returns the selected text as a string.

@@ -70,9 +70,14 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
 	// Enter replaces selection: delete selected text first
 	if m.HasSelection() {
-		m.DeleteSelection()
+		_, deleteCmd := m.DeleteSelection()
+		if deleteCmd != nil {
+			cmds = append(cmds, deleteCmd)
+		}
 		m.modified = true
 	}
 
@@ -160,6 +165,9 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	m.undoManager.AddOperation(op)
 	m.undoManager.CommitCurrentBatch()
 
+	if len(cmds) > 0 {
+		return m, tea.Batch(cmds...)
+	}
 	return m, nil
 }
 
@@ -712,7 +720,9 @@ func (m *Model) reEvaluate() {
 			if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
 				for _, varName := range calcBlock.Variables() {
 					m.changedVars[varName] = true
-					m.pinnedVars[varName] = true
+					if !builtinConstants[varName] {
+						m.pinnedVars[varName] = true
+					}
 				}
 			}
 		}
@@ -741,7 +751,20 @@ func (m *Model) deleteLine() {
 		content := strings.Join(newLines, "\n") + "\n"
 		newDoc, err := document.NewDocument(content)
 		if err != nil {
+			// Document rebuild failed (e.g., removing closing --- makes invalid YAML).
+			// Preserve the user's deletion via SetRawSource so the edit is not lost.
 			m.frontmatterErr = err
+			if fm := m.doc.GetFrontmatter(); fm != nil {
+				newFmCount := min(fmCount-1, len(newLines))
+				newRaw := strings.Join(newLines[:newFmCount], "\n") + "\n"
+				fm.SetRawSource(newRaw)
+			}
+			m.modified = true
+			// Adjust cursor
+			total := m.TotalLines()
+			if m.cursorLine >= total && total > 0 {
+				m.cursorLine = total - 1
+			}
 			return
 		}
 		m.frontmatterErr = nil

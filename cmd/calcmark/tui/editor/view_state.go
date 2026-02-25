@@ -14,9 +14,11 @@ import (
 )
 
 // getGlobalsCount returns the number of global variables.
+// Returns 0 when frontmatter has parse errors to stay consistent with
+// GetGlobalsPanelState() which returns no globals on error.
 func (m *Model) getGlobalsCount() int {
 	fm := m.doc.GetFrontmatter()
-	if fm == nil {
+	if fm == nil || m.frontmatterErr != nil {
 		return 0
 	}
 	return len(fm.Globals) + len(fm.Exchange)
@@ -106,7 +108,7 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 	// Count selected characters for status bar display
 	selectionCount := 0
 	if m.HasSelection() {
-		selectionCount = len([]rune(m.GetSelectedText()))
+		selectionCount = m.selectionRuneCount()
 	}
 
 	return components.StatusBarState{
@@ -179,6 +181,9 @@ func (m *Model) collectPinnedVariables() []components.PinnedVar {
 }
 
 // GetGlobalsPanelState returns state for the globals panel.
+// When frontmatter has parse errors (frontmatterErr != nil), returns an empty
+// globals list. Stale values from a previous successful parse must NOT leak
+// into the preview — the user should see no values until the YAML is valid.
 func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 	var globals []components.GlobalVar
 	var errMsg string
@@ -187,8 +192,12 @@ func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 		errMsg = m.frontmatterErr.Error()
 	}
 
+	// Only populate globals when frontmatter is valid (no parse errors).
+	// When frontmatterErr is set, the fm struct may still contain stale data
+	// from the last successful parse — returning those values would show
+	// incorrect results in the preview pane.
 	fm := m.doc.GetFrontmatter()
-	if fm != nil {
+	if fm != nil && m.frontmatterErr == nil {
 		for _, name := range fm.GlobalKeys() {
 			globals = append(globals, components.GlobalVar{
 				Name:       name,

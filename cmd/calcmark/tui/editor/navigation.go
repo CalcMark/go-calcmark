@@ -121,8 +121,60 @@ func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
 // Word navigation (Ctrl+Arrow / Alt+B/F)
 // ========================================
 
-// handleCtrlLeftKey moves cursor left to previous word boundary.
+// wordBoundaryLeft finds the previous word boundary from col in runes.
 // Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
+func wordBoundaryLeft(runes []rune, col int) int {
+	col = min(col, len(runes))
+
+	startCol := col
+
+	// Skip whitespace backwards
+	for col > 0 && unicode.IsSpace(runes[col-1]) {
+		col--
+	}
+
+	// Skip word characters backwards (non-space, non-punct)
+	for col > 0 && !unicode.IsSpace(runes[col-1]) && !unicode.IsPunct(runes[col-1]) {
+		col--
+	}
+
+	// If we only skipped punctuation, skip it too
+	if col == startCol || col == len(runes) {
+		for col > 0 && unicode.IsPunct(runes[col-1]) {
+			col--
+		}
+	}
+
+	return col
+}
+
+// wordBoundaryRight finds the next word boundary from col in runes.
+// Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
+func wordBoundaryRight(runes []rune, col int) int {
+	lineLen := len(runes)
+	if col > lineLen {
+		col = lineLen
+	}
+
+	// Skip current word characters forward (non-space, non-punct)
+	for col < lineLen && !unicode.IsSpace(runes[col]) && !unicode.IsPunct(runes[col]) {
+		col++
+	}
+
+	// Skip punctuation forward
+	for col < lineLen && unicode.IsPunct(runes[col]) {
+		col++
+	}
+
+	// Skip whitespace forward
+	for col < lineLen && unicode.IsSpace(runes[col]) {
+		col++
+	}
+
+	return col
+}
+
+// handleCtrlLeftKey moves cursor left to previous word boundary.
 // If at column 0, wraps to end of previous line first (like handleLeftKey).
 func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 	m.ClearSelection()
@@ -138,36 +190,11 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Move backwards to find word boundary
-	runes := []rune(m.editBuf)
-	col := m.cursorCol
-
-	// Clamp col to valid range to prevent index out of bounds
-	col = min(col, len(runes))
-
-	// Skip whitespace backwards
-	for col > 0 && unicode.IsSpace(runes[col-1]) {
-		col--
-	}
-
-	// Skip word characters backwards (non-space, non-punct)
-	for col > 0 && !unicode.IsSpace(runes[col-1]) && !unicode.IsPunct(runes[col-1]) {
-		col--
-	}
-
-	// If we only skipped punctuation, skip it too
-	if col == m.cursorCol || col == len(runes) {
-		for col > 0 && unicode.IsPunct(runes[col-1]) {
-			col--
-		}
-	}
-
-	m.cursorCol = col
+	m.cursorCol = wordBoundaryLeft([]rune(m.editBuf), m.cursorCol)
 	return m, nil
 }
 
 // handleCtrlRightKey moves cursor right to next word boundary.
-// Word boundaries are determined by unicode.IsSpace and unicode.IsPunct.
 // If at end of line, wraps to start of next line first (like handleRightKey).
 func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
 	m.ClearSelection()
@@ -191,24 +218,7 @@ func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	col := m.cursorCol
-
-	// Skip current word characters forward (non-space, non-punct)
-	for col < lineLen && !unicode.IsSpace(runes[col]) && !unicode.IsPunct(runes[col]) {
-		col++
-	}
-
-	// Skip punctuation forward
-	for col < lineLen && unicode.IsPunct(runes[col]) {
-		col++
-	}
-
-	// Skip whitespace forward
-	for col < lineLen && unicode.IsSpace(runes[col]) {
-		col++
-	}
-
-	m.cursorCol = col
+	m.cursorCol = wordBoundaryRight(runes, m.cursorCol)
 	return m, nil
 }
 
@@ -219,7 +229,7 @@ func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
 // They mirror the normal navigation handlers but call ensureSelectionAnchor()
 // instead of ClearSelection().
 
-func (m Model) handleShiftUp() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftUpKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -229,7 +239,7 @@ func (m Model) handleShiftUp() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftDown() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftDownKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -239,7 +249,7 @@ func (m Model) handleShiftDown() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftLeft() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftLeftKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -252,7 +262,7 @@ func (m Model) handleShiftLeft() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftRight() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftRightKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -265,7 +275,7 @@ func (m Model) handleShiftRight() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftHome() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftHomeKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -273,7 +283,7 @@ func (m Model) handleShiftHome() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftEnd() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftEndKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -281,7 +291,23 @@ func (m Model) handleShiftEnd() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftCtrlHome() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftPageUpKey() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	m.moveCursor(-(m.height - 4), 0)
+	return m, nil
+}
+
+func (m Model) handleShiftPageDownKey() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	m.moveCursor(m.height-4, 0)
+	return m, nil
+}
+
+func (m Model) handleShiftCtrlHomeKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -290,7 +316,7 @@ func (m Model) handleShiftCtrlHome() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftCtrlEnd() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftCtrlEndKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -300,7 +326,7 @@ func (m Model) handleShiftCtrlEnd() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleShiftCtrlLeft() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftCtrlLeftKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -313,26 +339,11 @@ func (m Model) handleShiftCtrlLeft() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	runes := []rune(m.editBuf)
-	col := min(m.cursorCol, len(runes))
-
-	for col > 0 && unicode.IsSpace(runes[col-1]) {
-		col--
-	}
-	for col > 0 && !unicode.IsSpace(runes[col-1]) && !unicode.IsPunct(runes[col-1]) {
-		col--
-	}
-	if col == m.cursorCol || col == len(runes) {
-		for col > 0 && unicode.IsPunct(runes[col-1]) {
-			col--
-		}
-	}
-
-	m.cursorCol = col
+	m.cursorCol = wordBoundaryLeft([]rune(m.editBuf), m.cursorCol)
 	return m, nil
 }
 
-func (m Model) handleShiftCtrlRight() (tea.Model, tea.Cmd) {
+func (m Model) handleShiftCtrlRightKey() (tea.Model, tea.Cmd) {
 	m.ensureSelectionAnchor()
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
@@ -352,18 +363,7 @@ func (m Model) handleShiftCtrlRight() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	col := m.cursorCol
-	for col < lineLen && !unicode.IsSpace(runes[col]) && !unicode.IsPunct(runes[col]) {
-		col++
-	}
-	for col < lineLen && unicode.IsPunct(runes[col]) {
-		col++
-	}
-	for col < lineLen && unicode.IsSpace(runes[col]) {
-		col++
-	}
-
-	m.cursorCol = col
+	m.cursorCol = wordBoundaryRight(runes, m.cursorCol)
 	return m, nil
 }
 
@@ -390,7 +390,7 @@ func (m *Model) moveCursor(dLine, dCol int) {
 	// Move column
 	lines := m.GetLines()
 	if m.cursorLine < len(lines) {
-		lineLen := len(lines[m.cursorLine])
+		lineLen := runeLen(lines[m.cursorLine])
 		m.cursorCol += dCol
 		if m.cursorCol < 0 {
 			m.cursorCol = 0

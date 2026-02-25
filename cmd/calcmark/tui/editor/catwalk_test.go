@@ -1457,7 +1457,7 @@ z = 30`
 	}
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
-		if !strings.HasSuffix(path, "shift_selection") {
+		if !strings.HasSuffix(path, "/shift_selection") {
 			return
 		}
 

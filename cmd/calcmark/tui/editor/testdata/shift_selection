@@ -113,3 +113,39 @@ key shift+right
 ----
 -- debug:
 mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z ##" selectionAnchorLine=0 selectionAnchorCol=0 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Shift+Ctrl+Home selects from cursor to document start
+# First clear selection and navigate to a middle position
+run observe=debug
+key right
+key down
+key shift+ctrl+home
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=3 selectionAnchorCol=6 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Shift+Ctrl+End selects from cursor to document end
+run observe=debug
+key shift+ctrl+end
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=4 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z ##" selectionAnchorLine=3 selectionAnchorCol=6 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Shift+Ctrl+Left selects word to the left
+# Navigate to a position with text before cursor
+run observe=debug
+key home
+key end
+key shift+ctrl+left
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=2 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z ##" selectionAnchorLine=3 selectionAnchorCol=4 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Shift+Ctrl+Right selects word to the right
+run observe=debug
+key right
+key home
+key shift+ctrl+right
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=2 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z ##" selectionAnchorLine=3 selectionAnchorCol=0 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

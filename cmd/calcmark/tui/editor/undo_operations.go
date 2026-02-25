@@ -22,7 +22,16 @@ func (m Model) handleUndo() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Apply operations in reverse order
+	// Apply operations in reverse order.
+	// IMPORTANT: Do NOT clear frontmatter rawSource before applying operations.
+	// The undo operations reference line numbers from the document state when they
+	// were recorded. rawSource preserves the exact line structure (including empty
+	// lines, formatting, etc.) that the operations were recorded against. Clearing
+	// rawSource forces Serialize() to reconstruct from maps, which can change the
+	// line count (e.g., losing empty lines added by Enter), causing operations to
+	// apply to the wrong lines and producing duplicated content.
+	// After all operations are applied, redetectBlockTypes() rebuilds the document
+	// from scratch, producing a clean state.
 	for i := len(batch.Operations) - 1; i >= 0; i-- {
 		m.applyOperationReverse(batch.Operations[i])
 	}
@@ -84,7 +93,9 @@ func (m Model) handleRedo() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Apply operations in forward order (original execution order)
+	// Apply operations in forward order (original execution order).
+	// Do NOT clear rawSource — same rationale as handleUndo: operations reference
+	// line numbers from the document state when they were recorded.
 	for _, op := range batch.Operations {
 		m.applyOperationForward(op)
 	}

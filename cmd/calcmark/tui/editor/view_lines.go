@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -8,19 +9,22 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 )
 
-// renderLineWithSelection applies selection highlighting to a line if needed.
-// Returns the line with selection styling applied.
-// Uses UTF-8 safe rune operations for column positions.
-func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
+// renderLineWithSelection applies selection highlighting to a non-cursor line.
+// IMPORTANT: rawText must be plain text WITHOUT ANSI codes. Column positions
+// are document-column (rune) indices that only work on un-styled text.
+// Non-selected text is rendered with tintFg/tintBg; selected text uses theme.Selection.
+func (m Model) renderLineWithSelection(lineNum int, rawText string, tintFg, tintBg color.Color) string {
+	tintStyle := lipgloss.NewStyle().Foreground(tintFg).Background(tintBg)
+
 	if !m.HasSelection() {
-		return lineText
+		return tintStyle.Render(rawText)
 	}
 
 	startLine, startCol, endLine, endCol := m.GetSelectionRange()
 
 	// Line is outside selection range
 	if lineNum < startLine || lineNum > endLine {
-		return lineText
+		return tintStyle.Render(rawText)
 	}
 
 	// Selection style - use theme colors
@@ -28,26 +32,22 @@ func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
 		Background(theme.Selection).
 		Foreground(theme.SelectionFg)
 
-	runes := []rune(lineText)
+	runes := []rune(rawText)
 	lineLen := len(runes)
 
 	// Determine selection bounds for this line
 	var selectStart, selectEnd int
 
 	if lineNum == startLine && lineNum == endLine {
-		// Selection is within this line only
 		selectStart = startCol
 		selectEnd = endCol
 	} else if lineNum == startLine {
-		// First line of multi-line selection
 		selectStart = startCol
 		selectEnd = lineLen
 	} else if lineNum == endLine {
-		// Last line of multi-line selection
 		selectStart = 0
 		selectEnd = endCol
 	} else {
-		// Middle line - select entire line
 		selectStart = 0
 		selectEnd = lineLen
 	}
@@ -68,51 +68,40 @@ func (m Model) renderLineWithSelection(lineNum int, lineText string) string {
 
 	// Nothing to select on this line
 	if selectStart >= selectEnd {
-		return lineText
+		return tintStyle.Render(rawText)
 	}
 
 	// Build the styled line: before + selected + after
 	var result strings.Builder
 
-	// Part before selection
+	// Part before selection (tinted)
 	if selectStart > 0 {
-		result.WriteString(string(runes[:selectStart]))
+		result.WriteString(tintStyle.Render(string(runes[:selectStart])))
 	}
 
 	// Selected part with highlighting
-	selectedText := string(runes[selectStart:selectEnd])
-	result.WriteString(selectionStyle.Render(selectedText))
+	result.WriteString(selectionStyle.Render(string(runes[selectStart:selectEnd])))
 
-	// Part after selection
+	// Part after selection (tinted)
 	if selectEnd < lineLen {
-		result.WriteString(string(runes[selectEnd:]))
+		result.WriteString(tintStyle.Render(string(runes[selectEnd:])))
 	}
 
 	return result.String()
 }
 
 // renderLineWithCursor renders a line with cursor at the specified column.
-// If content is empty, uses m.GetCurrentLineText() to get the actual line content.
-// This ensures the cursor is ALWAYS visible, even when not actively typing.
+// content must be plain text WITHOUT ANSI codes (rune-based column arithmetic).
+// When a selection is active, interleaves cursor + selection + normal styles
+// character-by-character so that rune positions are never corrupted by ANSI codes.
 func (m Model) renderLineWithCursor(content string, col int, width int, useEditStyle bool) string {
-	// Apply selection highlighting first if needed
-	if m.HasSelection() && m.cursorLine >= 0 {
-		content = m.renderLineWithSelection(m.cursorLine, content)
-	}
-
 	// Determine which style to use (includes foreground and background)
 	var lineStyle lipgloss.Style
 	if useEditStyle {
-		// When typing (editBuf active)
 		lineStyle = m.styles.EditLine.Inline(true)
 	} else {
-		// When not typing (showing document content with cursor)
 		lineStyle = m.styles.CurrentLine.Inline(true)
 	}
-
-	// CRITICAL INSIGHT: The issue is that concatenating multiple .Render() calls
-	// creates separate ANSI blocks. We need ONE continuous background.
-	// Solution: Build the ENTIRE content first, THEN render once with padding included
 
 	// Use runes for proper UTF-8 handling - col is a rune position
 	runes := []rune(content)
@@ -126,7 +115,66 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 		col = contentLen
 	}
 
-	// Determine cursor character
+	// Check for active selection on the cursor line
+	hasSelection := false
+	var selStart, selEnd int
+	var selectionStyle lipgloss.Style
+
+	if m.HasSelection() && m.cursorLine >= 0 {
+		sLine, sCol, eLine, eCol := m.GetSelectionRange()
+		if sLine <= m.cursorLine && eLine >= m.cursorLine {
+			hasSelection = true
+			selectionStyle = lipgloss.NewStyle().
+				Background(theme.Selection).
+				Foreground(theme.SelectionFg)
+
+			if sLine == m.cursorLine {
+				selStart = sCol
+			}
+			if eLine == m.cursorLine {
+				selEnd = eCol
+			} else {
+				selEnd = contentLen
+			}
+			// Clamp
+			if selStart < 0 {
+				selStart = 0
+			}
+			if selEnd > contentLen {
+				selEnd = contentLen
+			}
+		}
+	}
+
+	if hasSelection && selStart < selEnd {
+		// Character-by-character rendering to interleave cursor + selection + normal
+		var result strings.Builder
+		for i, r := range runes {
+			ch := string(r)
+			if i == col {
+				result.WriteString(m.styles.Cursor.Inline(true).Render(ch))
+			} else if i >= selStart && i < selEnd {
+				result.WriteString(selectionStyle.Render(ch))
+			} else {
+				result.WriteString(lineStyle.Render(ch))
+			}
+		}
+		// Cursor beyond content
+		if col >= contentLen {
+			result.WriteString(m.styles.Cursor.Inline(true).Render(" "))
+		}
+		// Pad to width
+		totalPadding := width - contentLen
+		if col >= contentLen {
+			totalPadding--
+		}
+		if totalPadding > 0 {
+			result.WriteString(lineStyle.Render(strings.Repeat(" ", totalPadding)))
+		}
+		return result.String()
+	}
+
+	// No selection — batch render (original fast path)
 	var cursorChar string
 	if col >= contentLen {
 		cursorChar = " "
@@ -134,30 +182,20 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 		cursorChar = string(runes[col])
 	}
 
-	// Calculate total padding needed (use rune length for display width approximation)
 	totalPadding := width - contentLen
 	if col >= contentLen {
-		totalPadding -= 1 // Account for cursor space
+		totalPadding--
 	}
 
-	// Build result by rendering segments with inline styles
 	var result strings.Builder
 
-	// Before cursor
 	if col > 0 {
 		result.WriteString(lineStyle.Render(string(runes[:col])))
 	}
-
-	// Cursor
 	result.WriteString(m.styles.Cursor.Inline(true).Render(cursorChar))
-
-	// After cursor (including padding to fill width)
-	afterCursorStart := col + 1
-	if afterCursorStart <= contentLen {
-		result.WriteString(lineStyle.Render(string(runes[afterCursorStart:])))
+	if col+1 <= contentLen {
+		result.WriteString(lineStyle.Render(string(runes[col+1:])))
 	}
-
-	// Add padding to fill the width
 	if totalPadding > 0 {
 		result.WriteString(lineStyle.Render(strings.Repeat(" ", totalPadding)))
 	}
@@ -165,11 +203,36 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 	return result.String()
 }
 
+// editLineSelectionRange returns the selection column range on the edit line
+// (m.cursorLine). Returns (-1, -1) if no selection overlaps the cursor line.
+// The range [selectStart, selectEnd) is in source-line column (rune) coordinates.
+func (m Model) editLineSelectionRange() (selectStart, selectEnd int) {
+	if !m.HasSelection() {
+		return -1, -1
+	}
+	sLine, sCol, eLine, eCol := m.GetSelectionRange()
+	if sLine > m.cursorLine || eLine < m.cursorLine {
+		return -1, -1
+	}
+	// Selection includes cursor line — determine column bounds
+	if sLine == m.cursorLine {
+		selectStart = sCol
+	} else {
+		selectStart = 0
+	}
+	if eLine == m.cursorLine {
+		selectEnd = eCol
+	} else {
+		selectEnd = len([]rune(m.editBuf))
+	}
+	return selectStart, selectEnd
+}
+
 // renderEditLineWrapped handles rendering the current editing line when it wraps
 // across multiple visual lines. Returns an array of rendered lines.
+// Applies selection highlighting when an active selection overlaps the cursor line.
 func (m Model) renderEditLineWrapped(width int) []string {
-	content := []rune(m.editBuf)
-	wrappedContent := geometry.WrapText(string(content), width)
+	wrappedContent := geometry.WrapText(m.editBuf, width)
 
 	// Find which wrapped line contains the cursor
 	cursorLineIdx := 0
@@ -201,21 +264,64 @@ func (m Model) renderEditLineWrapped(width int) []string {
 
 	lineStyle := m.styles.EditLine
 
+	// Precompute selection range on this line (in source rune coordinates).
+	// When no selection overlaps the cursor line, use the fast batch-render path.
+	selStart, selEnd := m.editLineSelectionRange()
+	hasSelectionOnLine := selStart >= 0
+
+	var selectionStyle lipgloss.Style
+	if hasSelectionOnLine {
+		selectionStyle = lipgloss.NewStyle().
+			Background(theme.Selection).
+			Foreground(theme.SelectionFg)
+	}
+
+	// Track the source column offset as we iterate through wrapped segments
+	segOffset := 0
 	for i, seg := range wrappedContent {
+		segRunes := []rune(seg)
+		segLen := len(segRunes)
+
 		var s strings.Builder
 
-		if i == cursorLineIdx {
-			// This line has the cursor - use rune slice for correct Unicode handling
-			segRunes := []rune(seg)
-			segLen := len(segRunes)
+		if i == cursorLineIdx && hasSelectionOnLine {
+			// Cursor line WITH selection — character-by-character rendering
+			// needed to interleave cursor, selection, and normal styles.
 
-			// Clamp cursorColInLine to segment bounds to prevent panics
-			// when cursor position exceeds the wrapped segment length
+			if cursorColInLine < 0 {
+				cursorColInLine = 0
+			}
 			if cursorColInLine > segLen {
 				cursorColInLine = segLen
 			}
 
-			// Determine cursor character
+			for j := range segLen {
+				srcCol := segOffset + j
+				ch := string(segRunes[j])
+
+				if j == cursorColInLine {
+					s.WriteString(m.styles.Cursor.Render(ch))
+				} else if srcCol >= selStart && srcCol < selEnd {
+					s.WriteString(selectionStyle.Render(ch))
+				} else {
+					s.WriteString(lineStyle.Render(ch))
+				}
+			}
+
+			if cursorColInLine >= segLen {
+				s.WriteString(m.styles.Cursor.Render(" "))
+			}
+
+		} else if i == cursorLineIdx {
+			// Cursor line WITHOUT selection — batch-render (original fast path)
+
+			if cursorColInLine < 0 {
+				cursorColInLine = 0
+			}
+			if cursorColInLine > segLen {
+				cursorColInLine = segLen
+			}
+
 			var cursorChar string
 			if cursorColInLine >= segLen {
 				cursorChar = " "
@@ -223,40 +329,42 @@ func (m Model) renderEditLineWrapped(width int) []string {
 				cursorChar = string(segRunes[cursorColInLine])
 			}
 
-			// Before cursor
 			if cursorColInLine > 0 {
 				s.WriteString(lineStyle.Render(string(segRunes[:cursorColInLine])))
 			}
-
-			// Cursor
 			s.WriteString(m.styles.Cursor.Render(cursorChar))
-
-			// After cursor
 			if cursorColInLine+1 < segLen {
 				s.WriteString(lineStyle.Render(string(segRunes[cursorColInLine+1:])))
 			}
 
-			// Calculate padding
-			currentWidth := lipgloss.Width(s.String())
-			padding := width - currentWidth
-			if padding > 0 {
-				s.WriteString(lineStyle.Render(strings.Repeat(" ", padding)))
+		} else if hasSelectionOnLine {
+			// Non-cursor segment WITH selection — character-by-character rendering
+
+			for j := range segLen {
+				srcCol := segOffset + j
+				ch := string(segRunes[j])
+
+				if srcCol >= selStart && srcCol < selEnd {
+					s.WriteString(selectionStyle.Render(ch))
+				} else {
+					s.WriteString(lineStyle.Render(ch))
+				}
 			}
 
-			result = append(result, s.String())
 		} else {
-			// No cursor on this line
+			// Non-cursor segment WITHOUT selection — batch-render
 			s.WriteString(lineStyle.Render(seg))
-
-			// Padding
-			currentWidth := lipgloss.Width(s.String())
-			padding := width - currentWidth
-			if padding > 0 {
-				s.WriteString(lineStyle.Render(strings.Repeat(" ", padding)))
-			}
-
-			result = append(result, s.String())
 		}
+
+		// Pad to full width
+		currentWidth := lipgloss.Width(s.String())
+		padding := width - currentWidth
+		if padding > 0 {
+			s.WriteString(lineStyle.Render(strings.Repeat(" ", padding)))
+		}
+
+		result = append(result, s.String())
+		segOffset += segLen
 	}
 
 	return result

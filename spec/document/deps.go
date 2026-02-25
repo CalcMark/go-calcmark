@@ -104,6 +104,20 @@ func extractIdentifiers(node ast.Node, identifiers map[string]bool) {
 			extractIdentifiers(arg, identifiers)
 		}
 
+	case *ast.UnitConversion:
+		// Recurse into Quantity; TargetUnit is a string, not a node.
+		extractIdentifiers(n.Quantity, identifiers)
+
+	case *ast.NapkinConversion:
+		extractIdentifiers(n.Expression, identifiers)
+
+	case *ast.PercentageOf:
+		extractIdentifiers(n.Percentage, identifiers)
+		extractIdentifiers(n.Value, identifiers)
+
+	case *ast.RateLiteral:
+		extractIdentifiers(n.Amount, identifiers)
+
 	// Literals don't have identifiers
 	case *ast.NumberLiteral,
 		*ast.CurrencyLiteral,
@@ -111,7 +125,8 @@ func extractIdentifiers(node ast.Node, identifiers map[string]bool) {
 		*ast.DateLiteral,
 		*ast.TimeLiteral,
 		*ast.DurationLiteral,
-		*ast.QuantityLiteral:
+		*ast.QuantityLiteral,
+		*ast.RelativeDateLiteral:
 		// No identifiers in literals
 
 	default:

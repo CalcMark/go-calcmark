@@ -43,8 +43,30 @@ func (m *Model) transitionToReady() {
 	// INVARIANT: Document must exist with at least 1 block
 	// Empty document ("") has 0 blocks, so we create a document with a single newline.
 	// After the unicode.go fix, "\n" correctly creates 1 block with 1 empty line (not 2).
+	//
+	// IMPORTANT: When frontmatter exists but all body blocks have been removed
+	// (e.g., line join of the only body line with a frontmatter line), we must
+	// preserve the frontmatter. Unconditionally replacing with NewDocument("\n")
+	// would discard all frontmatter content.
 	if m.doc == nil || len(m.doc.GetBlocks()) == 0 {
-		m.doc, _ = document.NewDocument("\n")
+		if m.doc != nil && m.doc.GetFrontmatter() != nil {
+			// Preserve frontmatter: rebuild document from current content + empty body line
+			content := m.getDocumentContent()
+			if content == "" {
+				content = "\n"
+			}
+			newDoc, err := document.NewDocument(content + "\n")
+			if err == nil {
+				m.doc = newDoc
+				m.fullReEvaluate()
+			}
+			// If parse fails (e.g., invalid YAML in rawSource), keep the existing
+			// document. The 0-blocks state is temporarily violated but safe: all
+			// block iteration loops handle empty slices gracefully, and the user
+			// can fix the frontmatter to restore a valid state.
+		} else {
+			m.doc, _ = document.NewDocument("\n")
+		}
 	}
 
 	// INVARIANT: Evaluator must exist

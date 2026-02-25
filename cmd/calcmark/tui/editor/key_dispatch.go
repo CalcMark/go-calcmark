@@ -27,28 +27,30 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Global shortcuts that work in all modes.
-	// Delegated to executeCommandByName to avoid duplicating dispatch logic.
-	switch msg.String() {
-	case "ctrl+c":
-		// Ctrl+C: copy if selection exists, quit if no selection.
-		// This preserves Unix interrupt behavior while enabling copy.
-		newModel, cmd, handled := m.handleCopy()
-		if handled {
-			return newModel, cmd
+	// Only respond to actual Ctrl+key, not Cmd (Super) key on macOS.
+	// Terminals using the Kitty keyboard protocol send Super separately;
+	// legacy terminals map Cmd→Ctrl and we can't distinguish them.
+	if msg.Mod.Contains(tea.ModCtrl) && !msg.Mod.Contains(tea.ModSuper) {
+		switch msg.Code {
+		case 'c':
+			// Ctrl+C: copy if selection exists, quit if no selection.
+			newModel, cmd, handled := m.handleCopy()
+			if handled {
+				return newModel, cmd
+			}
+			m.quitting = true
+			return m, tea.Quit
+		case 'q':
+			return m.executeCommandByName("Quit")
+		case 's':
+			return m.executeCommandByName("Save")
+		case 'e':
+			return m.executeCommandByName("Export")
+		case 'o':
+			return m.executeCommandByName("Open")
+		case 'f':
+			return m.insertFrontmatter()
 		}
-		// No selection — fall through to quit behavior.
-		m.quitting = true
-		return m, tea.Quit
-	case "ctrl+q":
-		return m.executeCommandByName("Quit")
-	case "ctrl+s":
-		return m.executeCommandByName("Save")
-	case "ctrl+e":
-		return m.executeCommandByName("Export")
-	case "ctrl+o":
-		return m.executeCommandByName("Open")
-	case "ctrl+f":
-		return m.insertFrontmatter()
 	}
 
 	// Handle command menu toggle (Ctrl+H/F1) - works regardless of mode
@@ -87,6 +89,54 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 // handleDefaultKey processes keys in the default editing mode.
 // The user is ALWAYS able to type and edit - this is the only mode they experience.
 func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	// Handle Super (Cmd on macOS) key combinations.
+	// With the Kitty keyboard protocol, Cmd sends ModSuper (not ModCtrl).
+	// Cmd+Arrow maps to Home/End, Cmd+Shift+Arrow extends selection.
+	// Cmd+A/C/X/V/Z/Y provide standard macOS editing shortcuts.
+	if msg.Mod.Contains(tea.ModSuper) {
+		hasShift := msg.Mod.Contains(tea.ModShift)
+		switch msg.Code {
+		case tea.KeyLeft:
+			if hasShift {
+				return m.handleShiftHomeKey()
+			}
+			return m.handleHomeKey()
+		case tea.KeyRight:
+			if hasShift {
+				return m.handleShiftEndKey()
+			}
+			return m.handleEndKey()
+		case tea.KeyUp:
+			if hasShift {
+				return m.handleShiftCtrlHomeKey()
+			}
+			return m.handleCtrlHomeKey()
+		case tea.KeyDown:
+			if hasShift {
+				return m.handleShiftCtrlEndKey()
+			}
+			return m.handleCtrlEndKey()
+		case 'a':
+			m.SelectAll()
+			return m, nil
+		case 'c':
+			newModel, cmd, handled := m.handleCopy()
+			if handled {
+				return newModel, cmd
+			}
+			return m, nil
+		case 'x':
+			return m.handleCut()
+		case 'v':
+			return m.handlePaste()
+		case 'z':
+			if hasShift {
+				return m.handleRedo()
+			}
+			return m.handleUndo()
+		}
+	}
+
 	// Handle Shift+navigation for text selection.
 	// Must be checked before Alt+Arrow and the main switch because
 	// shift+arrow key strings won't match plain arrow cases.
@@ -97,32 +147,36 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		switch msg.Code {
 		case tea.KeyUp:
 			if !hasCtrl && !hasAlt {
-				return m.handleShiftUp()
+				return m.handleShiftUpKey()
 			}
 		case tea.KeyDown:
 			if !hasCtrl && !hasAlt {
-				return m.handleShiftDown()
+				return m.handleShiftDownKey()
 			}
 		case tea.KeyLeft:
 			if hasCtrl || hasAlt {
-				return m.handleShiftCtrlLeft()
+				return m.handleShiftCtrlLeftKey()
 			}
-			return m.handleShiftLeft()
+			return m.handleShiftLeftKey()
 		case tea.KeyRight:
 			if hasCtrl || hasAlt {
-				return m.handleShiftCtrlRight()
+				return m.handleShiftCtrlRightKey()
 			}
-			return m.handleShiftRight()
+			return m.handleShiftRightKey()
 		case tea.KeyHome:
 			if hasCtrl {
-				return m.handleShiftCtrlHome()
+				return m.handleShiftCtrlHomeKey()
 			}
-			return m.handleShiftHome()
+			return m.handleShiftHomeKey()
 		case tea.KeyEnd:
 			if hasCtrl {
-				return m.handleShiftCtrlEnd()
+				return m.handleShiftCtrlEndKey()
 			}
-			return m.handleShiftEnd()
+			return m.handleShiftEndKey()
+		case tea.KeyPgUp:
+			return m.handleShiftPageUpKey()
+		case tea.KeyPgDown:
+			return m.handleShiftPageDownKey()
 		}
 	}
 

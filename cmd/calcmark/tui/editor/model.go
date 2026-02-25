@@ -390,12 +390,22 @@ func NewWithFile(filepath string, doc *document.Document) Model {
 // Document accessors
 // ========================================
 
-// autoPinVariables pins all variables in the document.
+// builtinConstants contains mathematical constants that should not be pinned.
+// These are always available in the environment and showing them clutters the display.
+var builtinConstants = map[string]bool{
+	"PI": true,
+	"E":  true,
+}
+
+// autoPinVariables pins all user-defined variables in the document.
+// Built-in constants (PI, E) are excluded to avoid cluttering the pinned panel.
 func (m *Model) autoPinVariables() {
 	for _, node := range m.doc.GetBlocks() {
 		if calcBlock, ok := node.Block.(*document.CalcBlock); ok {
 			for _, varName := range calcBlock.Variables() {
-				m.pinnedVars[varName] = true
+				if !builtinConstants[varName] {
+					m.pinnedVars[varName] = true
+				}
 			}
 		}
 	}
