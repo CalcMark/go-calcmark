@@ -821,7 +821,7 @@ func TestUndoResetsEditBufLoaded(t *testing.T) {
 
 	// Type "abc" on line 0
 	for _, r := range "abc" {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
@@ -842,7 +842,7 @@ func TestUndoResetsEditBufLoaded(t *testing.T) {
 	}
 
 	// Now undo — should revert document to "" and reset editBufLoaded
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlZ})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl})
 	m = result.(Model)
 
 	// After undo, editBufLoaded MUST be true — undo eagerly reloads editBuf
@@ -899,11 +899,13 @@ func TestUndoRedoIntegration(t *testing.T) {
 		t.Fatalf("Expected initial line '# Header', got %v", initialLines)
 	}
 
-	// Step 1: Type "abc" by sending KeyRunes through Update()
-	// This simulates actual user typing
-	typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("abc")}
-	newModel, _ := m.Update(typeMsg)
-	m = newModel.(Model)
+	// Step 1: Type "abc" by sending KeyPressMsg through Update()
+	// This simulates actual user typing (one character at a time in v2)
+	var newModel tea.Model
+	for _, ch := range "abc" {
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
+		m = newModel.(Model)
+	}
 
 	// Verify typing was recorded in editBuf
 	if !strings.HasPrefix(m.editBuf, "abc") {
@@ -911,7 +913,7 @@ func TestUndoRedoIntegration(t *testing.T) {
 	}
 
 	// Step 2: Force a boundary by navigating down (commits the edit)
-	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	downMsg := tea.KeyPressMsg{Code: tea.KeyDown}
 	newModel, _ = m.Update(downMsg)
 	m = newModel.(Model)
 
@@ -922,7 +924,7 @@ func TestUndoRedoIntegration(t *testing.T) {
 	}
 
 	// Step 3: Press Ctrl+Z to undo
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 	newModel, _ = m.Update(undoMsg)
 	m = newModel.(Model)
 
@@ -936,7 +938,7 @@ func TestUndoRedoIntegration(t *testing.T) {
 	}
 
 	// Step 4: Press Ctrl+Y to redo
-	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	redoMsg := tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	newModel, _ = m.Update(redoMsg)
 	m = newModel.(Model)
 
@@ -965,17 +967,16 @@ func TestUndoStatusMessage(t *testing.T) {
 	m := New(doc)
 
 	// Type something
-	typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")}
-	newModel, _ := m.Update(typeMsg)
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	m = newModel.(Model)
 
 	// Navigate to commit
-	downMsg := tea.KeyMsg{Type: tea.KeyDown}
+	downMsg := tea.KeyPressMsg{Code: tea.KeyDown}
 	newModel, _ = m.Update(downMsg)
 	m = newModel.(Model)
 
 	// Undo
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 	newModel, _ = m.Update(undoMsg)
 	m = newModel.(Model)
 
@@ -991,7 +992,7 @@ func TestUndoNothingToUndo(t *testing.T) {
 	m := New(doc)
 
 	// Immediately try to undo without any edits
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 	newModel, _ := m.Update(undoMsg)
 	m = newModel.(Model)
 
@@ -1016,7 +1017,7 @@ func TestUndoAfterTypeAndEnter(t *testing.T) {
 
 	// Step 1: Type "hello"
 	for _, ch := range "hello" {
-		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		typeMsg := tea.KeyPressMsg{Code: ch, Text: string(ch)}
 		newModel, _ := m.Update(typeMsg)
 		m = newModel.(Model)
 	}
@@ -1025,7 +1026,7 @@ func TestUndoAfterTypeAndEnter(t *testing.T) {
 	t.Logf("After typing 'hello': %v, editBuf=%q", linesAfterHello, m.editBuf)
 
 	// Step 2: Press Enter (this should commit "hello" and create newline)
-	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	newModel, _ := m.Update(enterMsg)
 	m = newModel.(Model)
 
@@ -1041,7 +1042,7 @@ func TestUndoAfterTypeAndEnter(t *testing.T) {
 	}
 
 	// Step 3: Press Ctrl+Z to undo
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 	newModel, _ = m.Update(undoMsg)
 	m = newModel.(Model)
 
@@ -1071,7 +1072,7 @@ func TestUTF8TypeAndUndo(t *testing.T) {
 
 	// Type "世界" (two 3-byte UTF-8 characters)
 	for _, ch := range "世界" {
-		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		typeMsg := tea.KeyPressMsg{Code: ch, Text: string(ch)}
 		newModel, _ := m.Update(typeMsg)
 		m = newModel.(Model)
 	}
@@ -1089,7 +1090,7 @@ func TestUTF8TypeAndUndo(t *testing.T) {
 	}
 
 	// Press Enter to commit and create undo point
-	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	newModel, _ := m.Update(enterMsg)
 	m = newModel.(Model)
 
@@ -1101,7 +1102,7 @@ func TestUTF8TypeAndUndo(t *testing.T) {
 	}
 
 	// Undo the Enter
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 	newModel, _ = m.Update(undoMsg)
 	m = newModel.(Model)
 
@@ -1125,18 +1126,18 @@ func TestRepeatedUndoRedoNoPanic(t *testing.T) {
 
 	// Type something
 	for _, ch := range "hello" {
-		typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+		typeMsg := tea.KeyPressMsg{Code: ch, Text: string(ch)}
 		newModel, _ := m.Update(typeMsg)
 		m = newModel.(Model)
 	}
 
 	// Press Enter to commit
-	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 	newModel, _ := m.Update(enterMsg)
 	m = newModel.(Model)
 
 	// Press Ctrl+Z many times (should not panic)
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
 	for range 20 {
 		newModel, _ = m.Update(undoMsg)
 		m = newModel.(Model)
@@ -1146,7 +1147,7 @@ func TestRepeatedUndoRedoNoPanic(t *testing.T) {
 	t.Logf("After 20 undos: statusMsg=%q", m.statusMsg)
 
 	// Press Ctrl+Y many times (should not panic)
-	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
+	redoMsg := tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	for range 20 {
 		newModel, _ = m.Update(redoMsg)
 		m = newModel.(Model)
@@ -1162,14 +1163,14 @@ func TestUndoRedoAlternating(t *testing.T) {
 	doc, _ := document.NewDocument("")
 	m := New(doc)
 
-	undoMsg := tea.KeyMsg{Type: tea.KeyCtrlZ}
-	redoMsg := tea.KeyMsg{Type: tea.KeyCtrlY}
-	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	undoMsg := tea.KeyPressMsg{Code: 'z', Mod: tea.ModCtrl}
+	redoMsg := tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
+	enterMsg := tea.KeyPressMsg{Code: tea.KeyEnter}
 
 	// Type and enter multiple times
 	for range 3 {
 		for _, ch := range "hello" {
-			typeMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
+			typeMsg := tea.KeyPressMsg{Code: ch, Text: string(ch)}
 			newModel, _ := m.Update(typeMsg)
 			m = newModel.(Model)
 		}

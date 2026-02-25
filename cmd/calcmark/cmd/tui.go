@@ -6,8 +6,8 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/document"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui"
 )
 
 // runEdit starts the editor mode, optionally with a file

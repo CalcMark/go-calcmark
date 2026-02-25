@@ -87,7 +87,7 @@ func TestStatusBarClearsOnTyping(t *testing.T) {
 	}
 
 	// Get initial view to see what's displayed
-	initialView := m.View()
+	initialView := m.View().Content
 	t.Logf("Initial view status bar area:\n%s",
 		getStatusBarFromView(initialView))
 

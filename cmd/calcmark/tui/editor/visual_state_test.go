@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestVisualStateAfterTypingAndEnter verifies that after typing and pressing ENTER,
@@ -31,7 +31,7 @@ func TestVisualStateAfterTypingAndEnter(t *testing.T) {
 
 	// Type "1. asdf"
 	for _, ch := range "1. asdf" {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = result.(Model)
 	}
 
@@ -52,7 +52,7 @@ func TestVisualStateAfterTypingAndEnter(t *testing.T) {
 	}
 
 	// Press ENTER
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	t.Logf("\n=== AFTER PRESSING ENTER ===")
@@ -106,12 +106,12 @@ func TestVisualStateView(t *testing.T) {
 
 	// Type some content
 	for _, ch := range "hello" {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = result.(Model)
 	}
 
 	// Get the visual output
-	view := m.View()
+	view := m.View().Content
 
 	t.Logf("View output length: %d bytes", len(view))
 	t.Logf("View contains lines: %d", strings.Count(view, "\n"))

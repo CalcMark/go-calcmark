@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestDeleteSingleChar_TypeThenDelete verifies that DELETE key can delete
@@ -22,7 +22,7 @@ func TestDeleteSingleChar_TypeThenDelete(t *testing.T) {
 	m.previewMode = PreviewFull
 
 	// Type a single character
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	m = m2.(Model)
 
 	if m.cursorCol != 1 || m.editBuf != "a" {
@@ -31,7 +31,7 @@ func TestDeleteSingleChar_TypeThenDelete(t *testing.T) {
 	}
 
 	// Move cursor left to position on the character
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 	m = m3.(Model)
 
 	if m.cursorCol != 0 {
@@ -39,7 +39,7 @@ func TestDeleteSingleChar_TypeThenDelete(t *testing.T) {
 	}
 
 	// Press DELETE - should delete the 'a'
-	m4, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m4, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m4.(Model)
 
 	if m.editBuf != "" {
@@ -61,7 +61,7 @@ func TestDeleteSingleChar_AtEndJoinsLines(t *testing.T) {
 	m.previewMode = PreviewFull
 
 	// Move to end of line (after 'a')
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
 	m = m2.(Model)
 
 	if m.cursorCol != 1 {
@@ -69,7 +69,7 @@ func TestDeleteSingleChar_AtEndJoinsLines(t *testing.T) {
 	}
 
 	// Press DELETE - this should join lines
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m3.(Model)
 
 	if m.editBuf != "aline2" {
@@ -97,7 +97,7 @@ func TestDeleteSingleChar_InitialCursor(t *testing.T) {
 	}
 
 	// Press DELETE - should delete 'a' at position 0
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m2.(Model)
 
 	if m.editBuf != "" {
@@ -125,14 +125,14 @@ func TestDeleteSingleChar_AfterLineJoin(t *testing.T) {
 	t.Logf("Initial lines: %v", m.GetLines())
 
 	// Move to end of first line
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
 	m = m2.(Model)
 
 	t.Logf("After END: cursorLine=%d, cursorCol=%d, editBuf=%q",
 		m.cursorLine, m.cursorCol, m.editBuf)
 
 	// First DELETE - joins with next line (the "a" line)
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m3.(Model)
 
 	t.Logf("After first DELETE (join): cursorCol=%d, editBuf=%q, lines=%v",
@@ -151,7 +151,7 @@ func TestDeleteSingleChar_AfterLineJoin(t *testing.T) {
 	}
 
 	// Second DELETE - should delete the 'a'
-	m4, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m4, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m4.(Model)
 
 	t.Logf("After second DELETE: cursorCol=%d, editBuf=%q, lines=%v",
@@ -178,11 +178,11 @@ func TestDeleteSingleChar_AfterLineJoinWithDebounce(t *testing.T) {
 	m.previewMode = PreviewFull
 
 	// Move to end of first line
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
 	m = m2.(Model)
 
 	// First DELETE - joins with next line
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m3.(Model)
 
 	t.Logf("After first DELETE: cursorCol=%d, editBuf=%q", m.cursorCol, m.editBuf)
@@ -197,7 +197,7 @@ func TestDeleteSingleChar_AfterLineJoinWithDebounce(t *testing.T) {
 		m.cursorCol, m.editBuf, m.GetLines())
 
 	// NOW try to delete the 'a' - this is where the bug likely occurs
-	m5, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m5, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m5.(Model)
 
 	t.Logf("After second DELETE: cursorCol=%d, editBuf=%q, lines=%v",
@@ -237,7 +237,7 @@ func TestDeleteSingleChar_WithClearedEditBuf(t *testing.T) {
 	}
 
 	// Now press DELETE - should delete the 'a' at position 28
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m2.(Model)
 
 	t.Logf("After DELETE: cursorCol=%d, editBuf=%q, lines=%v",
@@ -271,7 +271,7 @@ func TestDeleteSingleChar_CursorAtEnd(t *testing.T) {
 		m.cursorCol, len(m.GetLines()[0]), m.editBuf)
 
 	// Press DELETE - this will try to JOIN with next line, not delete the 'a'
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m2.(Model)
 
 	t.Logf("After DELETE: cursorCol=%d, editBuf=%q, lines=%v",
@@ -300,13 +300,13 @@ func TestDeleteSingleChar_FullUserScenario(t *testing.T) {
 		m.cursorLine, m.cursorCol, m.GetLines())
 
 	// Step 1: Press END to go to end of first line
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
 	m = m2.(Model)
 	t.Logf("Step 1 - After END: cursorLine=%d, cursorCol=%d, editBuf=%q",
 		m.cursorLine, m.cursorCol, m.editBuf)
 
 	// Step 2: Press DELETE to join with "a" line
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m3.(Model)
 	t.Logf("Step 2 - After DELETE (join): cursorLine=%d, cursorCol=%d, editBuf=%q, lines=%v",
 		m.cursorLine, m.cursorCol, m.editBuf, m.GetLines())
@@ -324,7 +324,7 @@ func TestDeleteSingleChar_FullUserScenario(t *testing.T) {
 	// - OR editBuf might be cleared, requiring reload
 
 	// Step 4: Press DELETE again - THIS IS WHERE THE BUG MIGHT BE
-	m5, _ := m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	m5, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 	m = m5.(Model)
 	t.Logf("Step 4 - After second DELETE: cursorLine=%d, cursorCol=%d, editBuf=%q, lines=%v",
 		m.cursorLine, m.cursorCol, m.editBuf, m.GetLines())

@@ -86,7 +86,7 @@ func TestErrorDisplayInContextFooter(t *testing.T) {
 	m.previewMode = PreviewFull
 	m.cursorLine = 0
 
-	view := m.View()
+	view := m.View().Content
 
 	// Should show helpful error in context footer area
 	// Looking for the variable name and hint, not the raw error code

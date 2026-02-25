@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestFirstLineBumpWhenTyping reproduces the bug where the first line
@@ -24,7 +24,7 @@ func TestFirstLineBumpWhenTyping(t *testing.T) {
 	m.height = 24
 
 	// Get initial visual state before typing
-	initialView := m.View()
+	initialView := m.View().Content
 	t.Logf("Initial view (before typing):\n%s", initialView)
 
 	// Get visual line count before typing
@@ -32,11 +32,11 @@ func TestFirstLineBumpWhenTyping(t *testing.T) {
 	t.Logf("Initial visual lines: %d", initialVisualLines)
 
 	// Simulate typing a character (should trigger transitionToEditing)
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	m = result.(Model)
 
 	// Get visual state after typing
-	afterView := m.View()
+	afterView := m.View().Content
 	t.Logf("After typing 'k':\n%s", afterView)
 
 	// Get visual line count after typing
@@ -87,15 +87,15 @@ func TestEmptyEditorFirstCharacter(t *testing.T) {
 
 	initialVisualLines := countVisualLines(m)
 	t.Logf("Empty editor initial visual lines: %d", initialVisualLines)
-	t.Logf("Initial view:\n%s", m.View())
+	t.Logf("Initial view:\n%s", m.View().Content)
 
 	// Type first character
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	m = result.(Model)
 
 	afterVisualLines := countVisualLines(m)
 	t.Logf("After typing first char, visual lines: %d", afterVisualLines)
-	t.Logf("After typing view:\n%s", m.View())
+	t.Logf("After typing view:\n%s", m.View().Content)
 
 	// Visual line count should stay the same (1 line before, 1 line after)
 	if initialVisualLines != afterVisualLines {

@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestArrowKeyNavigationAcrossLines tests that left/right arrow keys
@@ -91,7 +91,7 @@ func TestArrowKeyNavigationWithKeyMsg(t *testing.T) {
 	t.Logf("Starting: cursorLine=%d, cursorCol=%d, editBuf=%q", m.cursorLine, m.cursorCol, m.editBuf)
 
 	// Send Right arrow key
-	msg := tea.KeyMsg{Type: tea.KeyRight}
+	msg := tea.KeyPressMsg{Code: tea.KeyRight}
 	updatedModel, _ := m.Update(msg)
 	m = updatedModel.(Model)
 
@@ -105,7 +105,7 @@ func TestArrowKeyNavigationWithKeyMsg(t *testing.T) {
 	}
 
 	// Send Left arrow key (should go back)
-	msg = tea.KeyMsg{Type: tea.KeyLeft}
+	msg = tea.KeyPressMsg{Code: tea.KeyLeft}
 	updatedModel, _ = m.Update(msg)
 	m = updatedModel.(Model)
 
@@ -137,7 +137,7 @@ func TestUTF8CursorMovement(t *testing.T) {
 
 	// Move right 3 times should reach end of "日本語"
 	for range 3 {
-		rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+		rightMsg := tea.KeyPressMsg{Code: tea.KeyRight}
 		newModel, _ := m.Update(rightMsg)
 		m = newModel.(Model)
 	}
@@ -148,7 +148,7 @@ func TestUTF8CursorMovement(t *testing.T) {
 	}
 
 	// Moving right again should not move (at end)
-	rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+	rightMsg := tea.KeyPressMsg{Code: tea.KeyRight}
 	newModel, _ := m.Update(rightMsg)
 	m = newModel.(Model)
 

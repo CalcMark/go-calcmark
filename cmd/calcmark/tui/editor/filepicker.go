@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"charm.land/bubbles/v2/filepicker"
 	"charm.land/lipgloss/v2"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 )
 
 // FilePickerFocus indicates which part of the file dialog has focus.

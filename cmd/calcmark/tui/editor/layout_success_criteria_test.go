@@ -4,18 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/mattn/go-runewidth"
-	"github.com/muesli/termenv"
 )
-
-func init() {
-	// Force ASCII for consistent test output
-	lipgloss.SetColorProfile(termenv.Ascii)
-}
 
 // =============================================================================
 // Phase 2 Success Criteria Integration Tests
@@ -50,7 +44,7 @@ func TestSC1_SourceAndResultsSideBySide(t *testing.T) {
 	m.previewMode = PreviewFull
 
 	// --- Wiring: call View() and assert on its output ---
-	view := m.View()
+	view := m.View().Content
 	viewLines := strings.Split(view, "\n")
 
 	// View output should not exceed terminal height
@@ -403,7 +397,7 @@ func TestSC5_ResizeReflowsCorrectly(t *testing.T) {
 	m.previewMode = PreviewFull
 
 	// --- Render at width 120 ---
-	view1 := m.View()
+	view1 := m.View().Content
 	viewLines1 := strings.Split(view1, "\n")
 	leftWidth1, _ := m.GetPaneWidths(120)
 	t.Logf("Width 120: leftWidth=%d, view lines=%d", leftWidth1, len(viewLines1))
@@ -418,7 +412,7 @@ func TestSC5_ResizeReflowsCorrectly(t *testing.T) {
 	m = updated.(Model)
 
 	// --- Render at width 60 ---
-	view2 := m.View()
+	view2 := m.View().Content
 	viewLines2 := strings.Split(view2, "\n")
 	leftWidth2, rightWidth2 := m.GetPaneWidths(60)
 	t.Logf("Width 60: leftWidth=%d, rightWidth=%d, view lines=%d", leftWidth2, rightWidth2, len(viewLines2))

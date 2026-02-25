@@ -4,17 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 )
-
-func init() {
-	// Force ASCII for consistent test output
-	lipgloss.SetColorProfile(termenv.Ascii)
-}
 
 // TestViewAlignment_EditMode tests that source and preview panes
 // have the same number of lines during edit mode.
@@ -38,24 +31,24 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 
 	// Navigate to line 3 (zstd_compressed)
 	var updated tea.Model
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(Model)
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(Model)
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(Model)
 
 	t.Logf("Before insert: cursorLine=%d, mode=%v", m.cursorLine, m.mode)
 
 	// Press 'o' to insert line below and enter edit mode
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'o', Text: "o"})
 	m = updated.(Model)
 
 	t.Logf("After 'o': cursorLine=%d, mode=%v, editBuf=%q", m.cursorLine, m.mode, m.editBuf)
 
 	// Type some text
 	for _, r := range "test" {
-		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ = m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = updated.(Model)
 	}
 
@@ -67,7 +60,7 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 	}
 
 	// Now render and check alignment
-	view := m.View()
+	view := m.View().Content
 
 	// The view contains both panes side by side
 	// We need to extract and compare line counts
@@ -262,7 +255,7 @@ z = 30`
 	}
 
 	// Also render full view and check
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 	t.Log("=== Full View Output ===")
 	for i, line := range lines {
@@ -292,16 +285,16 @@ z = 30`
 
 	// Navigate down and insert
 	var updated tea.Model
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(Model)
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(Model)
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'o', Text: "o"})
 	m = updated.(Model)
 
 	// Type text
 	for _, r := range "new" {
-		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		updated, _ = m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = updated.(Model)
 	}
 

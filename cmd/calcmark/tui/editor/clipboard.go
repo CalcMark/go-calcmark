@@ -3,8 +3,8 @@ package editor
 import (
 	"strings"
 
-	"github.com/atotto/clipboard"
 	tea "charm.land/bubbletea/v2"
+	"github.com/atotto/clipboard"
 )
 
 // handleCut cuts selected text to system clipboard (Ctrl+X).

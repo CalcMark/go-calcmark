@@ -5,13 +5,11 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 )
 
 // TestLipglossPlaceStripsStyling checks if lipgloss.Place() strips ANSI codes
 func TestLipglossPlaceStripsStyling(t *testing.T) {
-	// Set color profile explicitly for this test
-	lipgloss.SetColorProfile(termenv.ANSI256)
+
 	// Create content with background styling
 	bgStyle := lipgloss.NewStyle().Background(lipgloss.Color("236"))
 	styledContent := bgStyle.Render("hello") + bgStyle.Render(strings.Repeat(" ", 10))
@@ -24,7 +22,7 @@ func TestLipglossPlaceStripsStyling(t *testing.T) {
 		20, 3,
 		lipgloss.Left, lipgloss.Top,
 		styledContent,
-		lipgloss.WithWhitespaceBackground(lipgloss.Color("236")),
+		lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(lipgloss.Color("236"))),
 	)
 
 	t.Logf("After Place (raw): %q", placed)
@@ -38,8 +36,7 @@ func TestLipglossPlaceStripsStyling(t *testing.T) {
 
 // TestPadToWidthPreservesStyle checks if padToWidth adds styled padding
 func TestPadToWidthPreservesStyle(t *testing.T) {
-	// Set color profile explicitly for this test
-	lipgloss.SetColorProfile(termenv.ANSI256)
+
 	input := "hello"
 	result := padToWidth(input, 20, lipgloss.Color("236"))
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"charm.land/lipgloss/v2"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 )
 
 // PinnedVar represents a pinned variable for display.

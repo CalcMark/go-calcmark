@@ -6,18 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/cockroachdb/datadriven"
-	"github.com/knz/catwalk"
-	"github.com/muesli/termenv"
 )
-
-func init() {
-	lipgloss.SetColorProfile(termenv.Ascii)
-}
 
 // TestEditorCatwalkWrapping tests text wrapping alignment between source and preview panes.
 func TestEditorCatwalkWrapping(t *testing.T) {
@@ -61,18 +54,18 @@ result = very_long_variable_name_that_will_definitely_wrap_in_narrow_pane * 2
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
-			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				// Use DebugLines() to show visual line structure
 				_, err := out.Write([]byte(model.DebugLines()))
 				return err
 			}),
-			catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				leftWidth, rightWidth := model.GetPaneWidths(model.width)
 				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
@@ -120,7 +113,7 @@ result = very_long_variable_name_that_will_definitely_wrap_in_narrow_pane * 2
 				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
-			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				results := model.GetLineResults()
 				var buf strings.Builder

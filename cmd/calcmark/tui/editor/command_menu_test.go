@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 func TestAllCommandMenuActionsViaUpdate(t *testing.T) {

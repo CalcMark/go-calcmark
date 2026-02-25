@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
 )
 
 func init() {
@@ -41,7 +41,7 @@ func TestNewModel(t *testing.T) {
 
 func TestHandleKeyCtrlC(t *testing.T) {
 	m := New(nil)
-	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	result := newModel.(Model)
 
 	if !result.quitting {
@@ -54,7 +54,7 @@ func TestHandleKeyCtrlC(t *testing.T) {
 
 func TestHandleKeyCtrlQ(t *testing.T) {
 	m := New(nil)
-	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'q', Mod: tea.ModCtrl})
 	result := newModel.(Model)
 
 	if !result.quitting {
@@ -69,10 +69,7 @@ func TestCommandModeEntry(t *testing.T) {
 	m := New(nil)
 
 	// Simulate typing ':' on empty input
-	newModel, _ := m.Update(tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{':'},
-	})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
 	result := newModel.(Model)
 
 	if result.inputMode != shared.InputCommand {
@@ -88,7 +85,7 @@ func TestCommandModeEscapeExit(t *testing.T) {
 	m.inputMode = shared.InputCommand
 	m.input.Prompt = ": "
 
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	result := newModel.(Model)
 
 	if result.inputMode != shared.InputNormal {

@@ -5,18 +5,11 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 )
 
 // TestDividerPositionConsistency verifies that the divider appears at a consistent
 // column position across all lines in the View() output.
 func TestDividerPositionConsistency(t *testing.T) {
-	// Save and restore color profile for test isolation
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
-
 	// Create document with varying content lengths
 	content := "# Header\nx = 10\nvery_long_variable_name = 100\ny = 5"
 	doc, err := document.NewDocument(content)
@@ -42,7 +35,7 @@ func TestDividerPositionConsistency(t *testing.T) {
 	expectedDividerCol := leftContentWidth
 
 	// Render view
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 
 	t.Logf("Total lines in view: %d", len(lines))

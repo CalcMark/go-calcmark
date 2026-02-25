@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestDeleteLastCharThenType reproduces the exact bug:
@@ -25,7 +25,7 @@ func TestDeleteLastCharThenType(t *testing.T) {
 
 	// Type "abc"
 	for _, r := range "abc" {
-		m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m2, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = m2.(Model)
 	}
 
@@ -40,7 +40,7 @@ func TestDeleteLastCharThenType(t *testing.T) {
 	t.Logf("After debounce (saves 'abc'): doc line=%q", m.GetLines()[0])
 
 	// Delete 'c'
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m2, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	m = m2.(Model)
 	t.Logf("After delete 'c': cursorCol=%d, editBuf=%q", m.cursorCol, m.editBuf)
 
@@ -49,7 +49,7 @@ func TestDeleteLastCharThenType(t *testing.T) {
 	t.Logf("After debounce (saves 'ab'): doc line=%q", m.GetLines()[0])
 
 	// Delete 'b'
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	m = m3.(Model)
 	t.Logf("After delete 'b': cursorCol=%d, editBuf=%q", m.cursorCol, m.editBuf)
 
@@ -58,7 +58,7 @@ func TestDeleteLastCharThenType(t *testing.T) {
 	t.Logf("After debounce (saves 'a'): doc line=%q", m.GetLines()[0])
 
 	// Delete 'a' - this is where the bug manifests
-	m4, _ := m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	m4, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	m = m4.(Model)
 	t.Logf("After delete 'a': cursorCol=%d, editBuf=%q", m.cursorCol, m.editBuf)
 
@@ -72,7 +72,7 @@ func TestDeleteLastCharThenType(t *testing.T) {
 	t.Logf("After debounce (should save ''): doc line=%q", docLine)
 
 	// Now type 'b' - this should result in just "b", not "ba"
-	m5, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	m5, _ := m.Update(tea.KeyPressMsg{Code: 'b', Text: "b"})
 	m = m5.(Model)
 	t.Logf("After type 'b': cursorCol=%d, editBuf=%q", m.cursorCol, m.editBuf)
 

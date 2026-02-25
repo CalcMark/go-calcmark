@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestCalculationBeforeOrderedList verifies that a calculation result
@@ -43,15 +43,15 @@ func TestCalculationBeforeOrderedList(t *testing.T) {
 	m.cursorCol = 0
 
 	// Type "1"
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: '.', Text: "."})
 	m = result.(Model)
 
 	// Type "."
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'.'}})
+	result, _ = m.Update(tea.KeyPressMsg{Code: '.', Text: "."})
 	m = result.(Model)
 
 	// Type " "
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	result, _ = m.Update(tea.KeyPressMsg{Code: '.', Text: "."})
 	m = result.(Model)
 
 	t.Logf("After typing '1. ', editBuf=%q", m.editBuf)

@@ -6,10 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/cockroachdb/datadriven"
-	"github.com/knz/catwalk"
 )
 
 func TestIsFrontmatterStructuralLine(t *testing.T) {
@@ -465,16 +464,16 @@ z = x + y`
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
-			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
-			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				results := model.GetLineResults()
 				var buf strings.Builder
@@ -485,7 +484,7 @@ z = x + y`
 				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
-			catwalk.WithObserver("frontmatter", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("frontmatter", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				var buf strings.Builder
 				fm := model.doc.GetFrontmatter()
@@ -740,16 +739,16 @@ x = my_var + 1`
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
-			catwalk.WithObserver("lines", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
-			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				results := model.GetLineResults()
 				var buf strings.Builder
@@ -760,7 +759,7 @@ x = my_var + 1`
 				_, err := out.Write([]byte(buf.String()))
 				return err
 			}),
-			catwalk.WithObserver("frontmatter", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("frontmatter", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				var buf strings.Builder
 				fm := model.doc.GetFrontmatter()
@@ -779,9 +778,9 @@ x = my_var + 1`
 	})
 }
 
-// alignmentObserver returns a catwalk observer that dumps source↔preview alignment.
-func alignmentObserver() catwalk.Option {
-	return catwalk.WithObserver("alignment", func(out io.Writer, m tea.Model) error {
+// alignmentObserver returns a v2 catwalk observer that dumps source↔preview alignment.
+func alignmentObserver() optionV2 {
+	return WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 		model := m.(Model)
 		leftWidth, rightWidth := model.GetPaneWidths(model.width)
 		aligned := model.computeAlignedPanes(leftWidth, rightWidth)
@@ -858,8 +857,8 @@ x = my_var + 1`
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
@@ -892,8 +891,8 @@ price = 100 USD in EUR`
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
@@ -928,8 +927,8 @@ tax = price * tax_rate`
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
@@ -959,8 +958,8 @@ x = 42`
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),

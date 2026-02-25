@@ -23,7 +23,7 @@ func TestViewportDoesNotExceedHeight(t *testing.T) {
 	m.width = 80
 	m.height = 24 // Standard terminal height
 
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 
 	t.Logf("View has %d lines for height %d", len(lines), m.height)
@@ -72,7 +72,7 @@ func TestViewportHeightWithLargeContent(t *testing.T) {
 	m.width = 80
 	m.height = 24
 
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 
 	t.Logf("View has %d lines for height %d (with scrolling)", len(lines), m.height)

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 )
 
 // HelpItemKind distinguishes actionable items (selectable, executable)

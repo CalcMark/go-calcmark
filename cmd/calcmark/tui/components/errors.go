@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	"charm.land/lipgloss/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // ErrorDisplayInfo contains parsed error information for display.

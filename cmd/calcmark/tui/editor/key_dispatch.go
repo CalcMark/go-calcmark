@@ -98,10 +98,11 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 		// On macOS terminals, Option+Arrow often sends ESC+b or ESC+f
 		// These appear as Alt+b and Alt+f (standard readline/emacs bindings)
-		if msg.Text == "b" || msg.Text == "B" {
+		// In v2, modifier combos have the character in Code, not Text.
+		if msg.Code == 'b' || msg.Code == 'B' {
 			return m.handleCtrlLeftKey() // backward word
 		}
-		if msg.Text == "f" || msg.Text == "F" {
+		if msg.Code == 'f' || msg.Code == 'F' {
 			return m.handleCtrlRightKey() // forward word
 		}
 	}

@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestInteractive_OrderedListThenBlankThenHeading simulates the user's reported bug:
@@ -40,7 +40,7 @@ func TestInteractive_OrderedListThenBlankThenHeading(t *testing.T) {
 	m.cursorCol = len(sourceLines[2])
 
 	// Press ENTER to create new line
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	t.Logf("After first ENTER: cursorLine=%d, TotalLines=%d", m.cursorLine, m.TotalLines())
@@ -54,7 +54,7 @@ func TestInteractive_OrderedListThenBlankThenHeading(t *testing.T) {
 	}
 
 	// Press ENTER again to create blank line
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	t.Logf("After second ENTER (blank line): cursorLine=%d, TotalLines=%d", m.cursorLine, m.TotalLines())
@@ -69,7 +69,7 @@ func TestInteractive_OrderedListThenBlankThenHeading(t *testing.T) {
 
 	// Type a heading: "# Title"
 	for _, ch := range "# Title" {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
@@ -98,7 +98,7 @@ func TestInteractive_OrderedListThenBlankThenHeading(t *testing.T) {
 	}
 
 	// Press ENTER to finish typing the heading
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	t.Logf("After ENTER (finish heading): cursorLine=%d", m.cursorLine)
@@ -144,14 +144,14 @@ func TestInteractive_HeadingVisibilityWhileTyping(t *testing.T) {
 	m.cursorCol = len(m.GetLines()[1])
 
 	// Press ENTER twice to create blank line
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	// Start typing "# Title"
 	for _, ch := range "# Title" {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 

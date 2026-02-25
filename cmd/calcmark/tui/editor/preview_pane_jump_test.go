@@ -88,7 +88,7 @@ savings = total_income * savings_rate`
 			m = result.(Model)
 		}
 
-		view := m.View()
+		view := m.View().Content
 		lines := strings.Split(view, "\n")
 		var previewLines []string
 		for _, line := range lines {

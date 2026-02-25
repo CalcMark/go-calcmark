@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestDocumentBlockStructure verifies how different document contents create blocks
@@ -131,7 +131,7 @@ func TestTypingInEmptyDocDoesNotCreateExtraLines(t *testing.T) {
 
 	// Type "1. asdf"
 	for i, ch := range "1. asdf" {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = result.(Model)
 
 		afterLines := m.TotalLines()
@@ -174,7 +174,7 @@ func TestEnterAfterOrderedListItem(t *testing.T) {
 
 	// Type "1. asdf"
 	for _, ch := range "1. asdf" {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = result.(Model)
 	}
 
@@ -192,7 +192,7 @@ func TestEnterAfterOrderedListItem(t *testing.T) {
 	}
 
 	// Press ENTER to create new line
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	linesAfter := m.TotalLines()
@@ -248,7 +248,7 @@ func TestEnterInMiddleOfOrderedListItem(t *testing.T) {
 		linesBefore, m.cursorLine, m.cursorCol, m.editBuf)
 
 	// Press ENTER to split the line
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	linesAfter := m.TotalLines()
@@ -299,7 +299,7 @@ func TestEnterAtEndOfLine(t *testing.T) {
 	m.mode = StateDefault
 
 	// Enter edit mode
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	m = result.(Model)
 
 	linesBefore := m.TotalLines()
@@ -307,7 +307,7 @@ func TestEnterAtEndOfLine(t *testing.T) {
 		linesBefore, m.cursorLine, m.cursorCol)
 
 	// Press ENTER
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	linesAfter := m.TotalLines()
@@ -347,7 +347,7 @@ func TestMultipleEntersCreateMultipleLines(t *testing.T) {
 	m.cursorLine = 0
 	m.cursorCol = len("start")
 	m.mode = StateDefault
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	m = result.(Model)
 
 	startingLines := m.TotalLines()
@@ -356,7 +356,7 @@ func TestMultipleEntersCreateMultipleLines(t *testing.T) {
 	// Press ENTER 3 times
 	for i := range 3 {
 		beforeEnter := m.TotalLines()
-		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = result.(Model)
 		afterEnter := m.TotalLines()
 

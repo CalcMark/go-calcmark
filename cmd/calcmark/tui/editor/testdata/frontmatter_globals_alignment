@@ -12,4 +12,4 @@ Source lines: 5, Preview lines: 5
 [1] SRC(ln=2 pad=false): "globals:"                          | PRV(ln=1 fm=true): ""
 [2] SRC(ln=3 pad=false): "  my_var: 42"                      | PRV(ln=2 fm=true): ""
 [3] SRC(ln=4 pad=false): "---"                               | PRV(ln=3 fm=true): ""
-[4] SRC(ln=5 pad=false): "x = my_var + 1"                    | PRV(ln=4 fm=false): "x → 43"
+[4] SRC(ln=5 pad=false): "x = my_var + 1"                    | PRV(ln=4 fm=false): "\x1b[38;2;156;163;175;48;2;26;23;..."

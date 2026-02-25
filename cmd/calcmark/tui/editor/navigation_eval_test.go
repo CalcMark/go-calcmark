@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestArrowUpEvaluatesLine tests that pressing arrow up saves and evaluates the current line.
@@ -22,21 +22,21 @@ func TestArrowUpEvaluatesLine(t *testing.T) {
 	m.height = 24
 
 	// Press ENTER to create a new line (cursor moves to line 1)
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	t.Logf("After ENTER: cursorLine=%d", m.cursorLine)
 
 	// Type "a = 2 * 3"
 	for _, ch := range "a = 2 * 3" {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
 	t.Logf("After typing: cursorLine=%d, editBuf=%q", m.cursorLine, m.editBuf)
 
 	// Press arrow UP - should save and evaluate the line
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = newModel.(Model)
 
 	t.Logf("After UP: cursorLine=%d, userIsTyping=%v", m.cursorLine, m.userIsTyping)
@@ -105,24 +105,24 @@ func TestArrowDownEvaluatesLine(t *testing.T) {
 
 	// Type "b = 5 + 5"
 	for _, ch := range "b = 5 + 5" {
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
 	// Press ENTER to create a new line
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	t.Logf("Before UP: cursorLine=%d", m.cursorLine)
 
 	// Press arrow UP to go back
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = newModel.(Model)
 
 	t.Logf("After UP: cursorLine=%d", m.cursorLine)
 
 	// Now press arrow DOWN - should save and evaluate line 0
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = newModel.(Model)
 
 	t.Logf("After DOWN: cursorLine=%d, userIsTyping=%v", m.cursorLine, m.userIsTyping)
@@ -175,7 +175,7 @@ func TestEnterOnEmptyLineCursorPosition(t *testing.T) {
 	t.Logf("EditBuf before ENTER: %q", m.editBuf)
 
 	// Press ENTER on the empty line
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = newModel.(Model)
 
 	t.Logf("After ENTER: cursorLine=%d, cursorCol=%d, TotalLines=%d", m.cursorLine, m.cursorCol, m.TotalLines())
@@ -305,7 +305,7 @@ func TestEscKeyDoesNothingInNormalMode(t *testing.T) {
 	t.Logf("Before ESC: cursorLine=%d, TotalLines=%d", m.cursorLine, m.TotalLines())
 
 	// Press ESC - should do nothing in normal mode
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	t.Logf("After ESC: cursorLine=%d, TotalLines=%d", m.cursorLine, m.TotalLines())
@@ -321,7 +321,7 @@ func TestEscKeyDoesNothingInNormalMode(t *testing.T) {
 	}
 
 	// Press ESC again - should still do nothing
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	t.Logf("After 2nd ESC: cursorLine=%d, TotalLines=%d", m.cursorLine, m.TotalLines())

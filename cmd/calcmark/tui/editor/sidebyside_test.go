@@ -4,13 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 func TestSideBySide_BasicRendering(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	// SideBySide now adds a divider (1 char) between panes
 	// So for total width 80: leftContent=39, divider=1, right=40
@@ -45,7 +43,6 @@ func TestSideBySide_BasicRendering(t *testing.T) {
 }
 
 func TestSideBySide_UnevenLineCounts(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	// For total width 80: leftContent=39, divider=1, right=40
 	sbs := NewSideBySide(39, 40, lipgloss.Color("236"), lipgloss.Color("235"))
@@ -87,7 +84,6 @@ func TestSideBySide_UnevenLineCounts(t *testing.T) {
 }
 
 func TestSideBySide_EmptyInput(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	// For total width 80: leftContent=39, divider=1, right=40
 	sbs := NewSideBySide(39, 40, lipgloss.Color("236"), lipgloss.Color("235"))
@@ -113,7 +109,6 @@ func TestSideBySide_EmptyInput(t *testing.T) {
 }
 
 func TestSideBySide_StyledContent(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	// For total width 80: leftContent=39, divider=1, right=40
 	sbs := NewSideBySide(39, 40, lipgloss.Color("236"), lipgloss.Color("235"))
@@ -149,7 +144,6 @@ func TestSideBySide_StyledContent(t *testing.T) {
 }
 
 func TestSideBySide_NoGaps(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	// For total width 80: leftContent=39, divider=1, right=40
 	sbs := NewSideBySide(39, 40, lipgloss.Color("236"), lipgloss.Color("235"))
@@ -203,7 +197,6 @@ func TestSideBySide_TotalWidth(t *testing.T) {
 // TestPreviewRequirements_PREVIEW01 verifies preview pane shows only calculation results
 // PREVIEW-01: Preview pane shows ONLY calculation results (not markdown text)
 func TestPreviewRequirements_PREVIEW01(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	// Mixed content: markdown headers shouldn't be echoed in preview
 	// Calculations should show results
@@ -250,7 +243,6 @@ y = x * 2`
 // TestPreviewRequirements_PREVIEW02 verifies results are vertically aligned
 // PREVIEW-02: Results vertically aligned with source calculation lines
 func TestPreviewRequirements_PREVIEW02(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.Ascii)
 
 	// Document with gaps between calculations
 	content := `x = 10
@@ -304,7 +296,6 @@ z = 30`
 // TestPreviewRequirements_PREVIEW03 verifies variable assignment format
 // PREVIEW-03: Variable assignments display as "variable_name -> result"
 func TestPreviewRequirements_PREVIEW03(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.Ascii)
 
 	content := `price = 100
 tax = price * 0.1
@@ -341,7 +332,7 @@ total = price + tax`
 	}
 
 	// Verify rendered format contains arrow
-	view := m.View()
+	view := m.View().Content
 	if !strings.Contains(view, "→") {
 		t.Error("PREVIEW-03: View should contain arrow (→) character")
 	}
@@ -352,7 +343,6 @@ total = price + tax`
 // TestPreviewRequirements_PREVIEW04 verifies anonymous calculation format
 // PREVIEW-04: Anonymous calculations display as "-> result" (arrow only)
 func TestPreviewRequirements_PREVIEW04(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.Ascii)
 
 	content := `2 + 2
 x = 10
@@ -394,7 +384,6 @@ x = 10
 // TestPreviewRequirements_PREVIEW05 verifies non-calculation lines are blank
 // PREVIEW-05: Non-calculation lines show blank in preview (spacing preserved)
 func TestPreviewRequirements_PREVIEW05(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.Ascii)
 
 	content := `# Header
 x = 10
@@ -445,7 +434,6 @@ y = 20`
 // Bug: Users see blockquotes, links, and other markdown in the Results pane,
 // but only headings and calculation results should display.
 func TestPreviewPaneFiltering(t *testing.T) {
-	lipgloss.SetColorProfile(termenv.Ascii)
 
 	tests := []struct {
 		name               string

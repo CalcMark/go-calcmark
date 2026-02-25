@@ -6,19 +6,12 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 )
 
 // TestSelectionHighlighting_WrappedLineFullyHighlighted verifies that
 // when a line wraps, all wrapped segments are highlighted when selected.
 // Bug: Wrapped line continuation is NOT highlighted even though selected.
 func TestSelectionHighlighting_WrappedLineFullyHighlighted(t *testing.T) {
-	// Save and restore color profile
-	// Use ANSI256 to enable color output for testing highlighting
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Create document with a line long enough to wrap at 80 columns
 	// Line 9: "remaining = total_income - fixed_total - savings" is ~50 chars
@@ -47,7 +40,7 @@ remaining = total_income - fixed_total - savings`
 	}
 
 	// Get the view - this triggers renderLineWithSelection for wrapped lines
-	view := m.View()
+	view := m.View().Content
 
 	// The wrapped line should have selection highlighting on BOTH segments
 	// Look for the wrapped content ("savings" in this case)
@@ -61,9 +54,10 @@ remaining = total_income - fixed_total - savings`
 		if strings.Contains(line, "savings") {
 			foundWrappedSegment = true
 			// Check if it has selection highlighting background.
-			// The palette Selection color (#1f3a5f dark) resolves to ANSI256 23,
-			// so we check for "48;5;23m" (background). Also accept the old "48;5;240".
-			if strings.Contains(line, "48;5;23m") || strings.Contains(line, "48;5;240") {
+			// The palette Selection color (#1f3a5f dark) renders as:
+			// - TrueColor: "48;2;30;58;95" (RGB background)
+			// - ANSI256: "48;5;23m" (fallback)
+			if strings.Contains(line, "48;2;30;58;95") || strings.Contains(line, "48;5;23m") || strings.Contains(line, "48;5;240") {
 				wrappedSegmentHighlighted = true
 			}
 			t.Logf("Wrapped segment line: %q", line)
@@ -84,11 +78,6 @@ remaining = total_income - fixed_total - savings`
 // selection highlighting doesn't override the dim/bright line distinction.
 // Bug: Selection highlighting loses dim/bright distinction - all text looks same when selected.
 func TestSelectionHighlighting_PreservesDimBrightDistinction(t *testing.T) {
-	// Save and restore color profile
-	// Use ANSI256 to enable color output for testing
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	content := `# Header
 x = 10
@@ -107,11 +96,11 @@ z = 30`
 
 	// Get view without selection first
 	m.eval.Evaluate(m.doc)
-	viewWithoutSelection := m.View()
+	viewWithoutSelection := m.View().Content
 
 	// Now select all
 	m.SelectAll()
-	viewWithSelection := m.View()
+	viewWithSelection := m.View().Content
 
 	// The cursor line should still have different styling from non-cursor lines
 	// even when selection is active
@@ -188,10 +177,6 @@ z = 30`
 // like "rent = $1500 │ utilities = $200 │ insurance = $150", which gets
 // misinterpreted as pane divider rows.
 func TestPreviewPaneJump_LastCalcBeforeEmptyLine(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Document that reproduces the exact scenario from user screenshot:
 	// - Line 10: insurance = $150
@@ -295,10 +280,6 @@ savings = total_income * savings_rate`
 // multi-line content, line numbers remain visible and text styling is consistent.
 // Bug: Pasting breaks things significantly - missing virtual line numbers and different text color.
 func TestPaste_PreservesLineNumbersAndStyling(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Start with simple content
 	content := `# Budget
@@ -318,7 +299,7 @@ income = 5000`
 	m.eval.Evaluate(m.doc)
 
 	// Get view before paste
-	viewBefore := m.View()
+	viewBefore := m.View().Content
 	linesBefore := strings.Split(viewBefore, "\n")
 
 	// Count lines with line numbers before paste
@@ -363,7 +344,7 @@ income = 5000`
 	m.eval.Evaluate(m.doc)
 
 	// Get view after paste
-	viewAfter := m.View()
+	viewAfter := m.View().Content
 	linesAfter := strings.Split(viewAfter, "\n")
 
 	numberedLinesAfter := countLinesWithNumbers(linesAfter)
@@ -433,10 +414,6 @@ income = 5000`
 // where scrolling and wrapping may cause line number issues.
 // Bug: Missing virtual line numbers and different text color after paste.
 func TestPaste_LargeDocumentWithScrolling(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Start with a larger document that will need scrolling
 	content := `# Budget
@@ -478,7 +455,7 @@ remaining = total_income - fixed_total - savings`
 	m.loadCurrentLineIntoEditBuffer()
 
 	// Force a view render to scroll the view
-	view1 := m.View()
+	view1 := m.View().Content
 
 	// Now paste content
 	pasteLines := []string{
@@ -490,7 +467,7 @@ remaining = total_income - fixed_total - savings`
 	m.eval.Evaluate(m.doc)
 
 	// Get view after paste
-	view2 := m.View()
+	view2 := m.View().Content
 	linesAfterPaste := strings.Split(view2, "\n")
 
 	// Look for the bug: source content lines without line numbers

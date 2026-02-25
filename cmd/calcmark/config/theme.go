@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 )
 
 // Styles holds pre-built lipgloss styles derived from the semantic palette.

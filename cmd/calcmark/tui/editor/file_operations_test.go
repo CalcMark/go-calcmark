@@ -9,8 +9,8 @@ import (
 
 	"path/filepath"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 func TestSaveFile(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
 )
 
 // TestFunctionHelp_AfterAutocompleteAccept verifies that function parameter help
@@ -32,7 +32,7 @@ func TestFunctionHelp_AfterAutocompleteAccept(t *testing.T) {
 
 	// Step 1: Type "acc" to trigger autocomplete
 	for _, r := range "acc" {
-		m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m2, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = m2.(Model)
 	}
 
@@ -62,7 +62,7 @@ func TestFunctionHelp_AfterAutocompleteAccept(t *testing.T) {
 	}
 
 	// Step 2: Press TAB to accept the autocomplete suggestion
-	m3, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m3, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = m3.(Model)
 
 	t.Logf("After pressing TAB:")
@@ -118,7 +118,7 @@ func TestFunctionHelp_AfterAutocompleteAccept(t *testing.T) {
 
 	// Step 4: THE REAL TEST - Check the actual View() output contains function help
 	// This is what the user actually sees!
-	view := m.View()
+	view := m.View().Content
 
 	t.Logf("View output length: %d bytes", len(view))
 
@@ -169,7 +169,7 @@ func TestFunctionHelp_ViewRendering(t *testing.T) {
 	t.Logf("  mode: %v", m.mode)
 
 	// Get the actual rendered view
-	view := m.View()
+	view := m.View().Content
 
 	t.Logf("View length: %d bytes", len(view))
 

@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // TestWordNavigationDispatch verifies that Ctrl+Left/Right, Alt+Left/Right,
@@ -25,10 +25,10 @@ func TestWordNavigationDispatch(t *testing.T) {
 		name string
 		msg  tea.KeyMsg
 	}{
-		{"Ctrl+Right", tea.KeyMsg{Type: tea.KeyCtrlRight}},
-		{"Alt+Right", tea.KeyMsg{Type: tea.KeyRight, Alt: true}},
-		{"Alt+f", tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}, Alt: true}},
-		{"Alt+F", tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'F'}, Alt: true}},
+		{"Ctrl+Right", tea.KeyPressMsg{Code: tea.KeyRight, Mod: tea.ModCtrl}},
+		{"Alt+Right", tea.KeyPressMsg{Code: tea.KeyRight, Mod: tea.ModAlt}},
+		{"Alt+f", tea.KeyPressMsg{Code: 'f', Mod: tea.ModAlt}},
+		{"Alt+F", tea.KeyPressMsg{Code: 'F', Mod: tea.ModAlt}},
 	}
 
 	for _, tc := range wordRightKeys {
@@ -57,10 +57,10 @@ func TestWordNavigationDispatch(t *testing.T) {
 		name string
 		msg  tea.KeyMsg
 	}{
-		{"Ctrl+Left", tea.KeyMsg{Type: tea.KeyCtrlLeft}},
-		{"Alt+Left", tea.KeyMsg{Type: tea.KeyLeft, Alt: true}},
-		{"Alt+b", tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}, Alt: true}},
-		{"Alt+B", tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'B'}, Alt: true}},
+		{"Ctrl+Left", tea.KeyPressMsg{Code: tea.KeyLeft, Mod: tea.ModCtrl}},
+		{"Alt+Left", tea.KeyPressMsg{Code: tea.KeyLeft, Mod: tea.ModAlt}},
+		{"Alt+b", tea.KeyPressMsg{Code: 'b', Mod: tea.ModAlt}},
+		{"Alt+B", tea.KeyPressMsg{Code: 'B', Mod: tea.ModAlt}},
 	}
 
 	for _, tc := range wordLeftKeys {

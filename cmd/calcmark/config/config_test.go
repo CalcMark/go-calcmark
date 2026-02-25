@@ -255,10 +255,11 @@ primary = "#FF00FF"
 	}
 
 	// overrideColor sets both Light and Dark slots to the user's hex.
-	// AdaptiveColor stringifies as "{Light Dark}".
+	// In lipgloss v2, lipgloss.Color is a color.Color so AdaptiveColor
+	// stringifies as "{{R G B A} {R G B A}}" instead of "{#hex #hex}".
 	fgStr := fmt.Sprintf("%v", fg)
-	if fgStr != "{#FF00FF #FF00FF}" {
-		t.Errorf("Title foreground = %v, want {#FF00FF #FF00FF}", fgStr)
+	if fgStr != "{{255 0 255 255} {255 0 255 255}}" {
+		t.Errorf("Title foreground = %v, want {{255 0 255 255} {255 0 255 255}}", fgStr)
 	}
 }
 

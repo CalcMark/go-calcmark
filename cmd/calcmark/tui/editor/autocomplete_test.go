@@ -276,7 +276,7 @@ func TestBackspaceLastCharAfterDebounce(t *testing.T) {
 	m.editBuf = ""
 
 	// 1. Type "a" — triggers autocomplete
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	keyMsg := tea.KeyPressMsg{Code: 'a', Text: "a"}
 	result, cmd := m.Update(keyMsg)
 	m = result.(Model)
 
@@ -312,7 +312,7 @@ func TestBackspaceLastCharAfterDebounce(t *testing.T) {
 	m.autocompleteState.Prefix = "a"
 
 	// 4. Press backspace to delete "a" — this is the bug trigger
-	bsMsg := tea.KeyMsg{Type: tea.KeyBackspace}
+	bsMsg := tea.KeyPressMsg{Code: tea.KeyBackspace}
 	result, _ = m.Update(bsMsg)
 	m = result.(Model)
 
@@ -359,7 +359,7 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 	m.editBuf = ""
 
 	// 1. Type "a" — inserts on empty line, triggers autocomplete
-	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	keyMsg := tea.KeyPressMsg{Code: 'a', Text: "a"}
 	result, _ := m.Update(keyMsg)
 	m = result.(Model)
 
@@ -383,7 +383,7 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 	m.state = StateReady // debounce transitions through Processing → Ready
 
 	// 4. Press backspace — deletes "a", editBuf becomes ""
-	bsMsg := tea.KeyMsg{Type: tea.KeyBackspace}
+	bsMsg := tea.KeyPressMsg{Code: tea.KeyBackspace}
 	result, _ = m.Update(bsMsg)
 	m = result.(Model)
 

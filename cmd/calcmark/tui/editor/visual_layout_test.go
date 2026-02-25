@@ -6,16 +6,10 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
-	"charm.land/lipgloss/v2"
-	"github.com/muesli/termenv"
 )
 
 // TestVisualLayout_GutterSpace verifies that there is a space between line numbers and content
 func TestVisualLayout_GutterSpace(t *testing.T) {
-	// Save and restore color profile for test isolation
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	content := "x = 10\ny = 20"
 	doc, err := document.NewDocument(content)
@@ -28,7 +22,7 @@ func TestVisualLayout_GutterSpace(t *testing.T) {
 	m.height = 24
 	m.previewMode = PreviewFull
 
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 
 	// Look for source lines (lines with line numbers)
@@ -90,10 +84,6 @@ func TestVisualLayout_GutterSpace(t *testing.T) {
 
 // TestVisualLayout_DividerPosition verifies divider is at consistent column based on terminal width
 func TestVisualLayout_DividerPosition(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	testCases := []struct {
 		width          int
@@ -122,7 +112,7 @@ func TestVisualLayout_DividerPosition(t *testing.T) {
 			const dividerWidth = 1
 			expectedDividerCol := leftWidth - dividerWidth
 
-			view := m.View()
+			view := m.View().Content
 			lines := strings.Split(view, "\n")
 
 			dividerFound := false
@@ -153,10 +143,6 @@ func TestVisualLayout_DividerPosition(t *testing.T) {
 
 // TestVisualLayout_NoExtraDividers verifies there are no extra pipe characters in content
 func TestVisualLayout_NoExtraDividers(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	content := "x = 10\ny = 20"
 	doc, err := document.NewDocument(content)
@@ -169,7 +155,7 @@ func TestVisualLayout_NoExtraDividers(t *testing.T) {
 	m.height = 24
 	m.previewMode = PreviewFull
 
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 
 	// Get expected divider position
@@ -201,10 +187,6 @@ func TestVisualLayout_NoExtraDividers(t *testing.T) {
 
 // TestVisualLayout_VerticalAlignment verifies preview results align with their source lines
 func TestVisualLayout_VerticalAlignment(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Create document with calculations
 	content := `# Header
@@ -230,7 +212,7 @@ z = y * 2`
 	// Evaluate to get results
 	m.eval.Evaluate(m.doc)
 
-	view := m.View()
+	view := m.View().Content
 	lines := strings.Split(view, "\n")
 
 	// Get divider position
@@ -352,9 +334,6 @@ func TestPreviewPaneWidthRatio(t *testing.T) {
 // TestPreviewPaneHeader verifies the preview pane has "Results" header
 // Requirement: Phase 10 - Preview pane header is "Results" (not "Preview")
 func TestPreviewPaneHeader(t *testing.T) {
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	content := "x = 10"
 	doc, err := document.NewDocument(content)
@@ -367,7 +346,7 @@ func TestPreviewPaneHeader(t *testing.T) {
 	m.height = 24
 	m.previewMode = PreviewFull
 
-	view := m.View()
+	view := m.View().Content
 
 	// Check for "Results" header in the rendered view
 	if !strings.Contains(view, "Results") {
@@ -385,9 +364,6 @@ func TestPreviewPaneHeader(t *testing.T) {
 // TestPreviewPaneAnonymousCalculationFormat verifies arrow format for anonymous calcs
 // Requirement: PREVIEW-04 - Anonymous calculations display as "-> result" (arrow only)
 func TestPreviewPaneAnonymousCalculationFormat(t *testing.T) {
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	// Document with both named and anonymous calculations
 	content := `x = 10
@@ -438,7 +414,7 @@ y = 20
 	}
 
 	// Verify the rendered view shows arrow format for both types
-	view := m.View()
+	view := m.View().Content
 	plainView := stripANSI(view)
 
 	// Named variable format: "varName → value"
@@ -466,10 +442,6 @@ func abs(x int) int {
 // TestRenderLineWithCursor_CursorBeyondContent verifies no panic when cursor > content length
 // Regression test for panic "slice bounds out of range [:48] with length 41" (fix: 7dbe80f)
 func TestRenderLineWithCursor_CursorBeyondContent(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	doc, err := document.NewDocument("short")
 	if err != nil {
@@ -504,10 +476,6 @@ func TestRenderLineWithCursor_CursorBeyondContent(t *testing.T) {
 
 // TestRenderLineWithCursor_UTF8Content verifies proper rune handling
 func TestRenderLineWithCursor_UTF8Content(t *testing.T) {
-	// Save and restore color profile
-	originalProfile := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.Ascii)
-	defer lipgloss.SetColorProfile(originalProfile)
 
 	doc, err := document.NewDocument("hello")
 	if err != nil {

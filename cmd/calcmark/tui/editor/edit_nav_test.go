@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 func TestEditModeEnterCreatesNewLine(t *testing.T) {
@@ -30,7 +30,7 @@ b = 2`
 		m.cursorLine, m.cursorCol, m.editBuf, m.TotalLines())
 
 	// Press Enter at end of line - should create new line below
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	t.Logf("After Enter: cursorLine=%d, cursorCol=%d, editBuf=%q, totalLines=%d, mode=%v",
@@ -66,16 +66,16 @@ b = 2`
 	m.height = 24
 
 	// Type a character that won't trigger autocomplete (punctuation)
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'#'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: '#', Text: "#"})
 	m = result.(Model)
 
 	// Navigate down to line 1 (ensure we're in StateDefault for navigation)
 	if m.mode != StateDefault {
 		// Dismiss any autocomplete that may have been triggered
-		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+		result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 		m = result.(Model)
 	}
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	m = result.(Model)
 
 	if m.cursorLine != 1 || m.mode != StateDefault {
@@ -85,7 +85,7 @@ b = 2`
 	t.Logf("On line 1: editBuf=%q", m.editBuf)
 
 	// Press Enter to add new line after line 1
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	t.Logf("After Enter: cursorLine=%d, editBuf=%q, totalLines=%d", m.cursorLine, m.editBuf, m.TotalLines())
@@ -101,7 +101,7 @@ b = 2`
 	}
 
 	// Navigate back up
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = result.(Model)
 
 	if m.cursorLine != 1 || m.mode != StateDefault {

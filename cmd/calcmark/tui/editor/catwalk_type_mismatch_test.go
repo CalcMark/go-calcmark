@@ -6,18 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/cockroachdb/datadriven"
-	"github.com/knz/catwalk"
-	"github.com/muesli/termenv"
 )
-
-func init() {
-	lipgloss.SetColorProfile(termenv.Ascii)
-}
 
 // TestEditorCatwalkTypeMismatch tests that type mismatch errors appear on the correct line.
 // Bug: Error appears on the line where the variable is defined, not where it's used incorrectly.
@@ -48,12 +41,12 @@ c = b * a
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
-			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				results := model.GetLineResults()
 				var buf strings.Builder
@@ -105,12 +98,12 @@ c = a * b
 		m.height = 24
 		m.previewMode = PreviewFull
 
-		catwalk.RunModel(t, path, m,
-			catwalk.WithObserver("debug", func(out io.Writer, m tea.Model) error {
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
-			catwalk.WithObserver("results", func(out io.Writer, m tea.Model) error {
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				results := model.GetLineResults()
 				var buf strings.Builder

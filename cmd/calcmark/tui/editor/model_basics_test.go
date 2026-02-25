@@ -6,9 +6,9 @@ import (
 	"slices"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
 )
 
 func init() {
@@ -122,7 +122,7 @@ func TestMoveCursor(t *testing.T) {
 func TestHandleKeyQuit(t *testing.T) {
 	// Ctrl+C with no selection should quit (standard interrupt signal)
 	m := New(nil)
-	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	newModel, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	result := newModel.(Model)
 	if !result.quitting {
 		t.Error("Ctrl+C with no selection should set quitting=true")
@@ -135,7 +135,7 @@ func TestHandleKeyQuit(t *testing.T) {
 	doc, _ := document.NewDocument("test text\n")
 	m = New(doc)
 	m.SelectAll() // Select all text
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	result = newModel.(Model)
 	if result.quitting {
 		t.Error("Ctrl+C with selection should NOT quit")
@@ -146,7 +146,7 @@ func TestHandleKeyQuit(t *testing.T) {
 
 	// Ctrl+Q should also quit (no unsaved changes)
 	m = New(nil)
-	newModel, cmd = m.Update(tea.KeyMsg{Type: tea.KeyCtrlQ})
+	newModel, cmd = m.Update(tea.KeyPressMsg{Code: 'q', Mod: tea.ModCtrl})
 	result = newModel.(Model)
 	if !result.quitting {
 		t.Error("Ctrl+Q should set quitting=true")

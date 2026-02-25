@@ -23,7 +23,7 @@ func TestViewWithEmptyLinesAfterHeading(t *testing.T) {
 	m.previewMode = PreviewFull
 
 	// Render the view
-	view := m.View()
+	view := m.View().Content
 
 	// Split into lines for analysis
 	lines := strings.Split(view, "\n")

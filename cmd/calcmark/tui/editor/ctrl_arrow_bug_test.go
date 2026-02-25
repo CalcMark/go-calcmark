@@ -14,7 +14,7 @@ func TestCtrlArrowEmptyEditor(t *testing.T) {
 	// Type "test this"
 	text := "test this"
 	for _, ch := range text {
-		newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
@@ -27,7 +27,7 @@ func TestCtrlArrowEmptyEditor(t *testing.T) {
 	t.Logf("Before CTRL+Left: editBuf=%q, cursorCol=%d", m.editBuf, m.cursorCol)
 
 	// Test CTRL+Left - should move to start of "this" (col 5)
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlLeft})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyLeft, Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	t.Logf("After CTRL+Left: editBuf=%q, cursorCol=%d", m.editBuf, m.cursorCol)
@@ -37,7 +37,7 @@ func TestCtrlArrowEmptyEditor(t *testing.T) {
 	}
 
 	// Test CTRL+Left again - should move to start of line (col 0)
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlLeft})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyLeft, Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.cursorCol != 0 {
@@ -47,7 +47,7 @@ func TestCtrlArrowEmptyEditor(t *testing.T) {
 	// Test CTRL+Right - most editors move to START of next word (col 5)
 	// But some move to END of current word (col 4)
 	// Let's check what actually happens
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlRight})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight, Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	t.Logf("After CTRL+Right from col 0: cursorCol=%d", m.cursorCol)
@@ -58,7 +58,7 @@ func TestCtrlArrowEmptyEditor(t *testing.T) {
 	}
 
 	// Test CTRL+Right again - should move to end of line (col 9)
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlRight})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyRight, Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
 	if m.cursorCol != 9 {

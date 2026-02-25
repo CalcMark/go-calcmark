@@ -160,7 +160,7 @@ func TestPreviewAlignmentIntegration(t *testing.T) {
 
 			// === LEVEL 4: View Rendering ===
 			m.previewMode = PreviewFull
-			view := m.View()
+			view := m.View().Content
 			viewLines := strings.Split(view, "\n")
 
 			t.Logf("View output has %d lines", len(viewLines))

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
-	tea "charm.land/bubbletea/v2"
 )
 
 // TestEmptyDocumentStructure tests what structure an empty document has
@@ -76,7 +76,7 @@ func TestTypingMarkdownInEmptyEditor(t *testing.T) {
 
 	// Type markdown heading: "# Header"
 	for _, r := range []rune{'#', ' ', 'H', 'e', 'a', 'd', 'e', 'r'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
@@ -85,7 +85,7 @@ func TestTypingMarkdownInEmptyEditor(t *testing.T) {
 	}
 
 	// Press ENTER to commit
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	// VERIFY: Document was updated
@@ -141,7 +141,7 @@ func TestMarkdownRenderingInPreview(t *testing.T) {
 	}
 
 	// Try rendering the empty view
-	initialView := m.View()
+	initialView := m.View().Content
 	if initialView == "" {
 		t.Error("Initial view is empty")
 	}
@@ -149,12 +149,12 @@ func TestMarkdownRenderingInPreview(t *testing.T) {
 	// Type markdown: "# Header"
 	t.Log("=== After typing '# Header' and ENTER ===")
 	for _, r := range []rune{'#', ' ', 'H', 'e', 'a', 'd', 'e', 'r'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
 	// Press ENTER to commit
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	// Check state after typing
@@ -168,7 +168,7 @@ func TestMarkdownRenderingInPreview(t *testing.T) {
 	}
 
 	// Try to render the view - this exercises the markdown rendering path
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("View returned empty string")
 	}
@@ -211,12 +211,12 @@ func TestUnsavedChangesContentBased(t *testing.T) {
 
 	// Type some content: "x = 42"
 	for _, r := range []rune{'x', ' ', '=', ' ', '4', '2'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
 	// Press ENTER to commit
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	// VERIFY: After typing, should have unsaved changes
@@ -230,9 +230,9 @@ func TestUnsavedChangesContentBased(t *testing.T) {
 	// Now delete the line we just created
 	// Move cursor to line 0 (the "x = 42" line)
 	// We're currently on line 2, so move up twice
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = result.(Model)
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = result.(Model)
 
 	if m.cursorLine != 0 {
@@ -251,7 +251,7 @@ func TestUnsavedChangesContentBased(t *testing.T) {
 
 	// Delete all characters in the line
 	for i := 0; i < len(m.editBuf); i++ {
-		result, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlU}) // Clear line
+		result, _ = m.Update(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl}) // Clear line
 		m = result.(Model)
 	}
 
@@ -340,12 +340,12 @@ func TestEmptyDocumentSourcePreviewAlignment(t *testing.T) {
 
 	// Type some markdown
 	for _, r := range []rune{'#', ' ', 'H', 'e', 'a', 'd', 'e', 'r'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
 	// Press ENTER
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	// Get alignment after typing
@@ -376,12 +376,12 @@ func TestTypingCalculationInEmptyEditor(t *testing.T) {
 
 	// Type calculation: "x = 42"
 	for _, r := range []rune{'x', ' ', '=', ' ', '4', '2'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
 	// Press ENTER to commit
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	// VERIFY: Document was updated
@@ -473,7 +473,7 @@ func TestEmptyEditorTyping(t *testing.T) {
 	m := New(nil)
 
 	// Type the letter 'h'
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	m = result.(Model)
 
 	// User should now be typing
@@ -492,13 +492,13 @@ func TestEmptyEditorTyping(t *testing.T) {
 	}
 
 	// Type more characters
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	result, _ = m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	m = result.(Model)
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
+	result, _ = m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	m = result.(Model)
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
+	result, _ = m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	m = result.(Model)
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	result, _ = m.Update(tea.KeyPressMsg{Code: 'o', Text: "o"})
 	m = result.(Model)
 
 	// editBuf should contain 'hello'
@@ -519,7 +519,7 @@ func TestEmptyEditorCursorVisibility(t *testing.T) {
 	m.height = 24
 
 	// Get the view - this should not panic
-	view := m.View()
+	view := m.View().Content
 	if view == "" {
 		t.Error("View returned empty string")
 	}
@@ -575,7 +575,7 @@ func TestCursorVisibleWhenTyping(t *testing.T) {
 	m.height = 24
 
 	// Type a character to enter editing mode
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	result, _ := m.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	m = result.(Model)
 
 	// User should now be typing
@@ -608,25 +608,25 @@ func TestEmptyEditorDocumentAlwaysValid(t *testing.T) {
 		op   func(Model) (tea.Model, tea.Cmd)
 	}{
 		{"Type character", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+			return m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 		}},
 		{"Press backspace on empty", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 		}},
 		{"Press delete on empty", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyDelete})
 		}},
 		{"Press up arrow", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyUp})
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 		}},
 		{"Press down arrow", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyDown})
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		}},
 		{"Press left arrow", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyLeft})
 		}},
 		{"Press right arrow", func(m Model) (tea.Model, tea.Cmd) {
-			return m.Update(tea.KeyMsg{Type: tea.KeyRight})
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyRight})
 		}},
 	}
 
@@ -677,7 +677,7 @@ func TestEmptyEditorLoadEditBuffer(t *testing.T) {
 
 	// Now add some content
 	for _, r := range []rune{'t', 'e', 's', 't'} {
-		result, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		result, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 		m = result.(Model)
 	}
 
@@ -687,13 +687,13 @@ func TestEmptyEditorLoadEditBuffer(t *testing.T) {
 	}
 
 	// Press ENTER to commit
-	result, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	result, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = result.(Model)
 
 	// Move cursor back up twice (we're on line 2, need to get to line 0)
-	result, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m2 := result.(Model)
-	result, _ = m2.Update(tea.KeyMsg{Type: tea.KeyUp})
+	result, _ = m2.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m2 = result.(Model)
 
 	if m2.cursorLine != 0 {
@@ -729,7 +729,7 @@ func TestEscInEmptyDocument(t *testing.T) {
 	}
 
 	// Press ESC - should do nothing in normal mode (ESC is only for canceling special modes)
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	if m.Mode() != StateDefault {
@@ -750,14 +750,14 @@ func TestTypingInEmptyDocument(t *testing.T) {
 	// Type "hello"
 	var newModel tea.Model
 	for _, ch := range "hello" {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
 	t.Logf("Before ESC: editBuf=%q, cursorLine=%d", m.editBuf, m.cursorLine)
 
 	// Press ESC - should do nothing in normal mode
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	t.Logf("After ESC: editBuf=%q, cursorLine=%d, userIsTyping=%v", m.editBuf, m.cursorLine, m.userIsTyping)
@@ -781,23 +781,23 @@ func TestContinueEditingAfterCreation(t *testing.T) {
 	// Blank documents start in editing mode, type "first"
 	var newModel tea.Model
 	for _, ch := range "first" {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	// Navigate back to line 0 to edit it
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 	m = newModel.(Model)
 
 	// Move cursor to end of line
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
 	m = newModel.(Model)
 
 	// Type " second" to append to "first"
 	for _, ch := range " second" {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: ch, Text: string(ch)})
 		m = newModel.(Model)
 	}
 
@@ -825,17 +825,17 @@ func TestEmptyEditBufferNoEmptyLines(t *testing.T) {
 	initialLines := m.TotalLines()
 
 	// Enter edit mode, clear the line, save
-	newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
 	m = newModel.(Model)
 
 	// Clear buffer by pressing backspace multiple times
 	for range 10 {
-		newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyBackspace})
 		m = newModel.(Model)
 	}
 
 	// Save with ESC
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	// Should still have lines (empty line becomes text block)
@@ -854,7 +854,7 @@ func TestBlankDocumentRendering(t *testing.T) {
 	m = newModel.(Model)
 
 	// Get the view
-	view := m.View()
+	view := m.View().Content
 
 	// Verify headers are visible
 	if !strings.Contains(view, "Source") {
@@ -892,9 +892,9 @@ func TestBlankDocumentTyping(t *testing.T) {
 	m = newModel.(Model)
 
 	// Type some text
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	m = newModel.(Model)
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: 'i', Text: "i"})
 	m = newModel.(Model)
 
 	// Verify edit buffer contains the text
@@ -908,7 +908,7 @@ func TestBlankDocumentTyping(t *testing.T) {
 	}
 
 	// Save with ESC
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = newModel.(Model)
 
 	// Verify document was created

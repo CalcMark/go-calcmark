@@ -6,4 +6,4 @@ run observe=alignment
 -- alignment:
 Source and Preview Alignment:
 Source lines: 1, Preview lines: 1
-[0] SRC(ln=1 pad=false): "x = 42"                            | PRV(ln=0 fm=false): "x → 42"
+[0] SRC(ln=1 pad=false): "x = 42"                            | PRV(ln=0 fm=false): "\x1b[38;2;156;163;175;48;2;26;23;..."

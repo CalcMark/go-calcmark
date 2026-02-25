@@ -3,9 +3,9 @@ package editor
 import (
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"charm.land/lipgloss/v2"
 )
 
 // renderLineWithSelection applies selection highlighting to a line if needed.
