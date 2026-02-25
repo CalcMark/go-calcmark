@@ -167,30 +167,37 @@ Create comprehensive tests in `testdata/`:
 
 ## Acceptance Criteria
 
-1. **Visual Selection Mode**
-   - [ ] Ctrl-Space enters/exits visual mode
-   - [ ] Arrow keys extend selection in visual mode
-   - [ ] Selected text is visually highlighted
-   - [ ] Copy/cut work on visual selection
+1. **Shift+Arrow Selection** (implemented via Bubble Tea v2 ModShift support)
+   - [x] Shift+Arrow keys select text (up/down/left/right)
+   - [x] Shift+Home/End select to line boundaries
+   - [x] Shift+Ctrl+Home/End select to document boundaries
+   - [x] Shift+Ctrl+Left/Right select by word
+   - [x] Selected text is visually highlighted
+   - [x] Copy/cut work on selection
 
 2. **Visual Feedback**
-   - [ ] Selected text has distinct background color
-   - [ ] Status bar shows selection info
-   - [ ] Mode indicator shows "VISUAL" when active
+   - [x] Selected text has distinct background color (pre-existing)
+   - [x] Status bar shows selection character count
+   - [x] Plain arrow keys clear selection
 
-3. **Clipboard Operations**
-   - [ ] Ctrl-C copies selected text
-   - [ ] Ctrl-X cuts selected text
-   - [ ] Ctrl-V pastes at cursor
-   - [ ] Ctrl-A selects all text
-   - [ ] Operations show success/failure feedback
+3. **Selection-Aware Editing**
+   - [x] Typing replaces selected text
+   - [x] Backspace deletes selected text
+   - [x] Delete key deletes selected text
+   - [x] Enter replaces selected text with newline
 
-4. **Cross-Platform**
+4. **Clipboard Operations**
+   - [x] Ctrl-C copies selected text (pre-existing)
+   - [x] Ctrl-X cuts selected text (pre-existing)
+   - [x] Ctrl-V pastes at cursor (pre-existing)
+   - [x] Ctrl-A selects all text (pre-existing)
+
+5. **Cross-Platform** (deferred)
    - [ ] Works on macOS with Cmd keys
    - [ ] Works on Linux/Windows with Ctrl keys
    - [ ] Word navigation uses appropriate modifiers
 
-5. **Error Handling**
+6. **Error Handling** (deferred)
    - [ ] Clipboard failures show error message
    - [ ] Operations validate selection bounds
    - [ ] Graceful fallback for unsupported operations

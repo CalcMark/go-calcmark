@@ -103,6 +103,12 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 		hints = "y/n/c"
 	}
 
+	// Count selected characters for status bar display
+	selectionCount := 0
+	if m.HasSelection() {
+		selectionCount = len([]rune(m.GetSelectedText()))
+	}
+
 	return components.StatusBarState{
 		Filename:       m.filepath,
 		Line:           m.cursorLine + 1,
@@ -115,6 +121,7 @@ func (m *Model) GetStatusBarState() components.StatusBarState {
 		StatusMsg:      m.statusMsg,
 		StatusIsErr:    m.statusIsErr,
 		EvalInProgress: m.userIsTyping, // userIsTyping tracks debounce state
+		SelectionCount: selectionCount,
 	}
 }
 

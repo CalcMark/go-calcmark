@@ -3,7 +3,7 @@ run observe=debug
 key ctrl+a
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="" selectionAnchorLine=0 selectionAnchorCol=0 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=0 selectionAnchorCol=0 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test right arrow clears selection
 run observe=debug
@@ -11,7 +11,7 @@ key ctrl+a
 key right
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test left arrow clears selection
 run observe=debug
@@ -19,7 +19,7 @@ key ctrl+a
 key left
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=5 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=5 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="z = 30" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test up arrow clears selection
 run observe=debug
@@ -27,7 +27,7 @@ key ctrl+a
 key up
 ----
 -- debug:
-mode=StateDefault cursorLine=2 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 20" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=6 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test down arrow clears selection
 run observe=debug
@@ -35,7 +35,7 @@ key ctrl+a
 key down
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 20" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="y = 20" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test typing clears selection
 run observe=debug
@@ -43,7 +43,7 @@ key ctrl+a
 type x
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=7 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 20x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateAutocomplete cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test backspace clears selection
 run observe=debug
@@ -51,7 +51,7 @@ key ctrl+a
 key backspace
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=5 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 2x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test delete clears selection
 run observe=debug
@@ -59,7 +59,7 @@ key ctrl+a
 key delete
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 2x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test Home key clears selection
 run observe=debug
@@ -67,7 +67,7 @@ key ctrl+a
 key home
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=0 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 2x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test End key clears selection
 run observe=debug
@@ -75,7 +75,7 @@ key ctrl+a
 key end
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 2x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test Page Up clears selection
 run observe=debug
@@ -83,7 +83,7 @@ key ctrl+a
 key pgup
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 2x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test Page Down clears selection
 run observe=debug
@@ -91,7 +91,7 @@ key ctrl+a
 key pgdown
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="y = 2x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test Ctrl+A then view render does not panic (regression test for 7dbe80f)
 # This test exercises renderLineWithCursor which panicked on cursor > content length
@@ -100,11 +100,11 @@ key ctrl+a
 ----
 -- view:
 [48;2;33;29;25m[48;2;33;29;25m [1;38;2;255;255;255;48;2;33;29;25mSource[48;2;33;29;25m [48;2;33;29;25m                                       [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m [1;38;2;255;255;255;48;2;26;23;20mResults[48;2;26;23;20m [48;2;26;23;20m                       [m␤
-[48;2;33;29;25m[48;2;33;29;25m   [38;2;107;114;128;48;2;33;29;25m1[48;2;33;29;25m [38;2;245;243;240;48;2;30;58;95m[38;2;245;243;240;48;2;33;29;25mhello world testhello world testhello [48;2;33;29;25m   [48;2;33;29;25m [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
-[48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m[48;2;33;29;25m    [48;2;33;29;25m [38;2;245;243;240;48;2;30;58;95m[38;2;245;243;240;48;2;33;29;25mworld test linetest thisx = 10[48;2;33;29;25m           [48;2;33;29;25m [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
-[48;2;33;29;25m[48;2;33;29;25m   [38;2;107;114;128;48;2;33;29;25m2[48;2;33;29;25m [38;2;245;243;240;48;2;30;58;95m[38;2;96;165;250;48;2;33;29;25mx = 10[48;2;33;29;25m                                   [48;2;33;29;25m [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[38;2;156;163;175;48;2;26;23;20mx[48;2;26;23;20m [38;2;107;114;128;48;2;26;23;20m→[48;2;26;23;20m [38;2;168;201;64;48;2;26;23;20m10[48;2;26;23;20m                          [m␤
-[48;2;33;29;25m[48;2;33;29;25m   [38;2;107;114;128;48;2;33;29;25m3[48;2;33;29;25m [38;2;245;243;240;48;2;30;58;95m[38;2;96;165;250;48;2;33;29;25my = 20[48;2;33;29;25m                                   [48;2;33;29;25m [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[38;2;156;163;175;48;2;26;23;20my[48;2;26;23;20m [38;2;107;114;128;48;2;26;23;20m→[48;2;26;23;20m [38;2;168;201;64;48;2;26;23;20m20[48;2;26;23;20m                          [m␤
-[48;2;33;29;25m[48;2;33;29;25m   [38;2;107;114;128;48;2;33;29;25m4[48;2;33;29;25m [38;2;245;243;240;48;2;42;37;32my = 2x[38;2;33;29;25;48;2;96;165;250m [38;2;245;243;240;48;2;42;37;32m                                  [48;2;33;29;25m [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[38;2;156;163;175;48;2;26;23;20mz[48;2;26;23;20m [38;2;107;114;128;48;2;26;23;20m→[48;2;26;23;20m [38;2;168;201;64;48;2;26;23;20m30[48;2;26;23;20m                          [m␤
+[48;2;33;29;25m[48;2;33;29;25m   [38;2;107;114;128;48;2;33;29;25m1[48;2;33;29;25m [38;2;33;29;25;48;2;96;165;250m [38;2;245;243;240;48;2;42;37;32m                                        [48;2;33;29;25m [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[97;1m[97;1m[97;1mHeader[48;2;26;23;20m                          [m␤
+[48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
+[48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
+[48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
+[48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
 [48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
 [48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
 [48;2;33;29;25m[38;2;107;114;128;48;2;33;29;25m~[48;2;33;29;25m                                              [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m                                [m␤
@@ -121,5 +121,5 @@ key ctrl+a
 [48;2;42;37;32m                                                                                [m␤
 [48;2;42;37;32m                                                                                [m␤
 [38;2;55;65;81;48;2;42;37;32m────────────────────────────────────────────────────────────────────────────────[m␤
-[48;2;42;37;32m [m[1;48;2;42;37;32m[New][m[38;2;248;113;113;48;2;42;37;32m [+][m[48;2;42;37;32m               [m[38;2;156;163;175;48;2;42;37;32mL4:7 | EVAL...[m[48;2;42;37;32m               [m[3;38;2;156;163;175;48;2;42;37;32mCtrl+Q quit | Ctrl+H help[m[48;2;42;37;32m [m␤
+[48;2;42;37;32m [m[1;48;2;42;37;32m[New][m[38;2;248;113;113;48;2;42;37;32m [+][m[48;2;42;37;32m               [m[38;2;156;163;175;48;2;42;37;32mL1:9 | EVAL...[m[48;2;42;37;32m               [m[3;38;2;156;163;175;48;2;42;37;32mCtrl+Q quit | Ctrl+H help[m[48;2;42;37;32m [m␤
 [48;2;42;37;32m                                                                                [m🛇

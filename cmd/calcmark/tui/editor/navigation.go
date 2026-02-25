@@ -213,6 +213,161 @@ func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
 }
 
 // ========================================
+// Shift+Arrow selection navigation
+// ========================================
+// These handlers extend the selection while moving the cursor.
+// They mirror the normal navigation handlers but call ensureSelectionAnchor()
+// instead of ClearSelection().
+
+func (m Model) handleShiftUp() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorLine > 0 {
+		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+	}
+	return m, nil
+}
+
+func (m Model) handleShiftDown() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorLine < m.TotalLines()-1 {
+		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+	}
+	return m, nil
+}
+
+func (m Model) handleShiftLeft() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorCol > 0 {
+		m.cursorCol--
+	} else if m.cursorLine > 0 {
+		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+		m.cursorCol = runeLen(m.editBuf)
+	}
+	return m, nil
+}
+
+func (m Model) handleShiftRight() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	if m.cursorCol < runeLen(m.editBuf) {
+		m.cursorCol++
+	} else if m.cursorLine < m.TotalLines()-1 {
+		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+		m.cursorCol = 0
+	}
+	return m, nil
+}
+
+func (m Model) handleShiftHome() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	m.cursorCol = 0
+	return m, nil
+}
+
+func (m Model) handleShiftEnd() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	m.cursorCol = runeLen(m.editBuf)
+	return m, nil
+}
+
+func (m Model) handleShiftCtrlHome() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	m.saveCurrentLineAndMoveTo(0)
+	m.cursorCol = 0
+	return m, nil
+}
+
+func (m Model) handleShiftCtrlEnd() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+	lastLine := max(m.TotalLines()-1, 0)
+	m.saveCurrentLineAndMoveTo(lastLine)
+	m.cursorCol = runeLen(m.editBuf)
+	return m, nil
+}
+
+func (m Model) handleShiftCtrlLeft() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+
+	if m.cursorCol == 0 {
+		if m.cursorLine > 0 {
+			m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+			m.cursorCol = runeLen(m.editBuf)
+		}
+		return m, nil
+	}
+
+	runes := []rune(m.editBuf)
+	col := min(m.cursorCol, len(runes))
+
+	for col > 0 && unicode.IsSpace(runes[col-1]) {
+		col--
+	}
+	for col > 0 && !unicode.IsSpace(runes[col-1]) && !unicode.IsPunct(runes[col-1]) {
+		col--
+	}
+	if col == m.cursorCol || col == len(runes) {
+		for col > 0 && unicode.IsPunct(runes[col-1]) {
+			col--
+		}
+	}
+
+	m.cursorCol = col
+	return m, nil
+}
+
+func (m Model) handleShiftCtrlRight() (tea.Model, tea.Cmd) {
+	m.ensureSelectionAnchor()
+	m.undoManager.ForceBoundary()
+	m.loadCurrentLineIntoEditBuffer()
+
+	runes := []rune(m.editBuf)
+	lineLen := len(runes)
+
+	if m.cursorCol > lineLen {
+		m.cursorCol = lineLen
+	}
+
+	if m.cursorCol >= lineLen {
+		if m.cursorLine < m.TotalLines()-1 {
+			m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+			m.cursorCol = 0
+		}
+		return m, nil
+	}
+
+	col := m.cursorCol
+	for col < lineLen && !unicode.IsSpace(runes[col]) && !unicode.IsPunct(runes[col]) {
+		col++
+	}
+	for col < lineLen && unicode.IsPunct(runes[col]) {
+		col++
+	}
+	for col < lineLen && unicode.IsSpace(runes[col]) {
+		col++
+	}
+
+	m.cursorCol = col
+	return m, nil
+}
+
+// ========================================
 // Cursor movement and scrolling
 // ========================================
 

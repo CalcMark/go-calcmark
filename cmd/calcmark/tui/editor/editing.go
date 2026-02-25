@@ -13,13 +13,22 @@ import (
 
 // handleRuneInput handles character input - regular typing only.
 // All vim keys have been removed - user is ALWAYS in editing mode.
+// If text is selected, typing replaces the selection.
 func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 	if len(runes) == 0 {
 		return m, nil
 	}
 
-	// Typing clears selection
-	m.ClearSelection()
+	var cmds []tea.Cmd
+
+	// Typing replaces selection: delete selected text first
+	if m.HasSelection() {
+		_, deleteCmd := m.DeleteSelection()
+		if deleteCmd != nil {
+			cmds = append(cmds, deleteCmd)
+		}
+		m.modified = true
+	}
 
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
@@ -46,6 +55,7 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 		ScrollOffset: beforeScroll,
 	}
 	undoCmd := m.recordEdit(op)
+	cmds = append(cmds, undoCmd)
 
 	// Check for autocomplete suggestions after typing (use pointer to modify)
 	(&m).updateAutocompleteState()
@@ -54,13 +64,17 @@ func (m Model) handleRuneInput(runes []rune) (tea.Model, tea.Cmd) {
 	debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
 		return evalDebounceMsg{editBufSnapshot: m.editBuf}
 	})
+	cmds = append(cmds, debounceCmd)
 
-	return m, tea.Batch(debounceCmd, undoCmd)
+	return m, tea.Batch(cmds...)
 }
 
 func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
-	// Typing clears selection
-	m.ClearSelection()
+	// Enter replaces selection: delete selected text first
+	if m.HasSelection() {
+		m.DeleteSelection()
+		m.modified = true
+	}
 
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
@@ -150,8 +164,15 @@ func (m Model) handleEnterKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
-	// Typing clears selection
-	m.ClearSelection()
+	// Backspace deletes selection if one exists
+	if m.HasSelection() {
+		_, cmd := m.DeleteSelection()
+		m.modified = true
+		debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+			return evalDebounceMsg{editBufSnapshot: m.editBuf}
+		})
+		return m, tea.Batch(cmd, debounceCmd)
+	}
 
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
@@ -231,8 +252,15 @@ func (m Model) handleBackspaceKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
-	// Typing clears selection
-	m.ClearSelection()
+	// Delete key deletes selection if one exists
+	if m.HasSelection() {
+		_, cmd := m.DeleteSelection()
+		m.modified = true
+		debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
+			return evalDebounceMsg{editBufSnapshot: m.editBuf}
+		})
+		return m, tea.Batch(cmd, debounceCmd)
+	}
 
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
@@ -318,6 +346,17 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleSpaceKey() (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	// Space replaces selection: delete selected text first
+	if m.HasSelection() {
+		_, deleteCmd := m.DeleteSelection()
+		if deleteCmd != nil {
+			cmds = append(cmds, deleteCmd)
+		}
+		m.modified = true
+	}
+
 	// Capture state BEFORE the edit for undo
 	beforeLine := m.cursorLine
 	beforeCol := m.cursorCol
@@ -340,11 +379,13 @@ func (m Model) handleSpaceKey() (tea.Model, tea.Cmd) {
 		ScrollOffset: beforeScroll,
 	}
 	undoCmd := m.recordEdit(op)
+	cmds = append(cmds, undoCmd)
 
 	debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
 		return evalDebounceMsg{editBufSnapshot: m.editBuf}
 	})
-	return m, tea.Batch(debounceCmd, undoCmd)
+	cmds = append(cmds, debounceCmd)
+	return m, tea.Batch(cmds...)
 }
 
 // Control keys

@@ -87,6 +87,45 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 // handleDefaultKey processes keys in the default editing mode.
 // The user is ALWAYS able to type and edit - this is the only mode they experience.
 func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	// Handle Shift+navigation for text selection.
+	// Must be checked before Alt+Arrow and the main switch because
+	// shift+arrow key strings won't match plain arrow cases.
+	if msg.Mod.Contains(tea.ModShift) {
+		hasCtrl := msg.Mod.Contains(tea.ModCtrl)
+		hasAlt := msg.Mod.Contains(tea.ModAlt)
+
+		switch msg.Code {
+		case tea.KeyUp:
+			if !hasCtrl && !hasAlt {
+				return m.handleShiftUp()
+			}
+		case tea.KeyDown:
+			if !hasCtrl && !hasAlt {
+				return m.handleShiftDown()
+			}
+		case tea.KeyLeft:
+			if hasCtrl || hasAlt {
+				return m.handleShiftCtrlLeft()
+			}
+			return m.handleShiftLeft()
+		case tea.KeyRight:
+			if hasCtrl || hasAlt {
+				return m.handleShiftCtrlRight()
+			}
+			return m.handleShiftRight()
+		case tea.KeyHome:
+			if hasCtrl {
+				return m.handleShiftCtrlHome()
+			}
+			return m.handleShiftHome()
+		case tea.KeyEnd:
+			if hasCtrl {
+				return m.handleShiftCtrlEnd()
+			}
+			return m.handleShiftEnd()
+		}
+	}
+
 	// Handle Alt+Arrow for word navigation (Option+Arrow on macOS)
 	// This is an alternative to Ctrl+Arrow which is often captured by macOS
 	if msg.Mod.Contains(tea.ModAlt) {

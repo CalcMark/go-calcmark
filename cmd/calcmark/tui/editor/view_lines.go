@@ -205,20 +205,27 @@ func (m Model) renderEditLineWrapped(width int) []string {
 		var s strings.Builder
 
 		if i == cursorLineIdx {
-			// This line has the cursor
-			segLen := len(seg)
+			// This line has the cursor - use rune slice for correct Unicode handling
+			segRunes := []rune(seg)
+			segLen := len(segRunes)
+
+			// Clamp cursorColInLine to segment bounds to prevent panics
+			// when cursor position exceeds the wrapped segment length
+			if cursorColInLine > segLen {
+				cursorColInLine = segLen
+			}
 
 			// Determine cursor character
 			var cursorChar string
 			if cursorColInLine >= segLen {
 				cursorChar = " "
 			} else {
-				cursorChar = string(seg[cursorColInLine])
+				cursorChar = string(segRunes[cursorColInLine])
 			}
 
 			// Before cursor
 			if cursorColInLine > 0 {
-				s.WriteString(lineStyle.Render(seg[:cursorColInLine]))
+				s.WriteString(lineStyle.Render(string(segRunes[:cursorColInLine])))
 			}
 
 			// Cursor
@@ -226,7 +233,7 @@ func (m Model) renderEditLineWrapped(width int) []string {
 
 			// After cursor
 			if cursorColInLine+1 < segLen {
-				s.WriteString(lineStyle.Render(seg[cursorColInLine+1:]))
+				s.WriteString(lineStyle.Render(string(segRunes[cursorColInLine+1:])))
 			}
 
 			// Calculate padding

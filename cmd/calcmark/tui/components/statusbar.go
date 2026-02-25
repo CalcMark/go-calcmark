@@ -36,6 +36,7 @@ type StatusBarState struct {
 	StatusMsg      string // Status message (e.g., "Saved: file.cm")
 	StatusIsErr    bool   // Whether status message is an error
 	EvalInProgress bool   // True during evaluation debounce period
+	SelectionCount int    // Number of selected characters (0 = no selection)
 }
 
 // StatusBarStyle holds styles for rendering the status bar.
@@ -131,10 +132,12 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 		left.WriteString(style.Modified.Render(" [+]"))
 	}
 
-	// Build center section: position info with column and optional EVAL indicator
+	// Build center section: position info with column, selection count, and optional EVAL indicator
 	var centerText string
 	if state.EvalInProgress {
 		centerText = fmt.Sprintf("L%d:%d | EVAL...", state.Line, state.Column)
+	} else if state.SelectionCount > 0 {
+		centerText = fmt.Sprintf("L%d:%d | %d selected", state.Line, state.Column, state.SelectionCount)
 	} else {
 		centerText = fmt.Sprintf("L%d:%d | %d calcs", state.Line, state.Column, state.CalcCount)
 	}

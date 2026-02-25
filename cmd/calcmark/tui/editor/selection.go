@@ -23,6 +23,15 @@ func (m *Model) SetSelectionAnchor() {
 	m.selectionAnchorCol = m.cursorCol
 }
 
+// ensureSelectionAnchor sets the selection anchor at the current cursor position
+// only if no selection is currently active. This is called before shift+navigation
+// to start a new selection or extend an existing one.
+func (m *Model) ensureSelectionAnchor() {
+	if m.selectionAnchorLine < 0 {
+		m.SetSelectionAnchor()
+	}
+}
+
 // ClearSelection clears the current selection by resetting the anchor.
 func (m *Model) ClearSelection() {
 	m.selectionAnchorLine = -1
