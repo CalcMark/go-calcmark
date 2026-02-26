@@ -5,5 +5,7 @@ run observe=alignment
 ----
 -- alignment:
 Source and Preview Alignment:
-Source lines: 1, Preview lines: 1
-[0] SRC(ln=1 pad=false): "x = 42"                            | PRV(ln=0 fm=false): "\x1b[38;2;156;163;175;48;2;26;23;..."
+Source lines: 3, Preview lines: 3
+[0] SRC(ln=1 pad=false): "---"                               | PRV(ln=0 fm=true): ""
+[1] SRC(ln=2 pad=false): "---"                               | PRV(ln=1 fm=true): ""
+[2] SRC(ln=3 pad=false): "x = 42"                            | PRV(ln=2 fm=false): "\x1b[38;2;156;163;175;48;2;26;23;..."

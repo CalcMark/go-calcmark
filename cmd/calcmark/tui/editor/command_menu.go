@@ -26,7 +26,7 @@ var EditorCommands = []Command{
 	{Name: "Save", Accelerator: "Ctrl+S", Description: "Save document", Category: "file"},
 	{Name: "Save As", Accelerator: "", Description: "Save with new name", Category: "file"},
 	{Name: "Open", Accelerator: "Ctrl+O", Description: "Open file", Category: "file"},
-	{Name: "Export", Accelerator: "Ctrl+E", Description: "Export to format", Category: "file"},
+	{Name: "Export", Accelerator: "", Description: "Export to format", Category: "file"},
 	{Name: "Quit", Accelerator: "Ctrl+Q", Description: "Quit editor", Category: "file"},
 
 	// Edit commands

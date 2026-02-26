@@ -40,6 +40,12 @@ const (
 	// OldText is the deleted line's content.
 	// NewText is not used.
 	OpDeleteLine
+	// OpDocReplace represents an atomic whole-document replacement.
+	// Used for operations that rebuild the document (e.g., frontmatter insertion/removal).
+	// OldText is the full document content before the operation.
+	// NewText is the full document content after the operation.
+	// Line and Col are not used.
+	OpDocReplace
 )
 
 // String returns the string representation of OpType.
@@ -55,6 +61,8 @@ func (t OpType) String() string {
 		return "InsertLine"
 	case OpDeleteLine:
 		return "DeleteLine"
+	case OpDocReplace:
+		return "DocReplace"
 	default:
 		return "Unknown"
 	}
@@ -127,6 +135,11 @@ func (op EditOperation) Reverse() EditOperation {
 		reversed.Type = OpInsertLine
 		reversed.OldText = op.OldText
 		reversed.NewText = op.NewText
+	case OpDocReplace:
+		// Undoing doc replace means swapping old and new content
+		reversed.Type = OpDocReplace
+		reversed.OldText = op.NewText
+		reversed.NewText = op.OldText
 	}
 
 	return reversed

@@ -275,13 +275,6 @@ type Model struct {
 	height      int
 	quitting    bool
 	previewMode PreviewMode // Preview pane mode: Full, Minimal, Hidden
-	pendingKey  rune        // For two-key sequences like gg, dd, yy
-	yankBuffer  string      // Yanked line content for paste
-
-	// Search state
-	searchTerm    string // Current search term
-	searchMatches []int  // Line numbers with matches
-	searchIdx     int    // Current match index
 
 	// Selection state
 	selectionAnchorLine int // Line of selection anchor, -1 if no selection
@@ -416,31 +409,17 @@ func (m *Model) autoPinVariables() {
 // See unicode.go fix - trailing newlines no longer create extra lines,
 // so we MUST include them when reconstructing to preserve N lines.
 func (m *Model) getDocumentContent() string {
-	var lines []string
-
-	// Prepend frontmatter lines if present
-	if fm := m.doc.GetFrontmatter(); fm != nil {
-		serialized := fm.Serialize()
-		if serialized != "" {
-			// Serialize() produces "---\n...\n---\n\n" — split and trim trailing blank
-			fmLines := strings.Split(strings.TrimRight(serialized, "\n"), "\n")
-			lines = append(lines, fmLines...)
-		}
-	}
-
-	for _, node := range m.doc.GetBlocks() {
-		switch b := node.Block.(type) {
-		case *document.CalcBlock:
-			lines = append(lines, b.Source()...)
-		case *document.TextBlock:
-			lines = append(lines, b.Source()...)
-		}
-	}
+	lines := m.GetLines()
 	if len(lines) == 0 {
 		return ""
 	}
-	// Append trailing newline to preserve last line
 	return strings.Join(lines, "\n") + "\n"
+}
+
+// splitFrontmatterLines splits a serialized frontmatter string into its
+// constituent lines, trimming the trailing newline that Serialize() appends.
+func splitFrontmatterLines(serialized string) []string {
+	return strings.Split(strings.TrimRight(serialized, "\n"), "\n")
 }
 
 // GetLines returns all lines in the document, including frontmatter.
@@ -451,8 +430,7 @@ func (m *Model) GetLines() []string {
 	if fm := m.doc.GetFrontmatter(); fm != nil {
 		serialized := fm.Serialize()
 		if serialized != "" {
-			fmLines := strings.Split(strings.TrimRight(serialized, "\n"), "\n")
-			lines = append(lines, fmLines...)
+			lines = append(lines, splitFrontmatterLines(serialized)...)
 		}
 	}
 
@@ -478,12 +456,21 @@ func (m *Model) frontmatterLineCount() int {
 	if serialized == "" {
 		return 0
 	}
-	return len(strings.Split(strings.TrimRight(serialized, "\n"), "\n"))
+	return len(splitFrontmatterLines(serialized))
 }
 
-// TotalLines returns the total number of lines.
+// TotalLines returns the total number of lines without materializing a []string.
 func (m *Model) TotalLines() int {
-	return len(m.GetLines())
+	count := m.frontmatterLineCount()
+	for _, node := range m.doc.GetBlocks() {
+		switch b := node.Block.(type) {
+		case *document.CalcBlock:
+			count += len(b.Source())
+		case *document.TextBlock:
+			count += len(b.Source())
+		}
+	}
+	return count
 }
 
 // CalcBlockCount returns the number of calculation blocks.
@@ -759,18 +746,18 @@ func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			undoCmd := m.recordEdit(op)
 
 			// Update suggestions with new prefix (use pointer to modify)
-			(&m).updateAutocompleteState()
+			m.updateAutocompleteState()
 			debounceModel, debounceCmd := m.debounceUpdate()
 			return debounceModel, tea.Batch(debounceCmd, undoCmd)
 		}
 		// If no character to delete, just update autocomplete state
-		(&m).updateAutocompleteState()
+		m.updateAutocompleteState()
 		return m.debounceUpdate()
 	case "space":
 		// Space typically ends a word - dismiss and insert space
 		m.mode = StateDefault
 		m.autocompleteState = components.AutosuggestState{}
-		return m.handleSpaceKey()
+		return m.handleRuneInput([]rune{' '})
 	case "enter":
 		// Enter accepts if there's a selection, otherwise just inserts newline
 		if len(m.autocompleteState.Suggestions) > 0 {
@@ -807,7 +794,7 @@ func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			undoCmd := m.recordEdit(op)
 
 			// Update suggestions with new prefix (use pointer to modify)
-			(&m).updateAutocompleteState()
+			m.updateAutocompleteState()
 			debounceModel, debounceCmd := m.debounceUpdate()
 			return debounceModel, tea.Batch(debounceCmd, undoCmd)
 		}
@@ -820,7 +807,7 @@ func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 // triggerAutocomplete initiates autocomplete mode (called explicitly by TAB).
 func (m Model) triggerAutocomplete() (tea.Model, tea.Cmd) {
-	(&m).updateAutocompleteState()
+	m.updateAutocompleteState()
 	return m, nil
 }
 

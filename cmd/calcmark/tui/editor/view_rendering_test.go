@@ -690,11 +690,6 @@ line_three = 3 + 3`
 		t.Errorf("Status message should be empty after 'dd', got: %q", m.statusMsg)
 	}
 
-	// The line should be in yank buffer for later pasting
-	if m.yankBuffer == "" {
-		t.Error("Yank buffer should contain deleted line content")
-	}
-
 	// View height should remain constant
 	afterDDView := m.View().Content
 	afterDDLines := strings.Count(afterDDView, "\n")

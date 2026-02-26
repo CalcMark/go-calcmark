@@ -20,6 +20,11 @@ func (m Model) handleCut() (tea.Model, tea.Cmd) {
 	// DeleteSelection returns the deleted text and records undo
 	deletedText, cmd := m.DeleteSelection()
 
+	// Document was modified by DeleteSelection — always re-evaluate,
+	// even if the clipboard write fails below.
+	m.modified = true
+	m.reEvaluate()
+
 	// Write to system clipboard
 	if err := clipboard.WriteAll(deletedText); err != nil {
 		m.statusMsg = "Clipboard error"
@@ -28,9 +33,6 @@ func (m Model) handleCut() (tea.Model, tea.Cmd) {
 	}
 
 	m.statusMsg = "Cut to clipboard"
-	m.modified = true
-	m.reEvaluate()
-
 	return m, cmd
 }
 
@@ -60,6 +62,10 @@ func (m Model) handleCopy() (tea.Model, tea.Cmd, bool) {
 // handlePaste pastes text from system clipboard at cursor position (Ctrl+V).
 // Multi-line paste is supported - lines are inserted properly.
 // The paste operation is recorded for undo.
+// maxPasteSize is the maximum allowed paste size, consistent with the
+// 1 MB file-loading limit documented in SECURITY.md.
+const maxPasteSize = 1 * 1024 * 1024
+
 func (m Model) handlePaste() (tea.Model, tea.Cmd) {
 	text, err := clipboard.ReadAll()
 	if err != nil {
@@ -72,6 +78,17 @@ func (m Model) handlePaste() (tea.Model, tea.Cmd) {
 		m.statusMsg = "Clipboard empty"
 		return m, nil
 	}
+
+	if len(text) > maxPasteSize {
+		m.statusMsg = "Paste too large (>1MB)"
+		m.statusIsErr = true
+		return m, nil
+	}
+
+	// Strip ANSI escape codes from pasted content. Pasted text must be
+	// plain text because the rendering pipeline's rune-based column
+	// arithmetic assumes no ANSI escape bytes in document content.
+	text = stripANSI(text)
 
 	// If there's a selection, delete it first
 	var cmd tea.Cmd

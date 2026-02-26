@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // HasSelection returns true if there is an active text selection.
@@ -62,57 +63,9 @@ func (m *Model) GetSelectionRange() (startLine, startCol, endLine, endCol int) {
 	return curLine, curCol, anchorLine, anchorCol
 }
 
-// selectionRuneCount returns the number of runes in the current selection
-// without materializing the full selected text string. Used by the status bar
-// to avoid the overhead of GetSelectedText() on every render frame.
+// selectionRuneCount returns the number of runes in the current selection.
 func (m *Model) selectionRuneCount() int {
-	startLine, startCol, endLine, endCol := m.GetSelectionRange()
-	if startLine < 0 {
-		return 0
-	}
-
-	lines := m.GetLines()
-	if len(lines) == 0 {
-		return 0
-	}
-
-	// Clamp to valid line range
-	if startLine >= len(lines) {
-		startLine = len(lines) - 1
-	}
-	if endLine >= len(lines) {
-		endLine = len(lines) - 1
-	}
-
-	if startLine == endLine {
-		line := lines[startLine]
-		lineRuneCount := utf8.RuneCountInString(line)
-		sc := min(max(startCol, 0), lineRuneCount)
-		ec := min(max(endCol, 0), lineRuneCount)
-		return ec - sc
-	}
-
-	// Multi-line: first partial + middle full lines + last partial + newlines
-	count := 0
-
-	// First line: from startCol to end
-	firstRuneCount := utf8.RuneCountInString(lines[startLine])
-	sc := min(max(startCol, 0), firstRuneCount)
-	count += firstRuneCount - sc
-
-	// Middle lines: full lines + newline separators
-	for i := startLine + 1; i < endLine; i++ {
-		count += 1 // newline
-		count += utf8.RuneCountInString(lines[i])
-	}
-
-	// Last line: from start to endCol + newline before it
-	count += 1 // newline
-	lastRuneCount := utf8.RuneCountInString(lines[endLine])
-	ec := min(max(endCol, 0), lastRuneCount)
-	count += ec
-
-	return count
+	return utf8.RuneCountInString(m.GetSelectedText())
 }
 
 // GetSelectedText returns the selected text as a string.
@@ -221,8 +174,70 @@ func (m *Model) DeleteSelection() (deletedText string, cmd tea.Cmd) {
 
 	lines := m.GetLines()
 
-	if startLine == endLine {
-		// Same-line deletion
+	// Determine if the selection touches frontmatter lines.
+	// Frontmatter requires atomic document rebuilds because the spec layer
+	// manages frontmatter as a single unit (not individual block lines).
+	fmCount := m.frontmatterLineCount()
+	touchesFrontmatter := startLine < fmCount
+
+	if touchesFrontmatter {
+		// Atomic deletion: rebuild the entire document with the selected
+		// lines removed and the boundary lines merged.
+		var mergedLine string
+		if startLine == endLine {
+			runes := []rune(lines[startLine])
+			mergedLine = string(runes[:startCol]) + string(runes[endCol:])
+		} else {
+			firstRunes := []rune(lines[startLine])
+			lastRunes := []rune(lines[endLine])
+			mergedLine = string(firstRunes[:startCol]) + string(lastRunes[endCol:])
+		}
+
+		newLines := make([]string, 0, len(lines)-(endLine-startLine))
+		newLines = append(newLines, lines[:startLine]...)
+		newLines = append(newLines, mergedLine)
+		newLines = append(newLines, lines[endLine+1:]...)
+
+		content := strings.Join(newLines, "\n") + "\n"
+		newDoc, err := document.NewDocument(content)
+		if err != nil {
+			// YAML became invalid — preserve edits via SetRawSource
+			m.frontmatterErr = err
+			if fm := m.doc.GetFrontmatter(); fm != nil {
+				newFmCount := min(fmCount-(endLine-startLine), len(newLines))
+				newRaw := strings.Join(newLines[:newFmCount], "\n") + "\n"
+				fm.SetRawSource(newRaw)
+			}
+		} else {
+			m.frontmatterErr = nil
+			m.doc = newDoc
+			m.fullReEvaluate()
+			m.autoPinVariables()
+		}
+
+		m.cursorLine = startLine
+		m.cursorCol = startCol
+		m.editBuf = mergedLine
+		m.editBufLoaded = true
+
+		// Record undo operation
+		opType := OpDelete
+		if startLine != endLine {
+			opType = OpReplace
+		}
+		op := EditOperation{
+			Type:         opType,
+			Line:         startLine,
+			Col:          startCol,
+			OldText:      deletedText,
+			NewText:      "",
+			CursorLine:   beforeLine,
+			CursorCol:    beforeCol,
+			ScrollOffset: beforeScroll,
+		}
+		cmd = m.recordEdit(op)
+	} else if startLine == endLine {
+		// Same-line deletion (non-frontmatter)
 		line := lines[startLine]
 		runes := []rune(line)
 
@@ -248,7 +263,7 @@ func (m *Model) DeleteSelection() (deletedText string, cmd tea.Cmd) {
 		}
 		cmd = m.recordEdit(op)
 	} else {
-		// Multi-line deletion
+		// Multi-line deletion (non-frontmatter)
 		// Get the part before selection on first line
 		firstLine := lines[startLine]
 		firstRunes := []rune(firstLine)

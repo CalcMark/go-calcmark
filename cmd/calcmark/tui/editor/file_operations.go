@@ -222,13 +222,6 @@ func (m *Model) openFile(filename string) {
 	m.changedBlockIDs = make(map[string]bool)
 	m.selectionAnchorLine = -1
 	m.selectionAnchorCol = -1
-	m.pendingKey = 0
-	m.yankBuffer = ""
-
-	// Search state
-	m.searchTerm = ""
-	m.searchMatches = nil
-	m.searchIdx = 0
 
 	// Overlay / prompt state
 	m.autocompleteState = components.AutosuggestState{}

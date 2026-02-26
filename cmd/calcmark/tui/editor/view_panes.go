@@ -54,13 +54,7 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 
 	// Compute frontmatter line count for block-level syntax highlighting.
 	// Lines 0..fmCount-1 are frontmatter, then calc/markdown follows.
-	fmCount := 0
-	if fm := m.doc.GetFrontmatter(); fm != nil {
-		serialized := fm.Serialize()
-		if serialized != "" {
-			fmCount = len(strings.Split(strings.TrimRight(serialized, "\n"), "\n"))
-		}
-	}
+	fmCount := m.frontmatterLineCount()
 
 	linesWritten := 0
 	for i := start; i < end && linesWritten < visibleLines; i++ {

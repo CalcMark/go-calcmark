@@ -1,0 +1,50 @@
+# Test: Undo frontmatter insertion via Ctrl+F then Ctrl+Z
+# Bug: Inserting frontmatter with Ctrl+F was not recorded in the undo history,
+# so Ctrl+Z showed "Nothing to undo" instead of removing the frontmatter block.
+
+# Initial state - no frontmatter, 3 calc lines
+run observe=frontmatter
+----
+-- frontmatter:
+hasFrontmatter=false
+frontmatterLineCount=0
+totalLines=3
+statusMsg=""
+
+# Press Ctrl+F to insert frontmatter
+run observe=frontmatter
+key ctrl+f
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=6
+totalLines=9
+statusMsg="Frontmatter inserted"
+globalsCount=1
+
+# Press Ctrl+Z to undo - should remove frontmatter and restore original
+run observe=frontmatter
+key ctrl+z
+----
+-- frontmatter:
+hasFrontmatter=false
+frontmatterLineCount=0
+totalLines=3
+statusMsg="Undo"
+
+# Verify the cursor returned to line 0
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=3 totalVisual=3 editBuf="x = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Ctrl+Y to redo - should re-insert frontmatter
+run observe=frontmatter
+key ctrl+y
+----
+-- frontmatter:
+hasFrontmatter=true
+frontmatterLineCount=6
+totalLines=9
+statusMsg="Redo"
+globalsCount=1

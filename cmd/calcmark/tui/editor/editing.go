@@ -353,49 +353,6 @@ func (m Model) handleDeleteKey() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleSpaceKey() (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-
-	// Space replaces selection: delete selected text first
-	if m.HasSelection() {
-		_, deleteCmd := m.DeleteSelection()
-		if deleteCmd != nil {
-			cmds = append(cmds, deleteCmd)
-		}
-		m.modified = true
-	}
-
-	// Capture state BEFORE the edit for undo
-	beforeLine := m.cursorLine
-	beforeCol := m.cursorCol
-	beforeScroll := m.scrollOffset
-
-	m.loadCurrentLineIntoEditBuffer()
-	m.editBuf = runeInsert(m.editBuf, m.cursorCol, " ")
-	m.cursorCol++
-	m.transitionToEditing()
-
-	// Record the insert operation (space is just a character)
-	op := EditOperation{
-		Type:         OpInsert,
-		Line:         beforeLine,
-		Col:          beforeCol,
-		OldText:      "",
-		NewText:      " ",
-		CursorLine:   beforeLine,
-		CursorCol:    beforeCol,
-		ScrollOffset: beforeScroll,
-	}
-	undoCmd := m.recordEdit(op)
-	cmds = append(cmds, undoCmd)
-
-	debounceCmd := tea.Tick(evalDebounceDelay, func(t time.Time) tea.Msg {
-		return evalDebounceMsg{editBufSnapshot: m.editBuf}
-	})
-	cmds = append(cmds, debounceCmd)
-	return m, tea.Batch(cmds...)
-}
-
 // Control keys
 func (m Model) handleCtrlP() (tea.Model, tea.Cmd) {
 	m.cyclePreviewMode()
@@ -738,9 +695,6 @@ func (m *Model) deleteLine() {
 		return
 	}
 
-	// Copy to yank buffer first
-	m.yankBuffer = lines[m.cursorLine]
-
 	// If cursor is on a frontmatter line, rebuild the whole document
 	fmCount := m.frontmatterLineCount()
 	if m.cursorLine < fmCount {
@@ -837,9 +791,17 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Flush any pending edits and capture state BEFORE the operation
+	m.transitionToProcessing()
+	m.undoManager.ForceBoundary()
+	oldContent := m.getDocumentContent()
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	// Build new content with default frontmatter prepended
 	fmBlock := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\n"
-	content := fmBlock + m.getDocumentContent()
+	content := fmBlock + oldContent
 
 	// Rebuild document via the spec layer (parsing stays in spec/document)
 	newDoc, err := document.NewDocument(content)
@@ -863,6 +825,19 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	m.modified = true
 	m.autoPinVariables()
 	m.InvalidateAlignedCache()
+
+	// Record the operation for undo/redo
+	op := EditOperation{
+		Type:         OpDocReplace,
+		OldText:      oldContent,
+		NewText:      content,
+		CursorLine:   beforeLine,
+		CursorCol:    beforeCol,
+		ScrollOffset: beforeScroll,
+	}
+	cmd := m.recordEdit(op)
+	m.undoManager.ForceBoundary()
+
 	m.statusMsg = "Frontmatter inserted"
-	return m, nil
+	return m, cmd
 }

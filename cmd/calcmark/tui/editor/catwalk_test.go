@@ -76,6 +76,7 @@ z = 30`
 			"frontmatter_exchange_alignment",      // TestEditorCatwalkFrontmatterExchangeAlignment
 			"frontmatter_both_sections_alignment", // TestEditorCatwalkFrontmatterBothSectionsAlignment
 			"frontmatter_empty_alignment",         // TestEditorCatwalkFrontmatterEmptyAlignment
+			"frontmatter_insert_undo",             // TestEditorCatwalkFrontmatterInsertUndo
 			"selection",                           // TestEditorCatwalkSelection
 			"shift_selection",                     // TestEditorCatwalkShiftSelection
 		}
@@ -1253,7 +1254,7 @@ z = 30`
 	}
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
-		if !strings.HasSuffix(path, "undo") {
+		if !strings.HasSuffix(path, "/undo") {
 			return
 		}
 

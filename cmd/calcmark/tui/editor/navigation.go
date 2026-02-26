@@ -12,10 +12,21 @@ import (
 // Arrow key navigation
 // ========================================
 
-func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
+// prepareNavigation is the common preamble for all navigation handlers.
+// When extendSelection is true (Shift held), the selection anchor is set/preserved;
+// otherwise any active selection is cleared.
+func (m *Model) prepareNavigation(extendSelection bool) {
+	if extendSelection {
+		m.ensureSelectionAnchor()
+	} else {
+		m.ClearSelection()
+	}
 	m.undoManager.ForceBoundary()
 	m.loadCurrentLineIntoEditBuffer()
+}
+
+func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
+	m.prepareNavigation(false)
 	if m.cursorLine > 0 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
 	}
@@ -23,9 +34,7 @@ func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	if m.cursorLine < m.TotalLines()-1 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
 	}
@@ -33,13 +42,10 @@ func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	if m.cursorCol > 0 {
 		m.cursorCol--
 	} else if m.cursorLine > 0 {
-		// At start of line - move to end of previous line
 		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
 		m.cursorCol = runeLen(m.editBuf)
 	}
@@ -47,13 +53,10 @@ func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	if m.cursorCol < runeLen(m.editBuf) {
 		m.cursorCol++
 	} else if m.cursorLine < m.TotalLines()-1 {
-		// At end of line - move to start of next line
 		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
 		m.cursorCol = 0
 	}
@@ -65,42 +68,32 @@ func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
 // ========================================
 
 func (m Model) handlePageUpKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	m.moveCursor(-(m.height - 4), 0)
 	return m, nil
 }
 
 func (m Model) handlePageDownKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	m.moveCursor(m.height-4, 0)
 	return m, nil
 }
 
 func (m Model) handleHomeKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	m.cursorCol = 0
 	return m, nil
 }
 
 func (m Model) handleEndKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	m.cursorCol = runeLen(m.editBuf)
 	return m, nil
 }
 
 // handleCtrlHomeKey moves cursor to document start (line 0, column 0).
 func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	m.saveCurrentLineAndMoveTo(0)
 	m.cursorCol = 0
 	return m, nil
@@ -108,9 +101,7 @@ func (m Model) handleCtrlHomeKey() (tea.Model, tea.Cmd) {
 
 // handleCtrlEndKey moves cursor to document end (last line, end of line).
 func (m Model) handleCtrlEndKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 	lastLine := max(m.TotalLines()-1, 0)
 	m.saveCurrentLineAndMoveTo(lastLine)
 	m.cursorCol = runeLen(m.editBuf)
@@ -177,9 +168,7 @@ func wordBoundaryRight(runes []rune, col int) int {
 // handleCtrlLeftKey moves cursor left to previous word boundary.
 // If at column 0, wraps to end of previous line first (like handleLeftKey).
 func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 
 	// If at start of line, move to end of previous line first
 	if m.cursorCol == 0 {
@@ -197,9 +186,7 @@ func (m Model) handleCtrlLeftKey() (tea.Model, tea.Cmd) {
 // handleCtrlRightKey moves cursor right to next word boundary.
 // If at end of line, wraps to start of next line first (like handleRightKey).
 func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
-	m.ClearSelection()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(false)
 
 	runes := []rune(m.editBuf)
 	lineLen := len(runes)
@@ -230,9 +217,7 @@ func (m Model) handleCtrlRightKey() (tea.Model, tea.Cmd) {
 // instead of ClearSelection().
 
 func (m Model) handleShiftUpKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	if m.cursorLine > 0 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
 	}
@@ -240,9 +225,7 @@ func (m Model) handleShiftUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleShiftDownKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	if m.cursorLine < m.TotalLines()-1 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
 	}
@@ -250,9 +233,7 @@ func (m Model) handleShiftDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleShiftLeftKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	if m.cursorCol > 0 {
 		m.cursorCol--
 	} else if m.cursorLine > 0 {
@@ -263,9 +244,7 @@ func (m Model) handleShiftLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleShiftRightKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	if m.cursorCol < runeLen(m.editBuf) {
 		m.cursorCol++
 	} else if m.cursorLine < m.TotalLines()-1 {
@@ -276,50 +255,38 @@ func (m Model) handleShiftRightKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleShiftHomeKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	m.cursorCol = 0
 	return m, nil
 }
 
 func (m Model) handleShiftEndKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	m.cursorCol = runeLen(m.editBuf)
 	return m, nil
 }
 
 func (m Model) handleShiftPageUpKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	m.moveCursor(-(m.height - 4), 0)
 	return m, nil
 }
 
 func (m Model) handleShiftPageDownKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	m.moveCursor(m.height-4, 0)
 	return m, nil
 }
 
 func (m Model) handleShiftCtrlHomeKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	m.saveCurrentLineAndMoveTo(0)
 	m.cursorCol = 0
 	return m, nil
 }
 
 func (m Model) handleShiftCtrlEndKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 	lastLine := max(m.TotalLines()-1, 0)
 	m.saveCurrentLineAndMoveTo(lastLine)
 	m.cursorCol = runeLen(m.editBuf)
@@ -327,9 +294,7 @@ func (m Model) handleShiftCtrlEndKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleShiftCtrlLeftKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 
 	if m.cursorCol == 0 {
 		if m.cursorLine > 0 {
@@ -344,9 +309,7 @@ func (m Model) handleShiftCtrlLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleShiftCtrlRightKey() (tea.Model, tea.Cmd) {
-	m.ensureSelectionAnchor()
-	m.undoManager.ForceBoundary()
-	m.loadCurrentLineIntoEditBuffer()
+	m.prepareNavigation(true)
 
 	runes := []rune(m.editBuf)
 	lineLen := len(runes)

@@ -502,6 +502,51 @@ z = x + y`
 	})
 }
 
+// TestEditorCatwalkFrontmatterInsertUndo tests Ctrl+F then Ctrl+Z via catwalk.
+// Bug: Ctrl+F was not recorded in undo history so Ctrl+Z did nothing.
+func TestEditorCatwalkFrontmatterInsertUndo(t *testing.T) {
+	content := `x = 10
+y = 20
+z = x + y`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "frontmatter_insert_undo") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("frontmatter", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				var buf strings.Builder
+				fm := model.doc.GetFrontmatter()
+				buf.WriteString(fmt.Sprintf("hasFrontmatter=%v\n", fm != nil))
+				buf.WriteString(fmt.Sprintf("frontmatterLineCount=%d\n", model.frontmatterLineCount()))
+				buf.WriteString(fmt.Sprintf("totalLines=%d\n", model.TotalLines()))
+				buf.WriteString(fmt.Sprintf("statusMsg=%q\n", model.statusMsg))
+				if fm != nil {
+					buf.WriteString(fmt.Sprintf("globalsCount=%d\n", len(fm.Globals)))
+				}
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
 // TestUpdateCurrentLineFrontmatterPersists verifies that editing a frontmatter line
 // via updateCurrentLine actually persists the change to the document.
 // This is the regression test for: edits to frontmatter lines revert on navigation.

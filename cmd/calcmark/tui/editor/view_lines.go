@@ -9,6 +9,13 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 )
 
+// selectionStyle returns the lipgloss style for selected text.
+func selectionStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Background(theme.Selection).
+		Foreground(theme.SelectionFg)
+}
+
 // renderLineWithSelection applies selection highlighting to a non-cursor line.
 // IMPORTANT: rawText must be plain text WITHOUT ANSI codes. Column positions
 // are document-column (rune) indices that only work on un-styled text.
@@ -27,47 +34,44 @@ func (m Model) renderLineWithSelection(lineNum int, rawText string, tintFg, tint
 		return tintStyle.Render(rawText)
 	}
 
-	// Selection style - use theme colors
-	selectionStyle := lipgloss.NewStyle().
-		Background(theme.Selection).
-		Foreground(theme.SelectionFg)
+	selStyle := selectionStyle()
 
 	runes := []rune(rawText)
 	lineLen := len(runes)
 
 	// Determine selection bounds for this line
-	var selectStart, selectEnd int
+	var selStart, selEnd int
 
 	if lineNum == startLine && lineNum == endLine {
-		selectStart = startCol
-		selectEnd = endCol
+		selStart = startCol
+		selEnd = endCol
 	} else if lineNum == startLine {
-		selectStart = startCol
-		selectEnd = lineLen
+		selStart = startCol
+		selEnd = lineLen
 	} else if lineNum == endLine {
-		selectStart = 0
-		selectEnd = endCol
+		selStart = 0
+		selEnd = endCol
 	} else {
-		selectStart = 0
-		selectEnd = lineLen
+		selStart = 0
+		selEnd = lineLen
 	}
 
 	// Clamp to valid range
-	if selectStart < 0 {
-		selectStart = 0
+	if selStart < 0 {
+		selStart = 0
 	}
-	if selectStart > lineLen {
-		selectStart = lineLen
+	if selStart > lineLen {
+		selStart = lineLen
 	}
-	if selectEnd < 0 {
-		selectEnd = 0
+	if selEnd < 0 {
+		selEnd = 0
 	}
-	if selectEnd > lineLen {
-		selectEnd = lineLen
+	if selEnd > lineLen {
+		selEnd = lineLen
 	}
 
 	// Nothing to select on this line
-	if selectStart >= selectEnd {
+	if selStart >= selEnd {
 		return tintStyle.Render(rawText)
 	}
 
@@ -75,16 +79,16 @@ func (m Model) renderLineWithSelection(lineNum int, rawText string, tintFg, tint
 	var result strings.Builder
 
 	// Part before selection (tinted)
-	if selectStart > 0 {
-		result.WriteString(tintStyle.Render(string(runes[:selectStart])))
+	if selStart > 0 {
+		result.WriteString(tintStyle.Render(string(runes[:selStart])))
 	}
 
 	// Selected part with highlighting
-	result.WriteString(selectionStyle.Render(string(runes[selectStart:selectEnd])))
+	result.WriteString(selStyle.Render(string(runes[selStart:selEnd])))
 
 	// Part after selection (tinted)
-	if selectEnd < lineLen {
-		result.WriteString(tintStyle.Render(string(runes[selectEnd:])))
+	if selEnd < lineLen {
+		result.WriteString(tintStyle.Render(string(runes[selEnd:])))
 	}
 
 	return result.String()
@@ -116,52 +120,63 @@ func (m Model) renderLineWithCursor(content string, col int, width int, useEditS
 	}
 
 	// Check for active selection on the cursor line
-	hasSelection := false
-	var selStart, selEnd int
-	var selectionStyle lipgloss.Style
-
-	if m.HasSelection() && m.cursorLine >= 0 {
-		sLine, sCol, eLine, eCol := m.GetSelectionRange()
-		if sLine <= m.cursorLine && eLine >= m.cursorLine {
-			hasSelection = true
-			selectionStyle = lipgloss.NewStyle().
-				Background(theme.Selection).
-				Foreground(theme.SelectionFg)
-
-			if sLine == m.cursorLine {
-				selStart = sCol
-			}
-			if eLine == m.cursorLine {
-				selEnd = eCol
-			} else {
-				selEnd = contentLen
-			}
-			// Clamp
-			if selStart < 0 {
-				selStart = 0
-			}
-			if selEnd > contentLen {
-				selEnd = contentLen
-			}
-		}
+	selStart, selEnd := m.editLineSelectionRange()
+	// Clamp to content bounds
+	if selStart < 0 {
+		selStart = 0
+	}
+	if selEnd > contentLen {
+		selEnd = contentLen
 	}
 
-	if hasSelection && selStart < selEnd {
-		// Character-by-character rendering to interleave cursor + selection + normal
+	if selStart >= 0 && selStart < selEnd {
+		// Batch-render contiguous style segments instead of character-by-character.
+		// Content is split into up to 5 segments based on cursor and selection boundaries.
+		selStyle := selectionStyle()
+		cursorStyle := m.styles.Cursor.Inline(true)
+
 		var result strings.Builder
-		for i, r := range runes {
-			ch := string(r)
-			if i == col {
-				result.WriteString(m.styles.Cursor.Inline(true).Render(ch))
-			} else if i >= selStart && i < selEnd {
-				result.WriteString(selectionStyle.Render(ch))
-			} else {
-				result.WriteString(lineStyle.Render(ch))
+
+		// Helper to render a rune slice with a given style (no-op for empty slices)
+		renderSlice := func(start, end int, style lipgloss.Style) {
+			if start < end && start < contentLen {
+				end = min(end, contentLen)
+				result.WriteString(style.Render(string(runes[start:end])))
 			}
 		}
+
+		if col < selStart {
+			// Cursor before selection: normal | cursor | normal | selection | normal
+			renderSlice(0, col, lineStyle)
+			if col < contentLen {
+				result.WriteString(cursorStyle.Render(string(runes[col])))
+			}
+			renderSlice(col+1, selStart, lineStyle)
+			renderSlice(selStart, selEnd, selStyle)
+			renderSlice(selEnd, contentLen, lineStyle)
+		} else if col < selEnd {
+			// Cursor inside selection: normal | selection | cursor | selection | normal
+			renderSlice(0, selStart, lineStyle)
+			renderSlice(selStart, col, selStyle)
+			if col < contentLen {
+				result.WriteString(cursorStyle.Render(string(runes[col])))
+			}
+			renderSlice(col+1, selEnd, selStyle)
+			renderSlice(selEnd, contentLen, lineStyle)
+		} else {
+			// Cursor after selection: normal | selection | normal | cursor | normal
+			renderSlice(0, selStart, lineStyle)
+			renderSlice(selStart, selEnd, selStyle)
+			renderSlice(selEnd, col, lineStyle)
+			if col < contentLen {
+				result.WriteString(cursorStyle.Render(string(runes[col])))
+			}
+			renderSlice(col+1, contentLen, lineStyle)
+		}
+
 		// Cursor beyond content
 		if col >= contentLen {
-			result.WriteString(m.styles.Cursor.Inline(true).Render(" "))
+			result.WriteString(cursorStyle.Render(" "))
 		}
 		// Pad to width
 		totalPadding := width - contentLen
@@ -269,11 +284,9 @@ func (m Model) renderEditLineWrapped(width int) []string {
 	selStart, selEnd := m.editLineSelectionRange()
 	hasSelectionOnLine := selStart >= 0
 
-	var selectionStyle lipgloss.Style
+	var selStyle lipgloss.Style
 	if hasSelectionOnLine {
-		selectionStyle = lipgloss.NewStyle().
-			Background(theme.Selection).
-			Foreground(theme.SelectionFg)
+		selStyle = selectionStyle()
 	}
 
 	// Track the source column offset as we iterate through wrapped segments
@@ -285,8 +298,7 @@ func (m Model) renderEditLineWrapped(width int) []string {
 		var s strings.Builder
 
 		if i == cursorLineIdx && hasSelectionOnLine {
-			// Cursor line WITH selection — character-by-character rendering
-			// needed to interleave cursor, selection, and normal styles.
+			// Cursor line WITH selection — batch-render contiguous segments.
 
 			if cursorColInLine < 0 {
 				cursorColInLine = 0
@@ -295,17 +307,48 @@ func (m Model) renderEditLineWrapped(width int) []string {
 				cursorColInLine = segLen
 			}
 
-			for j := range segLen {
-				srcCol := segOffset + j
-				ch := string(segRunes[j])
+			// Map source-column selection bounds to segment-local coordinates
+			localSelStart := max(selStart-segOffset, 0)
+			localSelEnd := min(selEnd-segOffset, segLen)
 
-				if j == cursorColInLine {
-					s.WriteString(m.styles.Cursor.Render(ch))
-				} else if srcCol >= selStart && srcCol < selEnd {
-					s.WriteString(selectionStyle.Render(ch))
-				} else {
-					s.WriteString(lineStyle.Render(ch))
+			// Helper to render a segment-local rune slice
+			renderSeg := func(start, end int, style lipgloss.Style) {
+				if start < end {
+					s.WriteString(style.Render(string(segRunes[start:end])))
 				}
+			}
+
+			if localSelStart >= localSelEnd {
+				// No selection in this segment — just cursor + normal
+				renderSeg(0, cursorColInLine, lineStyle)
+				if cursorColInLine < segLen {
+					s.WriteString(m.styles.Cursor.Render(string(segRunes[cursorColInLine])))
+				}
+				renderSeg(cursorColInLine+1, segLen, lineStyle)
+			} else if cursorColInLine < localSelStart {
+				renderSeg(0, cursorColInLine, lineStyle)
+				if cursorColInLine < segLen {
+					s.WriteString(m.styles.Cursor.Render(string(segRunes[cursorColInLine])))
+				}
+				renderSeg(cursorColInLine+1, localSelStart, lineStyle)
+				renderSeg(localSelStart, localSelEnd, selStyle)
+				renderSeg(localSelEnd, segLen, lineStyle)
+			} else if cursorColInLine < localSelEnd {
+				renderSeg(0, localSelStart, lineStyle)
+				renderSeg(localSelStart, cursorColInLine, selStyle)
+				if cursorColInLine < segLen {
+					s.WriteString(m.styles.Cursor.Render(string(segRunes[cursorColInLine])))
+				}
+				renderSeg(cursorColInLine+1, localSelEnd, selStyle)
+				renderSeg(localSelEnd, segLen, lineStyle)
+			} else {
+				renderSeg(0, localSelStart, lineStyle)
+				renderSeg(localSelStart, localSelEnd, selStyle)
+				renderSeg(localSelEnd, cursorColInLine, lineStyle)
+				if cursorColInLine < segLen {
+					s.WriteString(m.styles.Cursor.Render(string(segRunes[cursorColInLine])))
+				}
+				renderSeg(cursorColInLine+1, segLen, lineStyle)
 			}
 
 			if cursorColInLine >= segLen {
@@ -338,16 +381,21 @@ func (m Model) renderEditLineWrapped(width int) []string {
 			}
 
 		} else if hasSelectionOnLine {
-			// Non-cursor segment WITH selection — character-by-character rendering
+			// Non-cursor segment WITH selection — batch-render up to 3 segments
 
-			for j := range segLen {
-				srcCol := segOffset + j
-				ch := string(segRunes[j])
+			localSelStart := max(selStart-segOffset, 0)
+			localSelEnd := min(selEnd-segOffset, segLen)
 
-				if srcCol >= selStart && srcCol < selEnd {
-					s.WriteString(selectionStyle.Render(ch))
-				} else {
-					s.WriteString(lineStyle.Render(ch))
+			if localSelStart >= localSelEnd {
+				// No selection in this segment
+				s.WriteString(lineStyle.Render(seg))
+			} else {
+				if localSelStart > 0 {
+					s.WriteString(lineStyle.Render(string(segRunes[:localSelStart])))
+				}
+				s.WriteString(selStyle.Render(string(segRunes[localSelStart:localSelEnd])))
+				if localSelEnd < segLen {
+					s.WriteString(lineStyle.Render(string(segRunes[localSelEnd:])))
 				}
 			}
 

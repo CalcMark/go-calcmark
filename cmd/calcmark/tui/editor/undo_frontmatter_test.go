@@ -47,6 +47,10 @@ func sendKey(t *testing.T, m tea.Model, keyName string) tea.Model {
 		msg = tea.KeyPressMsg{Code: tea.KeyLeft, Mod: tea.ModShift}
 	case "shift+right":
 		msg = tea.KeyPressMsg{Code: tea.KeyRight, Mod: tea.ModShift}
+	case "shift+home":
+		msg = tea.KeyPressMsg{Code: tea.KeyHome, Mod: tea.ModShift}
+	case "shift+end":
+		msg = tea.KeyPressMsg{Code: tea.KeyEnd, Mod: tea.ModShift}
 	case "ctrl+a":
 		msg = tea.KeyPressMsg{Code: 'a', Mod: tea.ModCtrl}
 	default:
@@ -359,6 +363,310 @@ func TestUndoFrontmatterNoDuplication_InsertFMEditFMThenUndo(t *testing.T) {
 			t.Errorf("DUPLICATE LINE FOUND after undo %d: %q", i+1, dupLine)
 			break
 		}
+	}
+}
+
+// TestUndoFrontmatter_BackspaceDeleteFMLinesAndUndo tests that deleting
+// frontmatter line content via backspace and then undoing restores all lines.
+//
+// Bug: Ctrl+F → navigate to first line → backspace to delete "---" →
+// navigate down (commits + structural change) → join with previous →
+// navigate down (commits). Pressing Ctrl+Z twice should restore the
+// post-Ctrl+F state. Pressing Ctrl+Z a third time should remove frontmatter.
+//
+// Root cause: editBuf was loaded before redetectBlockTypes() in handleUndo,
+// so when the document rebuild changed line numbering (splitting embedded
+// newlines), the stale editBuf was flushed to the wrong line on the next undo.
+func TestUndoFrontmatter_BackspaceDeleteFMLinesAndUndo(t *testing.T) {
+	content := "x = 10"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	var model tea.Model = m
+	originalLines := m.GetLines()
+
+	// Step 1: Insert frontmatter via Ctrl+F
+	model = sendKey(t, model, "ctrl+f")
+	ed := model.(Model)
+	if ed.frontmatterLineCount() != 6 {
+		t.Fatalf("Expected 6 FM lines after Ctrl+F, got %d", ed.frontmatterLineCount())
+	}
+	afterInsertLines := ed.GetLines()
+	t.Logf("After Ctrl+F: %q", afterInsertLines)
+
+	// Step 2: Navigate to line 0 ("---"), end of line
+	model = sendKey(t, model, "up")  // line 1
+	model = sendKey(t, model, "up")  // line 0
+	model = sendKey(t, model, "end") // col 3
+
+	// Step 3: Backspace 3 times to delete "---"
+	model = sendKey(t, model, "backspace")
+	model = sendKey(t, model, "backspace")
+	model = sendKey(t, model, "backspace")
+	ed = model.(Model)
+	if ed.editBuf != "" {
+		t.Fatalf("Expected empty editBuf after deleting '---', got %q", ed.editBuf)
+	}
+
+	// Step 4: Navigate down to commit + trigger structural change
+	// (editBuf "" saved to frontmatter line 0 → removes opening "---" → no frontmatter)
+	model = sendKey(t, model, "down")
+
+	// Step 5: Backspace at BOL to join with previous (empty) line
+	model = sendKey(t, model, "home")
+	model = sendKey(t, model, "backspace")
+
+	// Step 6: Navigate down to commit the join
+	model = sendKey(t, model, "down")
+
+	ed = model.(Model)
+	t.Logf("After all edits: lines=%q", ed.GetLines())
+
+	// Undo stack (3 batches, from top):
+	//   1. [OpReplace(join)]  — the line join
+	//   2. [OpDelete×3]       — deleting "---"
+	//   3. [OpDocReplace]     — Ctrl+F insertion
+
+	// Undo 1: reverse the join
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	t.Logf("After undo 1 (join): lines=%q", ed.GetLines())
+
+	// Undo 2: restore "---" → should fully restore post-Ctrl+F state
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	t.Logf("After undo 2 (---): lines=%q", ed.GetLines())
+
+	restoredLines := ed.GetLines()
+	if len(restoredLines) != len(afterInsertLines) {
+		t.Errorf("After 2 undos: line count %d, want %d", len(restoredLines), len(afterInsertLines))
+	}
+	for i := range min(len(restoredLines), len(afterInsertLines)) {
+		if restoredLines[i] != afterInsertLines[i] {
+			t.Errorf("After 2 undos: line %d = %q, want %q", i, restoredLines[i], afterInsertLines[i])
+		}
+	}
+
+	// Undo 3: reverse Ctrl+F → back to original (no frontmatter)
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	t.Logf("After undo 3 (Ctrl+F): lines=%q", ed.GetLines())
+
+	finalLines := ed.GetLines()
+	if len(finalLines) != len(originalLines) {
+		t.Errorf("After 3 undos: line count %d, want %d", len(finalLines), len(originalLines))
+	}
+	for i := range min(len(finalLines), len(originalLines)) {
+		if finalLines[i] != originalLines[i] {
+			t.Errorf("After 3 undos: line %d = %q, want %q", i, finalLines[i], originalLines[i])
+		}
+	}
+
+	// Undo 4: should be "Nothing to undo"
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	if ed.statusMsg != "Nothing to undo" {
+		t.Errorf("Expected 'Nothing to undo' after 4 undos, got %q", ed.statusMsg)
+	}
+}
+
+// TestUndoFrontmatter_BackspaceWithinFMLineAndUndo tests the simpler case:
+// delete characters within a single frontmatter line via backspace, then undo.
+// The edit is committed via navigation, then undo should restore.
+func TestUndoFrontmatter_BackspaceWithinFMLineAndUndo(t *testing.T) {
+	content := "x = 10"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	var model tea.Model = m
+
+	// Insert frontmatter
+	model = sendKey(t, model, "ctrl+f")
+
+	// Navigate to line 0 (---), go to end
+	model = sendKey(t, model, "up")
+	model = sendKey(t, model, "up")
+	model = sendKey(t, model, "end")
+
+	// Delete "---" via backspace
+	model = sendKey(t, model, "backspace")
+	model = sendKey(t, model, "backspace")
+	model = sendKey(t, model, "backspace")
+
+	// Navigate to commit the edit (saveCurrentLineAndMoveTo)
+	model = sendKey(t, model, "down")
+
+	ed := model.(Model)
+	lines := ed.GetLines()
+	t.Logf("After deleting '---' and commit: lines=%q fmCount=%d",
+		lines, ed.frontmatterLineCount())
+
+	// Undo — should restore "---"
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	lines = ed.GetLines()
+	t.Logf("After undo: lines=%q statusMsg=%q fmCount=%d",
+		lines, ed.statusMsg, ed.frontmatterLineCount())
+
+	if ed.statusMsg == "Nothing to undo" {
+		t.Error("Expected undo to work, got 'Nothing to undo'")
+	}
+	if len(lines) == 0 || lines[0] != "---" {
+		t.Errorf("Line 0 after undo: got %q, want %q", lines[0], "---")
+	}
+}
+
+// TestUndoFrontmatter_CtrlFThenCtrlZRemovesFrontmatter tests that inserting
+// frontmatter via Ctrl+F is undoable via Ctrl+Z.
+//
+// Bug: Open empty editor → Ctrl+F to insert frontmatter → Ctrl+Z shows
+// "Nothing to undo" and the frontmatter remains. Expected: frontmatter is removed.
+func TestUndoFrontmatter_CtrlFThenCtrlZRemovesFrontmatter(t *testing.T) {
+	content := "x = 10\ny = 20\nz = 30"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	var model tea.Model = m
+
+	// Verify: no frontmatter initially
+	ed := model.(Model)
+	if ed.doc.GetFrontmatter() != nil {
+		t.Fatal("Expected no frontmatter initially")
+	}
+	originalLines := ed.GetLines()
+	t.Logf("Before Ctrl+F: lines=%q", originalLines)
+
+	// Insert frontmatter via Ctrl+F
+	model = sendKey(t, model, "ctrl+f")
+	ed = model.(Model)
+	if ed.doc.GetFrontmatter() == nil {
+		t.Fatal("Expected frontmatter after Ctrl+F")
+	}
+	if ed.statusMsg != "Frontmatter inserted" {
+		t.Fatalf("Expected status %q, got %q", "Frontmatter inserted", ed.statusMsg)
+	}
+	t.Logf("After Ctrl+F: totalLines=%d fmCount=%d", ed.TotalLines(), ed.frontmatterLineCount())
+
+	// Undo the frontmatter insertion via Ctrl+Z
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	t.Logf("After Ctrl+Z: totalLines=%d fmCount=%d statusMsg=%q", ed.TotalLines(), ed.frontmatterLineCount(), ed.statusMsg)
+
+	// The undo should NOT say "Nothing to undo"
+	if ed.statusMsg == "Nothing to undo" {
+		t.Error("Ctrl+Z after Ctrl+F said 'Nothing to undo' — frontmatter insertion was not recorded in undo history")
+	}
+
+	// After undo, frontmatter should be removed
+	if ed.doc.GetFrontmatter() != nil && ed.frontmatterLineCount() > 0 {
+		t.Error("Expected frontmatter to be removed after Ctrl+Z")
+	}
+
+	// Lines should match the original document
+	afterLines := ed.GetLines()
+	if len(afterLines) != len(originalLines) {
+		t.Errorf("Line count mismatch: got %d, want %d", len(afterLines), len(originalLines))
+		t.Logf("After undo lines: %q", afterLines)
+	}
+	for i := range min(len(afterLines), len(originalLines)) {
+		if afterLines[i] != originalLines[i] {
+			t.Errorf("Line %d: got %q, want %q", i, afterLines[i], originalLines[i])
+		}
+	}
+}
+
+// TestUndoFrontmatter_CtrlFThenCtrlZRestoresCursor tests that cursor position
+// is restored after undoing frontmatter insertion.
+func TestUndoFrontmatter_CtrlFThenCtrlZRestoresCursor(t *testing.T) {
+	content := "x = 10\ny = 20"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	var model tea.Model = m
+
+	// Remember initial cursor position
+	ed := model.(Model)
+	initialLine, initialCol := ed.cursorLine, ed.cursorCol
+
+	// Insert frontmatter
+	model = sendKey(t, model, "ctrl+f")
+
+	// Undo
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+
+	// Cursor should be restored to initial position
+	if ed.cursorLine != initialLine || ed.cursorCol != initialCol {
+		t.Errorf("Cursor after undo: got (%d,%d), want (%d,%d)",
+			ed.cursorLine, ed.cursorCol, initialLine, initialCol)
+	}
+}
+
+// TestUndoFrontmatter_CtrlFThenCtrlZThenCtrlYRedoes tests that Ctrl+Y redoes
+// the frontmatter insertion after undoing it.
+func TestUndoFrontmatter_CtrlFThenCtrlZThenCtrlYRedoes(t *testing.T) {
+	content := "x = 10"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	var model tea.Model = m
+
+	// Insert frontmatter
+	model = sendKey(t, model, "ctrl+f")
+	ed := model.(Model)
+	fmLineCount := ed.frontmatterLineCount()
+	if fmLineCount == 0 {
+		t.Fatal("Expected frontmatter after Ctrl+F")
+	}
+
+	// Undo
+	model = sendKey(t, model, "ctrl+z")
+	ed = model.(Model)
+	if ed.frontmatterLineCount() != 0 {
+		t.Error("Expected no frontmatter after undo")
+	}
+
+	// Redo
+	model = sendKey(t, model, "ctrl+y")
+	ed = model.(Model)
+	t.Logf("After redo: totalLines=%d fmCount=%d statusMsg=%q",
+		ed.TotalLines(), ed.frontmatterLineCount(), ed.statusMsg)
+
+	if ed.statusMsg == "Nothing to redo" {
+		t.Error("Ctrl+Y after Ctrl+Z said 'Nothing to redo'")
+	}
+	if ed.frontmatterLineCount() != fmLineCount {
+		t.Errorf("After redo: fmLineCount=%d, want %d", ed.frontmatterLineCount(), fmLineCount)
 	}
 }
 

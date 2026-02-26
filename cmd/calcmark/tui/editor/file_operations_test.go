@@ -260,28 +260,31 @@ func TestSavePromptMode(t *testing.T) {
 	}
 }
 
-func TestCtrlEExportCommand(t *testing.T) {
+func TestCtrlEDoesNotTriggerExport(t *testing.T) {
+	// Ctrl+E was removed as a global shortcut because legacy macOS terminals
+	// send \x05 (Ctrl+E) for Cmd+Right, making them indistinguishable.
+	// Export is accessible via the command menu (Ctrl+H).
 	m := New(nil)
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
-	if m.mode != StateExport {
-		t.Errorf("Expected StateExport after Ctrl+E, got %v", m.mode)
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after Ctrl+E (no longer triggers Export), got %v", m.mode)
 	}
 }
 
-// Test ESC behavior in empty document
+// Test export flow through the command menu
 func TestExportFlowThroughUpdate(t *testing.T) {
 	doc, _ := document.NewDocument("x = 42\n")
 	m := New(doc)
 
-	// Step 1: Ctrl+E enters export format selection
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
+	// Step 1: Enter export via command dispatch (as the command menu does)
+	newModel, _ := m.executeCommandByName("Export")
 	m = newModel.(Model)
 
 	if m.mode != StateExport {
-		t.Fatalf("Step 1: Expected StateExport after Ctrl+E, got %v", m.mode)
+		t.Fatalf("Step 1: Expected StateExport after Export command, got %v", m.mode)
 	}
 
 	// Step 2: Press '1' to select text format → transitions to file picker
@@ -331,7 +334,7 @@ func TestExportFlowEscCancel(t *testing.T) {
 
 	t.Run("cancel at format selection", func(t *testing.T) {
 		m := New(doc)
-		newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
+		newModel, _ := m.executeCommandByName("Export")
 		m = newModel.(Model)
 
 		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
@@ -344,7 +347,7 @@ func TestExportFlowEscCancel(t *testing.T) {
 
 	t.Run("cancel at file picker after format selection", func(t *testing.T) {
 		m := New(doc)
-		newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
+		newModel, _ := m.executeCommandByName("Export")
 		m = newModel.(Model)
 
 		// Select format → transitions to file picker
@@ -592,11 +595,6 @@ func TestOpenFileResetsEditBuf(t *testing.T) {
 	m.userIsTyping = true
 	m.selectionAnchorLine = 1
 	m.selectionAnchorCol = 5
-	m.pendingKey = 'd'
-	m.yankBuffer = "yanked line"
-	m.searchTerm = "find me"
-	m.searchMatches = []int{1, 3, 5}
-	m.searchIdx = 2
 	m.pendingSaveAction = PendingOpen
 
 	// Create a temp file to open
@@ -627,21 +625,6 @@ func TestOpenFileResetsEditBuf(t *testing.T) {
 	}
 	if m.modified {
 		t.Error("Expected modified=false after openFile")
-	}
-	if m.pendingKey != 0 {
-		t.Errorf("Expected pendingKey=0, got %d", m.pendingKey)
-	}
-	if m.yankBuffer != "" {
-		t.Errorf("Expected yankBuffer empty, got %q", m.yankBuffer)
-	}
-	if m.searchTerm != "" {
-		t.Errorf("Expected searchTerm empty, got %q", m.searchTerm)
-	}
-	if m.searchMatches != nil {
-		t.Errorf("Expected searchMatches nil, got %v", m.searchMatches)
-	}
-	if m.searchIdx != 0 {
-		t.Errorf("Expected searchIdx=0, got %d", m.searchIdx)
 	}
 	if m.pendingSaveAction != PendingNone {
 		t.Errorf("Expected PendingNone, got %v", m.pendingSaveAction)

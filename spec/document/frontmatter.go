@@ -425,13 +425,18 @@ func (f *Frontmatter) Serialize() string {
 	if f == nil {
 		return ""
 	}
-	if len(f.Exchange) == 0 && len(f.Globals) == 0 {
-		return ""
-	}
 
-	// Use raw source if available (preserves user formatting)
+	// Use raw source if available (preserves user formatting during editing).
+	// This takes priority over the empty-data check below because raw source
+	// is set by ParseFrontmatter and SetRawSource — when present, the user
+	// explicitly wrote frontmatter delimiters that should be preserved even
+	// if the YAML content between them is empty.
 	if f.rawSource != "" {
 		return f.rawSource + "\n" // Add CommonMark blank line
+	}
+
+	if len(f.Exchange) == 0 && len(f.Globals) == 0 {
+		return ""
 	}
 
 	// Fall back to reconstruction (programmatically created frontmatter)

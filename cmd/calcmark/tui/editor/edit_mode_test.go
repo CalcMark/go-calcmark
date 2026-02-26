@@ -41,7 +41,7 @@ func TestEditModeSpaceKey(t *testing.T) {
 	m.cursorCol = 5 // After "hello"
 
 	// Type a space
-	newModel, _ := m.handleSpaceKey()
+	newModel, _ := m.handleRuneInput([]rune{' '})
 	result := newModel.(Model)
 
 	if result.editBuf != "hello " {

@@ -30,6 +30,10 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Only respond to actual Ctrl+key, not Cmd (Super) key on macOS.
 	// Terminals using the Kitty keyboard protocol send Super separately;
 	// legacy terminals map Cmd→Ctrl and we can't distinguish them.
+	//
+	// NOTE: Ctrl+E is NOT bound here because legacy macOS terminals send
+	// \x05 (Ctrl+E) for Cmd+Right, making it indistinguishable from a real
+	// Ctrl+E press. Export is accessible via the command menu (Ctrl+H).
 	if msg.Mod.Contains(tea.ModCtrl) && !msg.Mod.Contains(tea.ModSuper) {
 		switch msg.Code {
 		case 'c':
@@ -44,8 +48,6 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.executeCommandByName("Quit")
 		case 's':
 			return m.executeCommandByName("Save")
-		case 'e':
-			return m.executeCommandByName("Export")
 		case 'o':
 			return m.executeCommandByName("Open")
 		case 'f':
@@ -263,7 +265,7 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		// Paste - Ctrl+V
 		return m.handlePaste()
 	case "space":
-		return m.handleSpaceKey()
+		return m.handleRuneInput([]rune{' '})
 	default:
 		// Handle text input (printable characters)
 		if msg.Text != "" {

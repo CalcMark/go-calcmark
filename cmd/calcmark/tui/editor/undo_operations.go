@@ -5,10 +5,15 @@ package editor
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // handleUndo handles Ctrl+Z - undo last edit batch.
 func (m Model) handleUndo() (tea.Model, tea.Cmd) {
+	// Clear any active selection — undo changes document content, so stale
+	// anchors would reference invalid positions and cause visual artifacts.
+	m.ClearSelection()
+
 	// Flush pending edits to document (CRITICAL - Pitfall 4)
 	m.transitionToProcessing()
 
@@ -63,15 +68,19 @@ func (m Model) handleUndo() (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Reload editBuf from the document for the restored cursor line.
-	// applyOperationReverse may have set editBuf for a different line than
-	// cursorLine, so we clear and eagerly reload to keep them in sync.
+	// Re-evaluate document.
+	// IMPORTANT: redetectBlockTypes MUST run before loadCurrentLineIntoEditBuffer.
+	// redetectBlockTypes() rebuilds the document via NewDocument(), which can change
+	// the line count (e.g., splitting a line with an embedded "\n" from an OpReplace
+	// undo of a line join). If editBuf is loaded before the rebuild, it will hold
+	// content from the pre-rebuild line numbering, and the next transitionToProcessing
+	// call will flush that stale content to the wrong line, corrupting the document.
 	m.editBufLoaded = false
-	m.loadCurrentLineIntoEditBuffer()
-
-	// Re-evaluate document
 	m.redetectBlockTypes()
 	m.reEvaluate()
+
+	// NOW load editBuf from the rebuilt document for the restored cursor line.
+	m.loadCurrentLineIntoEditBuffer()
 
 	m.statusMsg = "Undo"
 	m.modified = true
@@ -80,6 +89,10 @@ func (m Model) handleUndo() (tea.Model, tea.Cmd) {
 
 // handleRedo handles Ctrl+Y - redo last undone edit batch.
 func (m Model) handleRedo() (tea.Model, tea.Cmd) {
+	// Clear any active selection — redo changes document content, so stale
+	// anchors would reference invalid positions and cause visual artifacts.
+	m.ClearSelection()
+
 	// Flush pending edits to document (CRITICAL - Pitfall 4)
 	m.transitionToProcessing()
 
@@ -127,23 +140,46 @@ func (m Model) handleRedo() (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Reload editBuf from the document for the restored cursor line.
-	// applyOperationForward may have set editBuf for a different line than
-	// cursorLine, so we clear and eagerly reload to keep them in sync.
+	// Re-evaluate document.
+	// IMPORTANT: redetectBlockTypes MUST run before loadCurrentLineIntoEditBuffer.
+	// Same rationale as handleUndo — the rebuild can change line numbering.
 	m.editBufLoaded = false
-	m.loadCurrentLineIntoEditBuffer()
-
-	// Re-evaluate document
 	m.redetectBlockTypes()
 	m.reEvaluate()
+
+	// NOW load editBuf from the rebuilt document for the restored cursor line.
+	m.loadCurrentLineIntoEditBuffer()
 
 	m.statusMsg = "Redo"
 	m.modified = true
 	return m, nil
 }
 
+// applyDocReplace rebuilds the document from the given content string.
+// Used by OpDocReplace undo/redo to atomically replace the entire document.
+func (m *Model) applyDocReplace(content string) {
+	newDoc, err := document.NewDocument(content)
+	if err != nil {
+		// Should not fail for content that was previously valid,
+		// but handle gracefully by keeping the current document.
+		m.frontmatterErr = err
+		return
+	}
+	m.doc = newDoc
+	m.frontmatterErr = nil
+	m.fullReEvaluate()
+	m.autoPinVariables()
+	m.editBufLoaded = false
+}
+
 // applyOperationReverse reverses a single edit operation (for undo).
 func (m *Model) applyOperationReverse(op EditOperation) {
+	if op.Type == OpDocReplace {
+		// Atomic document replacement — rebuild from OldText (the pre-edit content)
+		m.applyDocReplace(op.OldText)
+		return
+	}
+
 	lines := m.GetLines()
 
 	switch op.Type {
@@ -221,6 +257,12 @@ func (m *Model) applyOperationReverse(op EditOperation) {
 
 // applyOperationForward applies a single edit operation (for redo).
 func (m *Model) applyOperationForward(op EditOperation) {
+	if op.Type == OpDocReplace {
+		// Atomic document replacement — rebuild from NewText (the post-edit content)
+		m.applyDocReplace(op.NewText)
+		return
+	}
+
 	lines := m.GetLines()
 
 	switch op.Type {

@@ -923,5 +923,5 @@ func TestBlankDocumentTyping(t *testing.T) {
 }
 
 // TestExportFlowThroughUpdate tests the complete export flow through the
-// Update chain (Ctrl+E → select format → file picker → type filename → Enter)
+// Update chain (command menu → Export → select format → file picker → type filename → Enter)
 // to verify that state transitions work correctly end-to-end.
