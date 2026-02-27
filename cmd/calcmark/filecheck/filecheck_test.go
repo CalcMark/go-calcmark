@@ -5,6 +5,35 @@ import (
 	"testing"
 )
 
+// --- IsCalcMarkExtension tests ---
+
+func TestIsCalcMarkExtension(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"budget.cm", true},
+		{"budget.calcmark", true},
+		{"BUDGET.CM", true},
+		{"BUDGET.CALCMARK", true},
+		{"budget.Cm", true},
+		{"/path/to/budget.cm", true},
+		{"budget.md", false},
+		{"budget.txt", false},
+		{"budget.json", false},
+		{"budget", false},        // no extension
+		{"budget.cm.bak", false}, // double extension
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := IsCalcMarkExtension(tt.path); got != tt.want {
+				t.Errorf("IsCalcMarkExtension(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
 // --- Magic number rejection tests ---
 
 func TestValidateContent_RejectsPNG(t *testing.T) {

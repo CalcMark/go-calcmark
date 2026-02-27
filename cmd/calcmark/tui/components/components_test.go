@@ -54,6 +54,23 @@ func TestRenderStatusBar(t *testing.T) {
 			width:    80,
 			wantSubs: []string{"test.cm"}, // Changed: mode should not appear in output
 		},
+		{
+			name: "long status message truncated",
+			state: StatusBarState{
+				StatusMsg:   "Open failed: unsupported file type (.md) — this is a really long error message that should be truncated by the status bar renderer",
+				StatusIsErr: true,
+			},
+			width:    40,
+			wantSubs: []string{"Open failed", "..."},
+		},
+		{
+			name: "short status message not truncated",
+			state: StatusBarState{
+				StatusMsg: "Saved: test.cm",
+			},
+			width:    80,
+			wantSubs: []string{"Saved: test.cm"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -65,6 +82,33 @@ func TestRenderStatusBar(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRenderStatusBarTruncation(t *testing.T) {
+	style := DefaultStatusBarStyle()
+
+	// A message wider than the bar must be truncated with "..."
+	longMsg := strings.Repeat("x", 100)
+	state := StatusBarState{StatusMsg: longMsg, StatusIsErr: true}
+	result := RenderStatusBar(state, 40, style)
+	if !strings.Contains(result, "...") {
+		t.Error("Expected truncation ellipsis for long message")
+	}
+	// The full original message must NOT appear verbatim
+	if strings.Contains(result, longMsg) {
+		t.Error("Expected long message to be truncated, but full message found")
+	}
+
+	// A short message must NOT be truncated
+	shortMsg := "Saved"
+	state2 := StatusBarState{StatusMsg: shortMsg}
+	result2 := RenderStatusBar(state2, 80, style)
+	if strings.Contains(result2, "...") {
+		t.Error("Short message should not contain truncation ellipsis")
+	}
+	if !strings.Contains(result2, shortMsg) {
+		t.Error("Short message should appear verbatim")
 	}
 }
 

@@ -137,7 +137,7 @@ func TruncateWithEllipsis(s string, maxWidth int) string {
 		return s
 	}
 
-	// Binary search for the right truncation point
+	// Scan backwards for the right truncation point
 	// (accounting for variable-width characters)
 	for i := len(s) - 1; i > 0; i-- {
 		truncated := s[:i] + "..."

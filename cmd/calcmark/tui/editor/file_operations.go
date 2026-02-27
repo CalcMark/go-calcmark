@@ -165,6 +165,17 @@ func (m *Model) openFile(filename string) {
 		return
 	}
 
+	// Validate file extension (case-insensitive, matching CLI behavior)
+	if !filecheck.IsCalcMarkExtension(absPath) {
+		ext := filepath.Ext(absPath)
+		if ext == "" {
+			ext = "no extension"
+		}
+		m.statusMsg = fmt.Sprintf("Open failed: unsupported file type (%s)", ext)
+		m.statusIsErr = true
+		return
+	}
+
 	// Read file
 	content, err := os.ReadFile(absPath)
 	if err != nil {

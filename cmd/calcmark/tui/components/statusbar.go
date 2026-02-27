@@ -115,8 +115,12 @@ func RenderStatusBar(state StatusBarState, width int, style StatusBarStyle) stri
 		} else {
 			msgStyle = style.StatusOK
 		}
-		msgStr := msgStyle.Render(state.StatusMsg)
-		line1 := buildLine(msgStr, lipgloss.Width(state.StatusMsg))
+		// Truncate long messages to fit within the bar width.
+		// Account for 1-char left padding added by buildLine.
+		maxMsgWidth := width - 2
+		msg := TruncateWithEllipsis(state.StatusMsg, maxMsgWidth)
+		msgStr := msgStyle.Render(msg)
+		line1 := buildLine(msgStr, lipgloss.Width(msg))
 		line2 := StyledPadding(width, barBg)
 		return line1 + "\n" + line2
 	}

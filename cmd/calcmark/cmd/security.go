@@ -62,8 +62,7 @@ func validateFilePath(path string) error {
 // Shared by both read-only and write path validators.
 func validateFileConstraints(absPath string) error {
 	// Security: Check file extension (case-insensitive)
-	ext := strings.ToLower(filepath.Ext(absPath))
-	if ext != ".cm" && ext != ".calcmark" {
+	if !filecheck.IsCalcMarkExtension(absPath) {
 		return fmt.Errorf("invalid file extension: expected .cm or .calcmark")
 	}
 

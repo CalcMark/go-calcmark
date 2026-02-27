@@ -5,8 +5,17 @@ package filecheck
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"unicode/utf8"
 )
+
+// IsCalcMarkExtension reports whether the file at path has a recognized
+// CalcMark extension (.cm or .calcmark, case-insensitive).
+func IsCalcMarkExtension(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".cm" || ext == ".calcmark"
+}
 
 // binarySignature maps a human-readable format name to its magic bytes.
 type binarySignature struct {
@@ -58,10 +67,7 @@ func ValidateContent(data []byte) error {
 	}
 
 	// 2. Null-byte check: text files must not contain 0x00.
-	scanLen := len(data)
-	if scanLen > nullScanLimit {
-		scanLen = nullScanLimit
-	}
+	scanLen := min(len(data), nullScanLimit)
 	if bytes.ContainsRune(data[:scanLen], '\x00') {
 		return fmt.Errorf("file is not valid CalcMark: contains null bytes (binary content)")
 	}
