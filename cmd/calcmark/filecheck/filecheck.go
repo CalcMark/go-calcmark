@@ -58,10 +58,7 @@ func ValidateContent(data []byte) error {
 	}
 
 	// 2. Null-byte check: text files must not contain 0x00.
-	scanLen := len(data)
-	if scanLen > nullScanLimit {
-		scanLen = nullScanLimit
-	}
+	scanLen := min(len(data), nullScanLimit)
 	if bytes.ContainsRune(data[:scanLen], '\x00') {
 		return fmt.Errorf("file is not valid CalcMark: contains null bytes (binary content)")
 	}

@@ -202,6 +202,39 @@ func (m *Model) openFile(filename string) {
 	m.resetForNewDocument(doc, eval, absPath, string(content))
 }
 
+// loadDocumentFromString loads a document from raw content (e.g., fetched from a remote store).
+// Similar to openFile but skips the file read — content is already in memory.
+// The document is treated as a new untitled file (no filepath set).
+func (m *Model) loadDocumentFromString(content, suggestedFilename string) {
+	// Security: Reject binary/non-text content before parsing
+	if err := filecheck.ValidateContent([]byte(content)); err != nil {
+		m.statusMsg = fmt.Sprintf("Open failed: %v", err)
+		m.statusIsErr = true
+		return
+	}
+
+	// Parse document
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		m.statusMsg = fmt.Sprintf("Parse error: %v", err)
+		m.statusIsErr = true
+		return
+	}
+
+	// Evaluate
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		m.statusMsg = fmt.Sprintf("Opened with errors: %v", err)
+		m.statusIsErr = true
+	} else {
+		m.statusMsg = fmt.Sprintf("Opened from Gist: %s", suggestedFilename)
+	}
+
+	// Reset all mutable editor state for the new document.
+	// Empty filepath signals this is an untitled document (not yet saved locally).
+	m.resetForNewDocument(doc, eval, "", content)
+}
+
 // cyclePreviewMode cycles through preview modes: Full → Minimal → Hidden → Full
 func (m *Model) cyclePreviewMode() {
 	switch m.previewMode {

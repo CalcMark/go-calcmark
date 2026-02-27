@@ -132,6 +132,28 @@ type alignedCacheKey struct {
 	editBuf     string      // EditBuf changes should invalidate cache
 }
 
+// shareResultMsg carries the result of a Share To Gist operation.
+type shareResultMsg struct {
+	url    string
+	copied bool // True if URL was successfully written to clipboard
+	err    error
+}
+
+// openFromResultMsg carries the result of an Open From Gist operation.
+type openFromResultMsg struct {
+	content  string
+	filename string
+	err      error
+}
+
+// retryShareMsg triggers a retry of the share operation after interactive auth.
+type retryShareMsg struct{}
+
+// retryOpenFromMsg triggers a retry of the open operation after interactive auth.
+type retryOpenFromMsg struct {
+	identifier string
+}
+
 // InputState determines the UI context: what receives input and what auxiliary UI should display.
 // IMPORTANT: This is NOT a modal editing system (like vim's normal/insert modes).
 // The user is ALWAYS editing the document - typing and navigation work continuously.
@@ -149,6 +171,8 @@ const (
 	StateCommandMenu                    // Command menu popup active
 	StateFilePicker                     // File picker for save/open operations
 	StateExport                         // Export overlay (format + filename in one modal)
+	StateShareTo                        // Share To Gist overlay (visibility + description)
+	StateOpenFrom                       // Open From Gist overlay (URL/ID input)
 	StateSavePrompt                     // Save confirmation dialog active, normal UI paused
 )
 
@@ -169,6 +193,10 @@ func (s InputState) String() string {
 		return "StateFilePicker"
 	case StateExport:
 		return "StateExport"
+	case StateShareTo:
+		return "StateShareTo"
+	case StateOpenFrom:
+		return "StateOpenFrom"
 	case StateSavePrompt:
 		return "StateSavePrompt"
 	default:
@@ -182,9 +210,10 @@ func (s InputState) String() string {
 type PendingAction int
 
 const (
-	PendingNone PendingAction = iota // No pending action (default — normal save)
-	PendingQuit                      // Save prompt was triggered by Ctrl+Q
-	PendingOpen                      // Save prompt was triggered by Ctrl+O
+	PendingNone           PendingAction = iota // No pending action (default — normal save)
+	PendingQuit                                // Save prompt was triggered by Ctrl+Q
+	PendingOpen                                // Save prompt was triggered by Ctrl+O
+	PendingOpenFromRemote                      // Save prompt was triggered by Open From Gist
 )
 
 // PreviewMode represents the preview pane display mode.
@@ -255,6 +284,14 @@ type Model struct {
 	// Export state
 	exportState      ExportOverlayState // State for the export modal overlay
 	exportFormatOpts []string           // Available export formats
+
+	// Share To overlay state
+	shareVisibility  int // 0 = public, 1 = secret
+	shareDescription string
+	shareField       int // 0 = visibility select, 1 = description input
+
+	// Open From overlay state
+	openFromInput string
 
 	// Help overlay state
 	helpState HelpOverlayState // Navigation state for interactive help
@@ -542,6 +579,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.batchID == m.undoGroupID {
 			m.undoManager.CommitCurrentBatch()
 		}
+
+	case shareResultMsg:
+		if msg.err != nil {
+			m.statusMsg = msg.err.Error()
+			m.statusIsErr = true
+		} else if msg.copied {
+			m.statusMsg = "Shared: " + msg.url + " (copied)"
+		} else {
+			m.statusMsg = "Shared: " + msg.url
+		}
+		m.exitOverlay()
+
+	case openFromResultMsg:
+		if msg.err != nil {
+			m.statusMsg = msg.err.Error()
+			m.statusIsErr = true
+		} else {
+			m.loadDocumentFromString(msg.content, msg.filename)
+		}
+		m.exitOverlay()
+
+	case retryShareMsg:
+		return m.executeShareToGist()
+
+	case retryOpenFromMsg:
+		return m.executeOpenFromGist(msg.identifier)
 	}
 
 	return m, nil

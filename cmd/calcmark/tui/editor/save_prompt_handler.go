@@ -65,6 +65,10 @@ func (m Model) completePendingSaveAction() (tea.Model, tea.Cmd) {
 		m.exitOverlay()
 		cmd := m.enterFilePicker(PickerForOpen, FocusFileBrowser)
 		return m, cmd
+	case PendingOpenFromRemote:
+		m.exitOverlay()
+		m.enterOpenFrom()
+		return m, nil
 	default:
 		m.exitOverlay()
 		return m, nil
@@ -78,6 +82,8 @@ func actionCancelledMsg(action PendingAction) string {
 		return "Quit cancelled"
 	case PendingOpen:
 		return "Open cancelled"
+	case PendingOpenFromRemote:
+		return "Open from Gist cancelled"
 	default:
 		return ""
 	}

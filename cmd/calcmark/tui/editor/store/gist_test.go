@@ -274,8 +274,8 @@ func TestGistStore_Open(t *testing.T) {
 			name:       "multi-file gist picks .cm file",
 			identifier: "def456",
 			results: map[string]mockResult{
-				"gh gist view def456 --json files":              {stdout: multiFileJSON},
-				"gh gist view def456 -r --filename budget.cm":   {stdout: []byte("# Budget\n")},
+				"gh gist view def456 --json files":            {stdout: multiFileJSON},
+				"gh gist view def456 -r --filename budget.cm": {stdout: []byte("# Budget\n")},
 			},
 			wantContent:  "# Budget\n",
 			wantFilename: "budget.cm",
@@ -284,8 +284,8 @@ func TestGistStore_Open(t *testing.T) {
 			name:       "multi-file gist with no .cm picks first",
 			identifier: "ghi789",
 			results: map[string]mockResult{
-				"gh gist view ghi789 --json files":              {stdout: multiFileNoCM},
-				"gh gist view ghi789 -r --filename data.txt":    {stdout: []byte("some data")},
+				"gh gist view ghi789 --json files":           {stdout: multiFileNoCM},
+				"gh gist view ghi789 -r --filename data.txt": {stdout: []byte("some data")},
 			},
 			wantContent:  "some data",
 			wantFilename: "data.txt",

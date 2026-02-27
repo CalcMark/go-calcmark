@@ -14,11 +14,29 @@ import (
 )
 
 // exitOverlay returns to StateDefault, resetting overlay-specific fields.
-// Handles: Help, CommandMenu, Export, SavePrompt, Globals, FilePicker.
+// Handles: Help, CommandMenu, Export, ShareTo, OpenFrom, SavePrompt, Globals, FilePicker.
 func (m *Model) exitOverlay() {
 	m.mode = StateDefault
 	m.pendingSaveAction = PendingNone
 	m.newFileName = ""
+	m.shareDescription = ""
+	m.shareVisibility = 0
+	m.shareField = 0
+	m.openFromInput = ""
+}
+
+// enterShareTo opens the Share To Gist overlay.
+func (m *Model) enterShareTo() {
+	m.mode = StateShareTo
+	m.shareVisibility = 0 // Default: public
+	m.shareDescription = ""
+	m.shareField = 0 // Start on visibility select
+}
+
+// enterOpenFrom opens the Open From Gist overlay.
+func (m *Model) enterOpenFrom() {
+	m.mode = StateOpenFrom
+	m.openFromInput = ""
 }
 
 // enterCommandMenu opens the command menu overlay.
