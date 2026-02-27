@@ -52,6 +52,9 @@ func runEval(args []string) error {
 		if err != nil {
 			return fmt.Errorf("read file: %w", err)
 		}
+		if err := validateFileContent(bytes); err != nil {
+			return fmt.Errorf("invalid file: %w", err)
+		}
 		input = string(bytes)
 	}
 
@@ -65,6 +68,9 @@ func runEval(args []string) error {
 		}
 		if len(bytes) >= maxStdinSize {
 			return fmt.Errorf("stdin input too large (max 1MB)")
+		}
+		if err := validateStdinContent(bytes); err != nil {
+			return fmt.Errorf("invalid input: %w", err)
 		}
 		input = string(bytes)
 

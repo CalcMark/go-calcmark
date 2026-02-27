@@ -105,8 +105,10 @@ tasks:
   security:
     desc: Run security-focused tests
     cmds:
-      - go test -v -run "TestValidateFilePath|TestValidateReadFilePath" ./cmd/calcmark/cmd
+      - go test -v -run "TestValidateFilePath|TestValidateReadFilePath|TestValidateFileContent|TestValidateStdinContent|TestReadFilePath" ./cmd/calcmark/cmd
+      - go test -v ./cmd/calcmark/filecheck
       - go test -v -run "TestSecurity" ./spec/parser
+      - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./cmd/calcmark/filecheck
       - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/lexer
       - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/parser
       - go test -v -run "Fuzz" -fuzz=. -fuzztime=5s ./spec/document

@@ -36,14 +36,25 @@ CalcMark is designed to be safe for evaluating user-provided calculation code. T
 - Maximum length: **100 characters**
 - Prevents pathological number parsing
 
+## File Content Validation
+
+All CLI entry points (eval, convert, edit) and the TUI editor validate file content before parsing:
+
+1. **Magic Number Detection**: Rejects files matching known binary format signatures (PNG, JPEG, GIF, PDF, ZIP, GZIP, ELF, PE/MZ, WASM, RIFF, OGG, FLAC, BMP, TIFF, SQLite, 7Z, RAR, Java class, Mach-O)
+2. **Null Byte Detection**: Scans the first 8 KB for null bytes (0x00), which never appear in valid text files
+3. **UTF-8 Validation**: Rejects content that is not valid UTF-8 text
+
+This prevents attacks where a binary file (e.g., `malware.gif`) is renamed to `exploit.cm` and opened by the interpreter.
+
 ## Denial of Service Protections
 
 ### Protection Mechanisms
 
 1. **File Size Validation**: Reject files >1MB before processing
-2. **Path Validation**: Block directory traversal (`..` in paths) for **input** files
-3. **Extension Validation**: Only `.cm` and `.calcmark` files for input
-4. **Timeout Protection** (recommended): Set timeouts in production environments
+2. **File Content Validation**: Reject binary/non-text content before parsing
+3. **Path Validation**: Block directory traversal (`..` in paths) for **input** files
+4. **Extension Validation**: Only `.cm` and `.calcmark` files for input
+5. **Timeout Protection** (recommended): Set timeouts in production environments
 
 Note: Output commands (`:output`, `:save`) allow writing to any path the user specifies, including paths with `..`. This is intentional - users should be able to export results anywhere they have write access.
 
@@ -73,6 +84,7 @@ case <-ctx.Done():
 | Attack | Mitigation |
 |--------|------------|
 | Huge file (e.g., 1GB) | File size limit (1MB for CLI) |
+| Binary file renamed to .cm | Magic number + null byte + UTF-8 validation |
 | Deep nesting `(((...)))` | Depth tracking (planned: 100 levels) |
 | Token bomb `x1+x2+x3+...` | Token count limit (planned: 10K) |
 | Infinite loop in calculation | No loops in language (by design) |

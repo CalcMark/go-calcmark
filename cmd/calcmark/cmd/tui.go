@@ -70,6 +70,11 @@ func loadDocument(path string) (*document.Document, error) {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
 
+	// Security: Reject binary/non-text content before parsing
+	if err := validateFileContent(content); err != nil {
+		return nil, err
+	}
+
 	doc, err := document.NewDocument(string(content))
 	if err != nil {
 		return nil, fmt.Errorf("parse document: %w", err)

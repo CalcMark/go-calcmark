@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/filecheck"
 	"github.com/CalcMark/go-calcmark/format"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -167,6 +168,13 @@ func (m *Model) openFile(filename string) {
 	// Read file
 	content, err := os.ReadFile(absPath)
 	if err != nil {
+		m.statusMsg = fmt.Sprintf("Open failed: %v", err)
+		m.statusIsErr = true
+		return
+	}
+
+	// Security: Reject binary/non-text content before parsing
+	if err := filecheck.ValidateContent(content); err != nil {
 		m.statusMsg = fmt.Sprintf("Open failed: %v", err)
 		m.statusIsErr = true
 		return

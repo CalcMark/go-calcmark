@@ -129,3 +129,99 @@ func TestStdinSizeLimit(t *testing.T) {
 	// If this test compiles, the constant is accessible.
 	// The real stdin limit is enforced in runEval via io.LimitReader.
 }
+
+// --- Content validation integration tests ---
+// These verify that validateFileContent and validateStdinContent work
+// correctly when called through the cmd package wrappers.
+
+func TestValidateFileContent_RejectsBinaryFile(t *testing.T) {
+	// Simulates the exact issue scenario: binary GIF renamed to .cm
+	gifData := []byte("GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff")
+	err := validateFileContent(gifData)
+	if err == nil {
+		t.Fatal("expected error for GIF binary content, got nil")
+	}
+	if !strings.Contains(err.Error(), "GIF") {
+		t.Fatalf("expected GIF in error, got: %v", err)
+	}
+}
+
+func TestValidateFileContent_AcceptsValidCalcMark(t *testing.T) {
+	data := []byte("# My Budget\nrent = 1200\nutilities = 150\ntotal = rent + utilities\n")
+	if err := validateFileContent(data); err != nil {
+		t.Fatalf("expected no error for valid CalcMark text, got: %v", err)
+	}
+}
+
+func TestValidateFileContent_RejectsNullBytes(t *testing.T) {
+	data := []byte("x = 1\x00\ny = 2\n")
+	err := validateFileContent(data)
+	if err == nil {
+		t.Fatal("expected error for content with null bytes, got nil")
+	}
+	if !strings.Contains(err.Error(), "null bytes") {
+		t.Fatalf("expected null bytes error, got: %v", err)
+	}
+}
+
+func TestValidateFileContent_RejectsInvalidUTF8(t *testing.T) {
+	data := []byte("caf\xe9") // Latin-1 'é', invalid UTF-8
+	err := validateFileContent(data)
+	if err == nil {
+		t.Fatal("expected error for invalid UTF-8, got nil")
+	}
+	if !strings.Contains(err.Error(), "UTF-8") {
+		t.Fatalf("expected UTF-8 error, got: %v", err)
+	}
+}
+
+func TestValidateStdinContent_RejectsBinary(t *testing.T) {
+	pngData := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+	err := validateStdinContent(pngData)
+	if err == nil {
+		t.Fatal("expected error for PNG binary via stdin, got nil")
+	}
+	if !strings.Contains(err.Error(), "PNG") {
+		t.Fatalf("expected PNG in error, got: %v", err)
+	}
+}
+
+func TestValidateStdinContent_AcceptsValidText(t *testing.T) {
+	data := []byte("x = 42\n")
+	if err := validateStdinContent(data); err != nil {
+		t.Fatalf("expected no error for valid stdin text, got: %v", err)
+	}
+}
+
+// createTempBinaryCMFile creates a .cm file with binary content for testing.
+func createTempBinaryCMFile(t *testing.T, dir, name string, data []byte) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestReadFilePath_PassesButContentValidationCatchesBinary(t *testing.T) {
+	// This test demonstrates that path validation alone is insufficient:
+	// a file with .cm extension and valid path passes validateReadFilePath,
+	// but content validation catches the binary data.
+	tmpDir := t.TempDir()
+	gifData := []byte("GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff")
+	path := createTempBinaryCMFile(t, tmpDir, "malicious.cm", gifData)
+
+	// Path validation passes (valid extension, valid path, small file)
+	if err := validateReadFilePath(path); err != nil {
+		t.Fatalf("path validation should pass for .cm file: %v", err)
+	}
+
+	// Content validation catches the binary data
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateFileContent(content); err == nil {
+		t.Fatal("content validation should reject binary GIF data")
+	}
+}

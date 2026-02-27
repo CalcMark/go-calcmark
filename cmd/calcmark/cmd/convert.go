@@ -70,6 +70,11 @@ func runConvert(filename string) error {
 		return fmt.Errorf("read file: %w", err)
 	}
 
+	// Security: Reject binary/non-text content before parsing
+	if err := validateFileContent(content); err != nil {
+		return fmt.Errorf("invalid file: %w", err)
+	}
+
 	// Parse document
 	doc, err := document.NewDocument(string(content))
 	if err != nil {
