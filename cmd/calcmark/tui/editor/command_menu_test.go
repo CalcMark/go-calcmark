@@ -121,7 +121,19 @@ func TestAllCommandMenuActionsViaUpdate(t *testing.T) {
 		newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyF1})
 		m = newModel.(Model)
 
-		// Execute Save (first item, index 0)
+		// Navigate to Save by name
+		for m.commandMenuState.Selected < len(EditorCommands)-1 {
+			if EditorCommands[m.commandMenuState.Selected].Name == "Save" {
+				break
+			}
+			newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
+			m = newModel.(Model)
+		}
+		if EditorCommands[m.commandMenuState.Selected].Name != "Save" {
+			t.Fatalf("Could not find 'Save' in command menu")
+		}
+
+		// Execute Save
 		newModel, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		m = newModel.(Model)
 

@@ -202,6 +202,22 @@ func (m *Model) openFile(filename string) {
 	m.resetForNewDocument(doc, eval, absPath, string(content))
 }
 
+// newFile resets the editor to a blank, untitled document.
+func (m *Model) newFile() {
+	doc, err := document.NewDocument("\n")
+	if err != nil {
+		m.statusMsg = fmt.Sprintf("New file failed: %v", err)
+		m.statusIsErr = true
+		return
+	}
+
+	eval := implDoc.NewEvaluator()
+	_ = eval.Evaluate(doc) // empty doc — no errors expected
+
+	m.resetForNewDocument(doc, eval, "", "\n")
+	m.statusMsg = "New document"
+}
+
 // cyclePreviewMode cycles through preview modes: Full → Minimal → Hidden → Full
 func (m *Model) cyclePreviewMode() {
 	switch m.previewMode {

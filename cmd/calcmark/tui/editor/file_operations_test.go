@@ -818,6 +818,212 @@ func TestSaveAsUsesFilePicker(t *testing.T) {
 	})
 }
 
+// TestNewFile tests that newFile resets the editor to an empty document.
+func TestNewFile(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\ny = 200\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Save to establish a filepath
+	tmpFile := t.TempDir() + "/test.cm"
+	m.saveFile(tmpFile)
+
+	// Simulate some editing state
+	m.cursorLine = 1
+	m.cursorCol = 5
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "changed"
+	m.saveCurrentLine(true)
+
+	// Invoke newFile
+	m.newFile()
+
+	// Filepath should be cleared
+	if m.filepath != "" {
+		t.Errorf("Expected empty filepath, got %q", m.filepath)
+	}
+	// Should not be modified
+	if m.modified {
+		t.Error("Expected modified=false after newFile")
+	}
+	// Cursor should be at origin
+	if m.cursorLine != 0 || m.cursorCol != 0 {
+		t.Errorf("Expected cursor at (0,0), got (%d,%d)", m.cursorLine, m.cursorCol)
+	}
+	// Edit state should be reset
+	if m.editBuf != "" {
+		t.Errorf("Expected empty editBuf, got %q", m.editBuf)
+	}
+	if m.userIsTyping {
+		t.Error("Expected userIsTyping=false")
+	}
+	// Document should be essentially empty
+	lines := m.GetLines()
+	if len(lines) != 1 || lines[0] != "" {
+		t.Errorf("Expected single empty line, got %v", lines)
+	}
+	// Status message
+	if m.statusMsg != "New document" {
+		t.Errorf("Expected 'New document' status, got %q", m.statusMsg)
+	}
+	// State machine should be ready
+	if m.state != StateReady {
+		t.Errorf("Expected StateReady, got %v", m.state)
+	}
+}
+
+// TestCtrlNCreatesNewDocument tests that Ctrl+N creates a new document.
+func TestCtrlNCreatesNewDocument(t *testing.T) {
+	doc, _ := document.NewDocument("x = 42\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	// No unsaved changes, so should go straight to new document
+	if m.filepath != "" {
+		t.Errorf("Expected empty filepath, got %q", m.filepath)
+	}
+	if m.statusMsg != "New document" {
+		t.Errorf("Expected 'New document' status, got %q", m.statusMsg)
+	}
+}
+
+// TestCtrlNWithUnsavedChanges tests that Ctrl+N shows save prompt with unsaved changes.
+func TestCtrlNWithUnsavedChanges(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Make an edit
+	m.cursorLine = 0
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "y = 200"
+	m.saveCurrentLine(true)
+
+	// Ctrl+N should show save prompt
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	if m.mode != StateSavePrompt {
+		t.Errorf("Expected StateSavePrompt, got %v", m.mode)
+	}
+	if m.pendingSaveAction != PendingNew {
+		t.Errorf("Expected PendingNew, got %v", m.pendingSaveAction)
+	}
+	if m.statusMsg != "Unsaved changes! Save before new? (y/n/c)" {
+		t.Errorf("Expected new save prompt message, got %q", m.statusMsg)
+	}
+}
+
+// TestCtrlNSavePromptNo tests pressing 'n' at save prompt proceeds to new document.
+func TestCtrlNSavePromptNo(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Make an edit
+	m.cursorLine = 0
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "y = 200"
+	m.saveCurrentLine(true)
+
+	// Ctrl+N → save prompt
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	// Press 'n' to discard and create new
+	newModel, _ = m.handleSavePromptKey(tea.KeyPressMsg{Code: 'n', Text: "n"})
+	m = newModel.(Model)
+
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after 'n', got %v", m.mode)
+	}
+	if m.filepath != "" {
+		t.Errorf("Expected empty filepath, got %q", m.filepath)
+	}
+	if m.statusMsg != "New document" {
+		t.Errorf("Expected 'New document' status, got %q", m.statusMsg)
+	}
+}
+
+// TestCtrlNSavePromptCancel tests pressing 'c' cancels the new operation.
+func TestCtrlNSavePromptCancel(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Make an edit
+	m.cursorLine = 0
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "y = 200"
+	m.saveCurrentLine(true)
+
+	// Ctrl+N → save prompt
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	// Press 'c' to cancel
+	newModel, _ = m.handleSavePromptKey(tea.KeyPressMsg{Code: 'c', Text: "c"})
+	m = newModel.(Model)
+
+	if m.mode != StateDefault {
+		t.Errorf("Expected StateDefault after cancel, got %v", m.mode)
+	}
+	if m.statusMsg != "New cancelled" {
+		t.Errorf("Expected 'New cancelled', got %q", m.statusMsg)
+	}
+}
+
+// TestCtrlNSavePromptYes tests pressing 'y' saves then creates new document.
+func TestCtrlNSavePromptYes(t *testing.T) {
+	doc, _ := document.NewDocument("x = 100\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Save to establish filepath first
+	tmpFile := t.TempDir() + "/test.cm"
+	m.saveFile(tmpFile)
+
+	// Make an edit
+	m.cursorLine = 0
+	m.loadCurrentLineIntoEditBuffer()
+	m.editBuf = "y = 200"
+	m.saveCurrentLine(true)
+
+	// Ctrl+N → save prompt
+	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	m = newModel.(Model)
+
+	// Press 'y' to save then new
+	newModel, _ = m.handleSavePromptKey(tea.KeyPressMsg{Code: 'y', Text: "y"})
+	m = newModel.(Model)
+
+	// Should have saved and then created new document
+	if m.filepath != "" {
+		t.Errorf("Expected empty filepath after save+new, got %q", m.filepath)
+	}
+	if m.statusMsg != "New document" {
+		t.Errorf("Expected 'New document' status, got %q", m.statusMsg)
+	}
+
+	// Verify original file was saved
+	data, err := os.ReadFile(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to read saved file: %v", err)
+	}
+	if !strings.Contains(string(data), "y = 200") {
+		t.Errorf("Expected saved content to contain 'y = 200', got %q", string(data))
+	}
+}
+
 // TestOpenViaCommandMenu tests opening files from the command menu.
 func TestOpenViaCommandMenu(t *testing.T) {
 	doc, _ := document.NewDocument("x = 42\n")

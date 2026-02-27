@@ -178,13 +178,14 @@ func (s InputState) String() string {
 
 // PendingAction tracks what action triggered the save prompt.
 // The save prompt handler uses this to decide what to do after
-// the user responds (quit vs open file).
+// the user responds (quit vs open file vs new file).
 type PendingAction int
 
 const (
 	PendingNone PendingAction = iota // No pending action (default — normal save)
 	PendingQuit                      // Save prompt was triggered by Ctrl+Q
 	PendingOpen                      // Save prompt was triggered by Ctrl+O
+	PendingNew                       // Save prompt was triggered by Ctrl+N
 )
 
 // PreviewMode represents the preview pane display mode.

@@ -1,0 +1,43 @@
+# Test Ctrl+N save prompt: typing text then Ctrl+N shows unsaved changes prompt
+# Mirrors open_unsaved_prompt test pattern for Ctrl+N
+
+# Initial state - clean editor, no unsaved changes
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type some text to create unsaved changes
+run observe=debug
+type hello world
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=11 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Ctrl+N should show save prompt because we have unsaved changes
+run observe=debug
+key ctrl+n
+----
+-- debug:
+mode=StateSavePrompt cursorLine=0 cursorCol=11 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press 'c' to cancel and return to editing
+run observe=debug
+type c
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=11 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Ctrl+N again, this time press 'n' to discard and create new document
+run observe=debug
+key ctrl+n
+----
+-- debug:
+mode=StateSavePrompt cursorLine=0 cursorCol=11 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="hello world# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press 'n' to discard changes and create new empty document
+run observe=debug
+type n
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

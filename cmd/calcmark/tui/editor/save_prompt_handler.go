@@ -8,8 +8,8 @@ import (
 
 // promptSaveIfNeeded checks for unsaved changes and either enters the save
 // prompt (returning true) or returns false so the caller can proceed directly.
-// This centralises the unsaved-changes guard used by Ctrl+Q, Ctrl+O, and the
-// command menu equivalents.
+// This centralises the unsaved-changes guard used by Ctrl+Q, Ctrl+O, Ctrl+N,
+// and the command menu equivalents.
 func (m *Model) promptSaveIfNeeded(action PendingAction, promptMsg string) bool {
 	if !m.hasUnsavedChanges() {
 		return false
@@ -65,6 +65,10 @@ func (m Model) completePendingSaveAction() (tea.Model, tea.Cmd) {
 		m.exitOverlay()
 		cmd := m.enterFilePicker(PickerForOpen, FocusFileBrowser)
 		return m, cmd
+	case PendingNew:
+		m.exitOverlay()
+		m.newFile()
+		return m, nil
 	default:
 		m.exitOverlay()
 		return m, nil
@@ -78,6 +82,8 @@ func actionCancelledMsg(action PendingAction) string {
 		return "Quit cancelled"
 	case PendingOpen:
 		return "Open cancelled"
+	case PendingNew:
+		return "New cancelled"
 	default:
 		return ""
 	}

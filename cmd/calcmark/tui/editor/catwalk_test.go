@@ -80,6 +80,8 @@ z = 30`
 			"selection",                           // TestEditorCatwalkSelection
 			"shift_selection",                     // TestEditorCatwalkShiftSelection
 			"cmd_shortcuts",                       // TestEditorCatwalkCmdShortcuts
+			"new_document_ctrl_n",                 // TestEditorCatwalkNewDocument
+			"new_unsaved_prompt",                  // TestEditorCatwalkNewUnsavedPrompt
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1516,6 +1518,68 @@ z = 30`
 			}),
 			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkNewDocument tests Ctrl+N on a clean document creates new empty document.
+func TestEditorCatwalkNewDocument(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "new_document_ctrl_n") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkNewUnsavedPrompt tests Ctrl+N with unsaved changes shows save prompt.
+func TestEditorCatwalkNewUnsavedPrompt(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "new_unsaved_prompt") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
 				return err
 			}),
 		)

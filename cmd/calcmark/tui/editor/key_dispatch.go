@@ -9,7 +9,7 @@ import (
 )
 
 // handleKey is the main key dispatch. It routes key events based on:
-// 1. Global shortcuts (Ctrl+C, Ctrl+Q, Ctrl+S, Ctrl+E, Ctrl+O, Ctrl+H)
+// 1. Global shortcuts (Ctrl+C, Ctrl+Q, Ctrl+N, Ctrl+S, Ctrl+E, Ctrl+O, Ctrl+H)
 // 2. Mode-specific handlers (help, autocomplete, command menu, file picker, etc.)
 // 3. Default editing mode
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -43,6 +43,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case 'q':
 			return m.executeCommandByName("Quit")
+		case 'n':
+			return m.executeCommandByName("New")
 		case 's':
 			return m.executeCommandByName("Save")
 		case 'e':
