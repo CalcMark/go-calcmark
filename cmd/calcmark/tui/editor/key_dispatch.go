@@ -80,6 +80,10 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleFilePickerKey(msg)
 	case StateExport:
 		return m.handleExportOverlayKey(msg)
+	case StateShareTo:
+		return m.handleShareOverlayKey(msg)
+	case StateOpenFrom:
+		return m.handleOpenFromOverlayKey(msg)
 	case StateSavePrompt:
 		return m.handleSavePromptKey(msg)
 	default:

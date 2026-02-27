@@ -82,6 +82,9 @@ z = 30`
 			"cmd_shortcuts",                       // TestEditorCatwalkCmdShortcuts
 			"new_document_ctrl_n",                 // TestEditorCatwalkNewDocument
 			"new_unsaved_prompt",                  // TestEditorCatwalkNewUnsavedPrompt
+			"share_to_overlay",                    // TestEditorCatwalkShareToOverlay
+			"open_from_overlay",                   // TestEditorCatwalkOpenFromOverlay
+			"open_from_unsaved",                   // TestEditorCatwalkOpenFromUnsaved
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1569,6 +1572,103 @@ z = 30`
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		if !strings.HasSuffix(path, "new_unsaved_prompt") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkShareToOverlay tests the Share To Gist overlay through catwalk.
+// Verifies: opening share overlay via command menu, Esc cancels, field navigation.
+func TestEditorCatwalkShareToOverlay(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "share_to_overlay") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkOpenFromOverlay tests the Open From Gist overlay through catwalk.
+// Verifies: opening open-from overlay via command menu, Esc cancels, text input.
+func TestEditorCatwalkOpenFromOverlay(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "open_from_overlay") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkOpenFromUnsaved tests Open From Gist with unsaved changes.
+// Verifies: typing creates unsaved state, Open From triggers save prompt,
+// cancel returns to editing, discard proceeds to Open From overlay.
+func TestEditorCatwalkOpenFromUnsaved(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "open_from_unsaved") {
 			return
 		}
 

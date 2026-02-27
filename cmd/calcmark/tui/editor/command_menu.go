@@ -180,6 +180,17 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 	case "Full Help":
 		m.enterHelp()
 		return m, nil
+
+	case "Share To Gist":
+		m.enterShareTo()
+		return m, nil
+
+	case "Open From Gist":
+		if m.promptSaveIfNeeded(PendingOpenFromRemote, "Unsaved changes! Save before open? (y/n/c)") {
+			return m, nil
+		}
+		m.enterOpenFrom()
+		return m, nil
 	}
 
 	return m, nil

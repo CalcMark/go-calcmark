@@ -65,6 +65,24 @@ func (m Model) View() tea.View {
 			lipgloss.WithWhitespaceChars(" "),
 			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
 		))
+
+	case StateShareTo:
+		shareOverlay := m.renderShareOverlay()
+		return tea.NewView(lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			shareOverlay,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
+		))
+
+	case StateOpenFrom:
+		openFromOverlay := m.renderOpenFromOverlay()
+		return tea.NewView(lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			openFromOverlay,
+			lipgloss.WithWhitespaceChars(" "),
+			lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Foreground(theme.OverlayWhitespaceFg).Background(theme.OverlayWhitespaceFg)),
+		))
 	}
 
 	// Calculate layout

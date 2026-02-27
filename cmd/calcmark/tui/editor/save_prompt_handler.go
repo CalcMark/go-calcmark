@@ -69,6 +69,10 @@ func (m Model) completePendingSaveAction() (tea.Model, tea.Cmd) {
 		m.exitOverlay()
 		m.newFile()
 		return m, nil
+	case PendingOpenFromRemote:
+		m.exitOverlay()
+		m.enterOpenFrom()
+		return m, nil
 	default:
 		m.exitOverlay()
 		return m, nil
@@ -84,6 +88,8 @@ func actionCancelledMsg(action PendingAction) string {
 		return "Open cancelled"
 	case PendingNew:
 		return "New cancelled"
+	case PendingOpenFromRemote:
+		return "Open from Gist cancelled"
 	default:
 		return ""
 	}
