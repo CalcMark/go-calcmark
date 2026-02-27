@@ -10,8 +10,8 @@ import (
 func (m Model) handleGlobalsKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
-		m.mode = StateDefault
 		m.globalsExpanded = false
+		m.exitOverlay()
 	case "up", "k":
 		if m.globalsFocusIdx > 0 {
 			m.globalsFocusIdx--
@@ -23,7 +23,7 @@ func (m Model) handleGlobalsKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		// Could edit focused global
-		m.mode = StateDefault
+		m.exitOverlay()
 	}
 
 	return m, nil

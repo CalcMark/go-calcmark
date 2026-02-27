@@ -26,7 +26,7 @@ var EditorCommands = []Command{
 	{Name: "Save", Accelerator: "Ctrl+S", Description: "Save document", Category: "file"},
 	{Name: "Save As", Accelerator: "", Description: "Save with new name", Category: "file"},
 	{Name: "Open", Accelerator: "Ctrl+O", Description: "Open file", Category: "file"},
-	{Name: "Export", Accelerator: "", Description: "Export to format", Category: "file"},
+	{Name: "Export", Accelerator: "Ctrl+E", Description: "Export to format", Category: "file"},
 	{Name: "Quit", Accelerator: "Ctrl+Q", Description: "Quit editor", Category: "file"},
 
 	// Edit commands
@@ -75,13 +75,13 @@ func (m Model) handleCommandMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Dismiss menu without executing
-		m.mode = StateDefault
+		m.exitOverlay()
 		return m, nil
 
 	default:
 		// Any other key (including typing) dismisses the menu
 		// and is processed normally
-		m.mode = StateDefault
+		m.exitOverlay()
 		return m.handleDefaultKey(msg)
 	}
 }
@@ -90,12 +90,12 @@ func (m Model) handleCommandMenuKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 // Thin wrapper that resolves the selected item's name and delegates.
 func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 	if m.commandMenuState.Selected < 0 || m.commandMenuState.Selected >= len(EditorCommands) {
-		m.mode = StateDefault
+		m.exitOverlay()
 		return m, nil
 	}
 
 	cmd := EditorCommands[m.commandMenuState.Selected]
-	m.mode = StateDefault
+	m.exitOverlay()
 	return m.executeCommandByName(cmd.Name)
 }
 
@@ -106,32 +106,23 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 	case "Save":
 		if m.filepath == "" {
 			// No filepath: open file picker for save
-			m.filePicker = initFilePicker()
-			m.filePickerFocus = FocusFilename
-			m.filePickerPurpose = PickerForSave
-			m.mode = StateFilePicker
-			return m, m.filePicker.Init()
+			cmd := m.enterFilePicker(PickerForSave, FocusFilename)
+			return m, cmd
 		}
 		m.saveFile("")
 		return m, nil
 
 	case "Save As":
 		// Always open file picker for save-as
-		m.filePicker = initFilePicker()
-		m.filePickerFocus = FocusFilename
-		m.filePickerPurpose = PickerForSave
-		m.mode = StateFilePicker
-		return m, m.filePicker.Init()
+		cmd := m.enterFilePicker(PickerForSave, FocusFilename)
+		return m, cmd
 
 	case "Open":
 		if m.promptSaveIfNeeded(PendingOpen, "Unsaved changes! Save before open? (y/n/c)") {
 			return m, nil
 		}
-		m.filePicker = initFilePicker()
-		m.filePickerFocus = FocusFileBrowser
-		m.filePickerPurpose = PickerForOpen
-		m.mode = StateFilePicker
-		return m, m.filePicker.Init()
+		cmd := m.enterFilePicker(PickerForOpen, FocusFileBrowser)
+		return m, cmd
 
 	case "Export":
 		m.enterExportMode()
@@ -151,8 +142,7 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 		return m.handleRedo()
 
 	case "Delete Line":
-		m.deleteLine()
-		return m, nil
+		return m.handleDeleteLine()
 
 	case "Insert Frontmatter":
 		return m.insertFrontmatter()
@@ -180,8 +170,7 @@ func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 		return m.handleCtrlU()
 
 	case "Full Help":
-		m.mode = StateHelp
-		m.helpState = HelpOverlayState{Selected: 0, ScrollOffset: 0}
+		m.enterHelp()
 		return m, nil
 	}
 

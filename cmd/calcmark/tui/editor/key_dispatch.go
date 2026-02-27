@@ -31,9 +31,6 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Terminals using the Kitty keyboard protocol send Super separately;
 	// legacy terminals map Cmd→Ctrl and we can't distinguish them.
 	//
-	// NOTE: Ctrl+E is NOT bound here because legacy macOS terminals send
-	// \x05 (Ctrl+E) for Cmd+Right, making it indistinguishable from a real
-	// Ctrl+E press. Export is accessible via the command menu (Ctrl+H).
 	if msg.Mod.Contains(tea.ModCtrl) && !msg.Mod.Contains(tea.ModSuper) {
 		switch msg.Code {
 		case 'c':
@@ -48,6 +45,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.executeCommandByName("Quit")
 		case 's':
 			return m.executeCommandByName("Save")
+		case 'e':
+			return m.executeCommandByName("Export")
 		case 'o':
 			return m.executeCommandByName("Open")
 		case 'f':
@@ -58,10 +57,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// Handle command menu toggle (Ctrl+H/F1) - works regardless of mode
 	if key.Matches(msg, m.keys.Help) {
 		if m.mode == StateCommandMenu {
-			m.mode = StateDefault
+			m.exitOverlay()
 		} else {
-			m.mode = StateCommandMenu
-			m.commandMenuState.Selected = 0 // Reset selection when opening
+			m.enterCommandMenu()
 		}
 		return m, nil
 	}
@@ -133,9 +131,36 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.handlePaste()
 		case 'z':
 			if hasShift {
-				return m.handleRedo()
+				return m.handleRedo() // Cmd+Shift+Z = Redo (macOS convention)
 			}
 			return m.handleUndo()
+		case 'y':
+			return m.handleRedo() // Cmd+Y = Redo (cross-platform alternative)
+		}
+	}
+
+	// Handle Ctrl+key clipboard and undo shortcuts via modifier+code.
+	// Uses the same msg.Mod/msg.Code pattern as the Super block above for
+	// reliability across terminal protocols (Kitty, legacy, etc.).
+	// Legacy macOS terminals map Cmd→Ctrl, so Cmd+Shift+Z arrives as
+	// Ctrl+Shift+Z — handled here for consistent redo behavior.
+	if msg.Mod.Contains(tea.ModCtrl) && !msg.Mod.Contains(tea.ModSuper) {
+		hasShift := msg.Mod.Contains(tea.ModShift)
+		switch msg.Code {
+		case 'z':
+			if hasShift {
+				return m.handleRedo() // Ctrl+Shift+Z = Redo
+			}
+			return m.handleUndo()
+		case 'y':
+			return m.handleRedo()
+		case 'x':
+			return m.handleCut()
+		case 'v':
+			return m.handlePaste()
+		case 'a':
+			m.SelectAll()
+			return m, nil
 		}
 	}
 
@@ -248,22 +273,7 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleCtrlU()
 	case "ctrl+k":
 		// Delete current line
-		m.deleteLine()
-		return m, nil
-	case "ctrl+z":
-		return m.handleUndo()
-	case "ctrl+y":
-		return m.handleRedo()
-	case "ctrl+a":
-		// Select all - Ctrl+A
-		m.SelectAll()
-		return m, nil
-	case "ctrl+x":
-		// Cut - Ctrl+X
-		return m.handleCut()
-	case "ctrl+v":
-		// Paste - Ctrl+V
-		return m.handlePaste()
+		return m.handleDeleteLine()
 	case "space":
 		return m.handleRuneInput([]rune{' '})
 	default:

@@ -688,7 +688,55 @@ func (m *Model) reEvaluate() {
 	// so the view can show which blocks were affected by the last change
 }
 
+// handleDeleteLine is the user-facing "delete line" action (Ctrl+K, command menu).
+// It captures undo state, performs the deletion, and records an OpDeleteLine operation.
+// Returns (model, cmd) for Bubble Tea compatibility.
+func (m Model) handleDeleteLine() (tea.Model, tea.Cmd) {
+	// Force undo boundary — line deletion is a discrete action
+	m.undoManager.ForceBoundary()
+
+	// Flush any pending edit buffer so the document matches what the user sees
+	m.saveCurrentLine(true)
+	m.editBufLoaded = false
+
+	lines := m.GetLines()
+	if m.cursorLine >= len(lines) {
+		return m, nil
+	}
+
+	// Capture state AFTER flush but BEFORE deletion for undo
+	beforeLine := m.cursorLine
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+	deletedContent := lines[m.cursorLine]
+
+	m.deleteLine()
+
+	// Reset edit buffer so it loads from the new current line
+	m.editBufLoaded = false
+
+	// Record the undo operation
+	op := EditOperation{
+		Type:         OpDeleteLine,
+		Line:         beforeLine,
+		Col:          0,
+		OldText:      deletedContent,
+		NewText:      "",
+		CursorLine:   beforeLine,
+		CursorCol:    beforeCol,
+		ScrollOffset: beforeScroll,
+	}
+	undoCmd := m.recordEdit(op)
+
+	// Force boundary after — next typing starts a new group
+	m.undoManager.ForceBoundary()
+
+	return m, undoCmd
+}
+
 // deleteLine deletes the current line (dd command).
+// This is the low-level mutation used by both user actions and undo replay.
+// User-facing code should call handleDeleteLine() which also records undo.
 func (m *Model) deleteLine() {
 	lines := m.GetLines()
 	if m.cursorLine >= len(lines) {
@@ -762,7 +810,7 @@ func (m *Model) deleteLine() {
 				}
 
 				m.modified = true
-				m.reEvaluate()
+				m.fullReEvaluate()
 				m.InvalidateAlignedCache()
 
 				// Adjust cursor if needed

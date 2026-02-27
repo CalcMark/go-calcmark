@@ -19,7 +19,7 @@ type ExportOverlayState struct {
 func (m Model) handleExportOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
-		m.mode = StateDefault
+		m.exitOverlay()
 		m.statusMsg = "Export cancelled"
 		return m, nil
 
@@ -53,14 +53,14 @@ func (m Model) handleExportOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) 
 	case "left", "right", "ctrl+left", "ctrl+right",
 		"home", "end", "ctrl+home", "ctrl+end",
 		"pgup", "pgdown":
-		m.mode = StateDefault
+		m.exitOverlay()
 		m.statusMsg = "Export cancelled"
 		return m.handleDefaultKey(msg)
 
 	default:
 		if msg.Text != "" {
 			// For any other rune, cancel Export mode
-			m.mode = StateDefault
+			m.exitOverlay()
 			m.statusMsg = "Export cancelled"
 			return m.handleDefaultKey(msg)
 		}
@@ -73,11 +73,8 @@ func (m Model) handleExportOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) 
 // openExportFilePicker transitions from format selection to the file picker
 // with PickerForExport purpose.
 func (m Model) openExportFilePicker() (tea.Model, tea.Cmd) {
-	m.filePicker = initFilePicker()
-	m.filePickerFocus = FocusFilename
-	m.filePickerPurpose = PickerForExport
-	m.mode = StateFilePicker
-	return m, m.filePicker.Init()
+	cmd := m.enterFilePicker(PickerForExport, FocusFilename)
+	return m, cmd
 }
 
 // renderExportOverlay renders the format selection modal as a centered overlay.

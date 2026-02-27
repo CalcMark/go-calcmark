@@ -13,10 +13,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		// Cancel and return to editing
-		m.mode = StateDefault
-		m.statusMsg = ""
-		m.newFileName = ""
-		m.pendingSaveAction = PendingNone
+		m.exitOverlay()
 		return m, nil
 
 	case "tab":
@@ -51,8 +48,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 				if m.newFileName != "" {
 					path := filepath.Join(m.filePicker.CurrentDirectory, m.newFileName)
 					m.openFile(path)
-					m.mode = StateDefault
-					m.newFileName = ""
+					m.exitOverlay()
 				}
 				return m, nil
 			}
@@ -65,8 +61,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 					filename := addExportExtension(m.newFileName, format)
 					path := filepath.Join(m.filePicker.CurrentDirectory, filename)
 					m.exportFile(path, format)
-					m.mode = StateDefault
-					m.newFileName = ""
+					m.exitOverlay()
 				}
 				return m, nil
 			}
@@ -100,8 +95,7 @@ func (m Model) handleFilePickerKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.filePickerPurpose == PickerForOpen {
 			// Open mode: selecting a file opens it immediately
 			m.openFile(path)
-			m.mode = StateDefault
-			m.newFileName = ""
+			m.exitOverlay()
 			return m, cmd
 		}
 		// Save/Export mode: put filename in the input field for confirmation

@@ -260,17 +260,14 @@ func TestSavePromptMode(t *testing.T) {
 	}
 }
 
-func TestCtrlEDoesNotTriggerExport(t *testing.T) {
-	// Ctrl+E was removed as a global shortcut because legacy macOS terminals
-	// send \x05 (Ctrl+E) for Cmd+Right, making them indistinguishable.
-	// Export is accessible via the command menu (Ctrl+H).
+func TestCtrlETriggersExport(t *testing.T) {
 	m := New(nil)
 
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
-	if m.mode != StateDefault {
-		t.Errorf("Expected StateDefault after Ctrl+E (no longer triggers Export), got %v", m.mode)
+	if m.mode != StateExport {
+		t.Errorf("Expected StateExport after Ctrl+E, got %v", m.mode)
 	}
 }
 
@@ -628,6 +625,57 @@ func TestOpenFileResetsEditBuf(t *testing.T) {
 	}
 	if m.pendingSaveAction != PendingNone {
 		t.Errorf("Expected PendingNone, got %v", m.pendingSaveAction)
+	}
+	if m.state != StateReady {
+		t.Errorf("Expected state=StateReady after openFile, got %v", m.state)
+	}
+}
+
+// TestOpenFileResetsStateFromEditing verifies that openFile transitions the
+// state machine from StateEditing to StateReady. This prevents the bug where
+// opening a new file while actively editing left the editor in StateEditing
+// with an empty editBuf, violating the StateEditing invariant.
+func TestOpenFileResetsStateFromEditing(t *testing.T) {
+	// Start with a document and simulate typing to enter StateEditing
+	doc, _ := document.NewDocument("x = 10\ny = 20\n")
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Type some text to enter StateEditing
+	for _, r := range "hello" {
+		newModel, _ := m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+		m = newModel.(Model)
+	}
+
+	if m.state != StateEditing {
+		t.Fatalf("Expected StateEditing after typing, got %v", m.state)
+	}
+
+	// Create a different file to open
+	tmpFile := filepath.Join(t.TempDir(), "other.cm")
+	if err := os.WriteFile(tmpFile, []byte("a = 42\n"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Open the new file
+	m.openFile(tmpFile)
+
+	// State must be StateReady, not StateEditing
+	if m.state != StateReady {
+		t.Errorf("Expected StateReady after openFile, got %v", m.state)
+	}
+	if m.editBufLoaded {
+		t.Error("Expected editBufLoaded=false after openFile")
+	}
+	if m.userIsTyping {
+		t.Error("Expected userIsTyping=false after openFile")
+	}
+
+	// Document should be the newly opened file
+	lines := m.GetLines()
+	if len(lines) == 0 || lines[0] != "a = 42" {
+		t.Errorf("Expected first line 'a = 42', got %v", lines)
 	}
 }
 

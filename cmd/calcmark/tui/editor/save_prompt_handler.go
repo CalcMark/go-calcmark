@@ -14,9 +14,7 @@ func (m *Model) promptSaveIfNeeded(action PendingAction, promptMsg string) bool 
 	if !m.hasUnsavedChanges() {
 		return false
 	}
-	m.pendingSaveAction = action
-	m.mode = StateSavePrompt
-	m.statusMsg = promptMsg
+	m.enterSavePrompt(action, promptMsg)
 	return true
 }
 
@@ -29,11 +27,8 @@ func (m Model) handleSavePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "y", "Y":
 		// Save first, then perform the pending action
 		if m.filepath == "" {
-			m.filePicker = initFilePicker()
-			m.filePickerFocus = FocusFilename
-			m.filePickerPurpose = PickerForSave
-			m.mode = StateFilePicker
-			return m, m.filePicker.Init()
+			cmd := m.enterFilePicker(PickerForSave, FocusFilename)
+			return m, cmd
 		}
 		m.saveFile("")
 		if m.statusIsErr {
@@ -46,12 +41,14 @@ func (m Model) handleSavePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.completePendingSaveAction()
 	case "c", "C":
 		// Cancel the pending action
-		m.mode = StateDefault
-		m.statusMsg = actionCancelledMsg(m.pendingSaveAction)
+		cancelMsg := actionCancelledMsg(m.pendingSaveAction)
+		m.exitOverlay()
+		m.statusMsg = cancelMsg
 	case "esc":
 		// Cancel the pending action
-		m.mode = StateDefault
-		m.statusMsg = actionCancelledMsg(m.pendingSaveAction)
+		cancelMsg := actionCancelledMsg(m.pendingSaveAction)
+		m.exitOverlay()
+		m.statusMsg = cancelMsg
 	}
 	return m, nil
 }
@@ -59,19 +56,17 @@ func (m Model) handleSavePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 // completePendingSaveAction finishes whatever action triggered the save prompt.
 func (m Model) completePendingSaveAction() (tea.Model, tea.Cmd) {
 	action := m.pendingSaveAction
-	m.pendingSaveAction = PendingNone
 	switch action {
 	case PendingQuit:
+		m.exitOverlay()
 		m.quitting = true
 		return m, tea.Quit
 	case PendingOpen:
-		m.filePicker = initFilePicker()
-		m.filePickerFocus = FocusFileBrowser
-		m.filePickerPurpose = PickerForOpen
-		m.mode = StateFilePicker
-		return m, m.filePicker.Init()
+		m.exitOverlay()
+		cmd := m.enterFilePicker(PickerForOpen, FocusFileBrowser)
+		return m, cmd
 	default:
-		m.mode = StateDefault
+		m.exitOverlay()
 		return m, nil
 	}
 }

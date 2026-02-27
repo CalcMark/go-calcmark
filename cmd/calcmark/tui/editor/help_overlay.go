@@ -47,24 +47,24 @@ func helpCategories() []HelpCategory {
 				{Name: "Save", Accelerator: "Ctrl+S", Kind: HelpActionable, CommandName: "Save"},
 				{Name: "Save As", Accelerator: "", Kind: HelpActionable, CommandName: "Save As"},
 				{Name: "Open", Accelerator: "Ctrl+O", Kind: HelpActionable, CommandName: "Open"},
-				{Name: "Export", Accelerator: "", Kind: HelpActionable, CommandName: "Export"},
+				{Name: "Export", Accelerator: "Ctrl+E", Kind: HelpActionable, CommandName: "Export"},
 				{Name: "Quit", Accelerator: "Ctrl+Q", Kind: HelpActionable, CommandName: "Quit"},
 			},
 		},
 		{
 			Name: "Edit",
 			Items: []HelpItem{
-				{Name: "Undo", Accelerator: "Ctrl+Z", Kind: HelpActionable, CommandName: "Undo"},
-				{Name: "Redo", Accelerator: "Ctrl+Y", Kind: HelpActionable, CommandName: "Redo"},
+				{Name: "Undo", Accelerator: "Ctrl+Z / ⌘Z", Kind: HelpActionable, CommandName: "Undo"},
+				{Name: "Redo", Accelerator: "Ctrl+Y / ⌘⇧Z", Kind: HelpActionable, CommandName: "Redo"},
 				{Name: "Delete Line", Accelerator: "Ctrl+K", Kind: HelpActionable, CommandName: "Delete Line"},
 				{Name: "Insert Frontmatter", Accelerator: "Ctrl+F", Kind: HelpActionable, CommandName: "Insert Frontmatter"},
 				{Name: "New Line", Accelerator: "Enter", Kind: HelpAdvisory},
 				{Name: "Backspace", Accelerator: "Bksp", Kind: HelpAdvisory},
 				{Name: "Delete Word", Accelerator: "Ctrl+Bksp", Kind: HelpAdvisory},
-				{Name: "Select All", Accelerator: "Ctrl+A", Kind: HelpAdvisory},
-				{Name: "Copy", Accelerator: "Ctrl+C", Kind: HelpAdvisory},
-				{Name: "Cut", Accelerator: "Ctrl+X", Kind: HelpAdvisory},
-				{Name: "Paste", Accelerator: "Ctrl+V", Kind: HelpAdvisory},
+				{Name: "Select All", Accelerator: "Ctrl+A / ⌘A", Kind: HelpAdvisory},
+				{Name: "Copy", Accelerator: "Ctrl+C / ⌘C", Kind: HelpAdvisory},
+				{Name: "Cut", Accelerator: "Ctrl+X / ⌘X", Kind: HelpAdvisory},
+				{Name: "Paste", Accelerator: "Ctrl+V / ⌘V", Kind: HelpAdvisory},
 			},
 		},
 		{
@@ -156,14 +156,14 @@ func (m Model) handleHelpOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if len(indices) == 0 {
 		// No actionable items — only Esc closes
 		if msg.String() == "esc" {
-			m.mode = StateDefault
+			m.exitOverlay()
 		}
 		return m, nil
 	}
 
 	switch msg.String() {
 	case "esc":
-		m.mode = StateDefault
+		m.exitOverlay()
 		return m, nil
 
 	case "up":
@@ -182,7 +182,7 @@ func (m Model) handleHelpOverlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.helpState.Selected >= 0 && m.helpState.Selected < len(items) {
 			item := items[m.helpState.Selected]
 			if item.Kind == HelpActionable && item.CommandName != "" {
-				m.mode = StateDefault
+				m.exitOverlay()
 				return m.executeCommandByName(item.CommandName)
 			}
 		}
@@ -224,7 +224,7 @@ func (m Model) renderHelpOverlay() string {
 				prefix = "   "
 			}
 
-			accel := fmt.Sprintf("%-14s", item.Accelerator)
+			accel := fmt.Sprintf("%-18s", item.Accelerator)
 			content := fmt.Sprintf("%s%s%s", prefix, accel, item.Name)
 
 			if item.Kind == HelpActionable && flatIdx == selectedIdx {

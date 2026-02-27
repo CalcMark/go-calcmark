@@ -517,6 +517,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 
+	case tea.PasteMsg:
+		// Bracketed paste: terminal intercepted Cmd+V (or middle-click) and
+		// sent the clipboard content as a paste event. Handle identically to
+		// Ctrl+V / Cmd+V key shortcut.
+		return m.handleBracketedPaste(msg.Content)
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -593,11 +599,6 @@ func (m Model) Width() int {
 // Height returns the current height.
 func (m Model) Height() int {
 	return m.height
-}
-
-// SetMode sets the editor mode.
-func (m *Model) SetMode(mode InputState) {
-	m.mode = mode
 }
 
 // IsModified returns whether the document has unsaved changes.
@@ -712,8 +713,7 @@ func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "esc":
 		// Dismiss autocomplete without inserting
-		m.mode = StateDefault
-		m.autocompleteState = components.AutosuggestState{}
+		m.exitAutocomplete()
 		return m, nil
 	case "tab":
 		// Accept current selection
@@ -755,16 +755,14 @@ func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.debounceUpdate()
 	case "space":
 		// Space typically ends a word - dismiss and insert space
-		m.mode = StateDefault
-		m.autocompleteState = components.AutosuggestState{}
+		m.exitAutocomplete()
 		return m.handleRuneInput([]rune{' '})
 	case "enter":
 		// Enter accepts if there's a selection, otherwise just inserts newline
 		if len(m.autocompleteState.Suggestions) > 0 {
 			return m.acceptAutocomplete()
 		}
-		m.mode = StateDefault
-		m.autocompleteState = components.AutosuggestState{}
+		m.exitAutocomplete()
 		return m.handleEnterKey()
 	default:
 		if msg.Text != "" {
@@ -799,8 +797,7 @@ func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return debounceModel, tea.Batch(debounceCmd, undoCmd)
 		}
 		// Navigation and other keys dismiss autocomplete
-		m.mode = StateDefault
-		m.autocompleteState = components.AutosuggestState{}
+		m.exitAutocomplete()
 		return m.handleDefaultKey(msg)
 	}
 }
@@ -924,7 +921,7 @@ func isWordRune(ch rune) bool {
 func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 	if m.autocompleteState.Selected < 0 ||
 		m.autocompleteState.Selected >= len(m.autocompleteState.Suggestions) {
-		m.mode = StateDefault
+		m.exitAutocomplete()
 		return m, nil
 	}
 
@@ -951,8 +948,7 @@ func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 	m.editBuf = beforePrefix + insertText + afterCursor
 	m.cursorCol = prefixStart + runeLen(insertText)
 
-	m.mode = StateDefault
-	m.autocompleteState = components.AutosuggestState{}
+	m.exitAutocomplete()
 	m.transitionToEditing()
 	return m.debounceUpdate()
 }

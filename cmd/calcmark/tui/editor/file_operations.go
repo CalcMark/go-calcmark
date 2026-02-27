@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/format"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -134,15 +133,6 @@ func (m *Model) exportFile(filename, formatName string) {
 	m.statusMsg = fmt.Sprintf("Exported to: %s (%s)", filepath.Base(absPath), formatName)
 }
 
-// enterExportMode enters export format selection mode.
-func (m *Model) enterExportMode() {
-	m.mode = StateExport
-	m.exportState = ExportOverlayState{
-		FormatIdx: 0,
-	}
-	m.statusMsg = ""
-}
-
 // hasUnsavedChanges returns true if there are unsaved changes.
 // Checks both the flushed document content and the live edit buffer,
 // since the user may have typed text that hasn't been committed to
@@ -200,40 +190,8 @@ func (m *Model) openFile(filename string) {
 		m.statusMsg = fmt.Sprintf("Opened: %s", filepath.Base(absPath))
 	}
 
-	// Reinitialize all mutable editor state for the new document.
-	// Every field must be reset to prevent stale data from leaking
-	// into the newly opened document.
-	m.doc = doc
-	m.eval = eval
-	m.filepath = absPath
-	m.modified = false
-	m.savedContent = string(content)
-
-	// Cursor and scroll
-	m.cursorLine = 0
-	m.cursorCol = 0
-	m.scrollOffset = 0
-
-	// Editing state
-	m.editBuf = ""
-	m.editBufLoaded = false // New file — needs loading
-	m.userIsTyping = false
-	m.frontmatterErr = nil
-	m.changedBlockIDs = make(map[string]bool)
-	m.selectionAnchorLine = -1
-	m.selectionAnchorCol = -1
-
-	// Overlay / prompt state
-	m.autocompleteState = components.AutosuggestState{}
-	m.pendingSaveAction = PendingNone
-
-	// Undo history — fresh start on file open
-	m.undoManager.Clear()
-
-	// Auto-pin variables
-	m.pinnedVars = make(map[string]bool)
-	m.changedVars = make(map[string]bool)
-	m.autoPinVariables()
+	// Reset all mutable editor state for the new document.
+	m.resetForNewDocument(doc, eval, absPath, string(content))
 }
 
 // cyclePreviewMode cycles through preview modes: Full → Minimal → Hidden → Full
