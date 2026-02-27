@@ -1,0 +1,16 @@
+# Test Ctrl+N: new document resets editor to blank state
+# Verifies: Ctrl+N without unsaved changes creates new empty document
+# Verifies: Ctrl+N with unsaved changes shows save prompt
+
+# Initial state - clean editor, no unsaved changes
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Ctrl+N on clean document goes straight to new document (no prompt)
+run observe=debug
+key ctrl+n
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

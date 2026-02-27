@@ -23,6 +23,7 @@ type CommandMenuState struct {
 // These are displayed in the command menu for discovery.
 var EditorCommands = []Command{
 	// File commands
+	{Name: "New", Accelerator: "Ctrl+N", Description: "New empty document", Category: "file"},
 	{Name: "Save", Accelerator: "Ctrl+S", Description: "Save document", Category: "file"},
 	{Name: "Save As", Accelerator: "", Description: "Save with new name", Category: "file"},
 	{Name: "Open", Accelerator: "Ctrl+O", Description: "Open file", Category: "file"},
@@ -103,6 +104,13 @@ func (m Model) executeCommandMenuSelection() (tea.Model, tea.Cmd) {
 // Shared by the command menu and help overlay.
 func (m Model) executeCommandByName(name string) (tea.Model, tea.Cmd) {
 	switch name {
+	case "New":
+		if m.promptSaveIfNeeded(PendingNew, "Unsaved changes! Save before new? (y/n/c)") {
+			return m, nil
+		}
+		m.newFile()
+		return m, nil
+
 	case "Save":
 		if m.filepath == "" {
 			// No filepath: open file picker for save
