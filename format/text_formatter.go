@@ -65,15 +65,17 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			sourceLines := block.Source()
 			results := block.Results()
 
-			for j, line := range sourceLines {
+			resultIdx := 0
+			for _, line := range sourceLines {
 				if line == "" {
 					continue
 				}
 				fmt.Fprint(w, line)
 				// Add result if available for this line
-				if j < len(results) && results[j] != nil {
-					fmt.Fprintf(w, " → %s", display.Format(results[j]))
+				if resultIdx < len(results) && results[resultIdx] != nil {
+					fmt.Fprintf(w, " → %s", display.Format(results[resultIdx]))
 				}
+				resultIdx++
 				fmt.Fprintln(w)
 			}
 

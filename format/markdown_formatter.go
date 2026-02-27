@@ -48,7 +48,8 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 				sourceLines = sourceLines[:len(sourceLines)-1]
 			}
 
-			for i, line := range sourceLines {
+			resultIdx := 0
+			for _, line := range sourceLines {
 				// Skip result lines from previous saves
 				if isResultLine(line) {
 					continue
@@ -59,9 +60,10 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 				}
 				fmt.Fprint(w, line)
 				// Append inline result if available
-				if i < len(results) && results[i] != nil {
-					fmt.Fprintf(w, " → %s", display.Format(results[i]))
+				if resultIdx < len(results) && results[resultIdx] != nil {
+					fmt.Fprintf(w, " → %s", display.Format(results[resultIdx]))
 				}
+				resultIdx++
 				fmt.Fprintln(w)
 			}
 			fmt.Fprintf(w, "```\n\n")

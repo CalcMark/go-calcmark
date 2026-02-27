@@ -279,3 +279,81 @@ func TestMarkdownFormatterFiltersResultCommentBlocks(t *testing.T) {
 		t.Errorf("Result appears too many times, possible duplicate: %s", output)
 	}
 }
+
+// TestMarkdownFormatterBlankLinesInCalcBlock tests that blank lines within a calc
+// block don't misalign results with source lines. Results are indexed per-AST-statement
+// (one per non-blank calc line), not per source line.
+func TestMarkdownFormatterBlankLinesInCalcBlock(t *testing.T) {
+	// Blank line separates the two groups of statements
+	source := "x = 10\ny = 20\n\nz = x + y\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Every line should have its correct result, not shifted by blank lines
+	if !strings.Contains(output, "x = 10 → 10") {
+		t.Errorf("Expected 'x = 10 → 10', got:\n%s", output)
+	}
+	if !strings.Contains(output, "y = 20 → 20") {
+		t.Errorf("Expected 'y = 20 → 20', got:\n%s", output)
+	}
+	if !strings.Contains(output, "z = x + y → 30") {
+		t.Errorf("Expected 'z = x + y → 30', got:\n%s", output)
+	}
+}
+
+// TestMarkdownFormatterMultipleBlankLines tests calc blocks with multiple blank
+// line groups don't lose results at the end.
+func TestMarkdownFormatterMultipleBlankLines(t *testing.T) {
+	source := "a = 1\n\nb = 2\n\nc = 3\n\nd = a + b + c\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	if !strings.Contains(output, "a = 1 → 1") {
+		t.Errorf("Expected 'a = 1 → 1', got:\n%s", output)
+	}
+	if !strings.Contains(output, "b = 2 → 2") {
+		t.Errorf("Expected 'b = 2 → 2', got:\n%s", output)
+	}
+	if !strings.Contains(output, "c = 3 → 3") {
+		t.Errorf("Expected 'c = 3 → 3', got:\n%s", output)
+	}
+	if !strings.Contains(output, "d = a + b + c → 6") {
+		t.Errorf("Expected 'd = a + b + c → 6', got:\n%s", output)
+	}
+}

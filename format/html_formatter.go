@@ -124,15 +124,17 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			sourceLines := block.Source()
 			results := block.Results()
 
-			for i, line := range sourceLines {
+			resultIdx := 0
+			for _, line := range sourceLines {
 				if line == "" {
 					continue
 				}
 				tl := TemplateLine{Source: line}
 				// Add result if available for this line
-				if i < len(results) && results[i] != nil {
-					tl.Result = display.Format(results[i])
+				if resultIdx < len(results) && results[resultIdx] != nil {
+					tl.Result = display.Format(results[resultIdx])
 				}
+				resultIdx++
 				tb.SourceLines = append(tb.SourceLines, tl)
 			}
 
