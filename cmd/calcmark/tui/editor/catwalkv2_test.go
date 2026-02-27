@@ -417,10 +417,10 @@ func (d *driverV2) applyTextCommand(t *testing.T, cmd string, args ...string) te
 		if err != nil {
 			t.Fatalf("%s: paste argument error: %v", d.pos, err)
 		}
-		// In v2, paste is represented by a KeyPressMsg with KeyExtended code
-		// and the full text in the Text field (same as typing multiple chars
-		// at once via bracketed paste).
-		d.addMsg(tea.KeyPressMsg{Code: tea.KeyExtended, Text: s})
+		// Bracketed paste: the terminal intercepts Cmd+V and sends clipboard
+		// content as a PasteMsg (not a key event). This matches real terminal
+		// behavior — Bubble Tea v2 delivers bracketed paste as tea.PasteMsg.
+		d.addMsg(tea.PasteMsg{Content: s})
 
 	default:
 		t.Fatalf("%s: unknown command %q", d.pos, cmd)

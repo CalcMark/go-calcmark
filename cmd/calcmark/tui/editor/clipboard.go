@@ -79,6 +79,25 @@ func (m Model) handlePaste() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	return m.insertPastedText(text)
+}
+
+// handleBracketedPaste handles bracketed paste events from the terminal.
+// When the user presses Cmd+V on macOS, the terminal intercepts the key,
+// reads the system clipboard, and sends the content as a bracketed paste
+// event — Bubble Tea delivers this as tea.PasteMsg. This method processes
+// that content identically to handlePaste (Ctrl+V / Cmd+V key shortcut).
+func (m Model) handleBracketedPaste(content string) (tea.Model, tea.Cmd) {
+	if content == "" {
+		return m, nil
+	}
+	return m.insertPastedText(content)
+}
+
+// insertPastedText validates, sanitizes, and inserts pasted text at the cursor.
+// Shared by handlePaste (Ctrl+V / Cmd+V key shortcut reading system clipboard)
+// and handleBracketedPaste (terminal-initiated paste via tea.PasteMsg).
+func (m Model) insertPastedText(text string) (tea.Model, tea.Cmd) {
 	if len(text) > maxPasteSize {
 		m.statusMsg = "Paste too large (>1MB)"
 		m.statusIsErr = true

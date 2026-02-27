@@ -276,6 +276,14 @@ func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int) AlignedMo
 		PreviewMode:        m.previewMode,
 	}
 
+	// When the user is actively typing, the edit buffer may differ from the
+	// committed document line. Feed it into alignment so pre-computed wrapping
+	// uses the live text, matching what the source pane renders.
+	if m.editBufLoaded {
+		input.EditBuf = m.editBuf
+		input.EditBufLine = m.cursorLine
+	}
+
 	// Compute with render functions that match view.go behavior
 	return ComputeAlignedModel(input, m.renderCalcLine, func(line string, width int) []string {
 		mdRenderer, _ := NewMarkdownRenderer(width)

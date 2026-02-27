@@ -8,7 +8,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -216,22 +215,12 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	end := min(start+resultsHeight, len(previewLines))
 
 	// In edit mode, source pane may render different number of lines for cursor line
-	// because it renders the live edit buffer. We need to:
-	// 1. Count how many pre-computed lines exist for cursor's source line
-	// 2. Count how many lines the edit buffer would render
-	// 3. Adjust by skipping pre-computed wrapped lines or adding empty lines
-	var editLineCount int
+	// because it renders the live edit buffer. We need to match the pre-computed
+	// aligned count so both panes emit the same number of visual lines.
 	var preComputedCursorLineCount int
 	if m.editBufLoaded {
-		// Count how many lines the edit buffer would produce
-		contentWidth := width // approximate
-		editLines := geometry.WrapText(m.editBuf, contentWidth)
-		editLineCount = len(editLines)
-		if editLineCount == 0 {
-			editLineCount = 1
-		}
-
-		// Count how many pre-computed visual lines exist for cursor's source line
+		// Count how many pre-computed visual lines exist for cursor's source line.
+		// This matches the source pane's numAligned count from alignment computation.
 		for _, pl := range previewLines {
 			if pl.sourceLineNum == m.cursorLine {
 				preComputedCursorLineCount++
@@ -279,7 +268,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		// This only applies to non-frontmatter lines (calc blocks, markdown).
 		if m.editBufLoaded && pl.sourceLineNum == m.cursorLine {
 			if !cursorLineProcessed {
-				// First occurrence of cursor line - output editLineCount lines
+				// First occurrence of cursor line - output preComputedCursorLineCount lines
 				// to match the source pane's edit buffer rendering.
 				// Show the actual preview content (computed result) rather than blank.
 				cursorPreviewLines := []previewLine{}
@@ -288,7 +277,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 						cursorPreviewLines = append(cursorPreviewLines, cpl)
 					}
 				}
-				for k := 0; k < editLineCount && linesWritten < resultsHeight; k++ {
+				for k := 0; k < preComputedCursorLineCount && linesWritten < resultsHeight; k++ {
 					// Show preview content if available, otherwise empty
 					var completeLine string
 					if k < len(cursorPreviewLines) {
@@ -302,7 +291,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 				}
 				cursorLineProcessed = true
 			}
-			// Skip all pre-computed lines for cursor (we've already output editLineCount lines)
+			// Skip all pre-computed lines for cursor (we've already output preComputedCursorLineCount lines)
 			continue
 		}
 

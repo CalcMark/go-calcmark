@@ -74,7 +74,7 @@ run observe=lines
 sourceToVisual: map[0:0 1:1 2:2 3:3 4:4]
 Visual lines:
   [0] srcIdx=0 lineNum=1 wrap=false pad=false content="jjjotest"
-  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="more# Header" <CURSOR>
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="morekj# Header" <CURSOR>
   [2] srcIdx=2 lineNum=3 wrap=false pad=false content="x = 10"
   [3] srcIdx=3 lineNum=4 wrap=false pad=false content="y = 20"
   [4] srcIdx=4 lineNum=5 wrap=false pad=false content="z = 30"

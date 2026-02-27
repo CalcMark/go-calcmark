@@ -390,3 +390,103 @@ func TestAlignedModel_InsertLineScenario(t *testing.T) {
 		t.Error("After insert: ReverseComplete invariant failed")
 	}
 }
+
+func TestComputeAlignedModel_EditBufAsymmetricWidths(t *testing.T) {
+	// Regression test: when the user is actively typing, the alignment
+	// computation must use the live edit buffer (EditBuf) instead of the
+	// committed document text. With asymmetric source/preview widths, the
+	// edit buffer may wrap differently than the committed line, and both
+	// panes must agree on the visual line count.
+	//
+	// Scenario: editBuf is 33 chars. Source width=41 (no wrap), preview
+	// width=32. Without EditBuf, alignment uses committed text "x = 1".
+	// With EditBuf, alignment uses the longer text which still fits in 41.
+
+	input := AlignedModelInput{
+		Lines: []string{"x = 1", "y = 20"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "x = 1", BlockID: "b1", IsCalc: true, VarName: "x", Value: "1"},
+			{LineNum: 1, Source: "y = 20", BlockID: "b1", IsCalc: true, VarName: "y", Value: "20"},
+		},
+		SourceContentWidth: 41,
+		PreviewWidth:       32,
+		CursorLine:         0,
+		PreviewMode:        PreviewFull,
+		EditBuf:            "total_gross = salary_1 + salary_2", // 33 chars, fits in 41
+		EditBufLine:        0,
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// EditBuf (33 chars) fits in source width (41) → 1 source visual line
+	// Preview result is short → 1 preview visual line
+	// numAligned = max(1, 1) = 1 for line 0
+	// Total: 1 (line 0) + 1 (line 1) = 2 visual lines
+	if model.TotalVisualLines != 2 {
+		t.Errorf("TotalVisualLines = %d, want 2", model.TotalVisualLines)
+	}
+
+	// The cursor line content should use the editBuf text, not committed text
+	if model.SourceLines[0].Content != "total_gross = salary_1 + salary_2" {
+		t.Errorf("SourceLines[0].Content = %q, want editBuf text", model.SourceLines[0].Content)
+	}
+
+	// Verify 1:1 alignment
+	if len(model.SourceLines) != len(model.PreviewLines) {
+		t.Errorf("SourceLines (%d) != PreviewLines (%d)",
+			len(model.SourceLines), len(model.PreviewLines))
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}
+
+func TestComputeAlignedModel_EditBufWrapsInSource(t *testing.T) {
+	// When the edit buffer is long enough to wrap in the source pane,
+	// alignment must account for the extra visual lines. Both panes
+	// should have the same count via padding.
+
+	input := AlignedModelInput{
+		Lines: []string{"x = 1", "y = 20"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "x = 1", BlockID: "b1", IsCalc: true, VarName: "x", Value: "1"},
+			{LineNum: 1, Source: "y = 20", BlockID: "b1", IsCalc: true, VarName: "y", Value: "20"},
+		},
+		SourceContentWidth: 25, // Narrow enough to force wrapping
+		PreviewWidth:       32,
+		CursorLine:         0,
+		PreviewMode:        PreviewFull,
+		EditBuf:            "total_gross = salary_1 + salary_2", // 33 chars > 25 → wraps
+		EditBufLine:        0,
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// EditBuf (33 chars) wraps at source width (25) → 2 source lines
+	// Preview result is short → 1 preview line
+	// numAligned = max(2, 1) = 2 for line 0
+	// Total: 2 (line 0 + wrap) + 1 (line 1) = 3 visual lines
+	if model.TotalVisualLines != 3 {
+		t.Errorf("TotalVisualLines = %d, want 3", model.TotalVisualLines)
+	}
+
+	// First visual line should be cursor, second should be cursor-wrapped
+	if model.SourceLines[0].Kind != AlignedLineCursor {
+		t.Errorf("SourceLines[0].Kind = %v, want AlignedLineCursor", model.SourceLines[0].Kind)
+	}
+	if model.SourceLines[1].Kind != AlignedLineCursorWrapped {
+		t.Errorf("SourceLines[1].Kind = %v, want AlignedLineCursorWrapped", model.SourceLines[1].Kind)
+	}
+
+	// Preview should have content + padding for the wrapped source line
+	if model.PreviewLines[1].Kind != AlignedLinePadding {
+		t.Errorf("PreviewLines[1].Kind = %v, want AlignedLinePadding", model.PreviewLines[1].Kind)
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}

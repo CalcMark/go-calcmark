@@ -79,6 +79,7 @@ z = 30`
 			"frontmatter_insert_undo",             // TestEditorCatwalkFrontmatterInsertUndo
 			"selection",                           // TestEditorCatwalkSelection
 			"shift_selection",                     // TestEditorCatwalkShiftSelection
+			"cmd_shortcuts",                       // TestEditorCatwalkCmdShortcuts
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1123,6 +1124,11 @@ price = 100 USD
 tax = price * 10%
 total = price + tax
 large = 1500 USD`,
+		"cursor_wrap_alignment": `# Household Budget
+
+total_gross = salary_1 + salary_2
+
+net = total_gross * 0.7`,
 	}
 
 	datadriven.Walk(t, "testdata/preview_pane", func(t *testing.T, path string) {
@@ -1459,6 +1465,42 @@ z = 30`
 
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		if !strings.HasSuffix(path, "/shift_selection") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkCmdShortcuts tests macOS Cmd (Super) keyboard shortcuts
+// for clipboard and undo/redo operations.
+func TestEditorCatwalkCmdShortcuts(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "/cmd_shortcuts") {
 			return
 		}
 
