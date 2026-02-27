@@ -1,7 +1,7 @@
 ---
 title: "feat: Add remote store plugin system with GitHub Gists backend"
 type: feat
-status: active
+status: completed
 date: 2026-02-27
 brainstorm: docs/brainstorms/2026-02-27-remote-store-plugins-brainstorm.md
 ---
@@ -128,11 +128,11 @@ infrequently-used feature.
 
 ### Testing Requirements
 
-- [ ] Catwalk tests: trigger Share To via command menu, verify overlay, Esc
+- [x] Catwalk tests: trigger Share To via command menu, verify overlay, Esc
   cancels
-- [ ] Catwalk tests: trigger Open From via command menu, verify overlay,
+- [x] Catwalk tests: trigger Open From via command menu, verify overlay,
   Esc cancels
-- [ ] Catwalk tests: trigger Open From with unsaved changes, verify save
+- [x] Catwalk tests: trigger Open From with unsaved changes, verify save
   prompt appears
 - [x] Unit tests: `gh` CLI availability check
 - [x] Unit tests: gist URL parsing from `gh` stdout
