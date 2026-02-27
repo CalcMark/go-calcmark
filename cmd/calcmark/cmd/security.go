@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/filecheck"
 )
 
 // validateReadFilePath performs security checks on a file path for read-only
@@ -82,4 +84,16 @@ func validateFileConstraints(absPath string) error {
 	}
 
 	return nil
+}
+
+// validateFileContent checks that data is valid text suitable for CalcMark.
+// Delegates to the shared filecheck package for reuse by the TUI editor.
+func validateFileContent(data []byte) error {
+	return filecheck.ValidateContent(data)
+}
+
+// validateStdinContent checks piped stdin data for binary content.
+// Applies the same content checks as file input.
+func validateStdinContent(data []byte) error {
+	return filecheck.ValidateContent(data)
 }
