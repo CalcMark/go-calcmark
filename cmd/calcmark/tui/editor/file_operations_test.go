@@ -76,6 +76,27 @@ func TestOpenFile(t *testing.T) {
 	}
 }
 
+// TestOpenFileWithParseErrorsShowsParseError verifies that .cm files with
+// invalid content show parse errors, not extension errors.
+func TestOpenFileWithParseErrorsShowsParseError(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "bad.cm")
+	// YAML frontmatter with unknown key triggers parse error
+	content := "---\ntitle: bad\n---\nx = 1\n"
+	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := New(nil)
+	m.openFile(tmpFile)
+
+	if !m.statusIsErr {
+		t.Fatal("expected parse error for .cm file with bad frontmatter")
+	}
+	if !strings.Contains(m.statusMsg, "Parse error") {
+		t.Errorf("expected 'Parse error' prefix, got: %s", m.statusMsg)
+	}
+}
+
 // Note: TestExecuteCommands and TestSaveWQ were removed along with
 // the executeCommand() dead code. The editor uses keyboard accelerators
 // (Ctrl+S, Ctrl+E, etc.) and the command menu (Ctrl+H) instead.
@@ -489,7 +510,8 @@ func TestExportViaFilePickerFlow(t *testing.T) {
 	}
 }
 
-// TestCtrlOOpensFilePicker tests Ctrl+O opens the file picker with PickerForOpen.
+// TestCtrlOOpensFilePicker tests Ctrl+O opens the file picker with PickerForOpen
+// and AllowedTypes restricted to CalcMark extensions.
 func TestCtrlOOpensFilePicker(t *testing.T) {
 	m := New(nil)
 	m.width = 80
@@ -506,6 +528,12 @@ func TestCtrlOOpensFilePicker(t *testing.T) {
 	}
 	if m.filePickerFocus != FocusFileBrowser {
 		t.Errorf("Expected FocusFileBrowser, got %v", m.filePickerFocus)
+	}
+
+	// File picker should only allow .cm and .calcmark files for open
+	allowed := m.filePicker.AllowedTypes
+	if len(allowed) != 2 || allowed[0] != ".cm" || allowed[1] != ".calcmark" {
+		t.Errorf("Expected AllowedTypes [.cm .calcmark], got %v", allowed)
 	}
 }
 

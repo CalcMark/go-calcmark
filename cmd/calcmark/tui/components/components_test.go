@@ -54,6 +54,23 @@ func TestRenderStatusBar(t *testing.T) {
 			width:    80,
 			wantSubs: []string{"test.cm"}, // Changed: mode should not appear in output
 		},
+		{
+			name: "long status message truncated",
+			state: StatusBarState{
+				StatusMsg:   "Open failed: unsupported file type (.md) — this is a really long error message that should be truncated by the status bar renderer",
+				StatusIsErr: true,
+			},
+			width:    40,
+			wantSubs: []string{"Open failed", "..."},
+		},
+		{
+			name: "short status message not truncated",
+			state: StatusBarState{
+				StatusMsg: "Saved: test.cm",
+			},
+			width:    80,
+			wantSubs: []string{"Saved: test.cm"},
+		},
 	}
 
 	for _, tt := range tests {
