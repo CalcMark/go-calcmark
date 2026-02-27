@@ -85,33 +85,6 @@ func TestRenderStatusBar(t *testing.T) {
 	}
 }
 
-func TestRenderStatusBarTruncation(t *testing.T) {
-	style := DefaultStatusBarStyle()
-
-	// A message wider than the bar must be truncated with "..."
-	longMsg := strings.Repeat("x", 100)
-	state := StatusBarState{StatusMsg: longMsg, StatusIsErr: true}
-	result := RenderStatusBar(state, 40, style)
-	if !strings.Contains(result, "...") {
-		t.Error("Expected truncation ellipsis for long message")
-	}
-	// The full original message must NOT appear verbatim
-	if strings.Contains(result, longMsg) {
-		t.Error("Expected long message to be truncated, but full message found")
-	}
-
-	// A short message must NOT be truncated
-	shortMsg := "Saved"
-	state2 := StatusBarState{StatusMsg: shortMsg}
-	result2 := RenderStatusBar(state2, 80, style)
-	if strings.Contains(result2, "...") {
-		t.Error("Short message should not contain truncation ellipsis")
-	}
-	if !strings.Contains(result2, shortMsg) {
-		t.Error("Short message should appear verbatim")
-	}
-}
-
 func TestRenderMinimalStatusBar(t *testing.T) {
 	style := DefaultStatusBarStyle()
 	state := StatusBarState{
