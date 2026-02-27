@@ -27,8 +27,9 @@ const (
 )
 
 // initFilePicker creates and configures a new filepicker for the editor.
-// Starts in the current working directory and shows .cm files prominently.
-func initFilePicker() filepicker.Model {
+// Starts in the current working directory. For open, only .cm/.calcmark files
+// are selectable; for save/export, all files are selectable.
+func initFilePicker(purpose FilePickerPurpose) filepicker.Model {
 	fp := filepicker.New()
 
 	// Start in current working directory, fall back to home
@@ -38,11 +39,14 @@ func initFilePicker() filepicker.Model {
 		fp.CurrentDirectory = home
 	}
 
-	// Configuration - show ALL files and directories for navigation
-	// Don't filter by extension - user needs to see directories to navigate
-	fp.AllowedTypes = []string{} // Empty = show all files
-	fp.DirAllowed = false        // Enter on directory = navigate into it (not select)
-	fp.FileAllowed = true        // Enter on file = select for overwrite
+	// For open, restrict to CalcMark files; for save/export, allow all
+	if purpose == PickerForOpen {
+		fp.AllowedTypes = []string{".cm", ".calcmark"}
+	} else {
+		fp.AllowedTypes = []string{} // Empty = show all files
+	}
+	fp.DirAllowed = false // Enter on directory = navigate into it (not select)
+	fp.FileAllowed = true // Enter on file = select for overwrite
 	fp.ShowHidden = false
 	fp.ShowPermissions = false // Permissions are not useful for save/open and consume space
 	fp.ShowSize = true

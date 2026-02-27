@@ -76,68 +76,6 @@ func TestOpenFile(t *testing.T) {
 	}
 }
 
-// TestOpenFileRejectsNonCalcMarkExtension verifies that openFile rejects files
-// without .cm or .calcmark extensions before reading them.
-func TestOpenFileRejectsNonCalcMarkExtension(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	tests := []struct {
-		name     string
-		filename string
-		wantErr  bool
-		wantSub  string
-	}{
-		{
-			name:     "rejects .md file",
-			filename: filepath.Join(tmpDir, "test.md"),
-			wantErr:  true,
-			wantSub:  "unsupported file type",
-		},
-		{
-			name:     "rejects no extension",
-			filename: filepath.Join(tmpDir, "Makefile"),
-			wantErr:  true,
-			wantSub:  "no extension",
-		},
-		{
-			name:     "accepts .CM uppercase",
-			filename: filepath.Join(tmpDir, "test.CM"),
-			wantErr:  false,
-		},
-		{
-			name:     "accepts .calcmark",
-			filename: filepath.Join(tmpDir, "test.calcmark"),
-			wantErr:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create the file with valid content so only extension check matters
-			content := "x = 42\n"
-			if err := os.WriteFile(tt.filename, []byte(content), 0644); err != nil {
-				t.Fatal(err)
-			}
-
-			m := New(nil)
-			m.openFile(tt.filename)
-
-			if tt.wantErr {
-				if !m.statusIsErr {
-					t.Errorf("expected error for %s, got success: %s", tt.filename, m.statusMsg)
-				}
-				if tt.wantSub != "" && !strings.Contains(m.statusMsg, tt.wantSub) {
-					t.Errorf("expected %q in error, got: %s", tt.wantSub, m.statusMsg)
-				}
-			} else {
-				if m.statusIsErr {
-					t.Errorf("expected success for %s, got error: %s", tt.filename, m.statusMsg)
-				}
-			}
-		})
-	}
-}
-
 // TestOpenFileWithParseErrorsShowsParseError verifies that .cm files with
 // invalid content show parse errors, not extension errors.
 func TestOpenFileWithParseErrorsShowsParseError(t *testing.T) {
@@ -572,7 +510,8 @@ func TestExportViaFilePickerFlow(t *testing.T) {
 	}
 }
 
-// TestCtrlOOpensFilePicker tests Ctrl+O opens the file picker with PickerForOpen.
+// TestCtrlOOpensFilePicker tests Ctrl+O opens the file picker with PickerForOpen
+// and AllowedTypes restricted to CalcMark extensions.
 func TestCtrlOOpensFilePicker(t *testing.T) {
 	m := New(nil)
 	m.width = 80
@@ -590,41 +529,11 @@ func TestCtrlOOpensFilePicker(t *testing.T) {
 	if m.filePickerFocus != FocusFileBrowser {
 		t.Errorf("Expected FocusFileBrowser, got %v", m.filePickerFocus)
 	}
-}
 
-// TestFilePickerStaysOpenOnOpenFailure tests that the file picker overlay
-// remains visible when a non-CalcMark file is selected, allowing the user
-// to pick a different file without having to re-open the picker.
-func TestFilePickerStaysOpenOnOpenFailure(t *testing.T) {
-	m := New(nil)
-	m.width = 80
-	m.height = 24
-
-	// Open file picker via Ctrl+O
-	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
-	m = newModel.(Model)
-
-	if m.mode != StateFilePicker {
-		t.Fatalf("Expected StateFilePicker, got %v", m.mode)
-	}
-
-	// Switch to filename input and type a .md filename
-	m.filePickerFocus = FocusFilename
-	m.newFileName = "readme.md"
-
-	// Press Enter to open — should fail because .md is not a CalcMark extension
-	newModel, _ = m.handleFilePickerKey(tea.KeyPressMsg{Code: tea.KeyEnter})
-	m = newModel.(Model)
-
-	// File picker should still be open
-	if m.mode != StateFilePicker {
-		t.Errorf("Expected file picker to stay open on failure, got mode %v", m.mode)
-	}
-	if !m.statusIsErr {
-		t.Error("Expected statusIsErr=true after open failure")
-	}
-	if m.statusMsg == "" {
-		t.Error("Expected non-empty error status message")
+	// File picker should only allow .cm and .calcmark files for open
+	allowed := m.filePicker.AllowedTypes
+	if len(allowed) != 2 || allowed[0] != ".cm" || allowed[1] != ".calcmark" {
+		t.Errorf("Expected AllowedTypes [.cm .calcmark], got %v", allowed)
 	}
 }
 

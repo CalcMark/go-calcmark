@@ -591,7 +591,7 @@ func TestFilePickerOverlayRendering(t *testing.T) {
 	}
 
 	for _, tc := range purposes {
-		m.filePicker = initFilePicker()
+		m.filePicker = initFilePicker(tc.purpose)
 		m.filePickerPurpose = tc.purpose
 		m.mode = StateFilePicker
 

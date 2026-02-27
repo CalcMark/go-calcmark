@@ -42,7 +42,7 @@ func (m *Model) enterSavePrompt(action PendingAction, promptMsg string) {
 
 // enterFilePicker opens the file picker for save/open/export.
 func (m *Model) enterFilePicker(purpose FilePickerPurpose, focus FilePickerFocus) tea.Cmd {
-	m.filePicker = initFilePicker()
+	m.filePicker = initFilePicker(purpose)
 	m.filePickerFocus = focus
 	m.filePickerPurpose = purpose
 	m.mode = StateFilePicker
