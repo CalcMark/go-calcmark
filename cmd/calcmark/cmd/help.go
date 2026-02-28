@@ -30,10 +30,10 @@ Examples:
 		fmt.Println(rootCmd.Long)
 		fmt.Println()
 
-		// Show available commands (skip hidden and help itself)
+		// Show available commands (skip unavailable and help itself)
 		fmt.Println("Commands:")
 		for _, c := range rootCmd.Commands() {
-			if c.Hidden || c.Name() == "help" {
+			if !c.IsAvailableCommand() || c.Name() == "help" {
 				continue
 			}
 			fmt.Printf("  %-14s%s\n", c.Name(), c.Short)

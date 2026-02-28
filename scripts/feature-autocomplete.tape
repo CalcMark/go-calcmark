@@ -16,7 +16,7 @@ Require cm
 
 # Launch editor with no file
 Hide
-Type "cm edit"
+Type "cm"
 Enter
 Show
 

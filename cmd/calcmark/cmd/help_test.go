@@ -117,7 +117,7 @@ func TestHelpCmdShowsCLIOverview(t *testing.T) {
 	}
 
 	// Verify commands section
-	for _, cmd := range []string{"eval", "convert", "edit", "version"} {
+	for _, cmd := range []string{"eval", "convert", "version"} {
 		if !strings.Contains(output, cmd) {
 			t.Errorf("help output missing command %q", cmd)
 		}

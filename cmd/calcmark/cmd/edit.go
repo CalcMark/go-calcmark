@@ -14,7 +14,8 @@ The editor shows source on the left and computed results on the right.
 Examples:
   cm edit                   Open editor with file picker
   cm edit budget.cm         Open specific file in editor`,
-	Args: cobra.MaximumNArgs(1),
+	Deprecated: "use 'cm' or 'cm <file>' instead.",
+	Args:       cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			runEdit(args[0])
