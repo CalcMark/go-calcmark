@@ -12,11 +12,11 @@ Set Padding 10
 Set TypingSpeed 80ms
 Set Framerate 12
 
-Require cm
+Require ./cm
 
 # Launch editor with no file (opens blank document)
 Hide
-Type "cm"
+Type "./cm"
 Enter
 Show
 

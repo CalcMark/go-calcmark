@@ -12,9 +12,9 @@ Set Padding 10
 Set TypingSpeed 50ms
 Set Framerate 12
 
-Require cm
+Require ./cm
 
 # Use printf to pipe expressions into cm eval (single visible command)
-Type `printf 'income = $5000\nrent = $1500\ngroceries = $400\nsavings = income * 0.20\nremaining = income - rent - groceries - savings\n' | cm eval`
+Type `printf 'income = $5000\nrent = $1500\ngroceries = $400\nsavings = income * 0.20\nremaining = income - rent - groceries - savings\n' | ./cm eval`
 Enter
 Sleep 3s
