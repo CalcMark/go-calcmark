@@ -101,6 +101,17 @@ infra_pct = 20%
 infra_cost = dev_cost * infra_pct
 ```
 
+## Optional: GitHub Gist Integration
+
+To share and open CalcMark documents via GitHub Gist, install the [GitHub CLI](https://cli.github.com):
+
+```bash
+brew install gh
+gh auth login
+```
+
+See [Sharing with GitHub Gist](/docs/user-guide/#sharing-gist) in the User Guide for details.
+
 ## Next Steps
 
 - Read the full [User Guide]({{< ref "docs/user-guide" >}}) for all features

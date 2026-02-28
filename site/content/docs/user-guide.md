@@ -8,6 +8,7 @@ weight: 20
 
 - [Editor Shortcuts](#editor-shortcuts) -- Keyboard shortcuts for the CalcMark editor
 - [Exporting Results](#exporting-results) -- `cm convert` and `cm eval`
+- [Sharing with GitHub Gist](#sharing-gist) -- Share and open documents via GitHub Gist
 - [Language Features](#language-features)
   - [Supported Units](#units) -- Physical, data, and currency units
   - [Unit Conversion](#unit-conversion) -- `in` and `as` keywords
@@ -33,6 +34,7 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 
 | Shortcut | Action |
 |----------|--------|
+| Ctrl+N | New empty document |
 | Ctrl+S | Save document |
 | Ctrl+O | Open file |
 | Ctrl+E | Export to format |
@@ -82,6 +84,35 @@ cm eval budget.cm            # Print final results
 cm eval -v budget.cm         # Show all intermediate values
 echo "1 + 2" | cm eval      # Evaluate from stdin
 ```
+
+## Sharing with GitHub Gist {#sharing-gist}
+
+Share CalcMark documents as GitHub Gists directly from the editor. This feature requires the [GitHub CLI (`gh`)](https://cli.github.com) to be installed and authenticated.
+
+### Prerequisites
+
+Install and authenticate the GitHub CLI:
+
+```bash
+# Install
+brew install gh          # macOS
+sudo apt install gh      # Debian/Ubuntu
+
+# Authenticate
+gh auth login
+```
+
+### Share To Gist
+
+Open the command menu (**Ctrl+H** or **F1**), select **Share To Gist**, then choose visibility (public or secret) and add an optional description. Press **Enter** to share. The Gist URL is copied to your clipboard.
+
+If you are not authenticated, CalcMark will launch `gh auth login` interactively and retry after you sign in.
+
+### Open From Gist
+
+Open the command menu, select **Open From Gist**, then paste a Gist URL or ID. CalcMark fetches the Gist content and loads it into the editor. If the Gist contains multiple files, `.cm` files are preferred.
+
+> **Note:** Sharing with GitHub Gist is not available in the browser (WASM) build.
 
 ## Language Features {#language-features}
 

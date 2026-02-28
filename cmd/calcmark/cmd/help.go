@@ -52,6 +52,8 @@ Examples:
 		fmt.Println()
 		fmt.Println("Use \"cm [command] --help\" for command details.")
 		fmt.Println("Use \"cm help <topic>\" for topic details.")
+		fmt.Println()
+		fmt.Println("GitHub Gist sharing requires the gh CLI: https://cli.github.com")
 	},
 }
 
