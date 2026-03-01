@@ -169,6 +169,14 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 	// Quantity operations (with unit conversion - USER REQUIREMENT: first-unit-wins)
 	if leftQty, ok := left.(*types.Quantity); ok {
 		if rightQty, ok := right.(*types.Quantity); ok {
+			// Unitless quantities (e.g., from accumulating a unitless rate like "1M / month")
+			// act as scalars for arithmetic. Re-dispatch as Number to reuse existing paths.
+			if leftQty.Unit == "" {
+				return evalBinaryOperation(types.NewNumber(leftQty.Value), right, operator)
+			}
+			if rightQty.Unit == "" {
+				return evalBinaryOperation(left, types.NewNumber(rightQty.Value), operator)
+			}
 			return evalQuantityOperation(leftQty, rightQty, operator)
 		}
 		// Quantity op Number (e.g., "10 dogs * 2" = "20 dogs", "5 dogs + 3" = "8 dogs")
