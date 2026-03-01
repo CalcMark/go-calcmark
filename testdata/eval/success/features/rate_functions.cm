@@ -23,6 +23,12 @@ $5/day over 365 days
 1000 req/s per minute
 100k/hour per second
 
+# Unitless rate accumulated then multiplied by quantity (issue #8)
+mau = 1M / month
+w = mau over 1 week
+avg_session_data = 500 KB
+monthly_data = w * avg_session_data
+
 # Combined examples
 # bandwidth = 100 MB/s
 # daily_total = bandwidth over 1 day

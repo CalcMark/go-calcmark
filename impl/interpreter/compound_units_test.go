@@ -431,3 +431,79 @@ func TestRateTypePreservation(t *testing.T) {
 		})
 	}
 }
+
+// TestUnitlessQuantityMultiplication verifies that a unitless quantity
+// (from accumulating a unitless rate) can multiply with a quantity that has units.
+// Regression test for https://github.com/CalcMark/go-calcmark/issues/8
+func TestUnitlessQuantityMultiplication(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		expectedUnit string
+	}{
+		{
+			name: "unitless rate accumulated then multiplied by quantity",
+			input: `mau = 1M / month
+w = mau over 1 week
+avg_session_data = 500 KB
+monthly_data = w * avg_session_data
+`,
+			expectedUnit: "KB",
+		},
+		{
+			name: "quantity multiplied by unitless rate accumulation",
+			input: `mau = 1M / month
+w = mau over 1 week
+avg_session_data = 500 KB
+monthly_data = avg_session_data * w
+`,
+			expectedUnit: "KB",
+		},
+		{
+			name: "unitless quantity times unitless quantity",
+			input: `a = 1M / month
+b = a over 1 week
+c = 2M / month
+d = c over 1 week
+result = b * d
+`,
+			expectedUnit: "", // both unitless, result is unitless quantity
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[len(results)-1]
+
+			qty, ok := result.(*types.Quantity)
+			if !ok {
+				t.Fatalf("Expected *types.Quantity, got %T (%v)", result, result)
+			}
+
+			if qty.Unit != tt.expectedUnit {
+				t.Errorf("Expected unit %q, got %q", tt.expectedUnit, qty.Unit)
+			}
+
+			if qty.Value.IsZero() {
+				t.Error("Result value should not be zero")
+			}
+
+			t.Logf("Result: %s", qty.String())
+		})
+	}
+}
