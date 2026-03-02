@@ -396,7 +396,7 @@ func New(doc *document.Document) Model {
 		vars := env.GetAllVariables()
 		result := make(map[string]string)
 		for name, val := range vars {
-			result[name] = fmt.Sprintf("%v", val)
+			result[name] = m.displayFormat(val)
 		}
 		return result
 	})

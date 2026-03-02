@@ -1,0 +1,11 @@
+# Test: Preview pane locale formatting for de-DE with mixed currency types
+# Verifies that GetLineResults respects the injected locale formatter
+# for prefix-symbol ($), postfix-code (CNY), and zero-decimal (JPY) currencies.
+
+run observe=results
+----
+-- results:
+Line 0 (price = 1500 USD): value=$1.500,00, error=""
+Line 1 (cost = 1500 CNY): value=CNY 1.500,00, error=""
+Line 2 (yen = 100 JPY): value=¥100, error=""
+Line 3 (pi = 3.14): value=3,14, error=""

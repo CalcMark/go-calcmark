@@ -1,7 +1,6 @@
 package editor
 
 import (
-	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -108,7 +107,7 @@ func (m Model) getLineReferences(lineNum int) []components.VarReference {
 
 	knownVars := make(map[string]string)
 	for varName, val := range allVars {
-		knownVars[varName] = fmt.Sprintf("%v", val)
+		knownVars[varName] = m.displayFormat(val)
 	}
 
 	return components.FindLineReferences(line, knownVars, 4)

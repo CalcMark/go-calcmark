@@ -120,8 +120,9 @@ func (m *Model) exportFile(filename, formatName string) {
 
 	// Format and write to file
 	opts := format.Options{
-		Verbose:       false,
-		IncludeErrors: true,
+		Verbose:          false,
+		IncludeErrors:    true,
+		DisplayFormatter: m.formatter,
 	}
 
 	err = formatter.Format(file, m.doc, opts)

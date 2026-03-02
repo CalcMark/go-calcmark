@@ -3,6 +3,7 @@ package editor
 // file_operations_test.go — Save, open, export, file picker, unsaved changes.
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -10,6 +11,8 @@ import (
 	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/format"
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -1086,4 +1089,80 @@ func TestOpenViaCommandMenu(t *testing.T) {
 	if m.filePickerFocus != FocusFileBrowser {
 		t.Errorf("Expected FocusFileBrowser for Open, got %v", m.filePickerFocus)
 	}
+}
+
+// TestExportFileLocale verifies that export uses the model's locale formatter.
+func TestExportFileLocale(t *testing.T) {
+	// Separate blocks with a text line so each calc block has its own LastValue.
+	doc, _ := document.NewDocument("x = 1500 USD\n# separator\ny = 42.50 CNY\n")
+	m := New(doc)
+
+	// Inject de-DE formatter
+	deCfg, err := display.NewConfig("de-DE")
+	if err != nil {
+		t.Fatalf("NewConfig(de-DE): %v", err)
+	}
+	m.SetFormatter(display.NewFormatter(deCfg))
+
+	tmpDir := t.TempDir()
+
+	t.Run("text export uses locale", func(t *testing.T) {
+		textFile := filepath.Join(tmpDir, "locale_test")
+		m.exportFile(textFile, "text")
+		if m.statusIsErr {
+			t.Fatalf("Export failed: %s", m.statusMsg)
+		}
+
+		data, err := os.ReadFile(filepath.Join(tmpDir, "locale_test.txt"))
+		if err != nil {
+			t.Fatalf("Read exported file: %v", err)
+		}
+		content := string(data)
+
+		// de-DE: comma decimal, dot thousand
+		if !strings.Contains(content, "$1.500,00") {
+			t.Errorf("Expected de-DE formatted USD ($1.500,00) in text export, got:\n%s", content)
+		}
+		if !strings.Contains(content, "CNY 42,50") {
+			t.Errorf("Expected de-DE formatted CNY (CNY 42,50) in text export, got:\n%s", content)
+		}
+	})
+
+	t.Run("json export uses locale for value and ASCII for raw_value", func(t *testing.T) {
+		jsonFile := filepath.Join(tmpDir, "locale_test_json")
+		m.exportFile(jsonFile, "json")
+		if m.statusIsErr {
+			t.Fatalf("Export failed: %s", m.statusMsg)
+		}
+
+		data, err := os.ReadFile(filepath.Join(tmpDir, "locale_test_json.json"))
+		if err != nil {
+			t.Fatalf("Read exported file: %v", err)
+		}
+
+		var jsonDoc format.JSONDocument
+		if err := json.Unmarshal(data, &jsonDoc); err != nil {
+			t.Fatalf("Parse JSON: %v", err)
+		}
+
+		// Find the results across blocks
+		for _, block := range jsonDoc.Blocks {
+			for _, result := range block.Results {
+				switch result.Variable {
+				case "x":
+					if result.Value != "$1.500,00" {
+						t.Errorf("JSON value for x: got %q, want %q", result.Value, "$1.500,00")
+					}
+					// raw_value should always be ASCII (en-US)
+					if strings.Contains(result.RawValue, ",") && !strings.Contains(result.RawValue, ".") {
+						t.Errorf("JSON raw_value should be ASCII, got %q", result.RawValue)
+					}
+				case "y":
+					if result.Value != "CNY 42,50" {
+						t.Errorf("JSON value for y: got %q, want %q", result.Value, "CNY 42,50")
+					}
+				}
+			}
+		}
+	})
 }

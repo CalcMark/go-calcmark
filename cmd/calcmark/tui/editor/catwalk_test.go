@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/cockroachdb/datadriven"
 )
@@ -33,8 +34,11 @@ z = 30`
 		if strings.HasPrefix(path, "testdata/compression/") {
 			return
 		}
-		// Skip preview_pane subdirectory (handled by TestEditorCatwalkPreviewPane)
+		// Skip preview_pane subdirectories (handled by dedicated test functions)
 		if strings.HasPrefix(path, "testdata/preview_pane/") {
+			return
+		}
+		if strings.HasPrefix(path, "testdata/preview_pane_locale/") {
 			return
 		}
 
@@ -1207,6 +1211,47 @@ net = total_gross * 0.7`,
 						prvInfo = fmt.Sprintf("PRV(ln=%d): %q", pl.sourceLineNum, prvContent)
 					}
 					buf.WriteString(fmt.Sprintf("[%d] %-50s | %s\n", i, srcInfo, prvInfo))
+				}
+				_, err := out.Write([]byte(buf.String()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkPreviewPaneLocale tests that preview pane results respect locale formatting.
+// Uses a de-DE formatter to verify locale-aware currency, postfix-code, and number formatting.
+func TestEditorCatwalkPreviewPaneLocale(t *testing.T) {
+	docContent := "price = 1500 USD\ncost = 1500 CNY\nyen = 100 JPY\npi = 3.14"
+	doc, err := document.NewDocument(docContent)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+	m.previewMode = PreviewFull
+
+	// Inject de-DE locale formatter
+	deCfg, cfgErr := display.NewConfig("de-DE")
+	if cfgErr != nil {
+		t.Fatalf("NewConfig(de-DE): %v", cfgErr)
+	}
+	m.SetFormatter(display.NewFormatter(deCfg))
+
+	// Re-evaluate with formatter set (results cache uses displayFormat)
+	m.eval.Evaluate(m.doc)
+
+	datadriven.Walk(t, "testdata/preview_pane_locale", func(t *testing.T, path string) {
+		RunModelV2(t, path, m,
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n",
+						r.LineNum, r.Source, r.Value, r.Error))
 				}
 				_, err := out.Write([]byte(buf.String()))
 				return err

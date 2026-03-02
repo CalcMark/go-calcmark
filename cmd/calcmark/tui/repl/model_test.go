@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -316,5 +317,43 @@ func TestRenderHelpLine(t *testing.T) {
 	}
 	if !strings.Contains(result, "Esc") {
 		t.Error("Command mode should mention Esc to cancel")
+	}
+}
+
+// TestREPLLocaleFormatting verifies that REPL output uses the injected locale formatter.
+func TestREPLLocaleFormatting(t *testing.T) {
+	m := New(nil)
+
+	// Inject de-DE formatter
+	deCfg, err := display.NewConfig("de-DE")
+	if err != nil {
+		t.Fatalf("NewConfig(de-DE): %v", err)
+	}
+	m.SetFormatter(display.NewFormatter(deCfg))
+
+	tests := []struct {
+		name  string
+		input string
+		want  string // Substring expected in output
+	}{
+		{"USD prefix currency", "$1500", "$1.500,00"},
+		{"CNY postfix currency", "1500 CNY", "CNY 1.500,00"},
+		{"plain number", "3.14", "3,14"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m.input.SetValue(tt.input)
+			newModel, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+			m = newModel.(Model)
+
+			if len(m.outputHistory) == 0 {
+				t.Fatal("Expected output in history")
+			}
+			lastOutput := m.outputHistory[len(m.outputHistory)-1].Output
+			if !strings.Contains(lastOutput, tt.want) {
+				t.Errorf("Output %q does not contain %q", lastOutput, tt.want)
+			}
+		})
 	}
 }

@@ -177,11 +177,34 @@ func TestFormatterLocaleCurrency(t *testing.T) {
 		{"fr-FR mid", "fr-FR", "1500", "$", "$1" + NoBreakSpace + "500,00"},
 		{"fr-FR large", "fr-FR", "15000", "$", "$15K"},
 
-		// Negative values
+		// Negative values (prefix-symbol currencies)
 		{"en-US negative small", "en-US", "-50.00", "$", "-$50.00"},
 		{"de-DE negative small", "de-DE", "-50.00", "$", "-$50,00"},
 		{"en-US negative mid", "en-US", "-1500", "$", "-$1,500.00"},
 		{"de-DE negative mid", "de-DE", "-1500", "$", "-$1.500,00"},
+
+		// Postfix-code currencies (no symbol mapping — stay as ISO code with space)
+		// CNY
+		{"en-US CNY small", "en-US", "42.50", "CNY", "CNY 42.50"},
+		{"de-DE CNY small", "de-DE", "42.50", "CNY", "CNY 42,50"},
+		{"fr-FR CNY small", "fr-FR", "42.50", "CNY", "CNY 42,50"},
+		{"en-US CNY mid", "en-US", "1500", "CNY", "CNY 1,500.00"},
+		{"de-DE CNY mid", "de-DE", "1500", "CNY", "CNY 1.500,00"},
+		{"fr-FR CNY mid", "fr-FR", "1500", "CNY", "CNY 1" + NoBreakSpace + "500,00"},
+		{"en-US CNY large", "en-US", "15000", "CNY", "CNY 15K"},
+		{"de-DE CNY large", "de-DE", "15000", "CNY", "CNY 15K"},
+
+		// VND (zero-decimal currency)
+		{"en-US VND mid", "en-US", "5000", "VND", "VND 5,000"},
+		{"de-DE VND mid", "de-DE", "5000", "VND", "VND 5.000"},
+
+		// KRW (zero-decimal currency)
+		{"en-US KRW mid", "en-US", "5000", "KRW", "KRW 5,000"},
+		{"de-DE KRW mid", "de-DE", "5000", "KRW", "KRW 5.000"},
+
+		// Negative postfix-code currencies
+		{"en-US CNY negative mid", "en-US", "-1500", "CNY", "-CNY 1,500.00"},
+		{"de-DE CNY negative mid", "de-DE", "-1500", "CNY", "-CNY 1.500,00"},
 	}
 
 	for _, tt := range tests {
