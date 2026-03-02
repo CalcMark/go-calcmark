@@ -189,30 +189,30 @@ func AlignResults(block *document.CalcBlock) []AlignedStatement { ... }
 **Tasks:**
 
 *P0 Performance Fixes (prerequisite):*
-- [ ] Hoist `getCurrencyDecimals()` map to a `switch` statement (`display.go:186`)
-- [ ] Hoist `abbreviateTimeUnit()` map to package-level `var` (`display.go:305`)
-- [ ] Hoist `normalizeUnitSymbol()` map to package-level `var` (`normalize.go:376`) — or unify with existing `aliasToCanonical`
-- [ ] Pre-allocate `results` slice in `GetLineResults()` with `make([]LineResult, 0, len(allLines))` (`results.go:30`)
+- [x] Hoist `getCurrencyDecimals()` map to a `switch` statement (`display.go:186`)
+- [x] Hoist `abbreviateTimeUnit()` map to package-level `var` (`display.go:305`)
+- [x] Hoist `normalizeUnitSymbol()` map to package-level `var` (`normalize.go:376`) — or unify with existing `aliasToCanonical`
+- [x] Pre-allocate `results` slice in `GetLineResults()` with `make([]LineResult, 0, len(allLines))` (`results.go:30`)
 
 *DisplayConfig and Formatter:*
-- [ ] Create `format/display/config.go` with `DisplayConfig` struct (Tag, DecimalSep, ThousandSep — no Precision field) and `DefaultConfig()` returning en-US defaults
-- [ ] Add `Validate() error` method on `DisplayConfig` — reject empty separators to prevent zero-value trap
-- [ ] Create `format/display/formatter.go` with `Formatter` value type wrapping `DisplayConfig`
-- [ ] Move all formatting logic from `display.go` free functions onto `Formatter` methods
-- [ ] Keep existing `display.Format()` as backward-compatible wrapper via package-level `defaultFormatter` singleton (constructed in `init()`, not per-call)
-- [ ] Add `Formatter display.Formatter` field to `format.Options` (not `DisplayConfig` — one mechanism for both formatters and TUI)
+- [x] Create `format/display/config.go` with `DisplayConfig` struct (Tag, DecimalSep, ThousandSep — no Precision field) and `DefaultConfig()` returning en-US defaults
+- [x] Add `Validate() error` method on `DisplayConfig` — reject empty separators to prevent zero-value trap
+- [x] Create `format/display/formatter.go` with `Formatter` value type wrapping `DisplayConfig`
+- [x] Move all formatting logic from `display.go` free functions onto `Formatter` methods
+- [x] Keep existing `display.Format()` as backward-compatible wrapper via package-level `defaultFormatter` singleton (constructed in `init()`, not per-call)
+- [x] Add `Formatter display.Formatter` field to `format.Options` (not `DisplayConfig` — one mechanism for both formatters and TUI)
 
 *AlignResults extraction:*
-- [ ] Create `format/align.go` with `AlignResults(block *document.CalcBlock) []AlignedStatement`
-- [ ] `AlignedStatement` struct: `Source`, `Result types.Type`, `Variable`, `IsBlank`, `IsResultLine`
-- [ ] Refactor `text_formatter.go`, `markdown_formatter.go`, `html_formatter.go`, `json_formatter.go` to use `AlignResults()`, each applying `opts.Formatter.Format()` to `Result` as needed
-- [ ] Add blank-line regression tests for each formatter (per institutional learning)
-- [ ] Add test for `AlignResults` directly with various source patterns
+- [x] Create `format/align.go` with `AlignResults(block *document.CalcBlock) []AlignedStatement`
+- [x] `AlignedStatement` struct: `Source`, `Result types.Type`, `Variable`, `IsBlank`, `IsResultLine`
+- [x] Refactor `text_formatter.go`, `markdown_formatter.go`, `html_formatter.go`, `json_formatter.go` to use `AlignResults()`, each applying `opts.Formatter.Format()` to `Result` as needed
+- [x] Add blank-line regression tests for each formatter (per institutional learning)
+- [x] Add test for `AlignResults` directly with various source patterns
 
 *Threading:*
-- [ ] Thread `Formatter` through all output formatter `Format()` implementations
-- [ ] All existing tests pass with zero output changes
-- [ ] Explicit test: `DefaultConfig()` produces identical output to current `display.Format()` for all existing test cases
+- [x] Thread `Formatter` through all output formatter `Format()` implementations
+- [x] All existing tests pass with zero output changes
+- [x] Explicit test: `DefaultConfig()` produces identical output to current `display.Format()` for all existing test cases
 
 **Files changed:**
 - `format/display/config.go` (new)
@@ -241,31 +241,31 @@ func AlignResults(block *document.CalcBlock) []AlignedStatement { ... }
 **Tasks:**
 
 *Locale support:*
-- [ ] Implement `NewConfig(locale string) (DisplayConfig, error)` with:
+- [x] Implement `NewConfig(locale string) (DisplayConfig, error)` with:
   - Length bound (64 bytes) and ASCII-only validation before `language.Parse()` (security finding)
   - Probe technique to extract separators via `message.NewPrinter`
   - Invalid locale falls back to en-US with warning to stderr
-- [ ] Replace hardcoded `addThousandSeparators()` with locale-aware `insertGroupSeparators()` on Formatter
-- [ ] Replace hardcoded decimal separator in `formatSmallNumber()`, `formatCurrencyWithSeparators()`, etc.
+- [x] Replace hardcoded `addThousandSeparators()` with locale-aware `insertGroupSeparators()` on Formatter
+- [x] Replace hardcoded decimal separator in `formatSmallNumber()`, `formatCurrencyWithSeparators()`, etc.
 - [ ] Eliminate `float64` conversion — use `decimal.StringFixed()` + string manipulation
-- [ ] Add string length guard (1000 chars) before separator insertion for pathological values (security finding)
-- [ ] K/M/B suffixes: English letters always; decimal separator within suffix numbers localizes (`1,5M` in de-DE)
-- [ ] Currency symbol positioning stays fixed — locale only affects separators
-- [ ] Napkin estimates (`~`) use locale separators
-- [ ] Frontmatter exchange rates in verbose output remain en-US
+- [x] Add string length guard (1000 chars) before separator insertion for pathological values (security finding)
+- [x] K/M/B suffixes: English letters always; decimal separator within suffix numbers localizes (`1,5M` in de-DE)
+- [x] Currency symbol positioning stays fixed — locale only affects separators
+- [x] Napkin estimates (`~`) use locale separators
+- [x] Frontmatter exchange rates in verbose output remain en-US
 
 *JSON schema:*
-- [ ] Add `RawValue string` field to `JSONResult` struct (`json:"raw_value"`)
-- [ ] `RawValue` uses `types.Type.String()` — always ASCII, machine-readable
-- [ ] Existing `Value` field becomes locale-formatted via `opts.Formatter.Format()`
-- [ ] Add test asserting `raw_value` is always ASCII-only (no U+202F, no locale-specific characters)
-- [ ] Document the JSON schema in a comment on the struct
+- [x] Add `RawValue string` field to `JSONResult` struct (`json:"raw_value"`)
+- [x] `RawValue` uses `types.Type.String()` — always ASCII, machine-readable
+- [x] Existing `Value` field becomes locale-formatted via `opts.Formatter.Format()`
+- [x] Add test asserting `raw_value` is always ASCII-only (no U+202F, no locale-specific characters)
+- [x] Document the JSON schema in a comment on the struct
 
 *Testing:*
-- [ ] Table-driven tests for en-US, de-DE, fr-FR covering: numbers, currency, quantities, rates, napkin, negatives, zero, very large, very small
-- [ ] Use `%q` format verb in test errors to make U+202F visible
-- [ ] Named constant `NarrowNoBreakSpace = "\u202F"` for test readability
-- [ ] Round-trip test: `DefaultConfig()` and `NewConfig("en-US")` produce identical output
+- [x] Table-driven tests for en-US, de-DE, fr-FR covering: numbers, currency, quantities, rates, napkin, negatives, zero, very large, very small
+- [x] Use `%q` format verb in test errors to make U+202F visible
+- [x] Named constant `NoBreakSpace = "\u00a0"` for test readability (Go's x/text uses U+00A0, not U+202F)
+- [x] Round-trip test: `DefaultConfig()` and `NewConfig("en-US")` produce identical output
 - [ ] Test `go-runewidth` width calculation for U+202F in TUI context
 
 **Locale behavior matrix:**
@@ -304,16 +304,16 @@ func AlignResults(block *document.CalcBlock) []AlignedStatement { ... }
 **Goal:** Users can configure locale via `--locale` flag and config file. TUI respects locale.
 
 **Tasks:**
-- [ ] Add `Locale string` field to `Config` struct in `config/types.go` (top-level — locale is application-wide, will eventually affect input parsing too)
-- [ ] Add `locale = "en-US"` to `defaults.toml`
-- [ ] Add `--locale` persistent flag to root command in `root.go` (mirrors `--color-mode` pattern: direct flag var + manual override, NOT `viper.BindPFlag` per institutional learning)
-- [ ] In `PersistentPreRunE`: if `--locale` flag set, override `cfg.Locale`. Add comment documenting the precedence chain at the resolution site.
-- [ ] Wire `config.Get().Locale` → `display.NewConfig(locale)` → `display.NewFormatter(cfg)` → `format.Options.Formatter` in `eval.go` and `convert.go`
-- [ ] Wire into TUI: pass `display.Formatter` to `editor.Model` and `repl.Model` constructors (same value type as `Options.Formatter`)
-- [ ] Preserve locale across TUI mode switches (`switchMode()` in `app.go` must carry formatter through)
-- [ ] Add `--locale` to `-h` help text with examples
-- [ ] Config tests: verify locale loading from TOML, CLI override, default fallback. Use `t.TempDir()` and `Reload()` pattern per existing config tests.
-- [ ] Integration test: `cm eval --locale de-DE` produces German-formatted output
+- [x] Add `Locale string` field to `Config` struct in `config/types.go` (top-level — locale is application-wide, will eventually affect input parsing too)
+- [x] Add `locale = "en-US"` to `defaults.toml`
+- [x] Add `--locale` persistent flag to root command in `root.go` (mirrors `--color-mode` pattern: direct flag var + manual override, NOT `viper.BindPFlag` per institutional learning)
+- [x] In `PersistentPreRunE`: if `--locale` flag set, override `cfg.Locale`. Add comment documenting the precedence chain at the resolution site.
+- [x] Wire `config.Get().Locale` → `display.NewConfig(locale)` → `display.NewFormatter(cfg)` → `format.Options.Formatter` in `eval.go` and `convert.go`
+- [x] Wire into TUI: pass `display.Formatter` to `editor.Model` and `repl.Model` constructors (same value type as `Options.Formatter`)
+- [x] Preserve locale across TUI mode switches (`switchMode()` in `app.go` must carry formatter through)
+- [x] Add `--locale` to `-h` help text with examples
+- [x] Config tests: verify locale loading from TOML, CLI override, default fallback. Use `t.TempDir()` and `Reload()` pattern per existing config tests.
+- [x] Integration test: `cm eval --locale de-DE` produces German-formatted output
 
 **Precedence order:** CLI flag > config.toml > en-US default
 
