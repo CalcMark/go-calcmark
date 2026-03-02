@@ -3,6 +3,7 @@ package format
 import (
 	"io"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -21,4 +22,17 @@ type Options struct {
 	Verbose       bool   // Show calculation steps, types, units
 	IncludeErrors bool   // Include error details
 	Template      string // For template-based formatters (future use)
+
+	// DisplayFormatter is the locale-aware formatter for rendering values.
+	// When zero-value, formatters fall back to display.Format() (en-US default).
+	DisplayFormatter display.Formatter
+}
+
+// getFormatter returns the DisplayFormatter from Options, or the default en-US formatter.
+func (o Options) getFormatter() display.Formatter {
+	// Zero-value check: DisplayConfig with empty separators means no formatter was set
+	if o.DisplayFormatter.Config().DecimalSep == "" {
+		return display.DefaultFormatter()
+	}
+	return o.DisplayFormatter
 }

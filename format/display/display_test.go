@@ -322,3 +322,61 @@ func TestFormat(t *testing.T) {
 		})
 	}
 }
+
+// TestDefaultFormatterMatchesPackageFunctions verifies that the Formatter struct
+// with DefaultConfig produces identical output to the package-level free functions.
+func TestDefaultFormatterMatchesPackageFunctions(t *testing.T) {
+	f := DefaultFormatter()
+
+	tests := []struct {
+		name  string
+		value types.Type
+	}{
+		{"number 100K", types.NewNumber(decimal.NewFromInt(100000))},
+		{"number 1.5M", types.NewNumber(decimal.NewFromInt(1500000))},
+		{"number small", types.NewNumber(decimal.NewFromFloat(42.50))},
+		{"number zero", types.NewNumber(decimal.NewFromInt(0))},
+		{"number negative", types.NewNumber(decimal.NewFromInt(-5000))},
+		{"currency small", types.NewCurrency(decimal.NewFromFloat(42.50), "$")},
+		{"currency mid", types.NewCurrency(decimal.NewFromInt(1500), "$")},
+		{"currency large", types.NewCurrency(decimal.NewFromInt(1500000), "$")},
+		{"currency JPY", types.NewCurrency(decimal.NewFromInt(100), "JPY")},
+		{"quantity known", types.NewQuantity(decimal.NewFromInt(1000), "m")},
+		{"quantity arbitrary", types.NewQuantity(decimal.NewFromInt(100000), "users")},
+		{"boolean true", types.NewBoolean(true)},
+		{"nil", nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkgResult := Format(tt.value)
+			fmtResult := f.Format(tt.value)
+			if pkgResult != fmtResult {
+				t.Errorf("mismatch: Format()=%q, Formatter.Format()=%q", pkgResult, fmtResult)
+			}
+		})
+	}
+}
+
+func TestDisplayConfigValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     DisplayConfig
+		wantErr bool
+	}{
+		{"valid en-US", DefaultConfig(), false},
+		{"valid de-DE", DisplayConfig{DecimalSep: ",", ThousandSep: "."}, false},
+		{"empty decimal", DisplayConfig{DecimalSep: "", ThousandSep: ","}, true},
+		{"empty thousand", DisplayConfig{DecimalSep: ".", ThousandSep: ""}, true},
+		{"same separators", DisplayConfig{DecimalSep: ".", ThousandSep: "."}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"maps"
-	"strings"
 
-	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -65,6 +63,8 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		Blocks: make([]JSONBlock, 0),
 	}
 
+	df := opts.getFormatter()
+
 	// Add frontmatter if present
 	if fm := doc.GetFrontmatter(); fm != nil {
 		jfm := &JSONFrontmatter{}
@@ -97,33 +97,16 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			jb.Type = "calculation"
 			jb.Variables = block.Variables()
 
-			// Build per-statement results, aligning source lines to results
-			// (results are indexed per-AST-statement, blank lines don't produce results)
-			sourceLines := block.Source()
-			evalResults := block.Results()
-			resultIdx := 0
-			for _, line := range sourceLines {
-				trimmed := strings.TrimSpace(line)
-				if trimmed == "" || isResultLine(line) {
+			stmts := AlignResults(block)
+			for _, stmt := range stmts {
+				if stmt.IsBlank || stmt.IsResultLine {
 					continue
 				}
-				jr := JSONResult{Source: line}
-				if resultIdx < len(evalResults) && evalResults[resultIdx] != nil {
-					jr.Value = display.Format(evalResults[resultIdx])
+				jr := JSONResult{Source: stmt.Source}
+				if stmt.Result != nil {
+					jr.Value = df.Format(stmt.Result)
 				}
-				resultIdx++
-				// Extract variable name from assignment (left of '=')
-				if eqIdx := strings.Index(line, "="); eqIdx > 0 {
-					// Make sure it's not == or !=
-					if eqIdx+1 < len(line) && line[eqIdx+1] != '=' {
-						if eqIdx == 0 || line[eqIdx-1] != '!' {
-							varName := strings.TrimSpace(line[:eqIdx])
-							if varName != "" && !strings.ContainsAny(varName, " \t+*/-") {
-								jr.Variable = varName
-							}
-						}
-					}
-				}
+				jr.Variable = stmt.Variable
 				jb.Results = append(jb.Results, jr)
 			}
 

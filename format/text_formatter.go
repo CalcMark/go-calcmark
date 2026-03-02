@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -19,9 +18,9 @@ func (f *TextFormatter) Extensions() []string {
 
 // Format writes the document as plain text to the writer.
 // In verbose mode, it shows source with intermediate results for each line.
-// All output uses the centralized Type.String() methods for display.
 func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options) error {
 	blocks := doc.GetBlocks()
+	df := opts.getFormatter()
 
 	// In non-verbose mode, only output calc block results (one per line, no extra spacing)
 	if !opts.Verbose {
@@ -30,7 +29,7 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				if block.Error() != nil {
 					fmt.Fprintf(w, "Error: %v\n", block.Error())
 				} else if block.LastValue() != nil {
-					fmt.Fprintln(w, display.Format(block.LastValue()))
+					fmt.Fprintln(w, df.Format(block.LastValue()))
 				}
 			}
 		}
@@ -61,37 +60,28 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	for i, node := range blocks {
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
-			// Show source with inline results for each line
-			sourceLines := block.Source()
-			results := block.Results()
-
-			resultIdx := 0
-			for _, line := range sourceLines {
-				if line == "" {
+			stmts := AlignResults(block)
+			for _, stmt := range stmts {
+				if stmt.IsBlank {
 					continue
 				}
-				fmt.Fprint(w, line)
-				// Add result if available for this line
-				if resultIdx < len(results) && results[resultIdx] != nil {
-					fmt.Fprintf(w, " → %s", display.Format(results[resultIdx]))
+				fmt.Fprint(w, stmt.Source)
+				if stmt.Result != nil {
+					fmt.Fprintf(w, " → %s", df.Format(stmt.Result))
 				}
-				resultIdx++
 				fmt.Fprintln(w)
 			}
 
-			// Show error in verbose mode too
 			if block.Error() != nil {
 				fmt.Fprintf(w, "Error: %v\n", block.Error())
 			}
 
 		case *document.TextBlock:
-			// For text blocks, show markdown content
 			for _, line := range block.Source() {
 				fmt.Fprintln(w, line)
 			}
 		}
 
-		// Add spacing between blocks (except after the last one)
 		if i < len(blocks)-1 {
 			fmt.Fprintln(w)
 		}

@@ -5,7 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -29,6 +28,7 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 	}
 
 	blocks := doc.GetBlocks()
+	df := opts.getFormatter()
 
 	for _, node := range blocks {
 		switch block := node.Block.(type) {
@@ -38,32 +38,26 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 				continue
 			}
 
-			// Format calculation blocks in fenced code blocks with per-line results
 			fmt.Fprintf(w, "```calcmark\n")
-			sourceLines := block.Source()
-			results := block.Results()
+			stmts := AlignResults(block)
 
-			// Trim trailing empty lines to avoid blank line before closing fence
-			for len(sourceLines) > 0 && strings.TrimSpace(sourceLines[len(sourceLines)-1]) == "" {
-				sourceLines = sourceLines[:len(sourceLines)-1]
+			// Trim trailing blank statements
+			for len(stmts) > 0 && stmts[len(stmts)-1].IsBlank {
+				stmts = stmts[:len(stmts)-1]
 			}
 
-			resultIdx := 0
-			for _, line := range sourceLines {
-				// Skip result lines from previous saves
-				if isResultLine(line) {
+			for _, stmt := range stmts {
+				if stmt.IsResultLine {
 					continue
 				}
-				if line == "" {
+				if stmt.IsBlank {
 					fmt.Fprintln(w)
 					continue
 				}
-				fmt.Fprint(w, line)
-				// Append inline result if available
-				if resultIdx < len(results) && results[resultIdx] != nil {
-					fmt.Fprintf(w, " → %s", display.Format(results[resultIdx]))
+				fmt.Fprint(w, stmt.Source)
+				if stmt.Result != nil {
+					fmt.Fprintf(w, " → %s", df.Format(stmt.Result))
 				}
-				resultIdx++
 				fmt.Fprintln(w)
 			}
 			fmt.Fprintf(w, "```\n\n")
@@ -77,7 +71,6 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 			if isResultBlock(block) {
 				continue
 			}
-			// Pass through markdown text as-is
 			for _, line := range block.Source() {
 				fmt.Fprintln(w, line)
 			}

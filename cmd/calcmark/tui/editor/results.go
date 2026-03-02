@@ -28,14 +28,14 @@ type LineResult struct {
 // Each source line maps to its corresponding statement result when available.
 // Frontmatter lines are prepended as empty (non-calc) results to match GetLines().
 func (m *Model) GetLineResults() []LineResult {
-	var results []LineResult
+	allLines := m.GetLines()
+	results := make([]LineResult, 0, len(allLines))
 	lineNum := 0
 
 	// Prepend empty results for frontmatter lines to maintain alignment
 	// with GetLines() which includes frontmatter
 	fmCount := m.frontmatterLineCount()
 	if fmCount > 0 {
-		allLines := m.GetLines()
 		for i := range fmCount {
 			source := ""
 			if i < len(allLines) {

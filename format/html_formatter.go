@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -79,6 +78,8 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		Blocks      []TemplateBlock
 	}{}
 
+	df := opts.getFormatter()
+
 	// Build frontmatter data if present
 	if fm := doc.GetFrontmatter(); fm != nil {
 		tfm := &TemplateFrontmatter{}
@@ -120,21 +121,15 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		case *document.CalcBlock:
 			tb.Type = "calculation"
 
-			// Build source lines with inline results, skipping empty lines
-			sourceLines := block.Source()
-			results := block.Results()
-
-			resultIdx := 0
-			for _, line := range sourceLines {
-				if line == "" {
+			stmts := AlignResults(block)
+			for _, stmt := range stmts {
+				if stmt.IsBlank || stmt.IsResultLine {
 					continue
 				}
-				tl := TemplateLine{Source: line}
-				// Add result if available for this line
-				if resultIdx < len(results) && results[resultIdx] != nil {
-					tl.Result = display.Format(results[resultIdx])
+				tl := TemplateLine{Source: stmt.Source}
+				if stmt.Result != nil {
+					tl.Result = df.Format(stmt.Result)
 				}
-				resultIdx++
 				tb.SourceLines = append(tb.SourceLines, tl)
 			}
 
