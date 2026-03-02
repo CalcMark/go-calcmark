@@ -22,8 +22,11 @@ cm completion [shell] # Generate shell completions
 | Flag | Values | Description |
 |------|--------|-------------|
 | `--color-mode` | `auto`, `light`, `dark` | Override terminal color detection |
+| `--locale` | `en-US`, `de-DE`, `fr-FR` | Display locale for number formatting |
 
 The `--color-mode` flag is available on all commands. When set to `auto` (default), CalcMark detects the terminal background color. Use `light` or `dark` to override.
+
+The `--locale` flag controls decimal and thousands separators in output. See [Configuration: Display Locale](/docs/configuration/#locale) for details.
 
 ---
 
@@ -58,9 +61,12 @@ cm eval budget.cm             # Print final results
 cm eval -v budget.cm          # Show all intermediate values
 echo "x = 10" | cm eval      # Evaluate from stdin
 echo "5 miles in km" | cm eval
+cm eval --locale=de-DE budget.cm  # German number formatting
 ```
 
 When reading from a file, only the last evaluated result is printed unless `-v` is used. With `-v`, every line that produces a value is shown.
+
+Use `--locale` to format output with locale-specific separators (e.g., `1.500,00` instead of `1,500.00` for de-DE).
 
 ---
 
@@ -86,6 +92,7 @@ cm convert doc.cm --to=json              # JSON to stdout
 cm convert doc.cm --to=text              # Plain text
 cm convert doc.cm --to=html -T tpl.html  # Custom HTML template
 cm convert --show-template               # Print default HTML template
+cm convert doc.cm --to=json --locale=de-DE  # JSON with German formatting
 ```
 
 ### Output Formats
@@ -94,9 +101,11 @@ cm convert --show-template               # Print default HTML template
 |--------|-------------|
 | `html` | Full HTML document with evaluated results |
 | `md` | Markdown with calculation results inline |
-| `json` | Structured JSON of all variables and results |
+| `json` | Structured JSON with locale-formatted and raw values |
 | `text` | Plain text output (same as `cm eval -v`) |
-| `cm` | Normalized CalcMark source |
+| `cm` | Normalized CalcMark source (always locale-independent) |
+
+> **Note:** The `cm` format is always locale-independent to ensure portability. All other formats respect the `--locale` flag.
 
 ### Custom HTML Templates {#custom-templates}
 
@@ -137,7 +146,10 @@ The template receives a root object with two fields:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.Source` | string | The CalcMark source expression |
-| `.Result` | string | Formatted evaluation result (empty if line has no result) |
+| `.Result` | string | Locale-formatted evaluation result (empty if line has no result) |
+| `.RawResult` | string | Machine-readable ASCII result, always en-US format (JSON only) |
+
+> **JSON output:** In JSON format, each result includes both `value` (locale-formatted for display) and `raw_value` (ASCII, machine-readable). Use `raw_value` when parsing results programmatically. See [Configuration: JSON Output and Locale](/docs/configuration/#json-raw-value).
 
 **Frontmatter fields** (when `.Frontmatter` is non-nil):
 

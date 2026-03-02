@@ -7,6 +7,7 @@ weight: 20
 ## Contents {#contents}
 
 - [Editor Shortcuts](#editor-shortcuts) -- Keyboard shortcuts for the CalcMark editor
+- [Locale Formatting](#locale-formatting) -- Display numbers in your locale
 - [Exporting Results](#exporting-results) -- `cm convert` and `cm eval`
 - [Sharing with GitHub Gist](#sharing-gist) -- Share and open documents via GitHub Gist
 - [Language Features](#language-features)
@@ -66,6 +67,74 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Ctrl+D | Scroll down half page |
 | Ctrl+U | Scroll up half page |
 
+## Locale Formatting {#locale-formatting}
+
+CalcMark can format output numbers using locale-specific decimal and thousands separators. This affects how results are displayed in all output modes (editor, REPL, eval, convert).
+
+### Setting Your Locale
+
+**Per-command** with the `--locale` flag:
+
+```bash
+cm eval --locale=de-DE budget.cm
+cm convert doc.cm --to=html --locale=fr-FR
+```
+
+**Permanently** in your config file:
+
+```toml
+# ~/.config/calcmark/config.toml
+locale = "de-DE"
+```
+
+The `--locale` flag overrides the config file for that invocation.
+
+### Example: Same Document, Different Locales
+
+Given a CalcMark document:
+
+```cm
+price = $1500
+pi = 3.14159
+users = 1500000
+weight = 50.5 kg
+```
+
+| Value | en-US (default) | de-DE | fr-FR |
+|-------|-----------------|-------|-------|
+| `price` | `$1,500.00` | `$1.500,00` | `$1 500,00` |
+| `pi` | `3.14159` | `3,14159` | `3,14159` |
+| `users` | `1.5M` | `1,5M` | `1,5M` |
+| `weight` | `50.5 kg` | `50,5 kg` | `50,5 kg` |
+
+### What Stays the Same
+
+Regardless of locale, these never change:
+
+- **Input syntax** -- always use `.` for decimals and `,` or `_` for thousands in your source
+- **K/M/B/T suffixes** -- always English letters
+- **Currency symbols** -- always prefix position (`$`, `€`, etc.)
+- **CalcMark format** -- `cm convert --to=cm` is always locale-independent
+
+### JSON Output
+
+When exporting to JSON, each result provides both a locale-formatted display value and a machine-readable ASCII value:
+
+```bash
+cm convert budget.cm --to=json --locale=de-DE
+```
+
+```json
+{
+  "source": "price = $1500",
+  "value": "$1.500,00",
+  "raw_value": "$1500",
+  "variable": "price"
+}
+```
+
+Use `raw_value` for programmatic consumption and `value` for display. See [Configuration: JSON Output](/docs/configuration/#json-raw-value) for details.
+
 ## Exporting Results {#exporting-results}
 
 Convert CalcMark files to other formats using `cm convert`:
@@ -83,7 +152,10 @@ Use `cm eval` for quick evaluation:
 cm eval budget.cm            # Print final results
 cm eval -v budget.cm         # Show all intermediate values
 echo "1 + 2" | cm eval      # Evaluate from stdin
+cm eval --locale=de-DE budget.cm  # German number formatting
 ```
+
+All export formats respect the `--locale` flag (or config setting) except `cm` format, which stays locale-independent.
 
 ## Sharing with GitHub Gist {#sharing-gist}
 

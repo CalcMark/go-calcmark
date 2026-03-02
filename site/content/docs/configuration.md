@@ -1,10 +1,10 @@
 ---
 title: "Configuration"
-summary: "Customize CalcMark's appearance and formatter defaults."
+summary: "Customize CalcMark's locale, appearance, and formatter defaults."
 weight: 40
 ---
 
-CalcMark supports user configuration via TOML files. Configuration controls color mode, theme colors, pane backgrounds, and formatter defaults.
+CalcMark supports user configuration via TOML files. Configuration controls display locale, color mode, theme colors, pane backgrounds, and formatter defaults.
 
 ## Configuration File Locations
 
@@ -32,7 +32,59 @@ Add your customizations:
 color_mode = "light"  # Use "light" if you have a light terminal background
 ```
 
-## CLI Flag Override
+## Display Locale {#locale}
+
+The `locale` setting controls how numbers are formatted in output -- specifically the decimal separator and thousands grouping separator.
+
+```toml
+# ~/.config/calcmark/config.toml
+locale = "de-DE"
+```
+
+### Supported Locales
+
+| Locale | Decimal | Thousands | Example: `$1500` | Example: `3.14` |
+|--------|---------|-----------|------------------|-----------------|
+| `en-US` (default) | `.` | `,` | `$1,500.00` | `3.14` |
+| `de-DE` | `,` | `.` | `$1.500,00` | `3,14` |
+| `fr-FR` | `,` | (non-breaking space) | `$1 500,00` | `3,14` |
+
+Locale affects **output formatting only** -- input syntax always uses `.` for decimals and `,` or `_` for thousands grouping, regardless of locale.
+
+### What Locale Changes
+
+- **Decimal separator** in numbers, quantities, and currency values
+- **Thousands grouping separator** in currency mid-range values (e.g., `$1,500.00`)
+- **Decimal within K/M/B suffixes** (e.g., `1.5M` in en-US becomes `1,5M` in de-DE)
+
+### What Locale Does Not Change
+
+- **K/M/B/T suffix letters** are always English, regardless of locale
+- **Currency symbol position** stays the same (always prefix, e.g., `$`)
+- **Input syntax** -- CalcMark source code always uses `.` for decimals
+- **CalcMark format** (`cm convert --to=cm`) stays locale-independent for portability
+- **JSON `raw_value`** is always machine-readable ASCII (see [JSON Output](#json-raw-value))
+
+### Precedence
+
+The locale is resolved in this order (first match wins):
+
+1. `--locale` CLI flag
+2. `locale` in config file (`config.toml`)
+3. `en-US` (default)
+
+### CLI Flag Override
+
+Override the locale for a single invocation:
+
+```bash
+cm eval --locale=de-DE budget.cm
+cm convert doc.cm --to=json --locale=fr-FR
+```
+
+If the locale string is invalid, CalcMark prints a warning to stderr and falls back to `en-US`.
+
+## Color Mode CLI Override
 
 The `--color-mode` flag overrides the config file setting for a single invocation:
 
@@ -47,6 +99,10 @@ All supported configuration keys are shown below. Leave color values empty (`""`
 
 ```toml
 # CalcMark Configuration
+
+# Display locale for number formatting (decimal/thousand separators).
+# Supported: "en-US", "de-DE", "fr-FR"
+locale = "en-US"
 
 [tui]
 # Color mode: "light" or "dark"
@@ -165,6 +221,26 @@ Customize the editor pane backgrounds:
 source_pane_bg = "#1A1A2E"
 preview_pane_bg = "#16213E"
 status_bar_bg = "#0F3460"
+```
+
+## JSON Output and Locale {#json-raw-value}
+
+When using `cm convert --to=json`, each result includes two value fields:
+
+| Field | Description | Example (de-DE) |
+|-------|-------------|-----------------|
+| `value` | Locale-formatted display string | `"1.500,00"` |
+| `raw_value` | Machine-readable ASCII (always en-US style) | `"1500"` |
+
+The `raw_value` field is guaranteed to contain only ASCII characters, making it safe for programmatic consumption regardless of locale. Use `value` for display and `raw_value` for computation.
+
+```json
+{
+  "source": "price = $1500",
+  "value": "$1.500,00",
+  "raw_value": "$1500",
+  "variable": "price"
+}
 ```
 
 ## What Can't Be Configured
