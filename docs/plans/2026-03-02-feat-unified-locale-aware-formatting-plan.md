@@ -451,11 +451,11 @@ See [brainstorm](../brainstorms/2026-03-02-unified-formatting-brainstorm.md) for
 
 ## Documentation Plan
 
-- [ ] Update `--help` text for `--locale` flag with examples
-- [ ] Add locale section to site/content documentation
-- [ ] Document supported locales and their behavior
-- [ ] Document JSON schema change (`raw_value` field)
-- [ ] Document that locale-formatted values may contain non-ASCII whitespace (U+202F for fr-FR)
+- [x] Update `--help` text for `--locale` flag with examples
+- [x] Add locale section to site/content documentation
+- [x] Document supported locales and their behavior
+- [x] Document JSON schema change (`raw_value` field)
+- [x] Document that locale-formatted values may contain non-ASCII whitespace (U+202F for fr-FR)
 
 ## References & Research
 
