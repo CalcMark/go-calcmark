@@ -51,3 +51,4 @@ test_*.tape
 test_*.gif
 test_*.png
 tiny.cm
+.task/

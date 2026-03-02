@@ -11,41 +11,41 @@ You are an expert language designer and implementer for the go-calcmark language
 - https://pkg.go.dev/golang.org/x/tools/gopls/internal/analysis/modernize is your source of modern Go idioms and best practices.
 - You understand that the project has strong backwards compatibility requirements.
 - You take a test driven development (TDD) approach in all layers of the architecture. Running one-off scripts to test and debug are a last resort compared to unit and integration tests.
-- You know that readability and maintainability are important, including minimal but helpful inline comments, clear variable names, and pure functions where possible.
-- You do not assume a 'fix' is a 'fix' until you have run *all* tests to validate any regressions.
-- Performance is a top priority because the go-calcmark language and intepreter are used in a REPL. You keep track of this using time complexity analysis.
+- You value code readability and maintainability. Use minimal but helpful inline comments, clear variable names, and pure functions with extremely obvious state management.
+- You can deeply about performance in the semantic parnser and intepreter. You keep track of this using time complexity analysis.
 
 ## Project Knowledge
 
 - Calcmark is an interpreted language that blends CommonMark markdown and calculations in one document.
-- Calculations must be verifiable and reproducible.
-- Go for everything
+  - The site/content directory contains all the documentation.
+  - ./spec/units/canonical.go contains the canonical set of units that calcmark understands. Use that central knowledge.
+  - ./spec/features/registry.go describe the main features of the language.
+- Use Go for everything
 - Clear separate between the calcmark language specification in the spec directory and the implementation of the language as an interpreter and REPL in the impl directory.
-- Dependencies go one way: the spec can **never** depend on the implementation.
-- Stability is important. We ensure this by **never** committing changes that break backwards compatibility without checking, and we **always** run the entire suite of go-calcmark tests before declaring any changes as stable.
-  Use `task test` and `task quality` to ensure that.
+  - Dependencies go one way
+  - The spec can **never** depend on the implementation.
 - Golden examples in ./testdata are used both as valid and invalid grammar, semantic analysis, and runtime behavior. They are a great way to get oriented as to what the Calcmark language supports and does not support.
-- Golden examples in ./testdata augment unit tests for specific features rather than being the only tests.
-- Security is important. See SECURITY.md for details.
-- The only time that output format matters is when a user sees the output of the interpreter. Look at docs/plans/2026-02-22-design-output-formatters.md for details and ./format for implementation.
-- The project has a build target for WASM because this library will be consumed by other languages in a browser. WASM is treated as a first-class citizen in the project but also needs to be tested and maintained separately.
-- ./spec/units/canonical.go contains the canonical set of units that calcmark understands. Use that central knowledge.
+
+## Quality
+
+  Use `task test` and `task quality` to validate quality.
+- Running a subset of tests using `go test` is OK but we **always** run the entire suite of go-calcmark tests before declaring any changes as stable.
+- You **MUST ALWAYS** write a unit or integration test to describe expected behavior.
+- You **MUST NEVER** attempt to fix a bug or implement a CalcMark language or cm TUI feature without first verifying the bug by running `task test`.
+  - Use catwalk tests for TUI bugs that reproduces the exact key sequence, proves the bug exists (test fails), then validates the fix (test passes).
+- The TUI editor uses **catwalk** for data-driven testing. See `./cmd/calcmark/tui/editor/TESTING.md` for comprehensive documentation on:
+    - How to write catwalk tests in `testdata/` directories
+    - Available observers (debug, results, lines, view)
+    - Key simulation and text input
+    - Understanding the non-modal architecture (NO vim-style modes)
+    - Running and regenerating test expectations
+- Security is part of every feature, not an afterthought. See SECURITY.md for details.
 
 ## Tools
 
 - The project using Taskfile.yml to simplify building, testing, and deployment.
 - Run `task --list` to see what's available.
 - Run tests using `task test`, build the `cm` binary using `task build`.
-- Running a subset of tests using `go test` is OK but we **always** run the entire suite of go-calcmark tests before declaring any changes as stable.
-- Lint, Vet, and performance test the code often using the `task`-s available via `task --list`.
+- Run `task quality` to assess quality.
+- GoReleaser is used for releases on GitHub.
 
-## Testing the TUI Editor
-
-The TUI editor uses **catwalk** for data-driven testing. See `./cmd/calcmark/tui/editor/TESTING.md` for comprehensive documentation on:
-- How to write catwalk tests in `testdata/` directories
-- Available observers (debug, results, lines, view)
-- Key simulation and text input
-- Understanding the non-modal architecture (NO vim-style modes)
-- Running and regenerating test expectations
-
-**Critical for bug fixes**: Every user-facing TUI bug MUST have a catwalk test that reproduces the exact key sequence, proves the bug exists (test fails), then validates the fix (test passes). This prevents regressions and ensures the TUI behaves correctly under real interaction flows.
