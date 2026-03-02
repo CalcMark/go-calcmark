@@ -13,50 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var helpCmd = &cobra.Command{
-	Use:   "help [topic]",
-	Short: "Display help for CalcMark topics",
-	Long: `Display help for CalcMark topics.
-
-Available topics:
-  functions   List all CalcMark functions with descriptions and usage
-  constants   List all built-in unit constants
-
-Examples:
-  cm help functions     Show all available functions
-  cm help constants     Show all unit constants`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Show the root command description and examples
-		fmt.Println(rootCmd.Long)
-		fmt.Println()
-
-		// Show available commands (skip unavailable and help itself)
-		fmt.Println("Commands:")
-		for _, c := range rootCmd.Commands() {
-			if !c.IsAvailableCommand() || c.Name() == "help" {
-				continue
-			}
-			fmt.Printf("  %-14s%s\n", c.Name(), c.Short)
-		}
-		fmt.Println()
-
-		// Show flags
-		fmt.Println("Flags:")
-		fmt.Println("  --color-mode string   Color mode: 'auto', 'light', or 'dark'")
-		fmt.Println()
-
-		// Show CalcMark-specific topics
-		fmt.Println("Topics:")
-		fmt.Println("  functions     List all CalcMark functions")
-		fmt.Println("  constants     List all built-in unit constants")
-		fmt.Println()
-		fmt.Println("Use \"cm [command] --help\" for command details.")
-		fmt.Println("Use \"cm help <topic>\" for topic details.")
-		fmt.Println()
-		fmt.Println("GitHub Gist sharing requires the gh CLI: https://cli.github.com")
-	},
-}
-
 var helpFunctionsCmd = &cobra.Command{
 	Use:   "functions",
 	Short: "List all CalcMark functions",
@@ -76,9 +32,9 @@ var helpConstantsCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(helpCmd)
-	helpCmd.AddCommand(helpFunctionsCmd)
-	helpCmd.AddCommand(helpConstantsCmd)
+	helpFunctionsCmd.GroupID = "topics"
+	helpConstantsCmd.GroupID = "topics"
+	rootCmd.AddCommand(helpFunctionsCmd, helpConstantsCmd)
 }
 
 // printFunctions prints all functions grouped by category.

@@ -12,7 +12,8 @@ The CalcMark CLI (`cm`) provides commands for editing, evaluating, converting, a
 cm [file]            # Open editor (default command)
 cm eval [file.cm]    # Evaluate and print results
 cm convert <file.cm> # Convert to another format
-cm help [topic]      # Browse functions and constants
+cm functions         # List all CalcMark functions
+cm constants         # List all unit constants
 cm version           # Print version info
 cm completion [shell] # Generate shell completions
 ```
@@ -183,23 +184,22 @@ Each global has `.Name` and `.Value`. Each exchange rate has `.From`, `.To`, and
 
 ---
 
-## `cm help [topic]` {#help}
+## `cm functions` / `cm constants` {#help-topics}
 
-Display help for CalcMark topics. Without a topic, lists available topics.
+Browse CalcMark's built-in functions and unit constants.
 
-### Topics
-
-| Topic | Description |
-|-------|-------------|
-| `functions` | All built-in functions with descriptions and usage patterns |
-| `constants` | All unit constants grouped by quantity type |
+| Command | Description |
+|---------|-------------|
+| `cm functions` | All built-in functions with descriptions and usage patterns |
+| `cm constants` | All unit constants grouped by quantity type |
 
 ### Examples
 
 ```bash
-cm help               # List available topics
-cm help functions     # Show all functions
-cm help constants     # Show all unit constants
+cm functions          # Show all functions
+cm constants          # Show all unit constants
+cm help functions     # Also works (Cobra routes help <topic>)
+cm help constants     # Also works
 ```
 
 ---

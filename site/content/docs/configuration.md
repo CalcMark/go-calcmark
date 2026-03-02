@@ -43,11 +43,15 @@ locale = "de-DE"
 
 ### Supported Locales
 
+CalcMark accepts any valid [BCP 47](https://en.wikipedia.org/wiki/IETF_language_tag) locale tag, powered by Go's [`golang.org/x/text`](https://pkg.go.dev/golang.org/x/text) library. Common examples:
+
 | Locale | Decimal | Thousands | Example: `$1500` | Example: `3.14` |
 |--------|---------|-----------|------------------|-----------------|
 | `en-US` (default) | `.` | `,` | `$1,500.00` | `3.14` |
 | `de-DE` | `,` | `.` | `$1.500,00` | `3,14` |
 | `fr-FR` | `,` | (non-breaking space) | `$1 500,00` | `3,14` |
+
+Other locales like `pt-BR`, `ja-JP`, `hi-IN`, etc. work the same way -- CalcMark discovers the correct separators from the locale tag automatically. If a locale string is invalid, CalcMark prints a warning to stderr and falls back to `en-US`.
 
 Locale affects **output formatting only** -- input syntax always uses `.` for decimals and `,` or `_` for thousands grouping, regardless of locale.
 

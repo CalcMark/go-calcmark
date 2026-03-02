@@ -20,7 +20,9 @@ Examples:
   cm budget.cm                    Open file in editor
   cm eval calc.cm                 Evaluate file and print result
   cm eval < input.cm              Evaluate from stdin
-  cm convert doc.cm --to=html     Convert to HTML`,
+  cm convert doc.cm --to=html     Convert to HTML
+
+GitHub Gist sharing requires the gh CLI: https://cli.github.com`,
 	// Allow 0 or 1 file argument
 	Args: cobra.MaximumNArgs(1),
 	// When called without subcommand, open editor
@@ -49,8 +51,8 @@ var (
 )
 
 func init() {
-	// Disable Cobra's auto-generated help command; we provide our own in help.go
-	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	// Command group for domain-specific help topics (functions, constants)
+	rootCmd.AddGroup(&cobra.Group{ID: "topics", Title: "Help Topics:"})
 
 	// Persistent flags available to all subcommands
 	rootCmd.PersistentFlags().StringVar(&colorModeFlag, "color-mode", "",
