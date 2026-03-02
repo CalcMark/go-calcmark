@@ -127,8 +127,9 @@ func runConvert(filename string) error {
 
 	// Format and write
 	opts := format.Options{
-		Verbose:  true,
-		Template: templateContent,
+		Verbose:          true,
+		Template:         templateContent,
+		DisplayFormatter: localeFormatter(),
 	}
 	if err := formatter.Format(out, doc, opts); err != nil {
 		return fmt.Errorf("format error: %w", err)

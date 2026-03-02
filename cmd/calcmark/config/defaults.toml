@@ -2,6 +2,10 @@
 # This file is embedded in the binary at build time.
 # User overrides: ~/.config/calcmark/config.toml or ~/.calcmarkrc.toml
 
+# Display locale for number formatting (decimal/thousand separators).
+# Supported: "en-US", "de-DE", "fr-FR"
+locale = "en-US"
+
 [tui]
 # Color mode: "light" or "dark"
 # Set to "light" if you use a light terminal background.

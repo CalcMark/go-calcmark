@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/spf13/cobra"
 )
 
@@ -44,6 +45,7 @@ func Execute() {
 
 var (
 	colorModeFlag string
+	localeFlag    string
 )
 
 func init() {
@@ -53,8 +55,11 @@ func init() {
 	// Persistent flags available to all subcommands
 	rootCmd.PersistentFlags().StringVar(&colorModeFlag, "color-mode", "",
 		"Color mode: 'auto' (detect from terminal), 'light', or 'dark'")
+	rootCmd.PersistentFlags().StringVar(&localeFlag, "locale", "",
+		"Display locale for number formatting (e.g., 'en-US', 'de-DE', 'fr-FR')")
 
 	// Load config before any command runs
+	// NOTE: localeFormatter() below depends on config being loaded first
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Load config (will apply color mode)
 		cfg, err := config.Load()
@@ -69,7 +74,29 @@ func init() {
 			config.ApplyColorModeOverride(colorModeFlag)
 		}
 
+		// Override locale if flag is set
+		// Precedence: --locale flag > config.toml > "en-US" default
+		if localeFlag != "" {
+			cfg.Locale = localeFlag
+		}
+
 		return nil
 	}
 
+}
+
+// localeFormatter builds a display.Formatter from the resolved config locale.
+// Must be called after config.Load() (i.e., inside or after PersistentPreRunE).
+// Invalid locale falls back to en-US with a warning to stderr.
+func localeFormatter() display.Formatter {
+	locale := config.Get().Locale
+	if locale == "" {
+		return display.DefaultFormatter()
+	}
+	dcfg, err := display.NewConfig(locale)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "calcmark: invalid locale %q, using en-US: %v\n", locale, err)
+		return display.DefaultFormatter()
+	}
+	return display.NewFormatter(dcfg)
 }

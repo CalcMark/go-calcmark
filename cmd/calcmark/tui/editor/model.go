@@ -32,8 +32,10 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // ========================================
@@ -322,6 +324,9 @@ type Model struct {
 	statusMsg   string
 	statusIsErr bool
 
+	// Display formatting (locale-aware)
+	formatter display.Formatter
+
 	// Styles
 	styles config.Styles
 
@@ -415,6 +420,21 @@ func NewWithFile(filepath string, doc *document.Document) Model {
 	m := New(doc)
 	m.filepath = filepath
 	return m
+}
+
+// SetFormatter sets the locale-aware display formatter.
+// If not called, the zero-value Formatter falls back to en-US defaults.
+func (m *Model) SetFormatter(f display.Formatter) {
+	m.formatter = f
+}
+
+// displayFormat formats a value using the model's locale-aware formatter.
+// Falls back to DefaultFormatter if no formatter was set.
+func (m Model) displayFormat(t types.Type) string {
+	if m.formatter.Config().DecimalSep == "" {
+		return display.Format(t)
+	}
+	return m.formatter.Format(t)
 }
 
 // ========================================

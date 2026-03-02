@@ -94,7 +94,8 @@ func runEval(args []string) error {
 	formatter := format.GetFormatter("text", "")
 
 	opts := format.Options{
-		Verbose: evalVerbose,
+		Verbose:          evalVerbose,
+		DisplayFormatter: localeFormatter(),
 	}
 
 	if err := formatter.Format(os.Stdout, doc, opts); err != nil {

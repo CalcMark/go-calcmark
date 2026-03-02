@@ -7,6 +7,7 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/editor"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/repl"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -25,6 +26,9 @@ type App struct {
 	repl   repl.Model
 	editor editor.Model
 
+	// Display formatting (locale-aware), preserved across mode switches
+	formatter display.Formatter
+
 	width    int
 	height   int
 	quitting bool
@@ -32,9 +36,10 @@ type App struct {
 
 // NewApp creates a new TUI application in REPL mode.
 func NewApp(doc *document.Document) *App {
+	r := repl.New(doc)
 	return &App{
 		mode: shared.ModeREPL,
-		repl: repl.New(doc),
+		repl: r,
 	}
 }
 
@@ -51,6 +56,14 @@ func NewEditorApp(doc *document.Document, filepath string) *App {
 		mode:   shared.ModeEditor,
 		editor: ed,
 	}
+}
+
+// SetFormatter sets the locale-aware display formatter on the App and its sub-models.
+// Must be called after construction but before Init().
+func (a *App) SetFormatter(f display.Formatter) {
+	a.formatter = f
+	a.repl.SetFormatter(f)
+	a.editor.SetFormatter(f)
 }
 
 // Init implements tea.Model.
@@ -103,23 +116,25 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // switchMode handles switching between REPL and Editor modes.
+// Preserves the locale-aware formatter across mode transitions.
 func (a *App) switchMode(msg shared.SwitchModeMsg) (tea.Model, tea.Cmd) {
 	switch msg.Mode {
 	case shared.ModeEditor:
 		// Switch to editor mode, carrying over the current document
 		doc := a.repl.Document()
 		if msg.Filepath != "" {
-			// Load file if specified
 			a.editor = editor.NewWithFile(msg.Filepath, doc)
 		} else {
 			a.editor = editor.New(doc)
 		}
+		a.editor.SetFormatter(a.formatter)
 		a.mode = shared.ModeEditor
 
 	case shared.ModeREPL:
 		// Switch back to REPL mode
 		doc := a.editor.Document()
 		a.repl = repl.New(doc)
+		a.repl.SetFormatter(a.formatter)
 		a.mode = shared.ModeREPL
 	}
 

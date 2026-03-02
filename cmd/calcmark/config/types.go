@@ -4,6 +4,11 @@ package config
 
 // Config is the root configuration structure.
 type Config struct {
+	// Locale is the BCP 47 locale tag for display formatting (e.g., "en-US", "de-DE").
+	// Affects decimal and thousand separators in output. Top-level because locale
+	// is application-wide and will eventually affect input parsing too.
+	// Precedence: --locale flag > config.toml > "en-US" default.
+	Locale    string          `mapstructure:"locale"`
 	TUI       TUIConfig       `mapstructure:"tui"`
 	Formatter FormatterConfig `mapstructure:"formatter"`
 }

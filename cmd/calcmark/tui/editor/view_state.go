@@ -9,7 +9,6 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -163,7 +162,7 @@ func (m *Model) collectPinnedVariables() []components.PinnedVar {
 				if m.eval != nil {
 					env := m.eval.GetEnvironment()
 					if val, ok := env.Get(varName); ok {
-						valueStr = display.Format(val)
+						valueStr = m.displayFormat(val)
 					}
 				}
 

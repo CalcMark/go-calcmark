@@ -288,6 +288,76 @@ func TestThemeOverride_PaletteDefault(t *testing.T) {
 	}
 }
 
+func TestLoad_DefaultLocale(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	cfg, err := Reload()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.Locale != "en-US" {
+		t.Errorf("expected default locale en-US, got %s", cfg.Locale)
+	}
+}
+
+func TestLoad_LocaleFromConfig(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	userConfig := `locale = "de-DE"
+`
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte(userConfig), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	cfg, err := Reload()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	if cfg.Locale != "de-DE" {
+		t.Errorf("expected locale de-DE from config, got %s", cfg.Locale)
+	}
+}
+
+func TestLoad_LocaleCLIOverride(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	// Config file says de-DE
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	userConfig := `locale = "de-DE"
+`
+	configPath := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configPath, []byte(userConfig), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	cfg, err := Reload()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+
+	// Simulate CLI flag override (what PersistentPreRunE does)
+	cfg.Locale = "fr-FR"
+
+	if cfg.Locale != "fr-FR" {
+		t.Errorf("expected CLI override fr-FR, got %s", cfg.Locale)
+	}
+}
+
 func TestGetStyles_AfterLoad(t *testing.T) {
 	_, err := Reload()
 	if err != nil {

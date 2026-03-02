@@ -3,7 +3,6 @@ package editor
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
@@ -172,7 +171,7 @@ func (m *Model) GetLineResults() []LineResult {
 
 				// Get result for this statement if available
 				if stmtIdx < len(stmtResults) && stmtResults[stmtIdx] != nil {
-					lr.Value = display.Format(stmtResults[stmtIdx])
+					lr.Value = m.displayFormat(stmtResults[stmtIdx])
 				}
 
 				// Get variable name if this statement defines one (assignment)

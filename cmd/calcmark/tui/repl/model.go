@@ -12,6 +12,7 @@ import (
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // Model represents the Simple REPL mode state.
@@ -46,6 +47,9 @@ type Model struct {
 
 	// Error state
 	err error
+
+	// Display formatting (locale-aware)
+	formatter display.Formatter
 
 	// Styles (from config)
 	styles config.Styles
@@ -92,6 +96,21 @@ func New(doc *document.Document) Model {
 	return m
 }
 
+// SetFormatter sets the locale-aware display formatter.
+// If not called, the zero-value Formatter falls back to en-US defaults.
+func (m *Model) SetFormatter(f display.Formatter) {
+	m.formatter = f
+}
+
+// displayFormat formats a value using the model's locale-aware formatter.
+// Falls back to DefaultFormatter if no formatter was set.
+func (m Model) displayFormat(t types.Type) string {
+	if m.formatter.Config().DecimalSep == "" {
+		return display.Format(t)
+	}
+	return m.formatter.Format(t)
+}
+
 // populateFromDocument initializes UI state from the document.
 func (m *Model) populateFromDocument() {
 	m.pinnedVars = make(map[string]bool)
@@ -120,7 +139,7 @@ func (m *Model) populateFromDocument() {
 
 			var output string
 			if calcBlock.LastValue() != nil {
-				output = fmt.Sprintf("= %s", display.Format(calcBlock.LastValue()))
+				output = fmt.Sprintf("= %s", m.displayFormat(calcBlock.LastValue()))
 			}
 			m.outputHistory = append(m.outputHistory, shared.HistoryEntry{
 				Input:   trimmed,
@@ -395,7 +414,7 @@ func (m Model) formatVariables() string {
 	var b strings.Builder
 	b.WriteString("Defined variables:\n")
 	for name, val := range allVars {
-		b.WriteString(fmt.Sprintf("  %s = %s\n", name, display.Format(val)))
+		b.WriteString(fmt.Sprintf("  %s = %s\n", name, m.displayFormat(val)))
 	}
 	return strings.TrimSuffix(b.String(), "\n")
 }
@@ -489,7 +508,7 @@ func (m *Model) addResultToHistory(expr string) {
 	if calcBlock.LastValue() != nil {
 		m.outputHistory = append(m.outputHistory, shared.HistoryEntry{
 			Input:   expr,
-			Output:  fmt.Sprintf("= %s", display.Format(calcBlock.LastValue())),
+			Output:  fmt.Sprintf("= %s", m.displayFormat(calcBlock.LastValue())),
 			IsError: false,
 		})
 	}
