@@ -470,6 +470,70 @@ func TestJSONFormatterTextBlockRenderedHTML(t *testing.T) {
 	}
 }
 
+// TestJSONFormatterRawValue verifies that raw_value is populated and always ASCII.
+func TestJSONFormatterRawValue(t *testing.T) {
+	source := "salary = $6500\nbonus = $500\ntotal = salary + bonus\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &JSONFormatter{}
+	if err := formatter.Format(&buf, doc, Options{}); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	var result JSONDocument
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		t.Fatalf("Invalid JSON: %v", err)
+	}
+
+	var calcBlock *JSONBlock
+	for i := range result.Blocks {
+		if result.Blocks[i].Type == "calculation" {
+			calcBlock = &result.Blocks[i]
+			break
+		}
+	}
+	if calcBlock == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	for i, r := range calcBlock.Results {
+		// raw_value must be populated for results with values
+		if r.Value != "" && r.RawValue == "" {
+			t.Errorf("Result[%d] has Value=%q but empty RawValue", i, r.Value)
+		}
+
+		// raw_value must be ASCII-only (no locale-specific characters)
+		for j, ch := range r.RawValue {
+			if ch > 127 {
+				t.Errorf("Result[%d].RawValue contains non-ASCII at position %d: %q", i, j, r.RawValue)
+				break
+			}
+		}
+	}
+
+	// Verify specific raw values
+	if len(calcBlock.Results) >= 3 {
+		// total = salary + bonus = $7000
+		lastResult := calcBlock.Results[2]
+		if lastResult.Value != "$7,000.00" {
+			t.Errorf("Value = %q, want %q", lastResult.Value, "$7,000.00")
+		}
+		// raw_value should be the machine-readable form
+		if !strings.Contains(lastResult.RawValue, "7000") {
+			t.Errorf("RawValue = %q, should contain '7000'", lastResult.RawValue)
+		}
+	}
+}
+
 // TestJSONFormatterCurrencyResults verifies that currency values in results
 // include the display-formatted representation (e.g., "$6,500.00" not "6500").
 func TestJSONFormatterCurrencyResults(t *testing.T) {

@@ -42,9 +42,12 @@ type JSONBlock struct {
 }
 
 // JSONResult represents a single evaluated statement's result.
+// Value is the locale-formatted display string.
+// RawValue is the machine-readable ASCII representation (always en-US format).
 type JSONResult struct {
 	Source   string `json:"source"`
 	Value    string `json:"value"`
+	RawValue string `json:"raw_value,omitempty"`
 	Variable string `json:"variable,omitempty"`
 }
 
@@ -105,6 +108,7 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				jr := JSONResult{Source: stmt.Source}
 				if stmt.Result != nil {
 					jr.Value = df.Format(stmt.Result)
+					jr.RawValue = stmt.Result.String()
 				}
 				jr.Variable = stmt.Variable
 				jb.Results = append(jb.Results, jr)
