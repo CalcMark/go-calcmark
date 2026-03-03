@@ -20,7 +20,8 @@ type LineResult struct {
 	Diagnostic    *document.Diagnostic // Structured diagnostic with code, message, position
 	BlockID       string
 	WasChanged    bool
-	IsBlocked     bool // True if this error is caused by an undefined variable from a prior error
+	IsBlocked      bool     // True if this error is caused by an undefined variable from a prior error
+	ReferencedVars []string // Variable names referenced by this statement (AST-derived, sorted)
 }
 
 // GetLineResults returns evaluation results for all lines.
@@ -180,6 +181,7 @@ func (m *Model) GetLineResults() []LineResult {
 					if varName := getAssignmentVarName(statements[stmtIdx]); varName != "" {
 						lr.VarName = varName
 					}
+					lr.ReferencedVars = document.ExtractStatementReferences(statements[stmtIdx])
 				}
 
 				results = append(results, lr)

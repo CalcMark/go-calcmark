@@ -226,30 +226,3 @@ func RenderContextFooter(state ContextFooterState, width int, bg color.Color) st
 	return padToHeight(line1)
 }
 
-// FindLineReferences extracts variable references from a line.
-// This is a pure function - give it the line and known variables, get references back.
-func FindLineReferences(line string, knownVars map[string]string, maxRefs int) []VarReference {
-	var refs []VarReference
-	seen := make(map[string]bool)
-
-	for varName, val := range knownVars {
-		// Check if this variable is referenced in the line
-		// Skip if it's being defined on this line (left of =)
-		if strings.Contains(line, varName) && !strings.HasPrefix(strings.TrimSpace(line), varName+" =") {
-			if !seen[varName] {
-				seen[varName] = true
-				refs = append(refs, VarReference{
-					Name:  varName,
-					Value: val,
-				})
-			}
-		}
-	}
-
-	// Limit to maxRefs references to fit in footer
-	if len(refs) > maxRefs {
-		refs = refs[:maxRefs]
-	}
-
-	return refs
-}

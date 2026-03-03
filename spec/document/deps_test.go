@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
 
@@ -117,6 +118,81 @@ func TestVariableReassignmentNoDuplicates(t *testing.T) {
 					t.Errorf("Variable %q appears more than once in %v", v, vars)
 				}
 				seen[v] = true
+			}
+		})
+	}
+}
+
+// TestExtractStatementReferences validates per-statement identifier extraction.
+// Time complexity: O(n) where n is AST node count — single recursive walk.
+func TestExtractStatementReferences(t *testing.T) {
+	tests := []struct {
+		name string
+		src  string // single statement
+		want []string
+	}{
+		{
+			name: "simple expression with variable",
+			src:  "x + 1\n",
+			want: []string{"x"},
+		},
+		{
+			name: "assignment returns only RHS refs",
+			src:  "y = x + z\n",
+			want: []string{"x", "z"},
+		},
+		{
+			name: "no refs in bare number",
+			src:  "42\n",
+			want: []string{},
+		},
+		{
+			name: "function call args",
+			src:  "avg(a, b)\n",
+			want: []string{"a", "b"},
+		},
+		{
+			name: "currency literal has no identifier",
+			src:  "1000 EUR - 250 EUR\n",
+			want: []string{},
+		},
+		{
+			name: "unit quantity has no identifier",
+			src:  "5 kg\n",
+			want: []string{},
+		},
+		{
+			name: "nil node returns empty",
+			src:  "", // handled as nil below
+			want: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var node ast.Node
+			if tt.src != "" {
+				nodes, err := parser.Parse(tt.src)
+				if err != nil {
+					t.Fatalf("Parse(%q) failed: %v", tt.src, err)
+				}
+				if len(nodes) != 1 {
+					t.Fatalf("expected 1 node, got %d", len(nodes))
+				}
+				node = nodes[0]
+			}
+
+			got := ExtractStatementReferences(node)
+
+			if len(tt.want) == 0 {
+				if len(got) != 0 {
+					t.Errorf("want empty, got %v", got)
+				}
+				return
+			}
+
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("want %v, got %v", tt.want, got)
 			}
 		})
 	}

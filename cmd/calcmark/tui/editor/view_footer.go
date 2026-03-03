@@ -92,25 +92,32 @@ func (m Model) renderContextFooter(width int) string {
 }
 
 // getLineReferences returns variables referenced in the given line.
-// Delegates to components.FindLineReferences with model's known variables.
+// Uses AST-derived ReferencedVars from LineResult instead of text matching.
+// O(v) where v is the number of referenced variables in the statement.
 func (m Model) getLineReferences(lineNum int) []components.VarReference {
-	lines := m.GetLines()
-	if lineNum >= len(lines) {
+	results := m.GetLineResults()
+	if lineNum >= len(results) || len(results[lineNum].ReferencedVars) == 0 {
 		return nil
 	}
 
-	line := lines[lineNum]
-
-	// Build map of known variables from environment
 	env := m.eval.GetEnvironment()
 	allVars := env.GetAllVariables()
 
-	knownVars := make(map[string]string)
-	for varName, val := range allVars {
-		knownVars[varName] = m.displayFormat(val)
+	const maxRefs = 4
+	refs := results[lineNum].ReferencedVars
+	out := make([]components.VarReference, 0, min(len(refs), maxRefs))
+	for _, varName := range refs {
+		if val, ok := allVars[varName]; ok {
+			out = append(out, components.VarReference{
+				Name:  varName,
+				Value: m.displayFormat(val),
+			})
+			if len(out) >= maxRefs {
+				break
+			}
+		}
 	}
-
-	return components.FindLineReferences(line, knownVars, 4)
+	return out
 }
 
 // formatFunctionParamHint looks up a function's parameter specs and formats
