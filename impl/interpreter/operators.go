@@ -78,10 +78,16 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 			// So we'll handle this in a special case if needed
 			return evalNumberOperation(leftNum, rightNum, operator)
 		}
-		// Number * Currency → Currency
-		if rightCur, ok := right.(*types.Currency); ok && operator == "*" {
-			result := leftNum.Value.Mul(rightCur.Value)
-			return types.NewCurrency(result, rightCur.Symbol), nil
+		// Number op Currency → Currency (e.g., "2 + $10" = "$12", "2 * $10" = "$20")
+		if rightCur, ok := right.(*types.Currency); ok {
+			switch operator {
+			case "+":
+				return types.NewCurrency(leftNum.Value.Add(rightCur.Value), rightCur.Symbol), nil
+			case "-":
+				return types.NewCurrency(leftNum.Value.Sub(rightCur.Value), rightCur.Symbol), nil
+			case "*":
+				return types.NewCurrency(leftNum.Value.Mul(rightCur.Value), rightCur.Symbol), nil
+			}
 		}
 		// Number * Duration → Duration
 		if rightDur, ok := right.(*types.Duration); ok && operator == "*" {
@@ -92,10 +98,21 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 
 	// Currency operations
 	if leftCur, ok := left.(*types.Currency); ok {
-		// Currency * Number → Currency
-		if rightNum, ok := right.(*types.Number); ok && operator == "*" {
-			result := leftCur.Value.Mul(rightNum.Value)
-			return types.NewCurrency(result, leftCur.Symbol), nil
+		// Currency op Number → Currency (e.g., "10 EUR + 2" = "12 EUR")
+		if rightNum, ok := right.(*types.Number); ok {
+			switch operator {
+			case "+":
+				return types.NewCurrency(leftCur.Value.Add(rightNum.Value), leftCur.Symbol), nil
+			case "-":
+				return types.NewCurrency(leftCur.Value.Sub(rightNum.Value), leftCur.Symbol), nil
+			case "*":
+				return types.NewCurrency(leftCur.Value.Mul(rightNum.Value), leftCur.Symbol), nil
+			case "/":
+				if rightNum.Value.IsZero() {
+					return nil, fmt.Errorf("division by zero")
+				}
+				return types.NewCurrency(leftCur.Value.Div(rightNum.Value), leftCur.Symbol), nil
+			}
 		}
 		// Currency op Currency (same type)
 		if rightCur, ok := right.(*types.Currency); ok {

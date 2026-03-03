@@ -57,7 +57,7 @@ func TestCurrencyMixing(t *testing.T) {
 		input    string
 		shouldOK bool
 	}{
-		{"$100 + 50 USD", "$100 + 50\n", false}, // This won't work - "50" is just a number
+		{"$100 + 50", "$100 + 50\n", true}, // Currency + Number works (issue #16)
 		{"$100 + $50", "$100 + $50\n", true},
 		// Need to verify if "100 USD" postfix syntax works first
 	}
