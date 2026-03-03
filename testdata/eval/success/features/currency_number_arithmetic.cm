@@ -1,0 +1,34 @@
+# Currency and Number Arithmetic
+
+A currency value combined with a plain number produces a currency result.
+The currency unit is preserved from whichever operand carries it.
+
+## Addition
+
+price = 10 EUR
+total = price + 2
+
+tip = $100 + 15
+
+## Subtraction
+
+discount = $50 - 10
+
+remainder = 20 EUR - 5
+
+## Division
+
+split = $100 / 4
+
+per_item = 30 EUR / 3
+
+## Multiplication
+
+doubled = $25 * 2
+
+scaled = 3 * 10 EUR
+
+## Chained operations
+
+base = 100 EUR
+adjusted = base + 20 - 5
