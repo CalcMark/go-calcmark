@@ -10,16 +10,16 @@ import (
 // LineResult represents a line's evaluation result.
 // This is the bridge between the document model and the view layer.
 type LineResult struct {
-	LineNum       int
-	Source        string
-	IsCalc        bool
-	IsFrontmatter bool // True if this line is part of the YAML frontmatter block
-	VarName       string
-	Value         string
-	Error         string               // Legacy error string (for backwards compatibility)
-	Diagnostic    *document.Diagnostic // Structured diagnostic with code, message, position
-	BlockID       string
-	WasChanged    bool
+	LineNum        int
+	Source         string
+	IsCalc         bool
+	IsFrontmatter  bool // True if this line is part of the YAML frontmatter block
+	VarName        string
+	Value          string
+	Error          string               // Legacy error string (for backwards compatibility)
+	Diagnostic     *document.Diagnostic // Structured diagnostic with code, message, position
+	BlockID        string
+	WasChanged     bool
 	IsBlocked      bool     // True if this error is caused by an undefined variable from a prior error
 	ReferencedVars []string // Variable names referenced by this statement (AST-derived, sorted)
 }
@@ -90,14 +90,9 @@ func (m *Model) GetLineResults() []LineResult {
 				}
 
 				// Skip empty/whitespace-only lines (no result to show)
-				trimmed := line
-				for _, c := range line {
-					if c != ' ' && c != '\t' {
-						trimmed = line
-						break
-					}
-				}
-				if len(trimmed) == 0 || trimmed == "" {
+				// Must use strings.TrimSpace to match countNonEmptyLinesBefore,
+				// otherwise statement index mapping drifts.
+				if strings.TrimSpace(line) == "" {
 					results = append(results, lr)
 					lineNum++
 					continue

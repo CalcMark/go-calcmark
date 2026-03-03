@@ -35,7 +35,7 @@ func (m Model) renderContextFooter(width int) string {
 
 		// Get variable references if no error
 		if !state.HasError && state.IsCalcLine {
-			state.References = m.getLineReferences(m.cursorLine)
+			state.References = m.getLineReferences(m.cursorLine, results)
 		}
 	}
 
@@ -93,9 +93,9 @@ func (m Model) renderContextFooter(width int) string {
 
 // getLineReferences returns variables referenced in the given line.
 // Uses AST-derived ReferencedVars from LineResult instead of text matching.
+// Accepts pre-computed results to avoid redundant GetLineResults() calls.
 // O(v) where v is the number of referenced variables in the statement.
-func (m Model) getLineReferences(lineNum int) []components.VarReference {
-	results := m.GetLineResults()
+func (m Model) getLineReferences(lineNum int, results []LineResult) []components.VarReference {
 	if lineNum >= len(results) || len(results[lineNum].ReferencedVars) == 0 {
 		return nil
 	}
