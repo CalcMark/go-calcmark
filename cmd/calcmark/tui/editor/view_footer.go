@@ -103,10 +103,19 @@ func (m Model) getLineReferences(lineNum int, results []LineResult) []components
 	env := m.eval.GetEnvironment()
 	allVars := env.GetAllVariables()
 
+	// Filter out self-references: if this line defines variable X, don't show
+	// X in the footer. This prevents circular display for cases like
+	// "hundred_gig = throughput(hundred_gig)" where the function argument
+	// shares the variable name.
+	definedVar := results[lineNum].VarName
+
 	const maxRefs = 4
 	refs := results[lineNum].ReferencedVars
 	out := make([]components.VarReference, 0, min(len(refs), maxRefs))
 	for _, varName := range refs {
+		if varName == definedVar {
+			continue
+		}
 		if val, ok := allVars[varName]; ok {
 			out = append(out, components.VarReference{
 				Name:  varName,

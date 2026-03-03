@@ -1,0 +1,28 @@
+# Context Footer Self-Reference Filter Integration Test
+# Reproduces the bug: "hundred_gig = throughput(hundred_gig)" showed
+# hundred_gig in the footer because the function argument shares the
+# variable name. Self-references must be filtered.
+
+# Step 1: Cursor on "hundred_gig = throughput(hundred_gig)" (line 0)
+# Footer should be empty — the only referenced identifier is the self-reference
+run observe=footer
+----
+-- footer:
+(empty)
+
+# Step 2: Navigate to "speed = throughput(gigabit)" (line 1)
+# Footer should be empty — gigabit is a throughput tier, not a variable
+run observe=footer
+key down
+----
+-- footer:
+(empty)
+
+# Step 3: Navigate to "total = hundred_gig + speed" (line 2)
+# This line has a type error (rates can't be added), so footer shows the error
+# (errors have priority over variable references in the context footer)
+run observe=footer
+key down
+----
+-- footer:
+⚠ cannot add rate (12500 megabyte/s) and rate (125 megabyte/s)

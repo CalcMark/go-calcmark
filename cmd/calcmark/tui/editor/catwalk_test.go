@@ -89,6 +89,8 @@ z = 30`
 			"share_to_overlay",                    // TestEditorCatwalkShareToOverlay
 			"open_from_overlay",                   // TestEditorCatwalkOpenFromOverlay
 			"open_from_unsaved",                   // TestEditorCatwalkOpenFromUnsaved
+			"context_footer_refs",                 // TestEditorCatwalkContextFooterRefs
+			"context_footer_self_ref",             // TestEditorCatwalkContextFooterSelfRef
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {

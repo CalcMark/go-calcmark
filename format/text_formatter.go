@@ -22,14 +22,18 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	blocks := doc.GetBlocks()
 	df := opts.getFormatter()
 
-	// In non-verbose mode, only output calc block results (one per line, no extra spacing)
+	// In non-verbose mode, output each per-statement result (one per line, no extra spacing)
 	if !opts.Verbose {
 		for _, node := range blocks {
 			if block, ok := node.Block.(*document.CalcBlock); ok {
 				if block.Error() != nil {
 					fmt.Fprintf(w, "Error: %v\n", block.Error())
-				} else if block.LastValue() != nil {
-					fmt.Fprintln(w, df.Format(block.LastValue()))
+				} else {
+					for _, result := range block.Results() {
+						if result != nil {
+							fmt.Fprintln(w, df.Format(result))
+						}
+					}
 				}
 			}
 		}

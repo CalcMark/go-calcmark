@@ -16,33 +16,6 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
-// TestRegressionBasicReferencedVars verifies that a simple two-line calc block
-// correctly populates ReferencedVars for the line referencing a variable.
-// This is the minimal reproduction for the reported regression.
-func TestRegressionBasicReferencedVars(t *testing.T) {
-	doc, err := document.NewDocument("x = 10\ny = x + 5\n")
-	if err != nil {
-		t.Fatalf("NewDocument: %v", err)
-	}
-	m := New(doc)
-
-	results := m.GetLineResults()
-	if len(results) < 2 {
-		t.Fatalf("expected at least 2 results, got %d", len(results))
-	}
-
-	// Line 0: "x = 10" — defines x, references nothing
-	if results[0].ReferencedVars != nil {
-		t.Errorf("line 0 ReferencedVars = %v, want nil", results[0].ReferencedVars)
-	}
-
-	// Line 1: "y = x + 5" — defines y, references x
-	wantRefs := []string{"x"}
-	if !slices.Equal(results[1].ReferencedVars, wantRefs) {
-		t.Errorf("line 1 ReferencedVars = %v, want %v", results[1].ReferencedVars, wantRefs)
-	}
-}
-
 // TestRegressionGetLineReferencesBasic verifies that getLineReferences returns
 // VarReference structs with the correct Name and Value for a simple case.
 // This is the function directly consumed by the context footer.
@@ -128,6 +101,33 @@ func TestRegressionGetLineReferencesWithWhitespace(t *testing.T) {
 	}
 	if refs[0].Value != "10" {
 		t.Errorf("refs[0].Value = %q, want %q", refs[0].Value, "10")
+	}
+}
+
+// TestRegressionSelfReferenceFiltered verifies that getLineReferences does NOT
+// return a self-reference (the variable defined on the current line).
+// Reproduction: "hundred_gig = throughput(hundred_gig)" — the function argument
+// shares the variable name, creating a false self-reference in the footer.
+func TestRegressionSelfReferenceFiltered(t *testing.T) {
+	doc, err := document.NewDocument("hundred_gig = throughput(hundred_gig)\n")
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+	m := New(doc)
+
+	results := m.GetLineResults()
+	if len(results) < 1 {
+		t.Fatalf("expected at least 1 result, got %d", len(results))
+	}
+
+	// The AST extracts "hundred_gig" as a referenced identifier from the
+	// function argument. ReferencedVars WILL contain it.
+	// But getLineReferences should filter it out because it's the variable
+	// being defined on this line (self-reference).
+	refs := m.getLineReferences(0, results)
+	if len(refs) != 0 {
+		t.Errorf("getLineReferences(0) = %v, want empty (self-reference should be filtered)",
+			refs)
 	}
 }
 

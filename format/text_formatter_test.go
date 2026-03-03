@@ -242,6 +242,42 @@ amount = 100 USD
 	}
 }
 
+// TestTextFormatterMultiStatementBlock tests that non-verbose mode shows all
+// per-statement results, not just the last value. Reproduces the bug where
+// "a = 10 kg\nb = a + 10 kg" | cm eval only showed "20 kg".
+func TestTextFormatterMultiStatementBlock(t *testing.T) {
+	doc, err := document.NewDocument("a = 10 kg\nb = a + 10 kg\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &TextFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 output lines, got %d: %q", len(lines), output)
+	}
+	if !strings.Contains(lines[0], "10 kg") {
+		t.Errorf("line 0 = %q, want to contain '10 kg'", lines[0])
+	}
+	if !strings.Contains(lines[1], "20 kg") {
+		t.Errorf("line 1 = %q, want to contain '20 kg'", lines[1])
+	}
+}
+
 // TestTextFormatterMultipleBlocks tests formatting multiple blocks
 func TestTextFormatterMultipleBlocks(t *testing.T) {
 	source := `x = 10
