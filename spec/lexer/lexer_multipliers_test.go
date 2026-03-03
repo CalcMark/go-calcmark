@@ -93,6 +93,77 @@ func TestMultiplierTokens(t *testing.T) {
 	}
 }
 
+// TestMultiplierPrefixedUnits tests that units starting with multiplier characters
+// (e.g., kg, km, kW) are NOT incorrectly consumed as multipliers.
+// Bug: https://github.com/CalcMark/go-calcmark/issues/14
+func TestMultiplierPrefixedUnits(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expectedType  TokenType
+		expectedValue string
+	}{
+		{
+			name:          "2kg should be quantity not multiplier",
+			input:         "2kg",
+			expectedType:  QUANTITY,
+			expectedValue: "2:kg",
+		},
+		{
+			name:          "5km should be quantity not multiplier",
+			input:         "5km",
+			expectedType:  QUANTITY,
+			expectedValue: "5:km",
+		},
+		{
+			name:          "10kW should be quantity not multiplier",
+			input:         "10kW",
+			expectedType:  QUANTITY,
+			expectedValue: "10:kW",
+		},
+		{
+			name:          "3kJ should be quantity not multiplier",
+			input:         "3kJ",
+			expectedType:  QUANTITY,
+			expectedValue: "3:kJ",
+		},
+		{
+			name:          "standalone 2k is still a multiplier",
+			input:         "2k",
+			expectedType:  NUMBER_K,
+			expectedValue: "2k",
+		},
+		{
+			name:          "standalone 5K is still a multiplier",
+			input:         "5K",
+			expectedType:  NUMBER_K,
+			expectedValue: "5K",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := NewLexer(tt.input)
+			tokens, err := l.Tokenize()
+			if err != nil {
+				t.Fatalf("Tokenize() error = %v", err)
+			}
+
+			if len(tokens) < 1 {
+				t.Fatalf("Expected at least 1 token, got %d", len(tokens))
+			}
+
+			tok := tokens[0]
+			if tok.Type != tt.expectedType {
+				t.Errorf("Token type = %v, want %v (tokens: %v)", tok.Type, tt.expectedType, tokens)
+			}
+			if tok.Value != tt.expectedValue {
+				t.Errorf("Token value = %q, want %q", tok.Value, tt.expectedValue)
+			}
+		})
+	}
+}
+
 // TestMultiplierVsUnit tests the critical distinction between multipliers (no space)
 // and units (with space). This is essential for the CalcMark language.
 func TestMultiplierVsUnit(t *testing.T) {

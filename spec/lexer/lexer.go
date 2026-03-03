@@ -248,8 +248,13 @@ func (l *Lexer) readNumber() Token {
 	}
 
 	// Check for multipliers (no space)
+	// Multipliers are single-character suffixes: k/K (thousand), M (million), B (billion), T (trillion), % (percent)
+	// If the suffix character is followed by another identifier character, it's a unit prefix (e.g., kg, km, kW),
+	// not a multiplier. In that case, fall through to the unit-adjacent-to-number handling below.
 	if l.pos < len(l.text) {
 		char := l.currentChar()
+		nextChar := l.peek(1)
+		isNextIdentChar := l.isIdentifierChar(nextChar, false)
 		var tokenType TokenType = NUMBER // Default
 
 		switch char {
@@ -258,27 +263,65 @@ func (l *Lexer) readNumber() Token {
 			l.advance()
 			value += "%"
 		case 'k', 'K':
-			tokenType = NUMBER_K
-			l.advance()
-			value += string(char)
+			if !isNextIdentChar {
+				tokenType = NUMBER_K
+				l.advance()
+				value += string(char)
+			}
 		case 'M':
-			tokenType = NUMBER_M
-			l.advance()
-			value += "M"
+			if !isNextIdentChar {
+				tokenType = NUMBER_M
+				l.advance()
+				value += "M"
+			}
 		case 'B':
-			tokenType = NUMBER_B
-			l.advance()
-			value += "B"
+			if !isNextIdentChar {
+				tokenType = NUMBER_B
+				l.advance()
+				value += "B"
+			}
 		case 'T':
-			tokenType = NUMBER_T
-			l.advance()
-			value += "T"
+			if !isNextIdentChar {
+				tokenType = NUMBER_T
+				l.advance()
+				value += "T"
+			}
 		}
 
 		if tokenType != NUMBER {
 			return Token{
 				Type:         tokenType,
 				Value:        value,
+				OriginalText: string(l.text[startPos:l.pos]),
+				Line:         startLine,
+				Column:       startColumn,
+				StartPos:     startPos,
+				EndPos:       l.pos,
+			}
+		}
+	}
+
+	// Check for unit directly adjacent to number (no space), e.g., 2kg, 5km, 10kW
+	if l.isIdentifierChar(l.currentChar(), true) {
+		savedUnitPos := l.pos
+		savedUnitLine := l.line
+		savedUnitCol := l.column
+		unit := l.readIdentifier()
+		unitStr := unit.Value
+
+		if _, isReserved := ReservedKeywords[strings.ToLower(unitStr)]; isReserved {
+			l.pos = savedUnitPos
+			l.line = savedUnitLine
+			l.column = savedUnitCol
+		} else if BooleanKeywords[strings.ToLower(unitStr)] {
+			l.pos = savedUnitPos
+			l.line = savedUnitLine
+			l.column = savedUnitCol
+		} else {
+			quantityValue := fmt.Sprintf("%s:%s", value, unitStr)
+			return Token{
+				Type:         QUANTITY,
+				Value:        quantityValue,
 				OriginalText: string(l.text[startPos:l.pos]),
 				Line:         startLine,
 				Column:       startColumn,
