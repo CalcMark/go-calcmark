@@ -1,0 +1,100 @@
+# Test: Undo/Redo after accepting autocomplete suggestions
+# Verifies: Issue #15 - autocomplete acceptance recorded on undo stack
+# Document: # Header\nx = 10\ny = 20\nz = 30 (4 lines)
+# IMPORTANT: Each test block is cumulative - state persists between blocks
+
+# Initial state
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 1: Type "av" to trigger autocomplete, then TAB to accept "avg("
+# The function suggestion gets "(" appended
+run observe=debug
+type av
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Accept autocomplete: "av" -> "avg("
+run observe=debug
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg(# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 2: Undo should revert autocomplete acceptance, restoring "av"
+# Force boundary by navigating first (commits any pending undo batch)
+run observe=debug
+key down
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 3: Redo should re-apply the autocomplete, restoring "avg("
+run observe=debug
+key ctrl+y
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="avg(# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 4: Undo the autocomplete again, then undo the typing ("av")
+# First undo: "avg(" -> "av"
+run observe=debug
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Second undo: "av" -> "" (restores original "# Header")
+run observe=debug
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Test 5: Type, accept, type more, then sequential undo
+# Type "sq" to trigger autocomplete for sqrt
+run observe=debug
+type sq
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="sq# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Accept "sqrt("
+run observe=debug
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="sqrt(# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type more after accepting: "9)"
+run observe=debug
+type 9)
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=7 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="sqrt(9)# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# First undo: should remove the typed "9)" (restoring "sqrt(")
+run observe=debug
+key down
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=5 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="sqrt(# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Second undo: should revert autocomplete (restoring "sq")
+run observe=debug
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="sq# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Third undo: should remove the typed "sq" (restoring "# Header")
+run observe=debug
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true

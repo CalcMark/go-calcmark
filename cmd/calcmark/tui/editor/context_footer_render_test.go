@@ -13,9 +13,9 @@ import (
 // Model → GetLineResults → getLineReferences → renderContextFooter.
 func TestContextFooterShowsVariableReferences(t *testing.T) {
 	tests := []struct {
-		name       string
-		source     string
-		cursorLine int
+		name         string
+		source       string
+		cursorLine   int
 		wantInOutput []string // substrings expected in footer output
 	}{
 		{
