@@ -7,152 +7,114 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
-// TestJSONFormatterSimple tests basic JSON output
-func TestJSONFormatterSimple(t *testing.T) {
-	doc, err := document.NewDocument("x = 10\n")
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
-
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	opts := Options{Verbose: false}
-
-	err = formatter.Format(&buf, doc, opts)
-	if err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	// Parse JSON to verify it's valid
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON output: %v", err)
-	}
-
-	if len(result.Blocks) == 0 {
-		t.Fatal("Expected at least one block in output")
-	}
-
-	// Check that the output contains the result
-	outputStr := buf.String()
-	if !strings.Contains(outputStr, "10") {
-		t.Errorf("Expected JSON to contain '10', got: %s", outputStr)
-	}
-}
-
-// TestJSONFormatterStructure tests the JSON structure
-func TestJSONFormatterStructure(t *testing.T) {
-	doc, err := document.NewDocument("x = 100 USD\n")
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
-
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	opts := Options{Verbose: false}
-
-	err = formatter.Format(&buf, doc, opts)
-	if err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	// Parse and check structure
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	if len(result.Blocks) < 1 {
-		t.Fatal("Expected at least one block")
-	}
-
-	block := result.Blocks[0]
-
-	// Check required fields
-	if block.Type == "" {
-		t.Error("JSON block should have 'type' field")
-	}
-
-	if block.Source == nil {
-		t.Error("JSON block should have 'source' field")
-	}
-}
-
-// TestJSONFormatterError tests error handling in JSON
-func TestJSONFormatterError(t *testing.T) {
-	doc, err := document.NewDocument("y = x + 1\n")
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
-
-	eval := implDoc.NewEvaluator()
-	eval.Evaluate(doc) // Will have error
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	opts := Options{Verbose: false}
-
-	err = formatter.Format(&buf, doc, opts)
-	if err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	// Should still be valid JSON
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-}
-
-// TestJSONFormatterWithFrontmatter tests that frontmatter is included in JSON
-func TestJSONFormatterWithFrontmatter(t *testing.T) {
-	source := `---
-exchange:
-  USD_EUR: 0.92
-globals:
-  tax_rate: 0.32
----
-x = 10
-`
+// helper creates a document, evaluates it, and formats it as JSON.
+func formatJSON(t *testing.T, source string, opts Options) JSONDocument {
+	t.Helper()
 	doc, err := document.NewDocument(source)
 	if err != nil {
 		t.Fatalf("Failed to create document: %v", err)
 	}
 
 	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
+	eval.Evaluate(doc)
 
 	var buf bytes.Buffer
 	formatter := &JSONFormatter{}
-	opts := Options{Verbose: false}
-
-	err = formatter.Format(&buf, doc, opts)
-	if err != nil {
+	if err := formatter.Format(&buf, doc, opts); err != nil {
 		t.Fatalf("Format failed: %v", err)
 	}
 
 	var result JSONDocument
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
+		t.Fatalf("Invalid JSON: %v\nOutput: %s", err, buf.String())
+	}
+	return result
+}
+
+// findCalcBlock returns the first calculation block, or nil.
+func findCalcBlock(doc JSONDocument) *JSONBlock {
+	for i := range doc.Blocks {
+		if doc.Blocks[i].Type == "calculation" {
+			return &doc.Blocks[i]
+		}
+	}
+	return nil
+}
+
+// TestJSONFormatterSimple tests basic JSON output
+func TestJSONFormatterSimple(t *testing.T) {
+	result := formatJSON(t, "x = 10\n", Options{})
+
+	if len(result.Blocks) == 0 {
+		t.Fatal("Expected at least one block in output")
 	}
 
-	// Check frontmatter
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) != 1 {
+		t.Fatalf("Expected 1 result, got %d", len(block.Results))
+	}
+
+	r := block.Results[0]
+	if r.Type != "number" {
+		t.Errorf("Type = %q, want %q", r.Type, "number")
+	}
+	if r.NumericValue == nil || *r.NumericValue != 10 {
+		t.Errorf("NumericValue = %v, want 10", r.NumericValue)
+	}
+}
+
+// TestJSONFormatterStructure tests the JSON structure for currency
+func TestJSONFormatterStructure(t *testing.T) {
+	result := formatJSON(t, "x = 100 USD\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if block.Type == "" {
+		t.Error("JSON block should have 'type' field")
+	}
+	if block.Source == nil {
+		t.Error("JSON block should have 'source' field")
+	}
+	if len(block.Results) < 1 {
+		t.Fatal("Expected at least one result")
+	}
+
+	r := block.Results[0]
+	if r.Type != "currency" {
+		t.Errorf("Type = %q, want %q", r.Type, "currency")
+	}
+	if r.Unit != "USD" {
+		t.Errorf("Unit = %q, want %q", r.Unit, "USD")
+	}
+}
+
+// TestJSONFormatterError tests error handling in JSON
+func TestJSONFormatterError(t *testing.T) {
+	result := formatJSON(t, "y = x + 1\n", Options{})
+
+	// Should still be valid JSON (formatJSON already checked this)
+	if len(result.Blocks) == 0 {
+		t.Fatal("Expected at least one block")
+	}
+}
+
+// TestJSONFormatterWithFrontmatter tests that frontmatter is included in JSON
+func TestJSONFormatterWithFrontmatter(t *testing.T) {
+	source := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  tax_rate: 0.32\n---\nx = 10\n"
+	result := formatJSON(t, source, Options{})
+
 	if result.Frontmatter == nil {
 		t.Fatal("Expected frontmatter in JSON output")
 	}
@@ -180,108 +142,56 @@ func TestJSONFormatterExtensions(t *testing.T) {
 	}
 }
 
-// --- Tests below validate the rich JSON output we want ---
-
 // TestJSONFormatterPerStatementResults verifies that each assignment in a calc
 // block includes its evaluated result, not just the block's last value.
 func TestJSONFormatterPerStatementResults(t *testing.T) {
-	source := "x = 10\ny = x * 2\nz = y + 1\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+	result := formatJSON(t, "x = 10\ny = x * 2\nz = y + 1\n", Options{})
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	// Find the calc block
-	var calcBlock *JSONBlock
-	for i := range result.Blocks {
-		if result.Blocks[i].Type == "calculation" {
-			calcBlock = &result.Blocks[i]
-			break
-		}
-	}
-	if calcBlock == nil {
+	block := findCalcBlock(result)
+	if block == nil {
 		t.Fatal("Expected a calculation block")
 	}
 
-	// Each statement must have its own result
-	if len(calcBlock.Results) != 3 {
-		t.Fatalf("Expected 3 per-statement results, got %d", len(calcBlock.Results))
+	if len(block.Results) != 3 {
+		t.Fatalf("Expected 3 per-statement results, got %d", len(block.Results))
 	}
 
 	expected := []struct {
 		source string
-		result string
+		value  string
+		typ    string
 	}{
-		{"x = 10", "10"},
-		{"y = x * 2", "20"},
-		{"z = y + 1", "21"},
+		{"x = 10", "10", "number"},
+		{"y = x * 2", "20", "number"},
+		{"z = y + 1", "21", "number"},
 	}
 
 	for i, want := range expected {
-		if calcBlock.Results[i].Source != want.source {
-			t.Errorf("Result[%d].Source = %q, want %q", i, calcBlock.Results[i].Source, want.source)
+		r := block.Results[i]
+		if r.Source != want.source {
+			t.Errorf("Result[%d].Source = %q, want %q", i, r.Source, want.source)
 		}
-		if calcBlock.Results[i].Value != want.result {
-			t.Errorf("Result[%d].Value = %q, want %q", i, calcBlock.Results[i].Value, want.result)
+		if r.Value != want.value {
+			t.Errorf("Result[%d].Value = %q, want %q", i, r.Value, want.value)
+		}
+		if r.Type != want.typ {
+			t.Errorf("Result[%d].Type = %q, want %q", i, r.Type, want.typ)
 		}
 	}
 }
 
 // TestJSONFormatterPerStatementResultsWithBlankLines verifies result alignment
-// when calc blocks contain blank line separators (the same bug the markdown
-// formatter had).
+// when calc blocks contain blank line separators.
 func TestJSONFormatterPerStatementResultsWithBlankLines(t *testing.T) {
-	source := "a = 1\n\nb = 2\n\nc = a + b\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+	result := formatJSON(t, "a = 1\n\nb = 2\n\nc = a + b\n", Options{})
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	var calcBlock *JSONBlock
-	for i := range result.Blocks {
-		if result.Blocks[i].Type == "calculation" {
-			calcBlock = &result.Blocks[i]
-			break
-		}
-	}
-	if calcBlock == nil {
+	block := findCalcBlock(result)
+	if block == nil {
 		t.Fatal("Expected a calculation block")
 	}
 
-	if len(calcBlock.Results) != 3 {
-		t.Fatalf("Expected 3 results (blank lines excluded), got %d", len(calcBlock.Results))
+	if len(block.Results) != 3 {
+		t.Fatalf("Expected 3 results (blank lines excluded), got %d", len(block.Results))
 	}
 
 	expected := []struct {
@@ -293,75 +203,59 @@ func TestJSONFormatterPerStatementResultsWithBlankLines(t *testing.T) {
 		{"c = a + b", "3"},
 	}
 	for i, want := range expected {
-		if calcBlock.Results[i].Source != want.source {
-			t.Errorf("Result[%d].Source = %q, want %q", i, calcBlock.Results[i].Source, want.source)
+		if block.Results[i].Source != want.source {
+			t.Errorf("Result[%d].Source = %q, want %q", i, block.Results[i].Source, want.source)
 		}
-		if calcBlock.Results[i].Value != want.value {
-			t.Errorf("Result[%d].Value = %q, want %q", i, calcBlock.Results[i].Value, want.value)
+		if block.Results[i].Value != want.value {
+			t.Errorf("Result[%d].Value = %q, want %q", i, block.Results[i].Value, want.value)
 		}
 	}
 }
 
 // TestJSONFormatterVariableResultMapping verifies that each variable can be
-// looked up with its name AND result value — essential for programmatic consumers.
+// looked up with its name AND result value.
 func TestJSONFormatterVariableResultMapping(t *testing.T) {
-	source := "price = $50\ntax_rate = 0.08\ntax = price * tax_rate\ntotal = price + tax\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+	result := formatJSON(t, "price = $50\ntax_rate = 0.08\ntax = price * tax_rate\ntotal = price + tax\n", Options{})
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	var calcBlock *JSONBlock
-	for i := range result.Blocks {
-		if result.Blocks[i].Type == "calculation" {
-			calcBlock = &result.Blocks[i]
-			break
-		}
-	}
-	if calcBlock == nil {
+	block := findCalcBlock(result)
+	if block == nil {
 		t.Fatal("Expected a calculation block")
 	}
 
-	// Build a variable→value map from the results for easy lookup
-	varValues := make(map[string]string)
-	for _, r := range calcBlock.Results {
+	// Build variable→result map
+	type varInfo struct {
+		value string
+		typ   string
+		unit  string
+	}
+	varMap := make(map[string]varInfo)
+	for _, r := range block.Results {
 		if r.Variable != "" {
-			varValues[r.Variable] = r.Value
+			varMap[r.Variable] = varInfo{value: r.Value, typ: r.Type, unit: r.Unit}
 		}
 	}
 
-	// Each variable should have its evaluated value
-	expectedVars := map[string]string{
-		"price":    "$50.00",
-		"tax_rate": "0.08",
-		"tax":      "$4.00",
-		"total":    "$54.00",
+	expectedVars := map[string]varInfo{
+		"price":    {value: "$50.00", typ: "currency", unit: "USD"},
+		"tax_rate": {value: "0.08", typ: "number", unit: ""},
+		"tax":      {value: "$4.00", typ: "currency", unit: "USD"},
+		"total":    {value: "$54.00", typ: "currency", unit: "USD"},
 	}
 
-	for name, wantVal := range expectedVars {
-		got, ok := varValues[name]
+	for name, want := range expectedVars {
+		got, ok := varMap[name]
 		if !ok {
 			t.Errorf("Variable %q not found in results", name)
 			continue
 		}
-		if got != wantVal {
-			t.Errorf("Variable %q = %q, want %q", name, got, wantVal)
+		if got.value != want.value {
+			t.Errorf("Variable %q value = %q, want %q", name, got.value, want.value)
+		}
+		if got.typ != want.typ {
+			t.Errorf("Variable %q type = %q, want %q", name, got.typ, want.typ)
+		}
+		if got.unit != want.unit {
+			t.Errorf("Variable %q unit = %q, want %q", name, got.unit, want.unit)
 		}
 	}
 }
@@ -369,51 +263,24 @@ func TestJSONFormatterVariableResultMapping(t *testing.T) {
 // TestJSONFormatterDiagnosticsHavePositions verifies that evaluation errors
 // include line and column information, not just a message string.
 func TestJSONFormatterDiagnosticsHavePositions(t *testing.T) {
-	source := "x = 10\ny = unknown_var + 1\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+	result := formatJSON(t, "x = 10\ny = unknown_var + 1\n", Options{})
 
-	eval := implDoc.NewEvaluator()
-	eval.Evaluate(doc) // expected to fail on y
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	// Find the calc block with the error
-	var calcBlock *JSONBlock
-	for i := range result.Blocks {
-		if result.Blocks[i].Type == "calculation" {
-			calcBlock = &result.Blocks[i]
-			break
-		}
-	}
-	if calcBlock == nil {
+	block := findCalcBlock(result)
+	if block == nil {
 		t.Fatal("Expected a calculation block")
 	}
 
-	// Should have diagnostics with position info
-	if len(calcBlock.Diagnostics) == 0 {
+	if len(block.Diagnostics) == 0 {
 		t.Fatal("Expected at least one diagnostic for undefined variable error")
 	}
 
-	diag := calcBlock.Diagnostics[0]
+	diag := block.Diagnostics[0]
 	if diag.Message == "" {
 		t.Error("Diagnostic should have a message")
 	}
 	if diag.Severity == "" {
 		t.Error("Diagnostic should have a severity")
 	}
-	// Line should be > 0 (1-indexed from parser)
 	if diag.Line == 0 {
 		t.Error("Diagnostic should have a line number")
 	}
@@ -422,29 +289,8 @@ func TestJSONFormatterDiagnosticsHavePositions(t *testing.T) {
 // TestJSONFormatterTextBlockRenderedHTML verifies that text blocks include
 // rendered HTML so consumers can display rich markdown without re-parsing.
 func TestJSONFormatterTextBlockRenderedHTML(t *testing.T) {
-	source := "# Budget Overview\n\nThis is a **bold** statement.\n\nx = 10\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+	result := formatJSON(t, "# Budget Overview\n\nThis is a **bold** statement.\n\nx = 10\n", Options{})
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	// Find text block
 	var textBlock *JSONBlock
 	for i := range result.Blocks {
 		if result.Blocks[i].Type == "text" {
@@ -456,12 +302,10 @@ func TestJSONFormatterTextBlockRenderedHTML(t *testing.T) {
 		t.Fatal("Expected a text block")
 	}
 
-	// Text blocks should include rendered HTML
 	if textBlock.HTML == "" {
 		t.Error("Text block should include rendered HTML")
 	}
 
-	// HTML should contain rendered markdown elements
 	if !strings.Contains(textBlock.HTML, "<h1") {
 		t.Errorf("Expected HTML to contain <h1> heading, got: %s", textBlock.HTML)
 	}
@@ -470,114 +314,295 @@ func TestJSONFormatterTextBlockRenderedHTML(t *testing.T) {
 	}
 }
 
-// TestJSONFormatterRawValue verifies that raw_value is populated and always ASCII.
-func TestJSONFormatterRawValue(t *testing.T) {
-	source := "salary = $6500\nbonus = $500\ntotal = salary + bonus\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+// TestJSONFormatterCurrencyResults verifies that currency values in results
+// include the display-formatted representation.
+func TestJSONFormatterCurrencyResults(t *testing.T) {
+	result := formatJSON(t, "salary = $6500\nbonus = $500\ntotal = salary + bonus\n", Options{})
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
-
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	var calcBlock *JSONBlock
-	for i := range result.Blocks {
-		if result.Blocks[i].Type == "calculation" {
-			calcBlock = &result.Blocks[i]
-			break
-		}
-	}
-	if calcBlock == nil {
+	block := findCalcBlock(result)
+	if block == nil {
 		t.Fatal("Expected a calculation block")
 	}
 
-	for i, r := range calcBlock.Results {
-		// raw_value must be populated for results with values
-		if r.Value != "" && r.RawValue == "" {
-			t.Errorf("Result[%d] has Value=%q but empty RawValue", i, r.Value)
-		}
-
-		// raw_value must be ASCII-only (no locale-specific characters)
-		for j, ch := range r.RawValue {
-			if ch > 127 {
-				t.Errorf("Result[%d].RawValue contains non-ASCII at position %d: %q", i, j, r.RawValue)
-				break
-			}
-		}
+	if len(block.Results) != 3 {
+		t.Fatalf("Expected 3 results, got %d", len(block.Results))
 	}
 
-	// Verify specific raw values
-	if len(calcBlock.Results) >= 3 {
-		// total = salary + bonus = $7000
-		lastResult := calcBlock.Results[2]
-		if lastResult.Value != "$7,000.00" {
-			t.Errorf("Value = %q, want %q", lastResult.Value, "$7,000.00")
-		}
-		// raw_value should be the machine-readable form
-		if !strings.Contains(lastResult.RawValue, "7000") {
-			t.Errorf("RawValue = %q, should contain '7000'", lastResult.RawValue)
-		}
+	lastResult := block.Results[2]
+	if lastResult.Value != "$7,000.00" {
+		t.Errorf("Expected display-formatted '$7,000.00', got %q", lastResult.Value)
+	}
+	if lastResult.Type != "currency" {
+		t.Errorf("Type = %q, want %q", lastResult.Type, "currency")
+	}
+	if lastResult.Unit != "USD" {
+		t.Errorf("Unit = %q, want %q", lastResult.Unit, "USD")
+	}
+	if lastResult.NumericValue == nil || *lastResult.NumericValue != 7000 {
+		t.Errorf("NumericValue = %v, want 7000", lastResult.NumericValue)
 	}
 }
 
-// TestJSONFormatterCurrencyResults verifies that currency values in results
-// include the display-formatted representation (e.g., "$6,500.00" not "6500").
-func TestJSONFormatterCurrencyResults(t *testing.T) {
-	source := "salary = $6500\nbonus = $500\ntotal = salary + bonus\n"
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
+// --- New type-specific tests ---
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		t.Fatalf("Failed to evaluate: %v", err)
-	}
+// TestJSONFormatterNumberType verifies plain number results.
+func TestJSONFormatterNumberType(t *testing.T) {
+	result := formatJSON(t, "x = 42\n", Options{})
 
-	var buf bytes.Buffer
-	formatter := &JSONFormatter{}
-	if err := formatter.Format(&buf, doc, Options{}); err != nil {
-		t.Fatalf("Format failed: %v", err)
-	}
-
-	var result JSONDocument
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("Invalid JSON: %v", err)
-	}
-
-	var calcBlock *JSONBlock
-	for i := range result.Blocks {
-		if result.Blocks[i].Type == "calculation" {
-			calcBlock = &result.Blocks[i]
-			break
-		}
-	}
-	if calcBlock == nil {
+	block := findCalcBlock(result)
+	if block == nil {
 		t.Fatal("Expected a calculation block")
 	}
 
-	if len(calcBlock.Results) != 3 {
-		t.Fatalf("Expected 3 results, got %d", len(calcBlock.Results))
+	r := block.Results[0]
+	if r.Type != "number" {
+		t.Errorf("Type = %q, want %q", r.Type, "number")
+	}
+	if r.NumericValue == nil || *r.NumericValue != 42 {
+		t.Errorf("NumericValue = %v, want 42", r.NumericValue)
+	}
+	if r.Unit != "" {
+		t.Errorf("Unit = %q, want empty", r.Unit)
+	}
+	if r.Variable != "x" {
+		t.Errorf("Variable = %q, want %q", r.Variable, "x")
+	}
+}
+
+// TestJSONFormatterQuantityType verifies quantity results with units.
+func TestJSONFormatterQuantityType(t *testing.T) {
+	result := formatJSON(t, "weight = 5 kg\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
 	}
 
-	// The display value should use the human-readable format (display.Format),
-	// matching what the markdown/text formatters show.
-	lastResult := calcBlock.Results[2]
-	if lastResult.Value != "$7,000.00" {
-		t.Errorf("Expected display-formatted '$7,000.00', got %q", lastResult.Value)
+	r := block.Results[0]
+	if r.Type != "quantity" {
+		t.Errorf("Type = %q, want %q", r.Type, "quantity")
+	}
+	if r.NumericValue == nil || *r.NumericValue != 5 {
+		t.Errorf("NumericValue = %v, want 5", r.NumericValue)
+	}
+	if r.Unit != "kg" {
+		t.Errorf("Unit = %q, want %q", r.Unit, "kg")
+	}
+}
+
+// TestJSONFormatterRateType verifies rate results with compound units.
+func TestJSONFormatterRateType(t *testing.T) {
+	result := formatJSON(t, "speed = 100 MB/s\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	r := block.Results[0]
+	if r.Type != "rate" {
+		t.Errorf("Type = %q, want %q", r.Type, "rate")
+	}
+	if r.NumericValue == nil || *r.NumericValue != 100 {
+		t.Errorf("NumericValue = %v, want 100", r.NumericValue)
+	}
+	if r.Unit != "MB/s" {
+		t.Errorf("Unit = %q, want %q", r.Unit, "MB/s")
+	}
+}
+
+// TestJSONFormatterDurationType verifies duration results.
+func TestJSONFormatterDurationType(t *testing.T) {
+	result := formatJSON(t, "elapsed = 3 hours\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	r := block.Results[0]
+	if r.Type != "duration" {
+		t.Errorf("Type = %q, want %q", r.Type, "duration")
+	}
+	if r.NumericValue == nil || *r.NumericValue != 3 {
+		t.Errorf("NumericValue = %v, want 3", r.NumericValue)
+	}
+	if r.Unit == "" {
+		t.Error("Unit should not be empty for duration")
+	}
+}
+
+// TestJSONFormatterBooleanType verifies boolean results.
+func TestJSONFormatterBooleanType(t *testing.T) {
+	result := formatJSON(t, "5 > 3\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) < 1 {
+		t.Fatal("Expected at least one result")
+	}
+
+	r := block.Results[0]
+	if r.Type != "boolean" {
+		t.Errorf("Type = %q, want %q", r.Type, "boolean")
+	}
+	if r.NumericValue != nil {
+		t.Errorf("NumericValue should be nil for boolean, got %v", *r.NumericValue)
+	}
+	if r.Unit != "" {
+		t.Errorf("Unit should be empty for boolean, got %q", r.Unit)
+	}
+}
+
+// TestJSONFormatterZeroNumericValue verifies that numeric_value of 0 is explicitly present.
+func TestJSONFormatterZeroNumericValue(t *testing.T) {
+	result := formatJSON(t, "x = 0\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	r := block.Results[0]
+	if r.Type != "number" {
+		t.Errorf("Type = %q, want %q", r.Type, "number")
+	}
+	if r.NumericValue == nil {
+		t.Fatal("NumericValue should not be nil for x = 0")
+	}
+	if *r.NumericValue != 0 {
+		t.Errorf("NumericValue = %v, want 0", *r.NumericValue)
+	}
+
+	// Verify the JSON output actually contains "numeric_value": 0
+	doc, _ := document.NewDocument("x = 0\n")
+	eval := implDoc.NewEvaluator()
+	eval.Evaluate(doc)
+	var buf bytes.Buffer
+	(&JSONFormatter{}).Format(&buf, doc, Options{})
+	if !strings.Contains(buf.String(), `"numeric_value": 0`) {
+		t.Errorf("JSON output should contain '\"numeric_value\": 0', got: %s", buf.String())
+	}
+}
+
+// TestJSONFormatterPerResultError verifies per-result error for partial block failure.
+// Uses division by zero which passes semantic analysis but fails at runtime,
+// allowing the first statement to succeed before the second fails.
+func TestJSONFormatterPerResultError(t *testing.T) {
+	result := formatJSON(t, "x = 10\ny = x / 0\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) < 2 {
+		t.Fatalf("Expected at least 2 results, got %d", len(block.Results))
+	}
+
+	// First result should succeed
+	first := block.Results[0]
+	if first.Type != "number" {
+		t.Errorf("First result Type = %q, want %q", first.Type, "number")
+	}
+	if first.Error != "" {
+		t.Errorf("First result should not have error, got %q", first.Error)
+	}
+
+	// Second result should have error, no type
+	second := block.Results[1]
+	if second.Error == "" {
+		t.Error("Second result should have error for division by zero")
+	}
+	if second.Type != "" {
+		t.Errorf("Error result should not have Type, got %q", second.Type)
+	}
+	if second.NumericValue != nil {
+		t.Errorf("Error result should not have NumericValue, got %v", *second.NumericValue)
+	}
+}
+
+// TestJSONFormatterBlockFieldsRemoved verifies output and variables are removed from JSON.
+func TestJSONFormatterBlockFieldsRemoved(t *testing.T) {
+	doc, _ := document.NewDocument("x = 10\ny = 20\n")
+	eval := implDoc.NewEvaluator()
+	eval.Evaluate(doc)
+
+	var buf bytes.Buffer
+	(&JSONFormatter{}).Format(&buf, doc, Options{})
+	jsonStr := buf.String()
+
+	if strings.Contains(jsonStr, `"output"`) {
+		t.Error("JSON should not contain 'output' field")
+	}
+	if strings.Contains(jsonStr, `"variables"`) {
+		t.Error("JSON should not contain 'variables' field")
+	}
+	if strings.Contains(jsonStr, `"raw_value"`) {
+		t.Error("JSON should not contain 'raw_value' field")
+	}
+}
+
+// TestJSONFormatterLocaleNumericValue verifies numeric_value is locale-independent.
+func TestJSONFormatterLocaleNumericValue(t *testing.T) {
+	// Use de-DE locale (comma decimal, period thousand)
+	deCfg, err := display.NewConfig("de-DE")
+	if err != nil {
+		t.Fatalf("Failed to create de-DE config: %v", err)
+	}
+	deFmt := display.NewFormatter(deCfg)
+
+	result := formatJSON(t, "price = $1500\n", Options{DisplayFormatter: deFmt})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	r := block.Results[0]
+
+	// numeric_value must be locale-independent
+	if r.NumericValue == nil || *r.NumericValue != 1500 {
+		t.Errorf("NumericValue = %v, want 1500 (locale-independent)", r.NumericValue)
+	}
+
+	// unit must be locale-independent
+	if r.Unit != "USD" {
+		t.Errorf("Unit = %q, want %q (locale-independent)", r.Unit, "USD")
+	}
+
+	// value should be locale-formatted (German style)
+	if !strings.Contains(r.Value, "1.500") && !strings.Contains(r.Value, "1500") {
+		t.Errorf("Value = %q, expected German-formatted currency", r.Value)
+	}
+}
+
+// TestJSONFormatterNapkinEstimate verifies is_approximate for napkin quantities.
+// Uses a quantity input (kg) because the napkin operator preserves type:
+// plain numbers stay Number (no IsNapkin), quantities stay Quantity with IsNapkin=true.
+func TestJSONFormatterNapkinEstimate(t *testing.T) {
+	result := formatJSON(t, "estimate = 500 kg as napkin\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) < 1 {
+		t.Fatal("Expected at least one result")
+	}
+
+	r := block.Results[0]
+	if r.Type != "quantity" {
+		t.Errorf("Type = %q, want %q", r.Type, "quantity")
+	}
+	if !r.IsApproximate {
+		t.Error("IsApproximate should be true for napkin estimate")
+	}
+	if r.NumericValue == nil {
+		t.Fatal("NumericValue should not be nil for napkin estimate")
 	}
 }

@@ -225,4 +225,3 @@ func RenderContextFooter(state ContextFooterState, width int, bg color.Color) st
 
 	return padToHeight(line1)
 }
-

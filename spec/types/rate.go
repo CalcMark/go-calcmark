@@ -48,6 +48,15 @@ func (r *Rate) String() string {
 	return fmt.Sprintf("%s/%s", r.Amount.String(), timeAbbrev)
 }
 
+// CompoundUnit returns the compound unit string for this rate (e.g., "MB/s", "USD/h").
+// The numerator uses the amount's unit and the denominator uses the abbreviated time unit.
+func (r *Rate) CompoundUnit() string {
+	if r == nil || r.Amount == nil {
+		return ""
+	}
+	return r.Amount.Unit + "/" + abbreviateTimeUnit(r.PerUnit)
+}
+
 // IsCompatible checks if two rates can be added/subtracted.
 // Rates are compatible if their amounts have compatible units and same time periods.
 func (r *Rate) IsCompatible(other *Rate) bool {

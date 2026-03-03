@@ -118,7 +118,7 @@ Regardless of locale, these never change:
 
 ### JSON Output
 
-When exporting to JSON, each result provides both a locale-formatted display value and a machine-readable ASCII value:
+When exporting to JSON, each result includes a locale-formatted display value and structured type information:
 
 ```bash
 cm convert budget.cm --to=json --locale=de-DE
@@ -128,12 +128,14 @@ cm convert budget.cm --to=json --locale=de-DE
 {
   "source": "price = $1500",
   "value": "$1.500,00",
-  "raw_value": "$1500",
+  "type": "currency",
+  "numeric_value": 1500,
+  "unit": "USD",
   "variable": "price"
 }
 ```
 
-Use `raw_value` for programmatic consumption and `value` for display. See [Configuration: JSON Output](/docs/configuration/#json-raw-value) for details.
+Use `type` for dispatch, `numeric_value` + `unit` for computation, and `value` for display. The `type`, `numeric_value`, and `unit` fields are always locale-independent. See [Configuration: JSON Output](/docs/configuration/#json-raw-value) for details.
 
 ## Exporting Results {#exporting-results}
 
