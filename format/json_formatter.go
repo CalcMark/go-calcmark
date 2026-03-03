@@ -6,6 +6,7 @@ import (
 	"maps"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // JSONFormatter formats CalcMark documents as JSON.
@@ -29,26 +30,30 @@ type JSONFrontmatter struct {
 	Exchange map[string]string `json:"exchange,omitempty"`
 }
 
-// JSONBlock represents a single block in JSON output
+// JSONBlock represents a single block in JSON output.
 type JSONBlock struct {
 	Type        string           `json:"type"`
 	Source      []string         `json:"source"`
 	Results     []JSONResult     `json:"results,omitempty"`
-	Output      string           `json:"output,omitempty"`
 	Error       string           `json:"error,omitempty"`
 	Diagnostics []JSONDiagnostic `json:"diagnostics,omitempty"`
-	Variables   []string         `json:"variables,omitempty"`
 	HTML        string           `json:"html,omitempty"`
 }
 
 // JSONResult represents a single evaluated statement's result.
 // Value is the locale-formatted display string.
-// RawValue is the machine-readable ASCII representation (always en-US format).
+// Type is the CalcMark type name (e.g., "number", "currency").
+// NumericValue, Unit, DateValue decompose the value for programmatic consumption.
 type JSONResult struct {
-	Source   string `json:"source"`
-	Value    string `json:"value"`
-	RawValue string `json:"raw_value,omitempty"`
-	Variable string `json:"variable,omitempty"`
+	Source        string   `json:"source"`
+	Value         string   `json:"value,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	NumericValue  *float64 `json:"numeric_value,omitempty"`
+	Unit          string   `json:"unit,omitempty"`
+	DateValue     string   `json:"date_value,omitempty"`
+	IsApproximate bool     `json:"is_approximate,omitempty"`
+	Error         string   `json:"error,omitempty"`
+	Variable      string   `json:"variable,omitempty"`
 }
 
 // JSONDiagnostic represents an error or warning with position info.
@@ -58,6 +63,46 @@ type JSONDiagnostic struct {
 	Message  string `json:"message"`
 	Line     int    `json:"line,omitempty"`
 	Column   int    `json:"column,omitempty"`
+}
+
+// populateResult fills type-specific decomposition fields on a JSONResult.
+func populateResult(jr *JSONResult, result types.Type) {
+	switch v := result.(type) {
+	case *types.Number:
+		jr.Type = "number"
+		f := v.Value.InexactFloat64()
+		jr.NumericValue = &f
+	case *types.Currency:
+		jr.Type = "currency"
+		f := v.Value.InexactFloat64()
+		jr.NumericValue = &f
+		jr.Unit = v.Code
+	case *types.Quantity:
+		jr.Type = "quantity"
+		f := v.Value.InexactFloat64()
+		jr.NumericValue = &f
+		jr.Unit = v.Unit
+		if v.IsNapkin {
+			jr.IsApproximate = true
+		}
+	case *types.Rate:
+		jr.Type = "rate"
+		f := v.Amount.Value.InexactFloat64()
+		jr.NumericValue = &f
+		jr.Unit = v.CompoundUnit()
+	case *types.Duration:
+		jr.Type = "duration"
+		f := v.Value.InexactFloat64()
+		jr.NumericValue = &f
+		jr.Unit = v.Unit
+	case *types.Date:
+		jr.Type = "date"
+		jr.DateValue = v.Time.Format("2006-01-02")
+	case *types.Time:
+		jr.Type = "time"
+	case *types.Boolean:
+		jr.Type = "boolean"
+	}
 }
 
 // Format writes the document as JSON to the writer.
@@ -98,7 +143,6 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
 			jb.Type = "calculation"
-			jb.Variables = block.Variables()
 
 			stmts := AlignResults(block)
 			for _, stmt := range stmts {
@@ -108,7 +152,10 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				jr := JSONResult{Source: stmt.Source}
 				if stmt.Result != nil {
 					jr.Value = df.Format(stmt.Result)
-					jr.RawValue = stmt.Result.String()
+					populateResult(&jr, stmt.Result)
+				} else if block.Error() != nil {
+					// Per-result error: statement was reached but evaluation failed
+					jr.Error = block.Error().Error()
 				}
 				jr.Variable = stmt.Variable
 				jb.Results = append(jb.Results, jr)
@@ -127,8 +174,6 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 
 			if block.Error() != nil {
 				jb.Error = block.Error().Error()
-			} else if block.LastValue() != nil {
-				jb.Output = block.LastValue().String()
 			}
 
 		case *document.TextBlock:

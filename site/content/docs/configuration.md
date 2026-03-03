@@ -229,23 +229,42 @@ status_bar_bg = "#0F3460"
 
 ## JSON Output and Locale {#json-raw-value}
 
-When using `cm convert --to=json`, each result includes two value fields:
+When using `cm convert --to=json`, each result includes a locale-formatted display value and structured type decomposition fields:
 
-| Field | Description | Example (de-DE) |
-|-------|-------------|-----------------|
-| `value` | Locale-formatted display string | `"1.500,00"` |
-| `raw_value` | Machine-readable ASCII (always en-US style) | `"1500"` |
+| Field | Description | Locale-dependent? | Example (de-DE) |
+|-------|-------------|-------------------|-----------------|
+| `value` | Locale-formatted display string | Yes | `"$1.500,00"` |
+| `type` | CalcMark type name | No | `"currency"` |
+| `numeric_value` | Machine-readable number (IEEE 754 float64) | No | `1500` |
+| `unit` | Unit identifier (ISO 4217 for currency) | No | `"USD"` |
+| `date_value` | ISO 8601 date (Date type only) | No | `"2026-03-03"` |
+| `is_approximate` | True for napkin estimates (Quantity only) | No | `true` |
 
-The `raw_value` field is guaranteed to contain only ASCII characters, making it safe for programmatic consumption regardless of locale. Use `value` for display and `raw_value` for computation.
+Use `type` for dispatch, `numeric_value` + `unit` for computation, and `value` for display. All fields except `value` are locale-independent.
 
 ```json
 {
   "source": "price = $1500",
   "value": "$1.500,00",
-  "raw_value": "$1500",
+  "type": "currency",
+  "numeric_value": 1500,
+  "unit": "USD",
   "variable": "price"
 }
 ```
+
+### Type Mapping
+
+| CalcMark Type | `type` | Has `numeric_value` | Has `unit` |
+|---|---|---|---|
+| Number | `"number"` | Yes | No |
+| Currency | `"currency"` | Yes | Yes (ISO 4217, e.g., `"USD"`) |
+| Quantity | `"quantity"` | Yes | Yes (e.g., `"kg"`) |
+| Rate | `"rate"` | Yes | Yes (compound, e.g., `"MB/s"`) |
+| Duration | `"duration"` | Yes | Yes (e.g., `"hours"`) |
+| Date | `"date"` | No | No |
+| Time | `"time"` | No | No |
+| Boolean | `"boolean"` | No | No |
 
 ## What Can't Be Configured
 

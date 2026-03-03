@@ -102,7 +102,7 @@ cm convert doc.cm --to=json --locale=de-DE  # JSON with German formatting
 |--------|-------------|
 | `html` | Full HTML document with evaluated results |
 | `md` | Markdown with calculation results inline |
-| `json` | Structured JSON with locale-formatted and raw values |
+| `json` | Structured JSON with type-aware decomposition fields |
 | `text` | Plain text output (same as `cm eval -v`) |
 | `cm` | Normalized CalcMark source (always locale-independent) |
 
@@ -148,9 +148,9 @@ The template receives a root object with two fields:
 |-------|------|-------------|
 | `.Source` | string | The CalcMark source expression |
 | `.Result` | string | Locale-formatted evaluation result (empty if line has no result) |
-| `.RawResult` | string | Machine-readable ASCII result, always en-US format (JSON only) |
+| `.RawResult` | string | Machine-readable ASCII result, always en-US format (HTML templates only) |
 
-> **JSON output:** In JSON format, each result includes both `value` (locale-formatted for display) and `raw_value` (ASCII, machine-readable). Use `raw_value` when parsing results programmatically. See [Configuration: JSON Output and Locale](/docs/configuration/#json-raw-value).
+> **JSON output:** In JSON format, each result includes `value` (locale-formatted for display), `type` (CalcMark type name), `numeric_value` (machine-readable number), and `unit` (unit identifier). Use `type` for dispatch, `numeric_value` + `unit` for computation. See [Configuration: JSON Output and Locale](/docs/configuration/#json-raw-value).
 
 **Frontmatter fields** (when `.Frontmatter` is non-nil):
 

@@ -1153,9 +1153,12 @@ func TestExportFileLocale(t *testing.T) {
 					if result.Value != "$1.500,00" {
 						t.Errorf("JSON value for x: got %q, want %q", result.Value, "$1.500,00")
 					}
-					// raw_value should always be ASCII (en-US)
-					if strings.Contains(result.RawValue, ",") && !strings.Contains(result.RawValue, ".") {
-						t.Errorf("JSON raw_value should be ASCII, got %q", result.RawValue)
+					// numeric_value is always locale-independent
+					if result.NumericValue == nil || *result.NumericValue != 1500 {
+						t.Errorf("JSON numeric_value should be 1500, got %v", result.NumericValue)
+					}
+					if result.Unit != "USD" {
+						t.Errorf("JSON unit should be USD, got %q", result.Unit)
 					}
 				case "y":
 					if result.Value != "CNY 42,50" {
