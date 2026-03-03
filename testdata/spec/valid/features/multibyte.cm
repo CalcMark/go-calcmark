@@ -1,0 +1,39 @@
+# Multi-byte Character Support
+# Validates that CalcMark documents with multi-byte UTF-8 content parse correctly
+
+## CJK identifiers as variable names
+a = 3
+手 = a * 5
+給料 = 5000
+收入 = 給料 * 12
+
+## Latin extended identifiers
+café = 100
+naïve = café + 50
+résumé = naïve * 2
+
+## Cyrillic identifiers
+Москва = 100
+доход = Москва + 50
+
+## Emoji identifiers (supported ranges U+1F300-U+1FA6F)
+💰 = 1000
+🎯 = 💰 + 500
+📊 = 💰 * 2
+
+## Mixed multi-byte and ASCII
+total = 手 + 給料
+combined = café + Москва
+everything = 💰 + total
+
+## Multi-byte in markdown headings and prose
+
+她鳥足飽經半方結己平向說眼虎
+
+就明細今士亮上封訴蝸花果但入東手人活扒弟平聽反足們都
+
+Lorem Ipsum คือ เนื้อหาจำลองแบบเรียบๆ ที่ใช้กันในธุรกิจงานพิมพ์
+
+## Calculations after multi-byte prose
+x = 42
+y = x + 手

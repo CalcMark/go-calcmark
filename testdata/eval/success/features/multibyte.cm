@@ -1,0 +1,33 @@
+# Multi-byte Evaluation Tests
+# Validates that multi-byte identifiers evaluate correctly end-to-end
+
+## CJK variable names
+a = 3
+手 = a * 5
+給料 = 5000
+收入 = 給料 * 12
+
+## Latin extended variable names
+café = 100
+résumé = café + 50
+
+## Cyrillic variable names
+Москва = 200
+доход = Москва * 3
+
+## Emoji variable names (supported ranges)
+💰 = 1000
+🎯 = 💰 + 500
+
+## Cross-script variable references
+total = 手 + café + Москва + 💰
+# Expected: 1315
+
+## Multi-byte with arithmetic operations
+和 = 手 + 給料
+差 = 收入 - 💰
+積 = café * доход
+
+## Multi-byte with functions
+平均 = avg(手, café, Москва, 💰)
+根 = sqrt(café + résumé + Москва + 50)
