@@ -2,6 +2,7 @@ package document
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -68,6 +69,28 @@ func (da *DependencyAnalyzer) AnalyzeBlock(block *CalcBlock) error {
 	block.SetDependencies(dependencies)
 
 	return nil
+}
+
+// ExtractStatementReferences returns the sorted set of variable names
+// referenced by a single AST statement. For assignments, only RHS
+// references are included (the defined variable is excluded by
+// extractIdentifiers). Returns nil for a nil node.
+// O(n) time where n is the number of AST nodes in the statement.
+func ExtractStatementReferences(node ast.Node) []string {
+	if node == nil {
+		return nil
+	}
+	refs := make(map[string]bool)
+	extractIdentifiers(node, refs)
+	if len(refs) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(refs))
+	for name := range refs {
+		result = append(result, name)
+	}
+	slices.Sort(result)
+	return result
 }
 
 // extractIdentifiers recursively finds all identifier references in an AST.
