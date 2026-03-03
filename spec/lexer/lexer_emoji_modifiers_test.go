@@ -123,37 +123,32 @@ func TestEmojiModifiersInCalculations(t *testing.T) {
 }
 
 // TestEmojiVariationSelectors tests emoji with variation selectors (text vs emoji presentation).
-// These common emoji (⭐ ✅ ☀️) are OUTSIDE our supported emoji ranges and will fail
-// tokenization in calculations. However, they work perfectly in markdown blocks.
-// Editor implementations should provide HINT diagnostics suggesting text alternatives.
+// These common emoji (⭐ ✅ ☀️) are in the supported BMP emoji ranges and should
+// tokenize successfully as identifiers in calculations.
 func TestEmojiVariationSelectors(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       string
-		note        string
-		expectError bool
-		editorHint  string
+		name      string
+		input     string
+		note      string
+		wantIdent string
 	}{
 		{
-			name:        "Star emoji presentation",
-			input:       "⭐ = 5",
-			note:        "U+2B50 (star) - OUTSIDE supported ranges",
-			expectError: true,
-			editorHint:  "Consider using 'star = 5' or emoji from supported ranges",
+			name:      "Star emoji presentation",
+			input:     "⭐ = 5",
+			note:      "U+2B50 (star) - in Stars and Circles range",
+			wantIdent: "⭐",
 		},
 		{
-			name:        "Sun with variation selector",
-			input:       "☀️ = 1",
-			note:        "U+2600 (sun) + U+FE0F (variation selector-16) - OUTSIDE supported ranges",
-			expectError: true,
-			editorHint:  "Consider using 'sun = 1' or emoji from supported ranges",
+			name:      "Sun with variation selector",
+			input:     "☀️ = 1",
+			note:      "U+2600 (sun) + U+FE0F (variation selector-16) - in Miscellaneous Symbols range",
+			wantIdent: "☀️",
 		},
 		{
-			name:        "Check mark emoji",
-			input:       "✅ = true",
-			note:        "U+2705 (check mark) - OUTSIDE supported ranges",
-			expectError: true,
-			editorHint:  "Consider using 'done = true' or emoji from supported ranges",
+			name:      "Check mark emoji",
+			input:     "✅ = 5",
+			note:      "U+2705 (check mark) - in Dingbats range",
+			wantIdent: "✅",
 		},
 	}
 
@@ -163,26 +158,21 @@ func TestEmojiVariationSelectors(t *testing.T) {
 			t.Logf("Input: %q", tt.input)
 			t.Logf("Note: %s", tt.note)
 
-			if tt.expectError && err == nil {
-				t.Errorf("Expected tokenization to fail, but it succeeded")
-			}
-
-			if !tt.expectError && err != nil {
-				t.Errorf("Expected tokenization to succeed, but got error: %v", err)
-			}
-
 			if err != nil {
-				t.Logf("✗ Tokenization failed (as expected)")
-				t.Logf("  Error: %v", err)
-				t.Logf("  Editor Hint: %s", tt.editorHint)
-				t.Logf("  → This line becomes MARKDOWN (graceful degradation)")
-			} else {
-				t.Logf("✓ Tokenization succeeded")
-				t.Logf("  Tokens:")
-				for i, tok := range tokens {
-					if tok.Type != NEWLINE && tok.Type != EOF {
-						t.Logf("    [%d] %s: %q (len=%d)", i, tok.Type, tok.Value, len(tok.Value))
-					}
+				t.Fatalf("Expected tokenization to succeed, but got error: %v", err)
+			}
+
+			if tokens[0].Type != IDENTIFIER {
+				t.Errorf("First token type: got %s, want IDENTIFIER", tokens[0].Type)
+			}
+			if tokens[0].Value != tt.wantIdent {
+				t.Errorf("Identifier: got %q, want %q", tokens[0].Value, tt.wantIdent)
+			}
+
+			t.Logf("Tokens:")
+			for i, tok := range tokens {
+				if tok.Type != NEWLINE && tok.Type != EOF {
+					t.Logf("  [%d] %s: %q (len=%d)", i, tok.Type, tok.Value, len(tok.Value))
 				}
 			}
 		})
