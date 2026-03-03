@@ -67,7 +67,7 @@ Locale affects **output formatting only** -- input syntax always uses `.` for de
 - **Currency symbol position** stays the same (always prefix, e.g., `$`)
 - **Input syntax** -- CalcMark source code always uses `.` for decimals
 - **CalcMark format** (`cm convert --to=cm`) stays locale-independent for portability
-- **JSON `raw_value`** is always machine-readable ASCII (see [JSON Output](#json-raw-value))
+- **JSON `numeric_value`** is always machine-readable ASCII (see [JSON Output](#json-raw-value))
 
 ### Precedence
 

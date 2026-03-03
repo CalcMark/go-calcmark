@@ -54,18 +54,24 @@ Evaluate a CalcMark file or stdin and print results.
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--verbose` | `-v` | Show all intermediate values, not just the final result |
+| `--format` | | Output format: `text` (default), `json`, `html`, `md`, `cm` |
 
 ### Examples
 
 ```bash
-cm eval budget.cm             # Print final results
-cm eval -v budget.cm          # Show all intermediate values
-echo "x = 10" | cm eval      # Evaluate from stdin
+cm eval budget.cm                    # Print final results
+cm eval -v budget.cm                 # Show all intermediate values
+echo "x = 10" | cm eval             # Evaluate from stdin
 echo "5 miles in km" | cm eval
-cm eval --locale=de-DE budget.cm  # German number formatting
+cm eval --locale=de-DE budget.cm     # German number formatting
+cm eval --format json budget.cm      # JSON output with type decomposition
+cm eval --format html doc.cm         # HTML document
+cm eval --format md budget.cm        # Markdown with embedded results
 ```
 
 When reading from a file, only the last evaluated result is printed unless `-v` is used. With `-v`, every line that produces a value is shown.
+
+Use `--format` to select the output format. The available formats are the same as `cm convert --to` (see [Output Formats](#convert)). The default format can be changed in [Configuration](/docs/configuration/) via `default_format`.
 
 Use `--locale` to format output with locale-specific separators (e.g., `1.500,00` instead of `1,500.00` for de-DE).
 
