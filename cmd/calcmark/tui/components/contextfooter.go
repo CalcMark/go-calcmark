@@ -233,9 +233,11 @@ func FindLineReferences(line string, knownVars map[string]string, maxRefs int) [
 	seen := make(map[string]bool)
 
 	for varName, val := range knownVars {
-		// Check if this variable is referenced in the line
-		// Skip if it's being defined on this line (left of =)
-		if strings.Contains(line, varName) && !strings.HasPrefix(strings.TrimSpace(line), varName+" =") {
+		// Check if this variable is referenced as a whole word in the line.
+		// A whole-word match means the variable name is not embedded in a
+		// longer identifier (e.g., "E" must not match inside "EUR").
+		// Skip if the variable is being defined on this line (left of =).
+		if containsWholeWord(line, varName) && !strings.HasPrefix(strings.TrimSpace(line), varName+" =") {
 			if !seen[varName] {
 				seen[varName] = true
 				refs = append(refs, VarReference{
@@ -252,4 +254,37 @@ func FindLineReferences(line string, knownVars map[string]string, maxRefs int) [
 	}
 
 	return refs
+}
+
+// containsWholeWord checks whether word appears in text as a whole word,
+// meaning it is not part of a larger identifier. Characters [a-zA-Z0-9_]
+// are considered identifier characters.
+func containsWholeWord(text, word string) bool {
+	if word == "" {
+		return false
+	}
+	for i := 0; i <= len(text)-len(word); i++ {
+		if text[i:i+len(word)] != word {
+			continue
+		}
+		// Check character before the match
+		if i > 0 && isIdentByte(text[i-1]) {
+			continue
+		}
+		// Check character after the match
+		end := i + len(word)
+		if end < len(text) && isIdentByte(text[end]) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+// isIdentByte returns true if the byte is valid in a CalcMark identifier.
+func isIdentByte(b byte) bool {
+	return (b >= 'a' && b <= 'z') ||
+		(b >= 'A' && b <= 'Z') ||
+		(b >= '0' && b <= '9') ||
+		b == '_'
 }
