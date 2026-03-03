@@ -9,11 +9,8 @@ package editor
 //   - Whitespace-only lines between definitions and references
 //   - The broken whitespace guard at results.go:93-104
 //
-// DO NOT modify existing code. This file is purely diagnostic.
-
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -131,37 +128,6 @@ func TestRegressionGetLineReferencesWithWhitespace(t *testing.T) {
 	}
 	if refs[0].Value != "10" {
 		t.Errorf("refs[0].Value = %q, want %q", refs[0].Value, "10")
-	}
-}
-
-// TestWhitespaceGuardCorrectness verifies that the whitespace guard in
-// GetLineResults (results.go) correctly identifies whitespace-only lines.
-// This was originally broken (d36390ff) — trimmed was always set to line.
-// Fixed by using strings.TrimSpace, consistent with countNonEmptyLinesBefore.
-func TestWhitespaceGuardCorrectness(t *testing.T) {
-	testCases := []struct {
-		name     string
-		line     string
-		wantSkip bool // true if the guard should skip this line
-	}{
-		{"empty string", "", true},
-		{"spaces only", "   ", true},
-		{"tab only", "\t", true},
-		{"mixed whitespace", " \t ", true},
-		{"non-empty", "x = 10", false},
-		{"space then text", " x = 10", false},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// This matches the fixed guard logic in results.go
-			actuallySkipped := strings.TrimSpace(tc.line) == ""
-
-			if actuallySkipped != tc.wantSkip {
-				t.Errorf("line %q: guard skipped=%v, want skip=%v",
-					tc.line, actuallySkipped, tc.wantSkip)
-			}
-		})
 	}
 }
 
