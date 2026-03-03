@@ -224,7 +224,7 @@ savings = total_income * savings_rate`
 		m.editBuf = "" // Clear first to avoid stale state
 		m.loadCurrentLineIntoEditBuffer()
 
-		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 		preview := m.renderPreviewPaneAligned(rightWidth, paneHeight, aligned)
 		previewLines := strings.Split(preview, "\n")
 
@@ -262,7 +262,7 @@ savings = total_income * savings_rate`
 		m.editBuf = ""
 		m.loadCurrentLineIntoEditBuffer()
 
-		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 		sourcePane := m.renderSourcePaneAligned(leftContentWidth, paneHeight, aligned)
 		previewPane := m.renderPreviewPaneAligned(rightWidth, paneHeight, aligned)
 

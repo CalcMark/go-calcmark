@@ -77,7 +77,7 @@ bzip2_compressed = compress(1000 MB, bzip2)`
 
 	// Get the aligned panes data to understand what SHOULD be rendered
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("=== Aligned Model State ===")
 	t.Logf("Source lines: %d, Preview lines: %d", len(aligned.sourceLines), len(aligned.previewLines))
@@ -218,7 +218,7 @@ z = 30`
 	m.previewMode = PreviewFull
 
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Debug: check results directly
 	lineResults := m.GetLineResults()
@@ -299,7 +299,7 @@ z = 30`
 	}
 
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("Mode: %v, CursorLine: %d, EditBuf: %q", m.mode, m.cursorLine, m.editBuf)
 	t.Logf("AlignedModel: source=%d, preview=%d lines", len(aligned.sourceLines), len(aligned.previewLines))

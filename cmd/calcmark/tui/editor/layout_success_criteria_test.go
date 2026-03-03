@@ -79,7 +79,7 @@ func TestSC1_SourceAndResultsSideBySide(t *testing.T) {
 	}
 
 	// --- Wiring: call computeAlignedPanes and assert on alignment invariant ---
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// The 1:1 alignment invariant: source and preview must have same line count
 	if len(aligned.sourceLines) != len(aligned.previewLines) {
@@ -96,7 +96,7 @@ func TestSC1_SourceAndResultsSideBySide(t *testing.T) {
 	}
 
 	// Verify Invariants from AlignedModel
-	freshAligned := m.computeAlignedModelFresh(leftWidth, rightWidth)
+	freshAligned := m.computeAlignedModelFresh(leftWidth, rightWidth, m.GetLineResults())
 	inv := freshAligned.Invariants()
 	if !inv.SourcePreviewMatch {
 		t.Error("AlignedModel invariant SourcePreviewMatch is false")
@@ -138,7 +138,7 @@ func TestSC2_SourceWrapsAtColumnBoundary(t *testing.T) {
 	t.Logf("leftWidth=%d, sourceContentWidth=%d, rightWidth=%d", leftWidth, sourceContentWidth, rightWidth)
 
 	// --- Wiring: call computeAlignedPanes ---
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Count how many visual lines belong to source line 0
 	sourceVisualLineCount := 0
@@ -437,7 +437,7 @@ func TestSC5_ResizeReflowsCorrectly(t *testing.T) {
 	}
 
 	// --- Verify alignment still holds after resize ---
-	aligned := m.computeAlignedPanes(leftWidth2, rightWidth2)
+	aligned := m.computeAlignedPanes(leftWidth2, rightWidth2, m.GetLineResults())
 	if len(aligned.sourceLines) != len(aligned.previewLines) {
 		t.Errorf("After resize: alignment broken, source=%d preview=%d",
 			len(aligned.sourceLines), len(aligned.previewLines))

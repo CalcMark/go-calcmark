@@ -55,7 +55,7 @@ salary = $5000
 		leftWidth, rightWidth := m.GetPaneWidths(m.width)
 		const dividerWidth = 1
 		leftContentWidth := leftWidth - dividerWidth
-		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 		preview := m.renderPreviewPaneAligned(rightWidth, m.height-2, aligned)
 		previewLines := strings.Split(preview, "\n")
 
@@ -180,7 +180,7 @@ savings = salary * savings_rate
 		leftWidth, rightWidth := m.GetPaneWidths(m.width)
 		const dividerWidth = 1
 		leftContentWidth := leftWidth - dividerWidth
-		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 		preview := m.renderPreviewPaneAligned(rightWidth, m.height-2, aligned)
 		previewLines := strings.Split(preview, "\n")
 

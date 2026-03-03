@@ -17,7 +17,7 @@ func TestSourceToVisualMapping_BasicCase(t *testing.T) {
 	m.height = 24
 
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	totalSourceLines := m.TotalLines()
 	t.Logf("Document has %d source lines", totalSourceLines)
@@ -68,7 +68,7 @@ func TestSourceToVisualMapping_PreviewWraps(t *testing.T) {
 	m2.height = 24
 
 	leftWidth, rightWidth := m2.GetPaneWidths(m2.width)
-	aligned := m2.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m2.computeAlignedPanes(leftWidth, rightWidth, m2.GetLineResults())
 
 	t.Logf("Source lines: %d, Preview lines: %d", len(aligned.sourceLines), len(aligned.previewLines))
 	t.Logf("sourceToVisual map: %v", aligned.sourceToVisual)
@@ -108,7 +108,7 @@ x = 100`
 	m.height = 24
 
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("Total source lines in doc: %d", m.TotalLines())
 	t.Logf("Visual source lines: %d, Visual preview lines: %d",
@@ -162,7 +162,7 @@ line5 = 5`
 	m.cursorLine = 1
 
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Get the visual line index for cursor
 	cursorVisualLine, ok := aligned.sourceToVisual[m.cursorLine]
@@ -218,7 +218,7 @@ z = 3`
 	sourceContentWidth := leftWidth - 4 - 2
 	t.Logf("Source content width: %d", sourceContentWidth)
 
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Log all visual lines for debugging
 	t.Log("Source visual lines:")
@@ -277,7 +277,7 @@ line9 = 9`
 	m.previewMode = PreviewFull
 
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("Total visual lines: %d", len(aligned.sourceLines))
 	t.Logf("Visible height: ~%d (height=%d minus headers/footers)", m.height-6, m.height)
@@ -328,7 +328,7 @@ another_short = 3`
 	sourceContentWidth := leftWidth - 4 - 2
 	t.Logf("Source content width: %d", sourceContentWidth)
 
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Log the visual structure
 	t.Log("Visual line structure:")
@@ -386,7 +386,7 @@ short = 5`
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 
 	// Check initial visual structure
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	t.Logf("Visual structure (%d visual lines for %d source lines):",
 		len(aligned.sourceLines), m.TotalLines())
 	for i, sl := range aligned.sourceLines {
@@ -469,7 +469,7 @@ func TestPaneAlignment_ExactDimensions(t *testing.T) {
 			m.height = tc.height
 
 			leftWidth, rightWidth := m.GetPaneWidths(m.width)
-			aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+			aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 			t.Logf("Width=%d -> left=%d, right=%d", tc.width, leftWidth, rightWidth)
 			t.Logf("Source lines: %d, Preview lines: %d",
@@ -557,7 +557,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`,
 			m.height = 24
 
 			leftWidth, rightWidth := m.GetPaneWidths(m.width)
-			aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+			aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 			if len(aligned.sourceLines) != len(aligned.previewLines) {
 				t.Errorf("Source lines (%d) != Preview lines (%d)",

@@ -63,7 +63,7 @@ func TestFirstLineBumpWhenTyping(t *testing.T) {
 func countVisualLines(m Model) int {
 	// Use the aligned computation to get actual visual line count
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	return len(aligned.sourceLines)
 }
 

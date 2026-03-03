@@ -103,11 +103,14 @@ func (m Model) View() tea.View {
 	// Pane content height (minus header row)
 	paneContentHeight := max(contentHeight-1, 3)
 
+	// Compute line results ONCE per frame and pass to all sub-renderers.
+	results := m.GetLineResults()
+
 	// CRITICAL: Compute aligned line structure ONCE to avoid cycles.
 	// Use leftContentWidth (not leftWidth) because divider takes 1 char from left pane
 	// Both widths are fixed, and we compute wrapping/padding based on them.
 	// This prevents: preview reflows → padding changes → width changes → reflow...
-	aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, results)
 
 	// Render source pane with header
 	sourceHeader := lipgloss.NewStyle().
@@ -183,7 +186,7 @@ func (m Model) View() tea.View {
 	allUILines = append(allUILines, emptyLine)
 
 	// Context footer (variables referenced in current line)
-	contextFooter := m.renderContextFooter(totalWidth)
+	contextFooter := m.renderContextFooter(totalWidth, results)
 	// The context footer is already multiple lines, so we need to handle each line
 	contextFooterLines := strings.Split(contextFooter, "\n")
 	for i, line := range contextFooterLines {
@@ -239,12 +242,12 @@ func (m Model) View() tea.View {
 // computeAlignedPanes computes both pane line structures once with fixed widths.
 // This is the single source of truth for alignment, preventing reflow cycles.
 // It uses the cached AlignedModel and converts to the legacy format for rendering.
-func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
+func (m Model) computeAlignedPanes(sourceWidth, previewWidth int, results []LineResult) alignedPanes {
 	// Use the cached AlignedModel - this is the canonical computation
 	// Note: We need a mutable reference to update the cache, but View() receives
 	// a value copy. For now, we recompute each time in View() but the AlignedModel
 	// computation is still the single source of truth.
-	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth)
+	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth, results)
 
 	// Convert AlignedModel to legacy alignedPanes format
 	sourceLines := make([]sourceLine, len(aligned.SourceLines))
@@ -280,14 +283,14 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int) alignedPanes {
 
 // computeAlignedModelFresh computes a fresh AlignedModel without caching.
 // Used by computeAlignedPanes since View() receives a value copy of Model.
-func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int) AlignedModel {
+func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int, results []LineResult) AlignedModel {
 	// Calculate content width for source pane (accounting for line numbers)
 	lineNumWidth := 4
 	sourceContentWidth := max(sourceWidth-lineNumWidth-2, 10)
 
 	input := AlignedModelInput{
 		Lines:              m.GetLines(),
-		Results:            m.GetLineResults(),
+		Results:            results,
 		SourceContentWidth: sourceContentWidth,
 		PreviewWidth:       previewWidth,
 		CursorLine:         m.cursorLine,

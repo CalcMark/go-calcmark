@@ -187,7 +187,7 @@ savings_rate = 0.20`
 		leftWidth, rightWidth := m.GetPaneWidths(m.width)
 		const dividerWidth = 1
 		leftContentWidth := leftWidth - dividerWidth
-		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 
 		// Count pre-computed visual lines for this source line in the aligned model
 		preComputedCount := 0
@@ -267,7 +267,7 @@ savings = $5000 * savings_rate`
 				m.editBuf = ""
 				m.loadCurrentLineIntoEditBuffer()
 
-				aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+				aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 				sourcePane := m.renderSourcePaneAligned(leftContentWidth, paneHeight, aligned)
 				previewPane := m.renderPreviewPaneAligned(rightWidth, paneHeight, aligned)
 
@@ -359,7 +359,7 @@ savings = salary * savings_rate`
 		leftWidth, rightWidth := m.GetPaneWidths(m.width)
 		const dividerWidth = 1
 		leftContentWidth := leftWidth - dividerWidth
-		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth)
+		aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, m.GetLineResults())
 		preview := m.renderPreviewPaneAligned(rightWidth, m.height-2, aligned)
 		previewLines := strings.Split(preview, "\n")
 

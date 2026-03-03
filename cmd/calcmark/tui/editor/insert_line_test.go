@@ -143,7 +143,7 @@ y = 20`
 
 	// Compute visual alignment
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("After insert, cursorLine=%d", m.cursorLine)
 	t.Logf("Source lines: %d, Preview lines: %d",
@@ -236,7 +236,7 @@ func TestInsertLine_ThenTypeAndExit(t *testing.T) {
 
 	// Visual alignment should be correct
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	if len(aligned.sourceLines) != len(aligned.previewLines) {
 		t.Errorf("Alignment broken after edit: source=%d, preview=%d",
@@ -280,7 +280,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 
 	// Get visual state before insert
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	visualBefore := alignedBefore.sourceToVisual[m.cursorLine]
 	t.Logf("Before insert: cursorLine=%d, visual=%d", m.cursorLine, visualBefore)
 
@@ -304,7 +304,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 	}
 
 	// Get visual state after insert
-	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	visualAfter, ok := alignedAfter.sourceToVisual[m.cursorLine]
 	if !ok {
 		t.Errorf("No visual mapping for cursor line %d after insert", m.cursorLine)
@@ -335,7 +335,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 		m.cursorLine = m.TotalLines() - 1
 	}
 
-	alignedNav := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedNav := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	visualNav, ok := alignedNav.sourceToVisual[m.cursorLine]
 	if !ok {
 		t.Errorf("No visual mapping for cursor line %d after navigation", m.cursorLine)
@@ -418,7 +418,7 @@ y = 20`
 
 	// Get visual state during edit
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	alignedEdit := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedEdit := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("During edit: %d source lines, %d preview lines",
 		len(alignedEdit.sourceLines), len(alignedEdit.previewLines))
@@ -445,7 +445,7 @@ y = 20`
 	}
 
 	// Visual alignment should be correct after exit
-	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	if len(alignedAfter.sourceLines) != len(alignedAfter.previewLines) {
 		t.Errorf("Alignment broken after exit: source=%d, preview=%d",
 			len(alignedAfter.sourceLines), len(alignedAfter.previewLines))
@@ -499,7 +499,7 @@ line4 = 4`
 			}
 
 			// Get aligned panes
-			aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+			aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 			// CRITICAL: sourceToVisual should have entries for ALL source lines
 			for srcLine := 0; srcLine < m.TotalLines(); srcLine++ {
@@ -616,7 +616,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 
 	// Get initial aligned state
-	alignedInitial := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedInitial := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	t.Logf("Initial: %d source lines, %d source visual lines",
 		m.TotalLines(), len(alignedInitial.sourceLines))
 
@@ -631,7 +631,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 	t.Logf("\nCursor at line 8 (snappy_compressed)")
 
 	// Check that cursor highlight is correct BEFORE insert
-	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	cursorVisualBefore := -1
 	for i, sl := range alignedBefore.sourceLines {
 		if sl.isCursorLine {
@@ -654,7 +654,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 	t.Logf("After insert: cursor now at line %d", m.cursorLine)
 
 	// Check cursor highlight AFTER insert
-	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	cursorVisualAfter := -1
 	for i, sl := range alignedAfter.sourceLines {
 		if sl.isCursorLine {
@@ -676,7 +676,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`
 	m.cursorLine++
 	t.Logf("After j: cursor now at line %d", m.cursorLine)
 
-	alignedNav := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedNav := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	cursorVisualNav := -1
 	for i, sl := range alignedNav.sourceLines {
 		if sl.isCursorLine {
@@ -739,7 +739,7 @@ line3 = 3`
 
 	// Verify visual structure
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	t.Logf("Visual structure:")
 	for i, sl := range aligned.sourceLines {
@@ -778,7 +778,7 @@ line3 = 3`
 	t.Logf("After 'j': cursor=%d", m.cursorLine)
 
 	// Check visual alignment after navigation
-	alignedNav := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedNav := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	cursorVisualNav := -1
 	for i, sl := range alignedNav.sourceLines {
 		if sl.isCursorLine {
@@ -879,7 +879,7 @@ another = 2`
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 
 	// Get initial visual state
-	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	t.Logf("Before insert: %d source visual lines", len(alignedBefore.sourceLines))
 	for i, sl := range alignedBefore.sourceLines {
 		t.Logf("  [%d] srcIdx=%d lineNum=%d wrap=%v content=%q",
@@ -902,7 +902,7 @@ another = 2`
 	}
 
 	// Get visual state after insert
-	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedAfter := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	t.Logf("After insert: %d source visual lines", len(alignedAfter.sourceLines))
 	for i, sl := range alignedAfter.sourceLines {
 		t.Logf("  [%d] srcIdx=%d lineNum=%d wrap=%v padding=%v cursor=%v content=%q",
@@ -993,7 +993,7 @@ lz4_compressed = compress(100 MB, lz4)`
 
 	// Verify aligned model has all lines
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedModelFresh(leftWidth, rightWidth)
+	aligned := m.computeAlignedModelFresh(leftWidth, rightWidth, m.GetLineResults())
 
 	for lineNum := range len(lines) {
 		found := false

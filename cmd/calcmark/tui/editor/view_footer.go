@@ -10,8 +10,7 @@ import (
 
 // renderContextFooter renders the context footer showing errors or referenced variables.
 // Delegates to components.RenderContextFooter with prepared state.
-func (m Model) renderContextFooter(width int) string {
-	results := m.GetLineResults()
+func (m Model) renderContextFooter(width int, results []LineResult) string {
 
 	// Build state for the pure render function
 	state := components.ContextFooterState{}

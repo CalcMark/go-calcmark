@@ -12,7 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var evalVerbose bool
+var (
+	evalVerbose bool
+	evalFormat  string
+)
 
 var evalCmd = &cobra.Command{
 	Use:   "eval [file.cm]",
@@ -20,9 +23,10 @@ var evalCmd = &cobra.Command{
 	Long: `Evaluate a CalcMark file or stdin and print the result.
 
 Examples:
-  cm eval calc.cm           Evaluate file and print result
-  cm eval -v calc.cm        Evaluate with verbose output (all values)
-  echo "x = 10" | cm eval   Evaluate from stdin`,
+  cm eval calc.cm                Evaluate file and print result
+  cm eval -v calc.cm             Evaluate with verbose output (all values)
+  cm eval --format json calc.cm  Evaluate and output as JSON
+  echo "x = 10" | cm eval       Evaluate from stdin`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runEval(args)
@@ -31,6 +35,7 @@ Examples:
 
 func init() {
 	evalCmd.Flags().BoolVarP(&evalVerbose, "verbose", "v", false, "Show all intermediate values")
+	evalCmd.Flags().StringVar(&evalFormat, "format", "text", "Output format: text, json, html, md, cm")
 	rootCmd.AddCommand(evalCmd)
 }
 
@@ -90,8 +95,8 @@ func runEval(args []string) error {
 		return fmt.Errorf("evaluation error: %w", err)
 	}
 
-	// Use text formatter for eval output
-	formatter := format.GetFormatter("text", "")
+	// Use the selected formatter for eval output (defaults to "text")
+	formatter := format.GetFormatter(evalFormat, "")
 
 	opts := format.Options{
 		Verbose:          evalVerbose,

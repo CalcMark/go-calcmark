@@ -294,7 +294,7 @@ func TestOrderedListRendering(t *testing.T) {
 
 	// Get the aligned model which should now render blocks correctly
 	sourceWidth, previewWidth := m.GetPaneWidths(80)
-	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth)
+	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth, m.GetLineResults())
 
 	t.Log("=== Block-level rendering test ===")
 	t.Logf("Source lines: %d", len(aligned.SourceLines))
@@ -326,7 +326,7 @@ func TestEmptyDocumentSourcePreviewAlignment(t *testing.T) {
 
 	// Get initial alignment
 	sourceWidth, previewWidth := m.GetPaneWidths(80)
-	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth)
+	aligned := m.computeAlignedModelFresh(sourceWidth, previewWidth, m.GetLineResults())
 
 	t.Logf("Initial empty document alignment:")
 	t.Logf("  Source lines: %d", len(aligned.SourceLines))
@@ -349,7 +349,7 @@ func TestEmptyDocumentSourcePreviewAlignment(t *testing.T) {
 	m = result.(Model)
 
 	// Get alignment after typing
-	aligned2 := m.computeAlignedModelFresh(sourceWidth, previewWidth)
+	aligned2 := m.computeAlignedModelFresh(sourceWidth, previewWidth, m.GetLineResults())
 
 	t.Logf("After typing '# Header':")
 	t.Logf("  Source lines: %d", len(aligned2.SourceLines))

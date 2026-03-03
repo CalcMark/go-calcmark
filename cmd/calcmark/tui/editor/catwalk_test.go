@@ -115,7 +115,7 @@ z = 30`
 			WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				leftWidth, rightWidth := model.GetPaneWidths(model.width)
-				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth, model.GetLineResults())
 
 				var buf strings.Builder
 				buf.WriteString("Source and Preview Alignment:\n")
@@ -343,7 +343,7 @@ z = 30`
 			WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				leftWidth, rightWidth := model.GetPaneWidths(model.width)
-				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth, model.GetLineResults())
 
 				var buf strings.Builder
 				buf.WriteString("Source and Preview Alignment:\n")
@@ -962,7 +962,7 @@ Another very long line that will certainly wrap when displayed at narrow width.`
 			WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				leftWidth, rightWidth := model.GetPaneWidths(model.width)
-				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth, model.GetLineResults())
 
 				var buf strings.Builder
 				buf.WriteString("Source and Preview Alignment:\n")
@@ -1183,7 +1183,7 @@ net = total_gross * 0.7`,
 			WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 				model := m.(Model)
 				leftWidth, rightWidth := model.GetPaneWidths(model.width)
-				aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+				aligned := model.computeAlignedPanes(leftWidth, rightWidth, model.GetLineResults())
 
 				var buf strings.Builder
 				buf.WriteString("Source and Preview Alignment:\n")

@@ -708,7 +708,7 @@ func (m Model) Key() shared.KeyMap {
 // This is used by catwalk tests to verify visual/source line consistency.
 func (m Model) Debug() string {
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Get cursor's visual position from the mapping
 	cursorVisual := -1
@@ -753,7 +753,7 @@ func (m Model) Debug() string {
 // This is used for debugging alignment issues.
 func (m Model) DebugLines() string {
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("sourceToVisual: %v\n", aligned.sourceToVisual))

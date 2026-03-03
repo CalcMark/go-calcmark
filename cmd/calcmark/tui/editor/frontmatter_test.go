@@ -828,7 +828,7 @@ func alignmentObserver() optionV2 {
 	return WithObserverV2("alignment", func(out io.Writer, m tea.Model) error {
 		model := m.(Model)
 		leftWidth, rightWidth := model.GetPaneWidths(model.width)
-		aligned := model.computeAlignedPanes(leftWidth, rightWidth)
+		aligned := model.computeAlignedPanes(leftWidth, rightWidth, model.GetLineResults())
 
 		var buf strings.Builder
 		buf.WriteString("Source and Preview Alignment:\n")

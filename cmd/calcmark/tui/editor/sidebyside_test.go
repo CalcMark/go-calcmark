@@ -488,7 +488,7 @@ func TestPreviewPaneFiltering(t *testing.T) {
 
 			// Get aligned panes to check preview content
 			leftWidth, rightWidth := m.GetPaneWidths(m.width)
-			aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+			aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 			// Build preview content string
 			var previewContent strings.Builder

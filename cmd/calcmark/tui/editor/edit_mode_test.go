@@ -564,7 +564,7 @@ this_is_line_two = 2`
 
 	// Compute aligned panes
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Find the source line that is marked as cursor line
 	cursorLineFound := false
@@ -617,7 +617,7 @@ y = 20`
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
 
 	// Get aligned panes before edit mode
-	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedBefore := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	visualBefore := alignedBefore.sourceToVisual[m.cursorLine]
 
 	// Enter edit mode
@@ -625,7 +625,7 @@ y = 20`
 	m.loadCurrentLineIntoEditBuffer()
 
 	// Get aligned panes in edit mode
-	alignedDuring := m.computeAlignedPanes(leftWidth, rightWidth)
+	alignedDuring := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 	visualDuring := alignedDuring.sourceToVisual[m.cursorLine]
 
 	t.Logf("Visual line before edit: %d, during edit: %d", visualBefore, visualDuring)
@@ -679,7 +679,7 @@ this_is_a_line_that_is_long_enough_to_wrap_in_narrow_terminal = 999`
 
 	// Compute aligned panes in edit mode
 	leftWidth, rightWidth := m.GetPaneWidths(m.width)
-	aligned := m.computeAlignedPanes(leftWidth, rightWidth)
+	aligned := m.computeAlignedPanes(leftWidth, rightWidth, m.GetLineResults())
 
 	// Find cursor line in visual structure
 	cursorVisualIdx := -1
