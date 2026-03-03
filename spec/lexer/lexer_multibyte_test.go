@@ -258,25 +258,17 @@ func TestMultibyteTokenPositions(t *testing.T) {
 	}
 }
 
-// TestMultibyteGracefulDegradation verifies that unsupported emoji (outside
-// the supported ranges) cause tokenization failure, which triggers graceful
-// degradation to markdown at the document level.
+// TestMultibyteGracefulDegradation verifies that complex ZWJ emoji sequences
+// and characters outside all supported ranges cause tokenization failure,
+// triggering graceful degradation to markdown at the document level.
 func TestMultibyteGracefulDegradation(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
 	}{
 		{
-			name:  "Star emoji outside supported range",
-			input: "⭐ = 5",
-		},
-		{
-			name:  "Star emoji with variation selector",
-			input: "⭐️ = 5",
-		},
-		{
-			name:  "Checkmark emoji outside supported range",
-			input: "✅ = true",
+			name:  "ZWJ family sequence",
+			input: "👨‍👩‍👧‍👦 = 4",
 		},
 	}
 
@@ -285,6 +277,87 @@ func TestMultibyteGracefulDegradation(t *testing.T) {
 			_, err := tokenizeHelper(tt.input)
 			if err == nil {
 				t.Error("Expected tokenization to fail for unsupported emoji, but it succeeded")
+			}
+		})
+	}
+}
+
+// TestBMPEmojiIdentifiers verifies that BMP emoji (⭐, ✅, ☀️, etc.) from
+// the Miscellaneous Symbols, Dingbats, and Stars ranges work as identifiers.
+func TestBMPEmojiIdentifiers(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantIdent string
+	}{
+		{
+			name:      "Star emoji (U+2B50)",
+			input:     "⭐ = 5",
+			wantIdent: "⭐",
+		},
+		{
+			name:      "Star with variation selector (U+2B50 U+FE0F)",
+			input:     "⭐️ = 5",
+			wantIdent: "⭐️",
+		},
+		{
+			name:      "Check mark (U+2705)",
+			input:     "✅ = 5",
+			wantIdent: "✅",
+		},
+		{
+			name:      "Sun (U+2600)",
+			input:     "☀ = 10",
+			wantIdent: "☀",
+		},
+		{
+			name:      "Sun with variation selector (U+2600 U+FE0F)",
+			input:     "☀️ = 10",
+			wantIdent: "☀️",
+		},
+		{
+			name:      "Warning sign (U+26A0)",
+			input:     "⚠ = 1",
+			wantIdent: "⚠",
+		},
+		{
+			name:      "Lightning (U+26A1)",
+			input:     "⚡ = 100",
+			wantIdent: "⚡",
+		},
+		{
+			name:      "Scissors (U+2702)",
+			input:     "✂ = 2",
+			wantIdent: "✂",
+		},
+		{
+			name:      "Cross mark (U+274C)",
+			input:     "❌ = 0",
+			wantIdent: "❌",
+		},
+		{
+			name:      "Heart (U+2764)",
+			input:     "❤ = 100",
+			wantIdent: "❤",
+		},
+		{
+			name:      "Circle (U+2B55)",
+			input:     "⭕ = 42",
+			wantIdent: "⭕",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokens, err := tokenizeHelper(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected tokenization error: %v", err)
+			}
+			if tokens[0].Type != IDENTIFIER {
+				t.Errorf("First token type: got %s, want IDENTIFIER", tokens[0].Type)
+			}
+			if tokens[0].Value != tt.wantIdent {
+				t.Errorf("Identifier: got %q, want %q", tokens[0].Value, tt.wantIdent)
 			}
 		})
 	}

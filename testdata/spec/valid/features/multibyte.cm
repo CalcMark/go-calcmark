@@ -16,10 +16,20 @@ résumé = naïve * 2
 Москва = 100
 доход = Москва + 50
 
-## Emoji identifiers (supported ranges U+1F300-U+1FA6F)
+## SMP emoji identifiers (U+1F300-U+1FA6F)
 💰 = 1000
 🎯 = 💰 + 500
 📊 = 💰 * 2
+
+## BMP emoji identifiers (U+2600-U+27BF, U+2B50-U+2B55)
+⭐ = 5
+⭐️ = 手 + 23
+✅ = ⭐️ * 2
+☀ = 10
+⚡ = 100
+❤ = 42
+❌ = 0
+⭕ = 1
 
 ## Mixed multi-byte and ASCII
 total = 手 + 給料

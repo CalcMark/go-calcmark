@@ -551,6 +551,11 @@ type EmojiRange struct {
 // EmojiRanges defines the Unicode emoji ranges supported for identifiers.
 // This list is exported for grammar introspection.
 var EmojiRanges = []EmojiRange{
+	// BMP emoji blocks (U+2xxx)
+	{Start: 0x2600, End: 0x26FF, Name: "Miscellaneous Symbols"},
+	{Start: 0x2700, End: 0x27BF, Name: "Dingbats"},
+	{Start: 0x2B50, End: 0x2B55, Name: "Stars and Circles"},
+	// SMP emoji blocks (U+1Fxxx)
 	{Start: 0x1F600, End: 0x1F64F, Name: "Emoticons"},
 	{Start: 0x1F300, End: 0x1F5FF, Name: "Miscellaneous Symbols and Pictographs"},
 	{Start: 0x1F680, End: 0x1F6FF, Name: "Transport and Map Symbols"},
@@ -559,9 +564,9 @@ var EmojiRanges = []EmojiRange{
 }
 
 // isEmoji checks if a rune is an emoji character.
-// Covers common emoji ranges sufficient for typical use cases.
-// Does not handle: emoji modifiers, ZWJ sequences, or all Unicode emoji blocks.
-// This is intentionally simple - extend EmojiRanges if more coverage is needed.
+// Covers common emoji ranges including BMP symbols (⭐, ✅, ☀) and SMP pictographs.
+// Does not handle: ZWJ sequences or all Unicode emoji blocks.
+// Variation selectors (U+FE0F) are accepted as identifier continuations via unicode.IsMark().
 func isEmoji(r rune) bool {
 	for _, emojiRange := range EmojiRanges {
 		if r >= emojiRange.Start && r <= emojiRange.End {

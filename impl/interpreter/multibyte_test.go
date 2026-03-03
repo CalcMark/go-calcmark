@@ -57,7 +57,7 @@ func TestMultibyteVariableAssignment(t *testing.T) {
 			expected: "600",
 		},
 
-		// Emoji (supported ranges)
+		// SMP emoji (supported ranges)
 		{
 			name:     "Emoji money bag assignment",
 			input:    "💰 = 1000\n",
@@ -67,6 +67,33 @@ func TestMultibyteVariableAssignment(t *testing.T) {
 			name:     "Emoji in expression",
 			input:    "💰 = 1000\n🎯 = 💰 + 500\n",
 			expected: "1500",
+		},
+
+		// BMP emoji (Miscellaneous Symbols, Dingbats, Stars)
+		{
+			name:     "Star emoji assignment",
+			input:    "⭐ = 5\n",
+			expected: "5",
+		},
+		{
+			name:     "Star with variation selector",
+			input:    "⭐️ = 38\n",
+			expected: "38",
+		},
+		{
+			name:     "Check mark emoji",
+			input:    "✅ = 42\n",
+			expected: "42",
+		},
+		{
+			name:     "BMP emoji in expression",
+			input:    "⭐ = 10\n✅ = ⭐ + 5\n",
+			expected: "15",
+		},
+		{
+			name:     "Issue 12 sample: star with multiplier",
+			input:    "a = 3\n手 = a * 5\n⭐️ = 手 + 23\ntest = ⭐️ * 1K\n",
+			expected: "38000",
 		},
 	}
 

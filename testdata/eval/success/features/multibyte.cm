@@ -15,9 +15,14 @@ résumé = café + 50
 Москва = 200
 доход = Москва * 3
 
-## Emoji variable names (supported ranges)
+## Emoji variable names (SMP ranges)
 💰 = 1000
 🎯 = 💰 + 500
+
+## BMP emoji variable names (issue #12)
+⭐️ = 手 + 23
+✅ = ⭐️ * 2
+test = ⭐️ * 1K
 
 ## Cross-script variable references
 total = 手 + café + Москва + 💰

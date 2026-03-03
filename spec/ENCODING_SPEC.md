@@ -42,8 +42,10 @@ An identifier MUST start with:
 - **Unicode Letter** (category L): any letter from any language
   - Examples: `a-z`, `A-Z`, `café`, `給料`, `Москва`
 - **Underscore**: U+005F (`_`)
-- **Emoji**: Unicode emoji characters (category So, Emoji_Presentation)
-  - Examples: `💰`, `🎯`, `📊`
+- **Emoji**: Unicode emoji characters from supported ranges
+  - BMP: Miscellaneous Symbols (U+2600-U+26FF), Dingbats (U+2700-U+27BF), Stars and Circles (U+2B50-U+2B55)
+  - SMP: Emoticons, Pictographs, Transport, Supplemental (U+1F300-U+1FA6F)
+  - Examples: `💰`, `🎯`, `📊`, `⭐`, `✅`, `☀`, `⚡`, `❤`
 
 ### Identifier Continue Characters
 After the first character, identifiers MAY contain:

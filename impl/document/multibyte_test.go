@@ -42,10 +42,10 @@ total = 手 + café`
 	env := eval.GetEnvironment()
 
 	expectations := map[string]string{
-		"a":  "3",
-		"手":  "15",
-		"給料": "5000",
-		"收入": "60000",
+		"a":    "3",
+		"手":    "15",
+		"給料":   "5000",
+		"收入":   "60000",
 		"café": "100",
 	}
 
@@ -74,6 +74,70 @@ total = 手 + café`
 		} else {
 			t.Logf("Variable 'total' = %s (cross-script reference works)", actual)
 		}
+	}
+}
+
+// TestMultibyteDocumentIssue12 validates the exact sample document from issue #12,
+// including ⭐️ as a variable name with the expanded BMP emoji ranges.
+func TestMultibyteDocumentIssue12(t *testing.T) {
+	source := `# 她鳥足飽經半方結己平向說眼虎
+
+This is plain ascii.
+
+a = 3
+手 = a * 5
+
+就明細今士亮上封訴蝸花果但入東
+
+⭐️ = 手 + 23
+
+雨久昔邊口
+
+test = ⭐️ * 1K`
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	env := eval.GetEnvironment()
+
+	// a = 3
+	if val, ok := env.Get("a"); !ok {
+		t.Error("Variable 'a' not found")
+	} else if val.String() != "3" {
+		t.Errorf("a = %q, want %q", val.String(), "3")
+	}
+
+	// 手 = 3 * 5 = 15
+	if val, ok := env.Get("手"); !ok {
+		t.Error("Variable '手' not found")
+	} else if val.String() != "15" {
+		t.Errorf("手 = %q, want %q", val.String(), "15")
+	}
+
+	// ⭐️ = 15 + 23 = 38
+	if val, ok := env.Get("⭐️"); !ok {
+		t.Error("Variable '⭐️' not found - BMP emoji not working as identifier")
+	} else if val.String() != "38" {
+		t.Errorf("⭐️ = %q, want %q", val.String(), "38")
+	} else {
+		t.Logf("⭐️ = %s (BMP emoji identifier works)", val.String())
+	}
+
+	// test = 38 * 1000 = 38000
+	if val, ok := env.Get("test"); !ok {
+		t.Error("Variable 'test' not found")
+	} else if val.String() != "38000" {
+		t.Errorf("test = %q, want %q", val.String(), "38000")
+	} else {
+		t.Logf("test = %s (BMP emoji variable reference works)", val.String())
 	}
 }
 
