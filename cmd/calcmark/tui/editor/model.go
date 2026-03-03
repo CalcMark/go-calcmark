@@ -1002,6 +1002,7 @@ func isWordRune(ch rune) bool {
 }
 
 // acceptAutocomplete inserts the selected suggestion at the cursor.
+// Records an OpReplace on the undo stack so the acceptance can be undone.
 func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 	if m.autocompleteState.Selected < 0 ||
 		m.autocompleteState.Selected >= len(m.autocompleteState.Suggestions) {
@@ -1022,9 +1023,16 @@ func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 		insertText += "("
 	}
 
+	// Capture state BEFORE the edit for undo
+	beforeCol := m.cursorCol
+	beforeScroll := m.scrollOffset
+
 	// Replace prefix with selected suggestion (UTF-8 safe)
 	prefix := m.autocompleteState.Prefix
 	prefixStart := max(m.cursorCol-runeLen(prefix), 0)
+
+	// Commit any pending typing batch as a separate undo step
+	m.undoManager.ForceBoundary()
 
 	// Delete the prefix, then insert the completion text
 	beforePrefix, _ := runeSlice(m.editBuf, prefixStart)
@@ -1032,6 +1040,22 @@ func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
 	m.editBuf = beforePrefix + insertText + afterCursor
 	m.cursorCol = prefixStart + runeLen(insertText)
 
+	// Record the replacement for undo (Col = where replacement starts, not cursor)
+	m.undoManager.AddOperation(EditOperation{
+		Type:         OpReplace,
+		Line:         m.cursorLine,
+		Col:          prefixStart,
+		OldText:      prefix,
+		NewText:      insertText,
+		CursorLine:   m.cursorLine,
+		CursorCol:    beforeCol,
+		ScrollOffset: beforeScroll,
+	})
+
+	// Commit as a discrete undo step (like paste)
+	m.undoManager.ForceBoundary()
+
+	m.modified = true
 	m.exitAutocomplete()
 	m.transitionToEditing()
 	return m.debounceUpdate()

@@ -91,6 +91,7 @@ z = 30`
 			"open_from_unsaved",                   // TestEditorCatwalkOpenFromUnsaved
 			"context_footer_refs",                 // TestEditorCatwalkContextFooterRefs
 			"context_footer_self_ref",             // TestEditorCatwalkContextFooterSelfRef
+			"autocomplete_undo",                   // TestEditorCatwalkAutocompleteUndo
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1727,6 +1728,43 @@ z = 30`
 		RunModelV2(t, path, m,
 			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkAutocompleteUndo tests undo/redo after accepting autocomplete.
+// Verifies: Issue #15 - autocomplete acceptance must be recorded on the undo stack.
+// Uses a fresh document to avoid shared mutation pollution from other catwalk tests.
+func TestEditorCatwalkAutocompleteUndo(t *testing.T) {
+	content := `# Header
+x = 10
+y = 20
+z = 30`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "/autocomplete_undo") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
 			}),
 		)
