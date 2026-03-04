@@ -123,6 +123,29 @@ var BuiltinFunctions = []FunctionDef{
 		Signature:   "capacity(demand, capacity_per_unit, unit, buffer?)",
 		Category:    "Capacity",
 	},
+
+	// Growth functions
+	{
+		Name:        "compound",
+		Synonyms:    []string{},
+		Description: "Compound growth: A = P(1+r)^n",
+		Signature:   "compound(principal, rate, duration, period?)",
+		Category:    "Growth",
+	},
+	{
+		Name:        "grow",
+		Synonyms:    []string{},
+		Description: "Linear growth: A = P + (increment x periods)",
+		Signature:   "grow(starting_amount, increment, duration)",
+		Category:    "Growth",
+	},
+	{
+		Name:        "depreciate",
+		Synonyms:    []string{},
+		Description: "Declining balance depreciation",
+		Signature:   "depreciate(principal, rate, duration, salvage?)",
+		Category:    "Growth",
+	},
 }
 
 // functionEvalMap maps function names to their Eval implementations.
@@ -140,6 +163,9 @@ var functionEvalMap = map[string]func(interp *Interpreter, f *ast.FunctionCall) 
 	"seek":          evalSeekFunc,
 	"compress":      evalCompressFunc,
 	"capacity":      evalCapacityFunc,
+	"compound":      evalCompoundFunc,
+	"grow":          evalGrowFunc,
+	"depreciate":    evalDepreciateFunc,
 }
 
 func init() {

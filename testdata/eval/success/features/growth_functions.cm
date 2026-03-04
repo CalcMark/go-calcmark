@@ -1,0 +1,44 @@
+# Growth Functions - compound(), grow(), depreciate()
+
+# Compound growth: basic 3-arg form
+investment = compound($1000, 5%, 10)
+compound(500, 10%, 20)
+compound($10000, 8%, 5)
+
+# Compound growth with duration
+compound($1000, 5%, 10 years)
+
+# Compound growth with quantity
+compound(500 customers, 20%, 12)
+
+# Financial compounding: compounded modifier
+compound($1000, 5%, 10 years, compounded monthly)
+compound($1000, 5%, 10 years, compounded quarterly)
+
+# Linear growth
+savings = grow($500, $100, 36)
+grow(100, 20, 5)
+
+# Depreciation
+car_value = depreciate($50000, 15%, 5)
+depreciate($10000, 10%, 3)
+
+# Depreciation with salvage floor
+depreciate($50000, 15%, 20, $5000)
+
+# Natural language compound
+compound $1000 by 5% over 10 years
+compound $500 by 10% over 5
+
+# Natural language compound with per-period
+compound $1000 by 5% per month over 12 months
+
+# Natural language compound with compounded modifier
+compound $1000 by 12% compounded monthly over 10 years
+
+# Natural language grow
+grow 100 by 20 over 5 months
+
+# Natural language depreciate
+depreciate $50000 by 15% over 5 years
+depreciate $50000 by 15% over 5 years to $5000

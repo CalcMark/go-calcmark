@@ -53,6 +53,16 @@ var ReservedKeywords = map[string]TokenType{
 	"sqrt": FUNC_SQRT,
 }
 
+// ContextualKeywords are identifiers that should NOT be consumed as unit names
+// when they follow a number. They are used as separators in NL function syntax
+// (e.g., "compound 1000 by 5%") but are not full reserved keywords, so they
+// remain valid as standalone identifiers in other contexts.
+var ContextualKeywords = map[string]bool{
+	"by":         true, // Growth NL: "compound 1000 by 5%"
+	"compounded": true, // Growth NL: "compound 1000 by 12% compounded monthly"
+	"to":         true, // Growth NL: "depreciate 50000 by 15% over 5 years to 5000"
+}
+
 // LexerError represents a lexer error
 type LexerError struct {
 	Message string
@@ -317,6 +327,10 @@ func (l *Lexer) readNumber() Token {
 			l.pos = savedUnitPos
 			l.line = savedUnitLine
 			l.column = savedUnitCol
+		} else if ContextualKeywords[strings.ToLower(unitStr)] {
+			l.pos = savedUnitPos
+			l.line = savedUnitLine
+			l.column = savedUnitCol
 		} else {
 			quantityValue := fmt.Sprintf("%s:%s", value, unitStr)
 			return Token{
@@ -347,6 +361,9 @@ func (l *Lexer) readNumber() Token {
 				l.pos = savedPos
 			} else if BooleanKeywords[strings.ToLower(unitStr)] {
 				// Boolean keyword, not a unit - backtrack
+				l.pos = savedPos
+			} else if ContextualKeywords[strings.ToLower(unitStr)] {
+				// NL syntax keyword, not a unit - backtrack
 				l.pos = savedPos
 			} else {
 				// Check for multi-word units: "1 nautical mile", "5 metric tons", "10 square meters"

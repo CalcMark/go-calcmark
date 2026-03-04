@@ -517,7 +517,7 @@ func getGrowthFeatures() []Feature {
 	return []Feature{
 		{
 			Name:        "compound",
-			Category:    CategoryGrowth,
+			Category:    CategoryFunction,
 			Syntax:      "compound(principal, rate, periods)",
 			Description: "Calculate compound growth over time periods",
 			Aliases: []Alias{
@@ -527,7 +527,7 @@ func getGrowthFeatures() []Feature {
 		},
 		{
 			Name:        "grow",
-			Category:    CategoryGrowth,
+			Category:    CategoryFunction,
 			Syntax:      "grow(amount, increment, periods)",
 			Description: "Calculate linear growth by adding a fixed amount each period",
 			Aliases: []Alias{
@@ -537,7 +537,7 @@ func getGrowthFeatures() []Feature {
 		},
 		{
 			Name:        "depreciate",
-			Category:    CategoryGrowth,
+			Category:    CategoryFunction,
 			Syntax:      "depreciate(value, rate, periods)",
 			Description: "Calculate declining balance depreciation over time",
 			Aliases: []Alias{

@@ -1027,6 +1027,18 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			}
 		}
 
+		// NL growth function lookahead: "compound|grow|depreciate <expr> by ..."
+		// If not followed by LPAREN, it's NL syntax.
+		if identName == "compound" && !p.check(lexer.LPAREN) {
+			return p.parseNLCompoundFunction()
+		}
+		if identName == "grow" && !p.check(lexer.LPAREN) {
+			return p.parseNLGrowFunction()
+		}
+		if identName == "depreciate" && !p.check(lexer.LPAREN) {
+			return p.parseNLDepreciateFunction()
+		}
+
 		// Check if it's a function call (identifier followed by '(')
 		if p.check(lexer.LPAREN) {
 			// This is a function call, parse it
@@ -1210,6 +1222,10 @@ func isNaturalSyntaxKeyword(ident string) bool {
 		return true // Used in "as napkin" conversion syntax
 	case "read", "compress", "transfer":
 		return true // NL function triggers: "read 100 MB from ssd", etc.
+	case "compound", "grow", "depreciate":
+		return true // Growth function NL triggers
+	case "by", "compounded":
+		return true // Contextual keywords used in growth NL syntax
 	default:
 		return false
 	}

@@ -338,6 +338,21 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 			c.checkDataSizeBaseMixingForCapacity(f.Arguments[0], f.Arguments[1])
 		}
 		return
+	case "compound":
+		// compound(principal, rate, periods, modifier?)
+		// First 3 arguments are expressions, 4th (optional) is a period/compounded identifier
+		for i := 0; i < len(f.Arguments) && i < 3; i++ {
+			c.checkExpression(f.Arguments[i])
+		}
+		// Skip 4th argument (period identifier or compounded:freq modifier)
+		return
+	case "depreciate":
+		// depreciate(value, rate, periods, salvage?)
+		// All arguments are expressions
+		for _, arg := range f.Arguments {
+			c.checkExpression(arg)
+		}
+		return
 	}
 
 	// Check all arguments for other functions
