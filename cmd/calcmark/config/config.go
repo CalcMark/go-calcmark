@@ -65,7 +65,7 @@ func load() (*Config, error) {
 	}
 
 	// 2. Merge user config files (order matters: later overrides earlier)
-	if fallbackPath, err := FallbackConfigPath(); err == nil {
+	if fallbackPath, err := fallbackConfigPath(); err == nil {
 		if _, statErr := os.Stat(fallbackPath); statErr == nil {
 			v.SetConfigFile(fallbackPath)
 			_ = v.MergeInConfig() // Ignore errors - malformed config uses defaults
@@ -176,11 +176,6 @@ func Reload() (*Config, error) {
 	return Load()
 }
 
-// Error returns any error from the last load attempt.
-func Error() error {
-	return loadErr
-}
-
 // DefaultsTOML returns the raw embedded defaults.toml content.
 func DefaultsTOML() string {
 	return defaultsToml
@@ -194,17 +189,23 @@ func XDGConfigPath() (string, error) {
 		return filepath.Join(xdg, "calcmark", "config.toml"), nil
 	}
 	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	if err != nil {
+		return "", fmt.Errorf("determine home directory: %w", err)
+	}
+	if home == "" {
+		return "", fmt.Errorf("home directory is empty")
 	}
 	return filepath.Join(home, ".config", "calcmark", "config.toml"), nil
 }
 
-// FallbackConfigPath returns the legacy dotfile config path (~/.calcmarkrc.toml).
-func FallbackConfigPath() (string, error) {
+// fallbackConfigPath returns the legacy dotfile config path (~/.calcmarkrc.toml).
+func fallbackConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	if err != nil {
+		return "", fmt.Errorf("determine home directory: %w", err)
+	}
+	if home == "" {
+		return "", fmt.Errorf("home directory is empty")
 	}
 	return filepath.Join(home, ".calcmarkrc.toml"), nil
 }

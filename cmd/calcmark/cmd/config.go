@@ -39,7 +39,7 @@ func runConfigShow() error {
 	cfg := config.Get()
 	bytes, err := toml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return fmt.Errorf("marshal config: %w", err)
 	}
 	fmt.Println("# CalcMark effective configuration")
 	fmt.Println()
@@ -55,7 +55,7 @@ func runConfigCreate() error {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return fmt.Errorf("cannot create config directory: %w", err)
+		return fmt.Errorf("create config directory: %w", err)
 	}
 
 	// Atomic create — fails if file already exists (O_EXCL)
@@ -64,13 +64,13 @@ func runConfigCreate() error {
 		if os.IsExist(err) {
 			return fmt.Errorf("config file already exists: %s", path)
 		}
-		return fmt.Errorf("cannot create config file: %w", err)
+		return fmt.Errorf("create config file: %w", err)
 	}
 	defer f.Close()
 
 	content := commentOutDefaults(config.DefaultsTOML())
 	if _, err := f.WriteString(content); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+		return fmt.Errorf("write config: %w", err)
 	}
 
 	fmt.Fprintf(os.Stderr, "Created %s\n", path)
@@ -106,13 +106,18 @@ func commentOutDefaults(defaults string) string {
 			b.WriteString("\n")
 		case strings.HasPrefix(trimmed, "#"):
 			// Keep existing descriptive comments
-			b.WriteString(line + "\n")
+			b.WriteString(line)
+			b.WriteByte('\n')
 		case strings.HasPrefix(trimmed, "["):
 			// Keep section headers (must be uncommented for TOML structure)
-			b.WriteString("\n" + line + "\n")
+			b.WriteByte('\n')
+			b.WriteString(line)
+			b.WriteByte('\n')
 		default:
 			// Comment out key = value lines
-			b.WriteString("# " + line + "\n")
+			b.WriteString("# ")
+			b.WriteString(line)
+			b.WriteByte('\n')
 		}
 	}
 	return b.String()

@@ -159,6 +159,57 @@ func TestConfigCreate_NoHome(t *testing.T) {
 	}
 }
 
+// TestCommentOutDefaults verifies that commentOutDefaults correctly transforms
+// embedded TOML into a user-facing template.
+func TestCommentOutDefaults(t *testing.T) {
+	input := `# CalcMark defaults
+# Built-in settings
+
+locale = "en-US"
+
+[tui]
+# Color mode
+color_mode = "dark"
+
+[tui.theme]
+primary = ""
+accent = ""
+`
+	got := commentOutDefaults(input)
+
+	// Header should be replaced
+	if !strings.Contains(got, "# CalcMark Configuration") {
+		t.Error("expected custom header")
+	}
+	if strings.Contains(got, "# Built-in settings") {
+		t.Error("original header comments should be stripped")
+	}
+
+	// Key=value lines should be commented out
+	if !strings.Contains(got, "# locale") {
+		t.Error("expected locale to be commented out")
+	}
+	if !strings.Contains(got, "# color_mode") {
+		t.Error("expected color_mode to be commented out")
+	}
+	if !strings.Contains(got, "# primary") {
+		t.Error("expected primary to be commented out")
+	}
+
+	// Section headers must stay uncommented
+	if !strings.Contains(got, "\n[tui]\n") {
+		t.Error("expected [tui] section header to remain uncommented")
+	}
+	if !strings.Contains(got, "\n[tui.theme]\n") {
+		t.Error("expected [tui.theme] section header to remain uncommented")
+	}
+
+	// Descriptive comments should be preserved
+	if !strings.Contains(got, "# Color mode") {
+		t.Error("expected descriptive comment to be preserved")
+	}
+}
+
 // captureConfigOutput captures both stdout and stderr during execution of fn.
 func captureConfigOutput(t *testing.T, fn func() error) (stdout, stderr string) {
 	t.Helper()
