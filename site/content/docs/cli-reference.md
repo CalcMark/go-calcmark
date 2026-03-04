@@ -12,6 +12,7 @@ The CalcMark CLI (`cm`) provides commands for editing, evaluating, converting, a
 cm [file]            # Open editor (default command)
 cm eval [file.cm]    # Evaluate and print results
 cm convert <file.cm> # Convert to another format
+cm config            # Print or create configuration
 cm functions         # List all CalcMark functions
 cm constants         # List all unit constants
 cm version           # Print version info
@@ -187,6 +188,30 @@ Each global has `.Name` and `.Value`. Each exchange rate has `.From`, `.To`, and
 </body>
 </html>
 ```
+
+---
+
+## `cm config` {#config}
+
+Print the current effective configuration or create a starter config file.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--create` | Create a starter config file at the XDG config path |
+
+### Examples
+
+```bash
+cm config                    # Print effective configuration as TOML
+cm config > backup.toml      # Save current config to a file
+cm config --create           # Create ~/.config/calcmark/config.toml
+```
+
+Without flags, `cm config` prints the fully-resolved effective configuration (embedded defaults merged with user overrides and CLI flag overrides) as valid TOML to stdout.
+
+With `--create`, a starter config file is written to `~/.config/calcmark/config.toml` (or `$XDG_CONFIG_HOME/calcmark/config.toml` if set) with all values commented out and descriptive comments included. The command refuses to overwrite an existing file.
 
 ---
 

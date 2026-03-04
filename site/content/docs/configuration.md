@@ -18,11 +18,18 @@ You only need to specify values you want to override -- unspecified values use t
 
 ## Quick Start
 
-Create a config file:
+Create a starter config file with all available options:
 
 ```bash
-mkdir -p ~/.config/calcmark
-touch ~/.config/calcmark/config.toml
+cm config --create
+```
+
+This creates `~/.config/calcmark/config.toml` with all values commented out and descriptive comments. Uncomment and modify values as needed.
+
+To view your current effective configuration:
+
+```bash
+cm config
 ```
 
 Add your customizations:
