@@ -277,59 +277,56 @@ func TestBackspaceLastCharAfterDebounce(t *testing.T) {
 	m.cursorCol = 0
 	m.editBuf = ""
 
-	// 1. Type "a" — triggers autocomplete
-	keyMsg := tea.KeyPressMsg{Code: 'a', Text: "a"}
-	result, cmd := m.Update(keyMsg)
-	m = result.(Model)
+	// 1. Type "av" — triggers autocomplete (2-char minimum prefix)
+	for _, ch := range "av" {
+		keyMsg := tea.KeyPressMsg{Code: ch, Text: string(ch)}
+		result, _ := m.Update(keyMsg)
+		m = result.(Model)
+	}
 
-	if m.editBuf != "ax = 10" {
-		t.Fatalf("After typing 'a': editBuf=%q, want %q", m.editBuf, "ax = 10")
+	if m.editBuf != "avx = 10" {
+		t.Fatalf("After typing 'av': editBuf=%q, want %q", m.editBuf, "avx = 10")
 	}
 	if m.mode != StateAutocomplete {
-		t.Fatalf("After typing 'a': mode=%v, want StateAutocomplete", m.mode)
+		t.Fatalf("After typing 'av': mode=%v, want StateAutocomplete", m.mode)
 	}
 
 	// 2. Simulate debounce firing (as happens in real app between key presses)
-	// Extract the evalDebounceMsg from the returned command
-	if cmd != nil {
-		// Process the batch — find and fire the evalDebounceMsg
-		m.transitionToProcessing() // This is what the debounce does
-	}
+	m.transitionToProcessing() // This is what the debounce does
 
-	// Document should now have "ax = 10" saved
+	// Document should now have "avx = 10" saved
 	lines := m.GetLines()
-	if lines[0] != "ax = 10" {
-		t.Fatalf("After debounce: line 0=%q, want %q", lines[0], "ax = 10")
+	if lines[0] != "avx = 10" {
+		t.Fatalf("After debounce: line 0=%q, want %q", lines[0], "avx = 10")
 	}
 
 	// editBuf should still have the content
-	if m.editBuf != "ax = 10" {
-		t.Fatalf("After debounce: editBuf=%q, want %q", m.editBuf, "ax = 10")
+	if m.editBuf != "avx = 10" {
+		t.Fatalf("After debounce: editBuf=%q, want %q", m.editBuf, "avx = 10")
 	}
 
 	// 3. Re-trigger autocomplete mode (debounce transitions to Ready, which
 	// clears autocomplete mode; simulate user state where popup is still showing)
 	m.mode = StateAutocomplete
 	m.autocompleteState.Visible = true
-	m.autocompleteState.Prefix = "a"
+	m.autocompleteState.Prefix = "av"
 
-	// 4. Press backspace to delete "a" — this is the bug trigger
+	// 4. Press backspace to delete "v" — prefix becomes "a" (below 2-char minimum)
 	bsMsg := tea.KeyPressMsg{Code: tea.KeyBackspace}
-	result, _ = m.Update(bsMsg)
+	result, _ := m.Update(bsMsg)
 	m = result.(Model)
 
-	// editBuf MUST be "x = 10" (the "a" deleted), NOT "ax = 10"
-	if m.editBuf != "x = 10" {
-		t.Errorf("After backspace: editBuf=%q, want %q", m.editBuf, "x = 10")
+	// editBuf MUST be "ax = 10" (the "v" deleted)
+	if m.editBuf != "ax = 10" {
+		t.Errorf("After backspace: editBuf=%q, want %q", m.editBuf, "ax = 10")
 	}
 
-	// Cursor must be at col 0
-	if m.cursorCol != 0 {
-		t.Errorf("After backspace: cursorCol=%d, want 0", m.cursorCol)
+	// Cursor must be at col 1
+	if m.cursorCol != 1 {
+		t.Errorf("After backspace: cursorCol=%d, want 1", m.cursorCol)
 	}
 
-	// Mode must be StateDefault (autocomplete dismissed, prefix is empty)
-	// Note: "x" at col 0 is not a word prefix (cursor is before it, not after)
+	// Mode must be StateDefault (autocomplete dismissed, prefix "a" is below 2-char minimum)
 	if m.mode != StateDefault {
 		t.Errorf("After backspace: mode=%v, want StateDefault", m.mode)
 	}

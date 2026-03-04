@@ -892,6 +892,9 @@ func (m Model) triggerAutocomplete() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// minAutocompletePrefix is the minimum number of characters needed to trigger autosuggest.
+const minAutocompletePrefix = 2
+
 // updateAutocompleteState checks for suggestions at current prefix and updates popup state.
 // This is called after every character typed to show/hide the popup automatically.
 // Uses pointer receiver because it modifies mode and autocompleteState.
@@ -899,8 +902,8 @@ func (m *Model) updateAutocompleteState() {
 	// Extract word prefix at cursor position
 	prefix := m.getCurrentWordPrefix()
 
-	// No prefix - dismiss any visible popup
-	if prefix == "" {
+	// Require at least 2 characters to reduce visual noise
+	if len(prefix) < minAutocompletePrefix {
 		if m.mode == StateAutocomplete {
 			m.mode = StateDefault
 			m.autocompleteState = components.AutosuggestState{}
@@ -941,15 +944,22 @@ func (m *Model) updateAutocompleteState() {
 
 // calculatePopupDimensions determines the popup size based on suggestions.
 func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (width, height int) {
-	// Calculate width based on longest suggestion name + syntax
+	// Calculate width based on longest suggestion name + syntax + category tag
 	width = 30 // minimum width for readability
 	for _, s := range suggestions {
-		// Name + syntax is more important than description for width
-		w := len(s.Name)
+		tag := suggestionTag(s.Category)
+		// Tag + space + syntax/name is the rendered content
+		w := len(tag) + 1
 		if s.Syntax != "" {
-			w += 1 + len(s.Syntax)
+			w += len(s.Syntax)
+			// Synonym hint from Name (e.g., " (average)")
+			if idx := strings.Index(s.Name, " ("); idx >= 0 {
+				w += 1 + len(s.Name[idx+1:])
+			}
+		} else {
+			w += len(s.Name)
 		}
-		if w+6 > width { // +6 for padding, selection indicator, borders
+		if w+6 > width { // +6 for padding, borders
 			width = w + 6
 		}
 	}

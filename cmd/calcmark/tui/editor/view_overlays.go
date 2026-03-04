@@ -41,21 +41,24 @@ func (m Model) renderAutocompletePopup() string {
 	for i := scrollTop; i < scrollTop+maxVisible && i < len(state.Suggestions); i++ {
 		s := state.Suggestions[i]
 
+		// Category tag prefix: fn/nl/var or abbreviated category name
+		tag := suggestionTag(s.Category)
+
 		// Format: prefer syntax (function signature) over description.
 		// Syntax already includes the function name (e.g. "capacity(demand, ...)"),
 		// so we use it directly to avoid showing the name twice.
 		// Synonym info in Name (e.g. "avg (average)") is appended separately.
 		var content string
 		if s.Syntax != "" {
-			content = " " + s.Syntax
+			content = " " + tag + " " + s.Syntax
 			// Preserve synonym hint from Name if present, e.g. " (average)"
 			if idx := strings.Index(s.Name, " ("); idx >= 0 {
 				content += " " + s.Name[idx+1:]
 			}
 		} else if s.Description != "" {
-			content = " " + s.Name + " " + s.Description
+			content = " " + tag + " " + s.Name + " " + s.Description
 		} else {
-			content = " " + s.Name
+			content = " " + tag + " " + s.Name
 		}
 		if len(content) > innerWidth {
 			content = content[:innerWidth-1] + "…"
@@ -119,6 +122,24 @@ func (m Model) calculatePopupScreenPosition(contentHeight int) (row, col int) {
 	}
 
 	return row, col
+}
+
+// suggestionTag returns a short tag for display in the popup (e.g., "fn", "nl", "var").
+func suggestionTag(category string) string {
+	switch category {
+	case "example":
+		return "nl"
+	case "variable":
+		return "var"
+	case "Math", "Conversion", "Network", "Storage", "Capacity":
+		return "fn"
+	default:
+		// Unit categories and others: show abbreviated category
+		if len(category) > 3 {
+			return strings.ToLower(category[:3])
+		}
+		return strings.ToLower(category)
+	}
 }
 
 // renderCommandMenuPopup renders the command menu as a popup overlay.
