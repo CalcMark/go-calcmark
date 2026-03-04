@@ -194,17 +194,22 @@ func (u *UnitSuggestionSource) GetSuggestions(prefix string) []components.Sugges
 }
 
 // VariableSuggestionSource provides variable name suggestions from the document environment.
+// Position-aware: only suggests variables defined above CursorLine.
 type VariableSuggestionSource struct {
-	getVariables func() map[string]string // Returns varName -> formattedValue
+	getVariables    func() map[string]string // Returns varName -> formattedValue
+	getDefinedLines func() map[string]int    // Returns varName -> definition line (0-indexed)
+	CursorLine      int                      // Current cursor line (0-indexed), set before GetSuggestions
 }
 
 // NewVariableSuggestionSource creates a new variable suggestion source.
-// The getVars function is called each time to get current variables.
-func NewVariableSuggestionSource(getVars func() map[string]string) *VariableSuggestionSource {
-	return &VariableSuggestionSource{getVariables: getVars}
+// getVars returns all variables. getLines returns definition line numbers.
+// Set CursorLine before calling GetSuggestions to filter by position.
+func NewVariableSuggestionSource(getVars func() map[string]string, getLines func() map[string]int) *VariableSuggestionSource {
+	return &VariableSuggestionSource{getVariables: getVars, getDefinedLines: getLines}
 }
 
 // GetSuggestions returns variable suggestions matching the given prefix.
+// Only includes variables defined above CursorLine (or built-ins/globals with no line).
 func (v *VariableSuggestionSource) GetSuggestions(prefix string) []components.Suggestion {
 	if v.getVariables == nil {
 		return nil
@@ -213,15 +218,28 @@ func (v *VariableSuggestionSource) GetSuggestions(prefix string) []components.Su
 	prefix = strings.ToLower(prefix)
 	var suggestions []components.Suggestion
 
-	for varName, value := range v.getVariables() {
-		if strings.HasPrefix(strings.ToLower(varName), prefix) {
-			suggestions = append(suggestions, components.Suggestion{
-				Name:        varName,
-				Category:    "variable",
-				Description: value,
-				InsertText:  varName,
-			})
+	vars := v.getVariables()
+	var definedLines map[string]int
+	if v.getDefinedLines != nil {
+		definedLines = v.getDefinedLines()
+	}
+
+	for varName, value := range vars {
+		if !strings.HasPrefix(strings.ToLower(varName), prefix) {
+			continue
 		}
+		// Position filtering: exclude variables defined at or after cursor
+		if definedLines != nil {
+			if lineNum, hasLine := definedLines[varName]; hasLine && lineNum >= v.CursorLine {
+				continue
+			}
+		}
+		suggestions = append(suggestions, components.Suggestion{
+			Name:        varName,
+			Category:    "variable",
+			Description: value,
+			InsertText:  varName,
+		})
 	}
 
 	return suggestions

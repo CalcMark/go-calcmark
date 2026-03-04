@@ -341,6 +341,7 @@ type Model struct {
 	// Autocomplete state
 	autocompleteState components.AutosuggestState
 	suggestionSource  components.SuggestionSource
+	varSource         *VariableSuggestionSource // Reference for updating CursorLine
 
 	// Command menu state
 	commandMenuState CommandMenuState
@@ -387,19 +388,34 @@ func New(doc *document.Document) Model {
 	// Initialize autocomplete suggestion sources
 	funcSource := NewFunctionSuggestionSource()
 	unitSource := NewUnitSuggestionSource()
-	// Variable source captures 'm' by closure to access current environment
-	varSource := NewVariableSuggestionSource(func() map[string]string {
-		if m.eval == nil {
-			return nil
-		}
-		env := m.eval.GetEnvironment()
-		vars := env.GetAllVariables()
-		result := make(map[string]string)
-		for name, val := range vars {
-			result[name] = m.displayFormat(val)
-		}
-		return result
-	})
+	// Variable source captures 'm' by closure to access current environment.
+	// Returns all variables with their formatted values; position filtering
+	// is done by VariableSuggestionSource using definedOnLine and cursorLine.
+	varSource := NewVariableSuggestionSource(
+		func() map[string]string {
+			if m.eval == nil {
+				return nil
+			}
+			env := m.eval.GetEnvironment()
+			vars := env.GetAllVariables()
+			result := make(map[string]string)
+			for name, val := range vars {
+				result[name] = m.displayFormat(val)
+			}
+			return result
+		},
+		func() map[string]int {
+			// Returns varName -> definition line (0-indexed)
+			definedOnLine := make(map[string]int)
+			for _, lr := range m.GetLineResults() {
+				if lr.VarName != "" {
+					definedOnLine[lr.VarName] = lr.LineNum
+				}
+			}
+			return definedOnLine
+		},
+	)
+	m.varSource = varSource
 	m.suggestionSource = NewCombinedSuggestionSource(funcSource, unitSource, varSource)
 
 	// CRITICAL: Transition to StateReady - establishes all invariants
@@ -914,6 +930,11 @@ func (m *Model) updateAutocompleteState() {
 	// Check if we have a suggestion source
 	if m.suggestionSource == nil {
 		return
+	}
+
+	// Update variable source with current cursor position for position-aware filtering
+	if m.varSource != nil {
+		m.varSource.CursorLine = m.cursorLine
 	}
 
 	suggestions := m.suggestionSource.GetSuggestions(prefix)

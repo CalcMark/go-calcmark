@@ -162,7 +162,7 @@ func TestVariableSuggestionSource_GetSuggestions(t *testing.T) {
 
 	source := NewVariableSuggestionSource(func() map[string]string {
 		return vars
-	})
+	}, nil)
 
 	tests := []struct {
 		name         string
@@ -222,7 +222,7 @@ func TestCombinedSuggestionSource_GetSuggestions(t *testing.T) {
 	unitSource := NewUnitSuggestionSource()
 	varSource := NewVariableSuggestionSource(func() map[string]string {
 		return map[string]string{"avgPrice": "100"}
-	})
+	}, nil)
 
 	combined := NewCombinedSuggestionSource(funcSource, unitSource, varSource)
 
@@ -521,7 +521,7 @@ func TestCombinedSuggestionSource_NLRowOrdering(t *testing.T) {
 	unitSource := NewUnitSuggestionSource()
 	varSource := NewVariableSuggestionSource(func() map[string]string {
 		return nil
-	})
+	}, nil)
 
 	combined := NewCombinedSuggestionSource(funcSource, unitSource, varSource)
 
@@ -603,5 +603,70 @@ func TestFunctionSuggestionSource_SynonymDisplay(t *testing.T) {
 	// Display name should mention the matched synonym
 	if s.Name != "avg (mean)" {
 		t.Errorf("expected Name to show matched synonym, got %q", s.Name)
+	}
+}
+
+// TestPositionAwareVariableSuggestions verifies that the autocomplete popup
+// only shows variables defined above the cursor line, not below it.
+func TestPositionAwareVariableSuggestions(t *testing.T) {
+	content := `price = 100
+quantity = 5
+total = price * quantity
+result = total + 10`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Move cursor to line 2 ("total = price * quantity")
+	m.cursorLine = 2
+	m.cursorCol = 0
+
+	// Set cursor position for variable filtering
+	m.varSource.CursorLine = m.cursorLine
+
+	// Get variable suggestions directly from the combined source
+	suggestions := m.suggestionSource.GetSuggestions("pr")
+
+	foundPrice := false
+	for _, s := range suggestions {
+		if s.Category == "variable" && s.InsertText == "price" {
+			foundPrice = true
+		}
+		if s.Category == "variable" && s.InsertText == "result" {
+			t.Error("should NOT suggest 'result' — it's defined below cursor")
+		}
+	}
+	if !foundPrice {
+		t.Error("should suggest 'price' — it's defined above cursor")
+	}
+
+	// Move cursor to line 0 — no user variables visible above
+	m.cursorLine = 0
+	m.varSource.CursorLine = m.cursorLine
+	suggestions = m.suggestionSource.GetSuggestions("pr")
+	for _, s := range suggestions {
+		if s.Category == "variable" && s.InsertText == "price" {
+			t.Error("should NOT suggest 'price' when cursor is on its definition line")
+		}
+	}
+
+	// PI and E should always be available regardless of cursor position
+	m.cursorLine = 0
+	m.varSource.CursorLine = m.cursorLine
+	suggestions = m.suggestionSource.GetSuggestions("PI")
+	foundPI := false
+	for _, s := range suggestions {
+		if s.Category == "variable" && s.InsertText == "PI" {
+			foundPI = true
+		}
+	}
+	if !foundPI {
+		t.Error("should always suggest built-in constant 'PI'")
 	}
 }
