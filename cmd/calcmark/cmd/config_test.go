@@ -210,6 +210,222 @@ accent = ""
 	}
 }
 
+// TestConfigCheck_ValidConfig verifies --check exits cleanly with valid config.
+func TestConfigCheck_ValidConfig(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`
+locale = "de-DE"
+[tui]
+color_mode = "light"
+[tui.theme]
+primary = "#5B21B6"
+[formatter]
+default_format = "json"
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if !strings.Contains(stderr, "config ok") {
+		t.Errorf("expected 'config ok' on stderr, got: %s", stderr)
+	}
+}
+
+// TestConfigCheck_InvalidColor verifies --check catches invalid hex colors.
+func TestConfigCheck_InvalidColor(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`
+[tui.theme]
+primary = "red"
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err == nil {
+		t.Fatal("expected error for invalid hex color")
+	}
+	if !strings.Contains(stderr, "invalid hex color") {
+		t.Errorf("expected 'invalid hex color' on stderr, got: %s", stderr)
+	}
+}
+
+// TestConfigCheck_InvalidColorMode verifies --check catches invalid color_mode.
+func TestConfigCheck_InvalidColorMode(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`
+[tui]
+color_mode = "system"
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err == nil {
+		t.Fatal("expected error for invalid color_mode")
+	}
+	if !strings.Contains(stderr, "color_mode") {
+		t.Errorf("expected 'color_mode' on stderr, got: %s", stderr)
+	}
+}
+
+// TestConfigCheck_InvalidFormat verifies --check catches invalid default_format.
+func TestConfigCheck_InvalidFormat(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`
+[formatter]
+default_format = "xml"
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err == nil {
+		t.Fatal("expected error for invalid default_format")
+	}
+	if !strings.Contains(stderr, "default_format") {
+		t.Errorf("expected 'default_format' on stderr, got: %s", stderr)
+	}
+}
+
+// TestConfigCheck_TOMLSyntaxError verifies --check catches TOML syntax errors.
+func TestConfigCheck_TOMLSyntaxError(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte("primary = [\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err == nil {
+		t.Fatal("expected error for TOML syntax error")
+	}
+	if !strings.Contains(stderr, "TOML syntax error") {
+		t.Errorf("expected 'TOML syntax error' on stderr, got: %s", stderr)
+	}
+}
+
+// TestConfigCheck_NoConfigFiles verifies --check succeeds with no config files.
+func TestConfigCheck_NoConfigFiles(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err != nil {
+		t.Fatalf("expected no error with no config files, got: %v", err)
+	}
+	if !strings.Contains(stderr, "config ok") {
+		t.Errorf("expected 'config ok' on stderr, got: %s", stderr)
+	}
+}
+
+// TestConfigCheck_MultipleErrors verifies --check reports all errors at once.
+func TestConfigCheck_MultipleErrors(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	configDir := filepath.Join(tmpHome, ".config", "calcmark")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(`
+[tui]
+color_mode = "system"
+[tui.theme]
+primary = "red"
+[formatter]
+default_format = "xml"
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stderr, err := captureConfigOutputWithErr(t, runConfigCheck)
+	if err == nil {
+		t.Fatal("expected error for multiple validation failures")
+	}
+	// Should report all three errors
+	if !strings.Contains(stderr, "color_mode") {
+		t.Error("expected color_mode error on stderr")
+	}
+	if !strings.Contains(stderr, "primary") {
+		t.Error("expected primary error on stderr")
+	}
+	if !strings.Contains(stderr, "default_format") {
+		t.Error("expected default_format error on stderr")
+	}
+}
+
+// captureConfigOutputWithErr captures stdout, stderr, and the returned error.
+func captureConfigOutputWithErr(t *testing.T, fn func() error) (stdout, stderr string, fnErr error) {
+	t.Helper()
+
+	oldStdout := os.Stdout
+	rOut, wOut, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create stdout pipe: %v", err)
+	}
+	os.Stdout = wOut
+
+	oldStderr := os.Stderr
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("failed to create stderr pipe: %v", err)
+	}
+	os.Stderr = wErr
+
+	fnErr = fn()
+
+	wOut.Close()
+	wErr.Close()
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	var bufOut, bufErr bytes.Buffer
+	io.Copy(&bufOut, rOut)
+	io.Copy(&bufErr, rErr)
+
+	return bufOut.String(), bufErr.String(), fnErr
+}
+
 // captureConfigOutput captures both stdout and stderr during execution of fn.
 func captureConfigOutput(t *testing.T, fn func() error) (stdout, stderr string) {
 	t.Helper()

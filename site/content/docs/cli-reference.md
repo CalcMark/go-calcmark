@@ -200,6 +200,7 @@ Print the current effective configuration or create a starter config file.
 | Flag | Description |
 |------|-------------|
 | `--create` | Create a starter config file at the XDG config path |
+| `--check` | Validate config files and report errors (exit 0 = ok, exit 1 = errors) |
 
 ### Examples
 
@@ -207,11 +208,14 @@ Print the current effective configuration or create a starter config file.
 cm config                    # Print effective configuration as TOML
 cm config > backup.toml      # Save current config to a file
 cm config --create           # Create ~/.config/calcmark/config.toml
+cm config --check            # Validate all config files
 ```
 
 Without flags, `cm config` prints the fully-resolved effective configuration (embedded defaults merged with user overrides and CLI flag overrides) as valid TOML to stdout.
 
 With `--create`, a starter config file is written to `~/.config/calcmark/config.toml` (or `$XDG_CONFIG_HOME/calcmark/config.toml` if set) with all values commented out and descriptive comments included. The command refuses to overwrite an existing file.
+
+With `--check`, all config files are validated for TOML syntax, valid hex colors (`#RGB` or `#RRGGBB`), valid `color_mode` values (`light`, `dark`, `auto`), valid `default_format` values, and unknown keys. File discovery results and any errors are printed to stderr. Exits with code 0 if everything is valid, or code 1 if any errors were found.
 
 ---
 

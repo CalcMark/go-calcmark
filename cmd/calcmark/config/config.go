@@ -68,13 +68,17 @@ func load() (*Config, error) {
 	if fallbackPath, err := fallbackConfigPath(); err == nil {
 		if _, statErr := os.Stat(fallbackPath); statErr == nil {
 			v.SetConfigFile(fallbackPath)
-			_ = v.MergeInConfig() // Ignore errors - malformed config uses defaults
+			if mergeErr := v.MergeInConfig(); mergeErr != nil {
+				fmt.Fprintf(os.Stderr, "calcmark: %s: %v\n", fallbackPath, mergeErr)
+			}
 		}
 	}
 	if xdgPath, err := XDGConfigPath(); err == nil {
 		if _, statErr := os.Stat(xdgPath); statErr == nil {
 			v.SetConfigFile(xdgPath)
-			_ = v.MergeInConfig()
+			if mergeErr := v.MergeInConfig(); mergeErr != nil {
+				fmt.Fprintf(os.Stderr, "calcmark: %s: %v\n", xdgPath, mergeErr)
+			}
 		}
 	}
 

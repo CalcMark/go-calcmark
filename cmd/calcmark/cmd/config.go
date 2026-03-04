@@ -7,20 +7,30 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/format"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
 
-var configCreate bool
+var (
+	configCreate bool
+	configCheck  bool
+)
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Print or create CalcMark configuration",
+	Short: "Print, create, or validate CalcMark configuration",
 	Long: `Print the current effective configuration as TOML.
 
 With --create, write a starter config file to the XDG config path
-with all values commented out and descriptive comments included.`,
+with all values commented out and descriptive comments included.
+
+With --check, validate all config files and report any errors.
+Exit code 0 means all config is valid; exit code 1 means errors were found.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if configCheck {
+			return runConfigCheck()
+		}
 		if configCreate {
 			return runConfigCreate()
 		}
@@ -31,6 +41,9 @@ with all values commented out and descriptive comments included.`,
 func init() {
 	configCmd.Flags().BoolVar(&configCreate, "create", false,
 		"Create a starter config file at ~/.config/calcmark/config.toml")
+	configCmd.Flags().BoolVar(&configCheck, "check", false,
+		"Validate config files and report errors")
+	configCmd.MarkFlagsMutuallyExclusive("create", "check")
 	rootCmd.AddCommand(configCmd)
 }
 
@@ -76,6 +89,30 @@ func runConfigCreate() error {
 	fmt.Fprintf(os.Stderr, "Created %s\n", path)
 	fmt.Print(content)
 	return nil
+}
+
+// runConfigCheck validates all config files and reports errors.
+func runConfigCheck() error {
+	result := config.Validate(format.FormatNames())
+
+	// Report file discovery
+	for _, f := range result.Files {
+		if f.Found {
+			fmt.Fprintf(os.Stderr, "calcmark: found %s\n", f.Path)
+		} else {
+			fmt.Fprintf(os.Stderr, "calcmark: not found %s\n", f.Path)
+		}
+	}
+
+	if result.OK() {
+		fmt.Fprintf(os.Stderr, "calcmark: config ok\n")
+		return nil
+	}
+
+	for _, e := range result.Errors {
+		fmt.Fprintf(os.Stderr, "calcmark: %s\n", e)
+	}
+	return fmt.Errorf("config validation found %d error(s)", len(result.Errors))
 }
 
 // commentOutDefaults transforms the embedded defaults.toml into a user-facing

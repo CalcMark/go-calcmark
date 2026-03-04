@@ -44,6 +44,16 @@ func GetFormatter(format string, filename string) Formatter {
 	return formatters["text"]
 }
 
+// FormatNames returns a sorted list of registered format names.
+func FormatNames() []string {
+	names := make([]string, 0, len(formatters))
+	for name := range formatters {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names
+}
+
 // RegisterFormatter adds a custom formatter to the registry.
 // This allows third-party formatters to be registered at runtime.
 func RegisterFormatter(name string, formatter Formatter) {

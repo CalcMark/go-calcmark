@@ -288,9 +288,9 @@ These colors derive from the palette and adapt automatically to your color mode.
 
 ### Config not loading?
 
-1. Check file permissions: `ls -la ~/.config/calcmark/config.toml`
-2. Validate TOML syntax (e.g., with `tomlv` or an online validator)
-3. Ensure valid hex colors (must start with `#`)
+1. Run `cm config --check` to validate your config files
+2. Check file permissions: `ls -la ~/.config/calcmark/config.toml`
+3. Ensure valid hex colors (must start with `#`, e.g., `#RGB` or `#RRGGBB`)
 
 ### Colors look wrong?
 
