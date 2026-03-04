@@ -87,21 +87,21 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"rtt": {
 		Name: "rtt",
 		Params: []ParamSpec{
-			{Name: "scope", Type: ArgTypeString, Examples: []string{`"datacenter"`, `"regional"`, `"global"`}},
+			{Name: "scope", Type: ArgTypeString, Examples: []string{`"local"`, `"regional"`, `"continental"`, `"global"`}},
 		},
 	},
 	"throughput": {
 		Name: "throughput",
 		Params: []ParamSpec{
-			{Name: "network_type", Type: ArgTypeString, Examples: []string{`"1gbe"`, `"10gbe"`, `"wifi"`}},
+			{Name: "network_type", Type: ArgTypeString, Examples: []string{`"gigabit"`, `"ten_gig"`, `"wifi"`, `"four_g"`, `"five_g"`}},
 		},
 	},
 	"transfer_time": {
 		Name: "transfer_time",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 GB", "100 MB", "10 TB"}},
-			{Name: "scope", Type: ArgTypeString, Examples: []string{`"datacenter"`, `"regional"`, `"global"`}},
-			{Name: "network_type", Type: ArgTypeString, Examples: []string{`"1gbe"`, `"10gbe"`}},
+			{Name: "scope", Type: ArgTypeString, Examples: []string{`"local"`, `"regional"`, `"continental"`, `"global"`}},
+			{Name: "network_type", Type: ArgTypeString, Examples: []string{`"gigabit"`, `"ten_gig"`, `"wifi"`}},
 		},
 	},
 
