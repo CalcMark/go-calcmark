@@ -171,6 +171,41 @@ func TestNLAliasesAreParseable(t *testing.T) {
 	}
 }
 
+func TestParseableAliasesHaveExamples(t *testing.T) {
+	r := NewRegistry()
+
+	// Every parseable alias on a function should have a non-empty Example.
+	functions := r.ByCategory(CategoryFunction)
+	for _, f := range functions {
+		for _, alias := range f.Aliases {
+			if alias.Parseable && alias.Example == "" {
+				t.Errorf("Function %q parseable alias %q has no Example", f.Name, alias.Name)
+			}
+		}
+	}
+}
+
+func TestNLExamplesForFunctionsWithoutParseableAliases(t *testing.T) {
+	r := NewRegistry()
+
+	// Functions that use NL keywords (over, per, at) should have NLExample set.
+	wantNLExample := map[string]string{
+		"accumulate":   "100 MB/s over 1 day",
+		"convert_rate": "5 MB/s per minute",
+		"capacity":     "10 TB at 2 TB per disk",
+		"downtime":     "99.9% downtime per month",
+	}
+
+	functions := r.ByCategory(CategoryFunction)
+	for _, f := range functions {
+		if want, ok := wantNLExample[f.Name]; ok {
+			if f.NLExample != want {
+				t.Errorf("Function %q NLExample = %q, want %q", f.Name, f.NLExample, want)
+			}
+		}
+	}
+}
+
 func TestNonParseableAliases(t *testing.T) {
 	r := NewRegistry()
 

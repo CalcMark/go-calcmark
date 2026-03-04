@@ -28,6 +28,7 @@ const (
 type Alias struct {
 	Name      string // Alternative name (e.g., "average of", "round trip time")
 	Parseable bool   // true if this alias works as input syntax, false if search-only
+	Example   string // Concrete NL example for autosuggest (e.g., "average of 1, 2, 3")
 }
 
 // Feature represents a single CalcMark feature that users can discover.
@@ -37,7 +38,8 @@ type Feature struct {
 	Syntax      string   // Usage syntax (e.g., "avg(a, b, c)")
 	Description string   // Human-readable description
 	Aliases     []Alias  // Alternative names/spellings
-	Example     string   // Example usage
+	Example     string   // Example usage (function-call form for help display)
+	NLExample   string   // Natural language example for autosuggest (e.g., "100 MB/s over 1 day")
 }
 
 // Match checks if a query matches this feature (case-insensitive prefix match).
@@ -140,7 +142,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "avg(a, b, c, ...)",
 			Description: "Calculate the average of numbers",
-			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "mean", Parseable: false}, {Name: "average of", Parseable: true}},
+			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "mean", Parseable: false}, {Name: "average of", Parseable: true, Example: "average of 1, 2, 3"}},
 			Example:     "avg(10, 20, 30) → 20",
 		},
 		{
@@ -148,7 +150,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "sqrt(n)",
 			Description: "Calculate the square root",
-			Aliases:     []Alias{{Name: "square root of", Parseable: true}},
+			Aliases:     []Alias{{Name: "square root of", Parseable: true, Example: "square root of 16"}},
 			Example:     "sqrt(16) → 4",
 		},
 		{
@@ -158,6 +160,7 @@ func getFunctions() []Feature {
 			Description: "Calculate total from a rate over time",
 			Aliases:     nil,
 			Example:     "accumulate(100 req/s, 1 hour) → 360000 req",
+			NLExample:   "100 MB/s over 1 day",
 		},
 		{
 			Name:        "convert_rate",
@@ -166,6 +169,7 @@ func getFunctions() []Feature {
 			Description: "Convert a rate to a different time unit",
 			Aliases:     nil,
 			Example:     "convert_rate(1000 req/s, minute) → 60000 req/min",
+			NLExample:   "5 MB/s per minute",
 		},
 		{
 			Name:        "capacity",
@@ -174,6 +178,7 @@ func getFunctions() []Feature {
 			Description: "Calculate how many units needed for a given load",
 			Aliases:     []Alias{{Name: "requires", Parseable: false}},
 			Example:     "capacity(10000 req/s, 500 req/s, server) → 20 servers",
+			NLExample:   "10 TB at 2 TB per disk",
 		},
 		{
 			Name:        "downtime",
@@ -182,6 +187,7 @@ func getFunctions() []Feature {
 			Description: "Calculate downtime from availability percentage",
 			Aliases:     nil,
 			Example:     "downtime(99.9%, month) → 43.2 minutes",
+			NLExample:   "99.9% downtime per month",
 		},
 		{
 			Name:        "rtt",
@@ -204,7 +210,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "transfer_time(size, scope, network)",
 			Description: "Time to transfer data over a network",
-			Aliases:     []Alias{{Name: "transfer...across", Parseable: true}},
+			Aliases:     []Alias{{Name: "transfer...across", Parseable: true, Example: "transfer 1 GB across regional gigabit"}},
 			Example:     "transfer 1 GB across regional gigabit",
 		},
 		{
@@ -212,7 +218,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "read(size, storage_type)",
 			Description: "Time to read data from storage",
-			Aliases:     []Alias{{Name: "read...from", Parseable: true}},
+			Aliases:     []Alias{{Name: "read...from", Parseable: true, Example: "read 100 MB from ssd"}},
 			Example:     "read 100 MB from ssd",
 		},
 		{
@@ -228,7 +234,7 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Syntax:      "compress(size, algorithm)",
 			Description: "Estimate compressed data size",
-			Aliases:     []Alias{{Name: "compress...using", Parseable: true}},
+			Aliases:     []Alias{{Name: "compress...using", Parseable: true, Example: "compress 1 GB using gzip"}},
 			Example:     "compress 1 GB using gzip",
 		},
 	}
