@@ -134,11 +134,11 @@ func cleanAliasName(name string) string {
 // firstWord returns the text before the first space or "..." in a name.
 // e.g., "average of" → "average", "transfer...across" → "transfer"
 func firstWord(name string) string {
-	if i := strings.Index(name, "..."); i >= 0 {
-		return name[:i]
+	if before, _, ok := strings.Cut(name, "..."); ok {
+		return before
 	}
-	if i := strings.IndexByte(name, ' '); i >= 0 {
-		return name[:i]
+	if before, _, ok := strings.Cut(name, " "); ok {
+		return before
 	}
 	return name
 }
