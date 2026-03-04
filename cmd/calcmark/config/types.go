@@ -8,16 +8,16 @@ type Config struct {
 	// Affects decimal and thousand separators in output. Top-level because locale
 	// is application-wide and will eventually affect input parsing too.
 	// Precedence: --locale flag > config.toml > "en-US" default.
-	Locale    string          `mapstructure:"locale"`
-	TUI       TUIConfig       `mapstructure:"tui"`
-	Formatter FormatterConfig `mapstructure:"formatter"`
+	Locale    string          `mapstructure:"locale" toml:"locale"`
+	TUI       TUIConfig       `mapstructure:"tui" toml:"tui"`
+	Formatter FormatterConfig `mapstructure:"formatter" toml:"formatter"`
 }
 
 // TUIConfig holds TUI-specific settings.
 type TUIConfig struct {
-	Theme     ThemeConfig `mapstructure:"theme"`
-	DarkMode  bool        `mapstructure:"dark_mode"`  // Deprecated: use ColorMode instead
-	ColorMode string      `mapstructure:"color_mode"` // "light" or "dark"
+	Theme     ThemeConfig `mapstructure:"theme" toml:"theme"`
+	DarkMode  bool        `mapstructure:"dark_mode" toml:"-"` // Deprecated: use ColorMode instead
+	ColorMode string      `mapstructure:"color_mode" toml:"color_mode"`
 }
 
 // ThemeConfig defines user-facing color overrides as hex strings.
@@ -25,20 +25,20 @@ type TUIConfig struct {
 // based on the configured color_mode. Internal structural colors (popup borders,
 // separator shades, etc.) are not user-configurable and derive from the palette.
 type ThemeConfig struct {
-	Primary   string `mapstructure:"primary"`   // Titles, prompts, variable names
-	Accent    string `mapstructure:"accent"`    // Borders, highlights
-	Error     string `mapstructure:"error"`     // Error messages
-	Warning   string `mapstructure:"warning"`   // Changed indicators
-	Muted     string `mapstructure:"muted"`     // Help text
-	Dimmed    string `mapstructure:"dimmed"`    // Hints, suggestions
-	Output    string `mapstructure:"output"`    // Calculation results
-	Bright    string `mapstructure:"bright"`    // Syntax emphasis
-	Separator string `mapstructure:"separator"` // Divider lines
+	Primary   string `mapstructure:"primary" toml:"primary"`     // Titles, prompts, variable names
+	Accent    string `mapstructure:"accent" toml:"accent"`       // Borders, highlights
+	Error     string `mapstructure:"error" toml:"error"`         // Error messages
+	Warning   string `mapstructure:"warning" toml:"warning"`     // Changed indicators
+	Muted     string `mapstructure:"muted" toml:"muted"`         // Help text
+	Dimmed    string `mapstructure:"dimmed" toml:"dimmed"`       // Hints, suggestions
+	Output    string `mapstructure:"output" toml:"output"`       // Calculation results
+	Bright    string `mapstructure:"bright" toml:"bright"`       // Syntax emphasis
+	Separator string `mapstructure:"separator" toml:"separator"` // Divider lines
 
 	// Pane backgrounds
-	SourcePaneBg  string `mapstructure:"source_pane_bg"`  // Background color for source pane
-	PreviewPaneBg string `mapstructure:"preview_pane_bg"` // Background color for preview pane
-	StatusBarBg   string `mapstructure:"status_bar_bg"`   // Background color for status bar
+	SourcePaneBg  string `mapstructure:"source_pane_bg" toml:"source_pane_bg"`   // Background color for source pane
+	PreviewPaneBg string `mapstructure:"preview_pane_bg" toml:"preview_pane_bg"` // Background color for preview pane
+	StatusBarBg   string `mapstructure:"status_bar_bg" toml:"status_bar_bg"`     // Background color for status bar
 }
 
 // ThemeConfigKnownKeys returns the set of known keys under [tui.theme].
@@ -62,7 +62,7 @@ func ThemeConfigKnownKeys() map[string]bool {
 
 // FormatterConfig holds output formatter settings.
 type FormatterConfig struct {
-	Verbose       bool   `mapstructure:"verbose"`
-	IncludeErrors bool   `mapstructure:"include_errors"`
-	DefaultFormat string `mapstructure:"default_format"`
+	Verbose       bool   `mapstructure:"verbose" toml:"verbose"`
+	IncludeErrors bool   `mapstructure:"include_errors" toml:"include_errors"`
+	DefaultFormat string `mapstructure:"default_format" toml:"default_format"`
 }

@@ -65,17 +65,13 @@ func load() (*Config, error) {
 	}
 
 	// 2. Merge user config files (order matters: later overrides earlier)
-	home, err := os.UserHomeDir()
-	if err == nil && home != "" {
-		// Fallback: ~/.calcmarkrc.toml (lower priority)
-		fallbackPath := filepath.Join(home, ".calcmarkrc.toml")
+	if fallbackPath, err := FallbackConfigPath(); err == nil {
 		if _, statErr := os.Stat(fallbackPath); statErr == nil {
 			v.SetConfigFile(fallbackPath)
 			_ = v.MergeInConfig() // Ignore errors - malformed config uses defaults
 		}
-
-		// Primary: ~/.config/calcmark/config.toml (XDG standard, higher priority)
-		xdgPath := filepath.Join(home, ".config", "calcmark", "config.toml")
+	}
+	if xdgPath, err := XDGConfigPath(); err == nil {
 		if _, statErr := os.Stat(xdgPath); statErr == nil {
 			v.SetConfigFile(xdgPath)
 			_ = v.MergeInConfig()
@@ -183,4 +179,32 @@ func Reload() (*Config, error) {
 // Error returns any error from the last load attempt.
 func Error() error {
 	return loadErr
+}
+
+// DefaultsTOML returns the raw embedded defaults.toml content.
+func DefaultsTOML() string {
+	return defaultsToml
+}
+
+// XDGConfigPath returns the XDG config file path for the current user.
+// Respects $XDG_CONFIG_HOME per the XDG Base Directory Specification.
+// Falls back to ~/.config/calcmark/config.toml if not set.
+func XDGConfigPath() (string, error) {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "calcmark", "config.toml"), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	return filepath.Join(home, ".config", "calcmark", "config.toml"), nil
+}
+
+// FallbackConfigPath returns the legacy dotfile config path (~/.calcmarkrc.toml).
+func FallbackConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	return filepath.Join(home, ".calcmarkrc.toml"), nil
 }
