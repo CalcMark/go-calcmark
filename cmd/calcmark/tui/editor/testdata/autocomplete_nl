@@ -1,0 +1,117 @@
+# Test NL autosuggest: fn/nl pairs, NL row selection, NL keyword matching
+
+# Type "av" to trigger autocomplete — should show fn and nl rows
+run observe=debug
+type av
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down to NL row (second item: "average of 1, 2, 3")
+run observe=debug
+key down
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Accept NL row with Tab — should insert "average of 1, 2, 3" (no parenthesis)
+run observe=debug
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=18 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="average of 1, 2, 3# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify: editBuf should have NL example text, no "(" appended
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="average of 1, 2, 3# Header" <CURSOR>
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="z = 30"
+
+# Undo the NL acceptance with Ctrl+Z — should restore "av"
+run observe=debug
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=2 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="av# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type NL keyword "aver" to match via NL alias keyword
+run observe=debug
+type er
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="aver# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Navigate down to NL row
+run observe=debug
+key down
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=4 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="aver# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Accept the NL suggestion
+run observe=debug
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=18 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="average of 1, 2, 3# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify NL text inserted
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="average of 1, 2, 3# Header" <CURSOR>
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="z = 30"
+
+# Clear and test convert_rate NL examples
+run observe=debug
+key ctrl+z
+key ctrl+z
+key ctrl+z
+key ctrl+z
+key ctrl+z
+key ctrl+z
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type "conver" to match convert_rate
+run observe=debug
+type conver
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="conver# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Should show fn row for convert_rate and nl row for NL example
+# Navigate to nl row
+run observe=debug
+key down
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=6 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="conver# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Accept NL row
+run observe=debug
+key tab
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=17 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="5 MB/s per minute# Header" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Verify convert_rate NL text inserted
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="5 MB/s per minute# Header" <CURSOR>
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="x = 10"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="y = 20"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="z = 30"
