@@ -10,11 +10,12 @@ import (
 
 // Suggestion represents an autocompletion suggestion.
 type Suggestion struct {
-	Name        string // Display name (may include synonyms for display)
-	Category    string // Category (function, unit, variable, etc.)
-	Description string // Brief description
-	Syntax      string // Syntax example
-	InsertText  string // Actual text to insert (without synonyms/formatting)
+	Name         string // Display name (may include synonyms for display)
+	Category     string // Category (function, unit, variable, etc.)
+	Description  string // Brief description
+	Syntax       string // Syntax example
+	InsertText   string // Actual text to insert (without synonyms/formatting)
+	SortCategory string // Override category for sorting (e.g., NL rows use parent fn category)
 }
 
 // SuggestionSource provides suggestions for a given prefix.

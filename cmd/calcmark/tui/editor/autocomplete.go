@@ -7,43 +7,96 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
-// FunctionSuggestionSource provides function name suggestions from BuiltinFunctions.
-type FunctionSuggestionSource struct{}
+// nlInfo holds NL example data for a function, sourced from the feature registry.
+type nlInfo struct {
+	aliasName string // Cleaned alias name for display (e.g., "average of")
+	example   string // Concrete example for insertion (e.g., "average of 1, 2, 3")
+	matchWord string // First word for prefix matching (e.g., "average")
+}
+
+// FunctionSuggestionSource provides function name suggestions from BuiltinFunctions,
+// plus NL example rows sourced from the feature registry.
+type FunctionSuggestionSource struct {
+	nlByFunction map[string][]nlInfo // function name -> NL examples
+}
 
 // NewFunctionSuggestionSource creates a new function suggestion source.
+// Builds an NL lookup from the feature registry for NL example rows.
 func NewFunctionSuggestionSource() *FunctionSuggestionSource {
-	return &FunctionSuggestionSource{}
+	src := &FunctionSuggestionSource{
+		nlByFunction: make(map[string][]nlInfo),
+	}
+
+	registry := features.NewRegistry()
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		// Parseable aliases with examples
+		for _, alias := range f.Aliases {
+			if alias.Parseable && alias.Example != "" {
+				src.nlByFunction[f.Name] = append(src.nlByFunction[f.Name], nlInfo{
+					aliasName: cleanAliasName(alias.Name),
+					example:   alias.Example,
+					matchWord: firstWord(alias.Name),
+				})
+			}
+		}
+		// Functions with NLExample but no parseable alias examples
+		if f.NLExample != "" && len(src.nlByFunction[f.Name]) == 0 {
+			src.nlByFunction[f.Name] = append(src.nlByFunction[f.Name], nlInfo{
+				aliasName: f.Name,
+				example:   f.NLExample,
+				matchWord: f.Name, // Match by function name only
+			})
+		}
+	}
+
+	return src
 }
 
 // GetSuggestions returns function suggestions matching the given prefix.
-// Matches against both primary names and synonyms.
+// Matches against primary names, synonyms, and NL alias keywords.
+// Emits fn/nl pairs: function row followed by its NL example row(s).
 func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Suggestion {
 	prefix = strings.ToLower(prefix)
 	var suggestions []components.Suggestion
 
 	for _, fn := range interpreter.BuiltinFunctions {
 		// Match primary name or any synonym
-		matched := strings.HasPrefix(strings.ToLower(fn.Name), prefix)
+		fnMatched := strings.HasPrefix(strings.ToLower(fn.Name), prefix)
 		matchedSynonym := ""
 		for _, syn := range fn.Synonyms {
 			if strings.HasPrefix(strings.ToLower(syn), prefix) {
-				matched = true
+				fnMatched = true
 				matchedSynonym = syn
 				break
 			}
 		}
 
-		if matched {
-			// Format name with synonyms for display
+		// Check NL alias match (even if function name didn't match)
+		nlMatched := false
+		var matchedNL []nlInfo
+		if nls, ok := f.nlByFunction[fn.Name]; ok {
+			for _, nl := range nls {
+				if strings.HasPrefix(strings.ToLower(nl.matchWord), prefix) {
+					nlMatched = true
+					matchedNL = append(matchedNL, nl)
+				}
+			}
+			// If fn matched but NL didn't match by keyword, still include all NL rows
+			if fnMatched && !nlMatched {
+				matchedNL = nls
+			}
+		}
+
+		// Emit fn row if function name or synonym matched
+		if fnMatched {
 			name := fn.Name
 			if len(fn.Synonyms) > 0 {
 				name = fmt.Sprintf("%s (%s)", fn.Name, strings.Join(fn.Synonyms, ", "))
 			}
-
-			// If matched via synonym, show that more prominently
 			if matchedSynonym != "" && matchedSynonym != fn.Name {
 				name = fmt.Sprintf("%s (%s)", fn.Name, matchedSynonym)
 			}
@@ -53,12 +106,41 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 				Category:    fn.Category,
 				Description: fn.Description,
 				Syntax:      fn.Signature,
-				InsertText:  fn.Name, // Always insert the primary function name
+				InsertText:  fn.Name,
+			})
+		}
+
+		// Emit NL row(s) immediately after the fn row
+		for _, nl := range matchedNL {
+			suggestions = append(suggestions, components.Suggestion{
+				Name:         nl.aliasName,
+				Category:     "example",
+				Syntax:       nl.example,
+				InsertText:   nl.example,
+				SortCategory: fn.Category, // Sort alongside parent function
 			})
 		}
 	}
 
 	return suggestions
+}
+
+// cleanAliasName strips "..." template notation from alias names.
+// e.g., "transfer...across" → "transfer across"
+func cleanAliasName(name string) string {
+	return strings.ReplaceAll(name, "...", " ")
+}
+
+// firstWord returns the text before the first space or "..." in a name.
+// e.g., "average of" → "average", "transfer...across" → "transfer"
+func firstWord(name string) string {
+	if i := strings.Index(name, "..."); i >= 0 {
+		return name[:i]
+	}
+	if i := strings.IndexByte(name, ' '); i >= 0 {
+		return name[:i]
+	}
+	return name
 }
 
 // UnitSuggestionSource provides unit name suggestions from StandardUnits.
@@ -156,14 +238,16 @@ func NewCombinedSuggestionSource(sources ...components.SuggestionSource) *Combin
 }
 
 // GetSuggestions returns suggestions from all sources, sorted by category then name.
+// Uses stable sort to preserve fn/nl pair ordering from FunctionSuggestionSource.
 func (c *CombinedSuggestionSource) GetSuggestions(prefix string) []components.Suggestion {
 	var all []components.Suggestion
 	for _, src := range c.sources {
 		all = append(all, src.GetSuggestions(prefix)...)
 	}
 
-	// Sort: functions first (by category order), then units, then variables
-	// Within each category, sort alphabetically
+	// Sort: functions first (by category order), then units, then variables.
+	// NL "example" rows use SortCategory to sort alongside their parent function.
+	// SliceStable preserves insertion order for equal keys, keeping fn/nl pairs adjacent.
 	catOrder := map[string]int{
 		"Math":        0,
 		"Conversion":  1,
@@ -181,21 +265,32 @@ func (c *CombinedSuggestionSource) GetSuggestions(prefix string) []components.Su
 		"variable":    100, // Variables last
 	}
 
-	sort.Slice(all, func(i, j int) bool {
-		ci := catOrder[all[i].Category]
-		cj := catOrder[all[j].Category]
-		// Categories not in map get a default high value
-		if _, ok := catOrder[all[i].Category]; !ok {
-			ci = 50
-		}
-		if _, ok := catOrder[all[j].Category]; !ok {
-			cj = 50
-		}
+	sort.SliceStable(all, func(i, j int) bool {
+		ci := suggestionSortOrder(all[i], catOrder)
+		cj := suggestionSortOrder(all[j], catOrder)
 		if ci != cj {
 			return ci < cj
+		}
+		// Within the same sort order, don't re-sort NL "example" rows —
+		// they should stay in insertion order (immediately after their fn row).
+		if all[i].Category == "example" || all[j].Category == "example" {
+			return false // preserve insertion order
 		}
 		return all[i].Name < all[j].Name
 	})
 
 	return all
+}
+
+// suggestionSortOrder returns the sort order for a suggestion.
+// Uses SortCategory if set (for NL rows), otherwise falls back to Category.
+func suggestionSortOrder(s components.Suggestion, catOrder map[string]int) int {
+	cat := s.Category
+	if s.SortCategory != "" {
+		cat = s.SortCategory
+	}
+	if order, ok := catOrder[cat]; ok {
+		return order
+	}
+	return 50
 }

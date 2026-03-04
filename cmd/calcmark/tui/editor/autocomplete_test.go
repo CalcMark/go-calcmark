@@ -1,10 +1,12 @@
 package editor
 
 import (
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -49,9 +51,9 @@ func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
 			wantMinCount: 1,
 		},
 		{
-			name:         "empty prefix returns all functions",
+			name:         "empty prefix returns all functions plus NL rows",
 			prefix:       "",
-			wantMinCount: 12, // All 12 builtin functions
+			wantMinCount: 21, // 12 builtin functions + 9 NL example rows
 		},
 		{
 			name:         "xyz prefix matches nothing",
@@ -408,6 +410,181 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 	// editBufLoaded MUST be true so the view uses editBuf="" instead of stale doc
 	if !m.editBufLoaded {
 		t.Error("editBufLoaded must be true so view renders editBuf instead of stale document content")
+	}
+}
+
+func TestFunctionSuggestionSource_NLRows(t *testing.T) {
+	source := NewFunctionSuggestionSource()
+
+	t.Run("avg prefix returns fn and nl rows", func(t *testing.T) {
+		suggestions := source.GetSuggestions("av")
+		var fnRow, nlRow *components.Suggestion
+		for i := range suggestions {
+			if suggestions[i].InsertText == "avg" {
+				fnRow = &suggestions[i]
+			}
+			if suggestions[i].Category == "example" && suggestions[i].InsertText == "average of 1, 2, 3" {
+				nlRow = &suggestions[i]
+			}
+		}
+		if fnRow == nil {
+			t.Error("expected fn row for avg")
+		}
+		if nlRow == nil {
+			t.Fatal("expected nl row for avg")
+		}
+		if nlRow.SortCategory != "Math" {
+			t.Errorf("NL row SortCategory = %q, want %q", nlRow.SortCategory, "Math")
+		}
+		if nlRow.Name != "average of" {
+			t.Errorf("NL row Name = %q, want %q", nlRow.Name, "average of")
+		}
+	})
+
+	t.Run("NL keyword prefix matches NL row", func(t *testing.T) {
+		suggestions := source.GetSuggestions("aver")
+		found := false
+		for _, s := range suggestions {
+			if s.Category == "example" && s.InsertText == "average of 1, 2, 3" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("expected NL row when typing NL keyword prefix 'aver'")
+		}
+	})
+
+	t.Run("NL keyword only matches when fn name does not", func(t *testing.T) {
+		// "squa" matches "square root of" but not "sqrt"
+		suggestions := source.GetSuggestions("squa")
+		var hasFn, hasNL bool
+		for _, s := range suggestions {
+			if s.InsertText == "sqrt" {
+				hasFn = true
+			}
+			if s.Category == "example" && s.InsertText == "square root of 16" {
+				hasNL = true
+			}
+		}
+		if hasFn {
+			t.Error("fn row for sqrt should NOT match prefix 'squa'")
+		}
+		if !hasNL {
+			t.Error("expected NL row for 'square root of' with prefix 'squa'")
+		}
+	})
+
+	t.Run("template alias cleaned for display", func(t *testing.T) {
+		suggestions := source.GetSuggestions("transfer")
+		for _, s := range suggestions {
+			if s.Category == "example" {
+				if s.Name != "transfer across" {
+					t.Errorf("expected cleaned alias name %q, got %q", "transfer across", s.Name)
+				}
+				if s.InsertText != "transfer 1 GB across regional gigabit" {
+					t.Errorf("expected example InsertText, got %q", s.InsertText)
+				}
+				break
+			}
+		}
+	})
+
+	t.Run("NL row syntax has no parentheses", func(t *testing.T) {
+		suggestions := source.GetSuggestions("av")
+		for _, s := range suggestions {
+			if s.Category == "example" {
+				if strings.Contains(s.Syntax, "(") {
+					t.Errorf("NL row Syntax should not contain '(', got %q", s.Syntax)
+				}
+			}
+		}
+	})
+
+	t.Run("functions with NLExample but no parseable alias", func(t *testing.T) {
+		suggestions := source.GetSuggestions("accum")
+		var nlRow *components.Suggestion
+		for i := range suggestions {
+			if suggestions[i].Category == "example" {
+				nlRow = &suggestions[i]
+				break
+			}
+		}
+		if nlRow == nil {
+			t.Fatal("expected NL row for accumulate via NLExample")
+		}
+		if nlRow.InsertText != "100 MB/s over 1 day" {
+			t.Errorf("NL InsertText = %q, want %q", nlRow.InsertText, "100 MB/s over 1 day")
+		}
+	})
+}
+
+func TestCombinedSuggestionSource_NLRowOrdering(t *testing.T) {
+	funcSource := NewFunctionSuggestionSource()
+	unitSource := NewUnitSuggestionSource()
+	varSource := NewVariableSuggestionSource(func() map[string]string {
+		return nil
+	})
+
+	combined := NewCombinedSuggestionSource(funcSource, unitSource, varSource)
+
+	// "av" should produce fn row for avg, then nl row for avg, grouped together
+	suggestions := combined.GetSuggestions("av")
+
+	fnIdx := -1
+	nlIdx := -1
+	for i, s := range suggestions {
+		if s.InsertText == "avg" && s.Category != "example" {
+			fnIdx = i
+		}
+		if s.Category == "example" && s.InsertText == "average of 1, 2, 3" {
+			nlIdx = i
+		}
+	}
+
+	if fnIdx == -1 {
+		t.Fatal("expected fn row for avg")
+	}
+	if nlIdx == -1 {
+		t.Fatal("expected nl row for avg")
+	}
+	if nlIdx != fnIdx+1 {
+		t.Errorf("NL row at index %d should immediately follow fn row at index %d", nlIdx, fnIdx)
+	}
+}
+
+func TestCleanAliasName(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"transfer...across", "transfer across"},
+		{"read...from", "read from"},
+		{"average of", "average of"},
+		{"compress...using", "compress using"},
+	}
+	for _, tt := range tests {
+		if got := cleanAliasName(tt.input); got != tt.want {
+			t.Errorf("cleanAliasName(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestFirstWord(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"average of", "average"},
+		{"square root of", "square"},
+		{"transfer...across", "transfer"},
+		{"read...from", "read"},
+		{"accumulate", "accumulate"},
+	}
+	for _, tt := range tests {
+		if got := firstWord(tt.input); got != tt.want {
+			t.Errorf("firstWord(%q) = %q, want %q", tt.input, got, tt.want)
+		}
 	}
 }
 
