@@ -21,6 +21,7 @@ const (
 	CategoryNetwork     Category = "network"
 	CategoryStorage     Category = "storage"
 	CategoryCompression Category = "compression"
+	CategoryGrowth      Category = "growth"
 )
 
 // Alias represents an alternative name for a feature, with a flag indicating
@@ -73,6 +74,7 @@ func NewRegistry() *Registry {
 	r.features = append(r.features, getNetworkFeatures()...)
 	r.features = append(r.features, getStorageFeatures()...)
 	r.features = append(r.features, getCompressionFeatures()...)
+	r.features = append(r.features, getGrowthFeatures()...)
 	r.features = append(r.features, getKeywords()...)
 	r.features = append(r.features, getOperators()...)
 	return r
@@ -506,6 +508,42 @@ func getCompressionFeatures() []Feature {
 			Description: "Snappy fast compression (~2.5:1 ratio)",
 			Aliases:     nil,
 			Example:     "compress(1 GB, snappy) → 400 MB",
+		},
+	}
+}
+
+// getGrowthFeatures returns growth and depreciation function features.
+func getGrowthFeatures() []Feature {
+	return []Feature{
+		{
+			Name:        "compound",
+			Category:    CategoryGrowth,
+			Syntax:      "compound(principal, rate, periods)",
+			Description: "Calculate compound growth over time periods",
+			Aliases: []Alias{
+				{Name: "compound...by...over", Parseable: true},
+			},
+			Example: "compound(1000, 5%, 10) → 1628.89",
+		},
+		{
+			Name:        "grow",
+			Category:    CategoryGrowth,
+			Syntax:      "grow(amount, increment, periods)",
+			Description: "Calculate linear growth by adding a fixed amount each period",
+			Aliases: []Alias{
+				{Name: "grow...by...over", Parseable: true},
+			},
+			Example: "grow(100, 20 GB, 5) → 200 GB",
+		},
+		{
+			Name:        "depreciate",
+			Category:    CategoryGrowth,
+			Syntax:      "depreciate(value, rate, periods)",
+			Description: "Calculate declining balance depreciation over time",
+			Aliases: []Alias{
+				{Name: "depreciate...by...over", Parseable: true},
+			},
+			Example: "depreciate(10000, 20%, 5) → 3276.80",
 		},
 	}
 }

@@ -114,6 +114,29 @@ func TestNapkinFormatClassification(t *testing.T) {
 	}
 }
 
+func TestGrowthFunctionClassification(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want LineType
+	}{
+		{name: "compound functional", line: "compound(1000, 5%, 10)", want: Calculation},
+		{name: "grow functional", line: "grow(100, 20, 5)", want: Calculation},
+		{name: "depreciate functional", line: "depreciate(50000, 15%, 5)", want: Calculation},
+		{name: "compound assignment", line: "result = compound(1000, 5%, 10)", want: Calculation},
+	}
+
+	ctx := interpreter.NewEnvironment()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := classifyLineTest(t, tt.line, ctx)
+			if got != tt.want {
+				t.Errorf("ClassifyLine(%q) = %v, want %v", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestContextSensitiveClassification(t *testing.T) {
 	tests := []struct {
 		name    string

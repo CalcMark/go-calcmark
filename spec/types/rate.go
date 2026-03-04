@@ -122,7 +122,8 @@ func (r *Rate) Multiply(scalar decimal.Decimal) *Rate {
 }
 
 // NormalizeTimeUnit converts various time unit formats to canonical form.
-// Examples: "s" → "second", "seconds" → "second", "sec" → "second"
+// Handles abbreviations, plurals, and adjectival forms (e.g., "monthly" → "month").
+// Examples: "s" → "second", "seconds" → "second", "sec" → "second", "daily" → "day"
 func NormalizeTimeUnit(unit string) string {
 	lower := strings.ToLower(strings.TrimSpace(unit))
 
@@ -143,23 +144,31 @@ func NormalizeTimeUnit(unit string) string {
 		"hour":  "hour",
 		"hours": "hour",
 
-		"d":    "day",
-		"day":  "day",
-		"days": "day",
+		"d":     "day",
+		"day":   "day",
+		"days":  "day",
+		"daily": "day",
 
-		"w":     "week",
-		"wk":    "week",
-		"week":  "week",
-		"weeks": "week",
+		"w":      "week",
+		"wk":     "week",
+		"week":   "week",
+		"weeks":  "week",
+		"weekly": "week",
 
-		"month":  "month",
-		"months": "month",
-		"mo":     "month",
+		"month":   "month",
+		"months":  "month",
+		"mo":      "month",
+		"monthly": "month",
 
-		"y":     "year",
-		"yr":    "year",
-		"year":  "year",
-		"years": "year",
+		"quarter":   "quarter",
+		"quarters":  "quarter",
+		"quarterly": "quarter",
+
+		"y":      "year",
+		"yr":     "year",
+		"year":   "year",
+		"years":  "year",
+		"yearly": "year",
 	}
 
 	if canonical, ok := timeUnits[lower]; ok {
@@ -168,6 +177,22 @@ func NormalizeTimeUnit(unit string) string {
 
 	// Unknown unit, return as-is
 	return lower
+}
+
+// PeriodToPeriodsPerYear returns how many of the given period fit in one year.
+// Used by growth functions to convert between annual rates and per-period rates.
+// Returns 0 and false for unrecognized periods.
+func PeriodToPeriodsPerYear(period string) (int, bool) {
+	normalized := NormalizeTimeUnit(period)
+	periods := map[string]int{
+		"year":    1,
+		"quarter": 4,
+		"month":   12,
+		"week":    52,
+		"day":     365,
+	}
+	n, ok := periods[normalized]
+	return n, ok
 }
 
 // abbreviateTimeUnit returns short form for display.

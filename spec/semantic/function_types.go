@@ -127,6 +127,32 @@ var FunctionSpecs = map[string]FunctionSpec{
 		},
 	},
 
+	// Growth functions
+	"compound": {
+		Name: "compound",
+		Params: []ParamSpec{
+			{Name: "principal", Type: ArgTypeAny, Examples: []string{"1000", "$1000", "100 users"}},
+			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"5%", "0.05", "12%"}},
+			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"10", "12", "5"}},
+		},
+	},
+	"grow": {
+		Name: "grow",
+		Params: []ParamSpec{
+			{Name: "amount", Type: ArgTypeAny, Examples: []string{"100", "50 GB", "1000 users"}},
+			{Name: "increment", Type: ArgTypeAny, Examples: []string{"20 GB", "100 users", "5"}},
+			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"12", "6", "24"}},
+		},
+	},
+	"depreciate": {
+		Name: "depreciate",
+		Params: []ParamSpec{
+			{Name: "value", Type: ArgTypeAny, Examples: []string{"10000", "$50000", "1000 units"}},
+			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"20%", "0.15", "10%"}},
+			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"5", "10", "7"}},
+		},
+	},
+
 	// Capacity functions
 	"capacity": {
 		Name: "capacity",

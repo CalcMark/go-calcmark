@@ -1082,6 +1082,7 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	arg = p.maybeCompoundModifier(arg)
 	args = append(args, arg)
 
 	// Parse remaining arguments
@@ -1090,6 +1091,7 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		arg = p.maybeCompoundModifier(arg)
 		args = append(args, arg)
 	}
 
@@ -1119,6 +1121,26 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 			End:   ast.Position{Line: funcName.Line, Column: funcName.Column + len(funcName.Value)},
 		},
 	}, nil
+}
+
+// maybeCompoundModifier checks if an argument is an Identifier "compounded"
+// followed by another IDENTIFIER (e.g., "compounded monthly"). If so, combines
+// them into a single Identifier with "compounded:" prefix for the evaluator.
+// This handles the functional syntax: compound(1000, 5%, 10, compounded monthly)
+func (p *RecursiveDescentParser) maybeCompoundModifier(arg ast.Node) ast.Node {
+	ident, ok := arg.(*ast.Identifier)
+	if !ok || strings.ToLower(ident.Name) != "compounded" {
+		return arg
+	}
+	if !p.check(lexer.IDENTIFIER) {
+		return arg
+	}
+	p.advance()
+	period := strings.ToLower(string(p.previous().Value))
+	return &ast.Identifier{
+		Name:  "compounded:" + period,
+		Range: ident.Range,
+	}
 }
 
 // parseFromTarget parses the target of a "from" expression.

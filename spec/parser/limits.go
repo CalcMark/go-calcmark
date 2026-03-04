@@ -9,6 +9,11 @@ const (
 	// MaxTokenCount limits total tokens to prevent "token bomb" attacks
 	// Example: x1+x2+x3+...+x10000
 	MaxTokenCount = 10000
+
+	// MaxCompoundPeriods limits the number of periods in growth functions
+	// to prevent CPU exhaustion from large exponent calculations.
+	// compound(x, y, 10000) is the maximum allowed.
+	MaxCompoundPeriods = 10_000
 )
 
 // SecurityError represents a security limit violation

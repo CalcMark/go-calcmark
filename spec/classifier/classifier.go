@@ -84,6 +84,13 @@ func containsFunctions(tokens []lexer.Token) bool {
 		if functionTypes[token.Type] {
 			return true
 		}
+		// Growth functions use IDENTIFIER tokens (not reserved keywords)
+		if token.Type == lexer.IDENTIFIER {
+			switch strings.ToLower(string(token.Value)) {
+			case "compound", "grow", "depreciate":
+				return true
+			}
+		}
 	}
 	return false
 }

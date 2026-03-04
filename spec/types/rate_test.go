@@ -111,6 +111,65 @@ func TestTimeUnitNormalization(t *testing.T) {
 	}
 }
 
+func TestNormalizeTimeUnit_AdjectivalForms(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"daily", "day"},
+		{"weekly", "week"},
+		{"monthly", "month"},
+		{"quarterly", "quarter"},
+		{"yearly", "year"},
+		{"Daily", "day"},
+		{"MONTHLY", "month"},
+		{"quarter", "quarter"},
+		{"quarters", "quarter"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := NormalizeTimeUnit(tt.input)
+			if result != tt.expected {
+				t.Errorf("NormalizeTimeUnit(%q) = %q, expected %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestPeriodToPeriodsPerYear(t *testing.T) {
+	tests := []struct {
+		period   string
+		expected int
+		ok       bool
+	}{
+		{"year", 1, true},
+		{"yearly", 1, true},
+		{"quarter", 4, true},
+		{"quarterly", 4, true},
+		{"month", 12, true},
+		{"monthly", 12, true},
+		{"week", 52, true},
+		{"weekly", 52, true},
+		{"day", 365, true},
+		{"daily", 365, true},
+		{"second", 0, false},
+		{"unknown", 0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.period, func(t *testing.T) {
+			n, ok := PeriodToPeriodsPerYear(tt.period)
+			if ok != tt.ok {
+				t.Errorf("PeriodToPeriodsPerYear(%q) ok = %v, expected %v", tt.period, ok, tt.ok)
+			}
+			if n != tt.expected {
+				t.Errorf("PeriodToPeriodsPerYear(%q) = %d, expected %d", tt.period, n, tt.expected)
+			}
+		})
+	}
+}
+
 func TestTimeUnitToSeconds(t *testing.T) {
 	tests := []struct {
 		unit     string
