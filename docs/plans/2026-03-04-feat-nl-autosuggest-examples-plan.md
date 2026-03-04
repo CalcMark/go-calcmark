@@ -1,7 +1,7 @@
 ---
 title: "feat: Add NL examples and position-aware variables to autosuggest"
 type: feat
-status: active
+status: completed
 date: 2026-03-04
 brainstorm: docs/brainstorms/2026-03-04-nl-autosuggest-examples-brainstorm.md
 related_todo: .planning/todos/pending/2026-02-07-function-help-natural-language-examples.md
@@ -121,28 +121,28 @@ Keep the existing 8-item cap with scroll indicator. With fn+nl pairs and a 2-cha
 
 ### Functional
 
-- [ ] Typing a function name prefix (e.g., `avg`, `conver`) shows both fn and nl rows in the popup
-- [ ] Typing an NL alias keyword prefix (e.g., `aver`, `squa`, `trans`) shows the nl row (and fn row if it also matches)
-- [ ] Selecting an nl row inserts the concrete example text (e.g., `average of 1, 2, 3`)
-- [ ] Selecting an nl row does NOT append `(`
-- [ ] Selecting an fn row continues to append `(` (existing behavior preserved)
-- [ ] Popup rows show `fn` or `nl` category tags
-- [ ] fn and nl rows for the same function are adjacent in the popup
-- [ ] Undo after accepting an nl suggestion restores the original prefix
-- [ ] Autosuggest popup does not appear until at least 2 characters have been typed
+- [x] Typing a function name prefix (e.g., `avg`, `conver`) shows both fn and nl rows in the popup
+- [x] Typing an NL alias keyword prefix (e.g., `aver`, `squa`, `trans`) shows the nl row (and fn row if it also matches)
+- [x] Selecting an nl row inserts the concrete example text (e.g., `average of 1, 2, 3`)
+- [x] Selecting an nl row does NOT append `(`
+- [x] Selecting an fn row continues to append `(` (existing behavior preserved)
+- [x] Popup rows show `fn` or `nl` category tags
+- [x] fn and nl rows for the same function are adjacent in the popup
+- [x] Undo after accepting an nl suggestion restores the original prefix
+- [x] Autosuggest popup does not appear until at least 2 characters have been typed
 
 ### Variable Position Awareness
 
-- [ ] Variable suggestions only include variables defined on lines above the cursor
-- [ ] Variables defined on the same line or below the cursor are excluded
-- [ ] Built-in constants (e.g., `E`, `PI`) are always included regardless of position
+- [x] Variable suggestions only include variables defined on lines above the cursor
+- [x] Variables defined on the same line or below the cursor are excluded
+- [x] Built-in constants (e.g., `E`, `PI`) are always included regardless of position
 
 ### Non-Functional
 
-- [ ] All 9 NL-capable functions have example text
-- [ ] Feature registry `Alias.Example` field is the single source of NL example data
-- [ ] No changes to `acceptAutocomplete` logic (NL rows naturally bypass `(` appending)
-- [ ] Existing autocomplete tests updated for tag rendering and still pass
+- [x] All 9 NL-capable functions have example text
+- [x] Feature registry `Alias.Example` field is the single source of NL example data
+- [x] No changes to `acceptAutocomplete` logic (NL rows naturally bypass `(` appending)
+- [x] Existing autocomplete tests updated for tag rendering and still pass
 
 ## Implementation Phases
 
