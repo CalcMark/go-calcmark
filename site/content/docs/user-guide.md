@@ -15,7 +15,8 @@ weight: 20
   - [Unit Conversion](#unit-conversion) -- `in` and `as` keywords
   - [Currency Conversion](#currency-conversion) -- Exchange rates in frontmatter
   - [Global Variables](#global-variables) -- Reusable values in frontmatter
-  - [Built-in Functions](#built-in-functions) -- All 12 functions
+  - [Built-in Functions](#built-in-functions) -- All 15 functions
+  - [Growth Functions](#growth-functions) -- Compound, linear, and depreciation
   - [Rates and `over`](#rates) -- Rate literals and accumulation
   - [Napkin Math](#napkin-math) -- Quick estimates with `as napkin`
   - [Date Arithmetic](#date-arithmetic) -- Date literals and duration math
@@ -281,6 +282,29 @@ Globals must be literal values. Expressions like `1 + 1` are not allowed.
 {{< feature-table category="function" >}}
 
 See the [Language Reference](/docs/language-reference/) for the complete list of functions, including [natural language syntax](/docs/language-reference/#natural-language-syntax) forms.
+
+### Growth Functions {#growth-functions}
+
+Model compound growth, linear growth, and depreciation over time:
+
+```cm
+# Compound growth
+compound($1000, 5%, 10)                          -> $1628.89
+compound $1000 by 5% over 10 years               (NL form)
+
+# Financial compounding
+compound($1000, 5%, 10 years, compounded monthly) -> $1647.01
+
+# Linear growth
+grow($500, $100, 36)                              -> $4100.00
+grow 100 by 20 over 5 months                      (NL form)
+
+# Depreciation with salvage floor
+depreciate($50000, 15%, 5)                        -> $22185.27
+depreciate $50000 by 15% over 5 years to $5000
+```
+
+See the [Language Reference: Growth Functions](/docs/language-reference/#growth) for the full argument reference.
 
 ### Rates and the `over` keyword {#rates}
 

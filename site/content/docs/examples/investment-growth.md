@@ -1,0 +1,62 @@
+---
+title: "Investment & Growth"
+summary: "Compound growth, depreciation, and linear growth for financial and business modeling."
+weight: 10
+---
+
+Model investment returns, asset depreciation, and business growth using CalcMark's growth functions.
+
+## The CalcMark File
+
+````cm
+# Investment Growth
+
+## Retirement Savings
+initial_savings = $50000
+annual_return = 7%
+years_to_retire = 30
+
+# Simple compound growth
+retirement_fund = compound($50000, 7%, 30)
+
+# With monthly compounding (higher return)
+retirement_monthly = compound($50000, 7%, 30 years, compounded monthly)
+
+## Business Growth
+
+# Customer base growing 15% per month
+starting_customers = 500 customers
+monthly_growth = compound(500 customers, 15%, 24)
+
+# Natural language form
+compound 1000 users by 10% over 12 months
+
+## Linear Growth
+
+# Adding $200/month to savings for 5 years
+savings_plan = grow($0, $200, 60)
+
+# Adding 50 subscribers per week
+grow 100 subscribers by 50 over 52 weeks
+
+## Asset Depreciation
+
+# Car loses 20% per year
+car_value = depreciate($35000, 20%, 5)
+
+# Equipment with $2000 salvage floor
+depreciate $80000 by 25% over 10 years to $2000
+
+# Office furniture
+furniture = depreciate($15000, 15%, 7)
+````
+
+### What This Demonstrates
+
+- `compound()` for exponential growth with percentage rates
+- Financial compounding frequencies (`compounded monthly`, `compounded quarterly`)
+- `grow()` for linear (additive) growth with fixed increments
+- `depreciate()` for declining-balance depreciation
+- Salvage floor with the `to` keyword in NL form
+- Quantities with arbitrary units (`customers`, `users`, `subscribers`)
+- Both functional and natural language syntax

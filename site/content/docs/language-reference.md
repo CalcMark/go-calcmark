@@ -385,7 +385,7 @@ All built-in function names are reserved:
 ```
 avg, sqrt, accumulate, convert_rate, capacity,
 downtime, rtt, throughput, transfer_time,
-read, seek, compress
+read, seek, compress, compound, grow, depreciate
 ```
 
 ### Language Keywords
@@ -512,6 +512,35 @@ compress 1 GB using gzip            -> (NL form)
 compress 500 MB using lz4
 ```
 
+#### `compound` / `compound...by...over` {#compound-examples}
+
+```cm
+compound($1000, 5%, 10)                              -> $1628.89
+compound(500 customers, 20%, 12)                     -> 4458.05 customers
+compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
+compound($1000, 5%, 10 years, compounded quarterly)  -> $1643.62
+compound $1000 by 5% over 10 years                   -> $1628.89  (NL form)
+compound $1000 by 12% compounded monthly over 10 years
+compound $1000 by 5% per month over 12 months
+```
+
+#### `grow` / `grow...by...over` {#grow-examples}
+
+```cm
+grow(100, 20, 5)                   -> 200
+grow($500, $100, 36)               -> $4100.00
+grow 100 by 20 over 5 months       -> 200  (NL form)
+```
+
+#### `depreciate` / `depreciate...by...over` {#depreciate-examples}
+
+```cm
+depreciate($50000, 15%, 5)                -> $22185.27
+depreciate($50000, 15%, 20, $5000)        -> $5000.00  (salvage floor)
+depreciate $50000 by 15% over 5 years     -> $22185.27  (NL form)
+depreciate $50000 by 15% over 5 years to $5000
+```
+
 ### Unit Handling in Functions
 
 **Same units are preserved:**
@@ -543,6 +572,9 @@ CalcMark supports natural language forms for several functions. These are equiva
 | `read X from Y` | `read(X, Y)` | `read 100 MB from ssd` |
 | `compress X using Y` | `compress(X, Y)` | `compress 1 GB using gzip` |
 | `transfer X across Y Z` | `transfer_time(X, Y, Z)` | `transfer 1 GB across regional gigabit` |
+| `compound X by Y% over Z` | `compound(X, Y%, Z)` | `compound $1000 by 5% over 10 years` |
+| `grow X by Y over Z` | `grow(X, Y, Z)` | `grow 100 by 20 over 5 months` |
+| `depreciate X by Y% over Z` | `depreciate(X, Y%, Z)` | `depreciate $50000 by 15% over 5 years` |
 
 ### Capacity Planning Syntax {#capacity-syntax}
 
@@ -749,6 +781,74 @@ compress(1 GB, snappy)   -> ~400 MB  (2.5:1 ratio)
 
 compress 1 GB using gzip (NL form)
 ```
+
+---
+
+## Growth Functions {#growth}
+
+### Compound Growth
+
+Calculate compound growth over time. Supports simple compounding, per-period rates, and financial compounding frequencies:
+
+```cm
+compound($1000, 5%, 10)                              -> $1628.89
+compound(500 customers, 20%, 12)                     -> 4458.05 customers
+compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
+compound($1000, 5%, 10 years, compounded quarterly)  -> $1643.62
+
+compound $1000 by 5% over 10 years                   (NL form)
+compound $1000 by 12% compounded monthly over 10 years
+compound $1000 by 5% per month over 12 months
+```
+
+**Arguments:**
+
+| # | Name | Description |
+|---|------|-------------|
+| 1 | principal | Starting amount (number, currency, or quantity) |
+| 2 | rate | Growth rate as percentage |
+| 3 | periods | Number of periods (number or duration) |
+| 4 | modifier | Optional: `compounded monthly/quarterly/daily/weekly/annually` or period identifier |
+
+### Linear Growth
+
+Calculate linear (additive) growth over time:
+
+```cm
+grow($500, $100, 36)               -> $4100.00
+grow(100, 20, 5)                   -> 200
+
+grow 100 by 20 over 5 months       (NL form)
+```
+
+**Arguments:**
+
+| # | Name | Description |
+|---|------|-------------|
+| 1 | initial | Starting amount |
+| 2 | increment | Amount added each period |
+| 3 | periods | Number of periods (number or duration) |
+
+### Depreciation
+
+Calculate declining-balance depreciation with optional salvage floor:
+
+```cm
+depreciate($50000, 15%, 5)                -> $22185.27
+depreciate($50000, 15%, 20, $5000)        -> $5000.00  (salvage floor)
+
+depreciate $50000 by 15% over 5 years     (NL form)
+depreciate $50000 by 15% over 5 years to $5000
+```
+
+**Arguments:**
+
+| # | Name | Description |
+|---|------|-------------|
+| 1 | value | Starting value |
+| 2 | rate | Depreciation rate as percentage |
+| 3 | periods | Number of periods (number or duration) |
+| 4 | salvage | Optional: minimum floor value |
 
 ---
 

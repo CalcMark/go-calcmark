@@ -44,6 +44,36 @@ transfer 100 MB across local ten_gig
 transfer 10 GB across continental hundred_gig
 ```
 
+## Growth Functions: compound...by...over / grow...by...over / depreciate...by...over
+
+```cm
+# Compound growth - functional
+compound($1000, 5%, 10)
+compound(500 customers, 20%, 12)
+compound($1000, 5%, 10 years, compounded monthly)
+compound($1000, 5%, 10 years, compounded quarterly)
+
+# Compound growth - natural language
+compound $1000 by 5% over 10 years
+compound $1000 by 12% compounded monthly over 10 years
+compound $1000 by 5% per month over 12 months
+
+# Linear growth - functional
+grow($500, $100, 36)
+grow(100, 20, 5)
+
+# Linear growth - natural language
+grow 100 by 20 over 5 months
+
+# Depreciation - functional
+depreciate($50000, 15%, 5)
+depreciate($50000, 15%, 20, $5000)
+
+# Depreciation - natural language
+depreciate $50000 by 15% over 5 years
+depreciate $50000 by 15% over 5 years to $5000
+```
+
 ## Functions with Expressions
 
 ```cm
@@ -93,6 +123,7 @@ same = total1 == total2
 
 - Traditional `fn(args)` and natural language `name of args` syntax
 - Multi-argument `read...from`, `compress...using`, `transfer...across` patterns
+- Growth functions: `compound...by...over`, `grow...by...over`, `depreciate...by...over`
 - Expressions and variables as function arguments
 - Nested function calls
 - Assignment from function results
