@@ -41,6 +41,20 @@ Tests all valid duration literal formats.
 1 month - 1 week
 5 days + 12 hours
 
+## Duration Conversions with 'in'
+
+1 day in seconds
+1 week in days
+2 hours in minutes
+1 year in days
+1 month in hours
+
+## Duration Conversions with 'as'
+
+1 day as seconds
+3 hours as minutes
+tt = 2 weeks as days
+
 ## Durations in Context
 
 deadline = today + 2 weeks
