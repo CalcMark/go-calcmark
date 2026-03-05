@@ -18,6 +18,8 @@ and calculations in one document. Calculations are verifiable and reproducible.
 Examples:
   cm                              Open editor with new document
   cm budget.cm                    Open file in editor
+  echo "x = 42" | cm             Evaluate piped input
+  echo "x = 42" | cm --format json  Evaluate piped input as JSON
   cm eval calc.cm                 Evaluate file and print result
   cm eval < input.cm              Evaluate from stdin
   cm convert doc.cm --to=html     Convert to HTML
@@ -25,15 +27,24 @@ Examples:
 GitHub Gist sharing requires the gh CLI: https://cli.github.com`,
 	// Allow 0 or 1 file argument
 	Args: cobra.MaximumNArgs(1),
-	// When called without subcommand, open editor
-	Run: func(cmd *cobra.Command, args []string) {
+	// When called without subcommand, open editor — unless stdin is piped,
+	// in which case evaluate and print the result (issue #23).
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Piped stdin without a file argument → evaluate like `cm eval`.
+		if stdinIsPiped() && len(args) == 0 {
+			evalFormat = rootFormat
+			evalVerbose = rootVerbose
+			return runEval(nil)
+		}
+
 		// If a file argument is provided, open in editor mode
 		if len(args) > 0 {
 			runEdit(args[0])
-			return
+			return nil
 		}
 		// Otherwise open editor with empty document
 		runEdit("")
+		return nil
 	},
 }
 
@@ -48,6 +59,8 @@ func Execute() {
 var (
 	colorModeFlag string
 	localeFlag    string
+	rootFormat    string
+	rootVerbose   bool
 )
 
 func init() {
@@ -59,6 +72,12 @@ func init() {
 		"Color mode: 'auto' (detect from terminal), 'light', or 'dark'")
 	rootCmd.PersistentFlags().StringVar(&localeFlag, "locale", "",
 		"Display locale for number formatting (e.g., 'en-US', 'de-DE', 'fr-FR')")
+
+	// --format applies when stdin is piped (e.g. `echo "1+1" | cm --format json`)
+	rootCmd.Flags().StringVar(&rootFormat, "format", "text",
+		"Output format for piped input: text, json, html, md, cm")
+	rootCmd.Flags().BoolVarP(&rootVerbose, "verbose", "v", false,
+		"Show all intermediate values (piped input)")
 
 	// Load config before any command runs
 	// NOTE: localeFormatter() below depends on config being loaded first

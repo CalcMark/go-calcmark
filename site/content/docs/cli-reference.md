@@ -25,6 +25,8 @@ cm completion [shell] # Generate shell completions
 |------|--------|-------------|
 | `--color-mode` | `auto`, `light`, `dark` | Override terminal color detection |
 | `--locale` | `en-US`, `de-DE`, `fr-FR` | Display locale for number formatting |
+| `--format` | `text`, `json`, `html`, `md`, `cm` | Output format when stdin is piped (default: `text`) |
+| `--verbose` / `-v` | | Show all intermediate values when stdin is piped |
 
 The `--color-mode` flag is available on all commands. When set to `auto` (default), CalcMark detects the terminal background color. Use `light` or `dark` to override.
 
@@ -36,10 +38,26 @@ The `--locale` flag controls decimal and thousands separators in output. See [Co
 
 Open the CalcMark editor. With no arguments, starts with an empty document. With a file argument, opens that file for editing.
 
+When stdin is piped, `cm` automatically evaluates the input and prints results to stdout instead of launching the editor. This makes CalcMark usable in shell pipelines and by AI agents.
+
+### Flags (piped mode)
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--format` | | Output format: `text` (default), `json`, `html`, `md`, `cm` |
+| `--verbose` | `-v` | Show all intermediate values, not just the final result |
+
+### Examples
+
 ```bash
-cm                    # New document
-cm budget.cm          # Edit existing file
-cm --color-mode=dark  # Force dark mode
+cm                              # New document (interactive editor)
+cm budget.cm                    # Edit existing file
+cm --color-mode=dark            # Force dark mode
+
+echo "x = 42" | cm             # Evaluate piped input (text output)
+echo "x = 42" | cm --format json  # JSON output for scripting/agents
+echo "x = 10" | cm -v          # Verbose output with all values
+cat budget.cm | cm --format json   # Pipe a file through cm
 ```
 
 See [Editor Shortcuts](/docs/user-guide/#editor-shortcuts) in the User Guide for keyboard shortcuts.

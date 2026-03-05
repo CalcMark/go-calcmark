@@ -154,12 +154,13 @@ cm convert doc.cm --to=json              # JSON to stdout
 cm convert doc.cm --to=html -T tpl.html  # Custom HTML template
 ```
 
-Use `cm eval` for quick evaluation:
+Use `cm eval` for quick evaluation, or pipe directly into `cm`:
 
 ```bash
 cm eval budget.cm            # Print final results
 cm eval -v budget.cm         # Show all intermediate values
-echo "1 + 2" | cm eval      # Evaluate from stdin
+echo "1 + 2" | cm           # Evaluate piped input (auto-detects pipe)
+echo "1 + 2" | cm --format json  # JSON output for scripting/agents
 cm eval --locale=de-DE budget.cm  # German number formatting
 ```
 
