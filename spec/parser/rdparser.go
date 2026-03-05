@@ -352,17 +352,30 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 		}
 	}
 
-	// Check for "as napkin" keyword: "1234567 as napkin" or "(100 + 50) as napkin"
+	// Check for "as napkin" or "as <unit>" keyword: "1234567 as napkin", "1 day as seconds"
 	// Do this at expression level to allow it to apply to entire sub-expressions
 	// including those in parentheses
 	if p.match(lexer.AS) {
-		if !p.match(lexer.NAPKIN) {
-			return nil, p.error("expected 'napkin' after 'as'")
+		if p.match(lexer.NAPKIN) {
+			return &ast.NapkinConversion{
+				Expression: left,
+				Range:      &ast.Range{},
+			}, nil
 		}
-		return &ast.NapkinConversion{
-			Expression: left,
-			Range:      &ast.Range{},
-		}, nil
+		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
+		if p.check(lexer.IDENTIFIER) {
+			targetUnit := string(p.peek().Value)
+			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
+			if types.IsValidDurationUnit(targetUnit) || isQuantityUnit {
+				p.advance() // consume the target unit
+				return &ast.UnitConversion{
+					Quantity:   left,
+					TargetUnit: targetUnit,
+					Range:      &ast.Range{},
+				}, nil
+			}
+		}
+		return nil, p.error("expected 'napkin' or a valid unit after 'as'")
 	}
 
 	return left, nil
@@ -705,8 +718,9 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 		return nil, err
 	}
 
-	// Check for "as napkin" postfix (higher precedence than unary operators)
-	// Need to check for "as" identifier followed by "napkin" keyword
+	// Check for "as napkin" or "as <unit>" postfix (higher precedence than unary operators)
+	// "as napkin" → NapkinConversion
+	// "as seconds" → UnitConversion (for duration conversion like "1 day as seconds")
 	// This ensures "-47 as napkin" parses as "napkin(-47)" not "-(napkin(47))"
 	if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "as" {
 		p.advance() // consume "as"
@@ -716,8 +730,20 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 				Range:      &ast.Range{},
 			}, nil
 		}
-		// If we saw "as" but not "napkin", that's an error
-		return nil, p.error("expected 'napkin' after 'as'")
+		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
+		if p.check(lexer.IDENTIFIER) {
+			targetUnit := string(p.peek().Value)
+			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
+			if types.IsValidDurationUnit(targetUnit) || isQuantityUnit {
+				p.advance() // consume the target unit
+				return &ast.UnitConversion{
+					Quantity:   result,
+					TargetUnit: targetUnit,
+					Range:      &ast.Range{},
+				}, nil
+			}
+		}
+		return nil, p.error("expected 'napkin' or a valid unit after 'as'")
 	}
 
 	return result, nil

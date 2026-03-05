@@ -52,8 +52,8 @@ var durationToSecondsDecimal = map[string]decimal.Decimal{
 	"years":        decimal.NewFromInt(31536000),
 }
 
-// isValidDurationUnit checks if the unit is a valid duration unit.
-func isValidDurationUnit(unit string) bool {
+// IsValidDurationUnit checks if the unit is a valid duration unit.
+func IsValidDurationUnit(unit string) bool {
 	_, ok := durationToSecondsDecimal[unit]
 	return ok
 }
@@ -61,7 +61,7 @@ func isValidDurationUnit(unit string) bool {
 // NewDuration creates a new Duration with the given value and unit.
 func NewDuration(value decimal.Decimal, unit string) (*Duration, error) {
 	// Validate unit using the decimal map (includes milliseconds)
-	if !isValidDurationUnit(unit) {
+	if !IsValidDurationUnit(unit) {
 		return nil, fmt.Errorf("invalid duration unit: %s", unit)
 	}
 
@@ -95,7 +95,7 @@ func (d *Duration) ToSeconds() decimal.Decimal {
 // Convert converts the duration to a different unit.
 func (d *Duration) Convert(targetUnit string) (*Duration, error) {
 	// Validate target unit
-	if !isValidDurationUnit(targetUnit) {
+	if !IsValidDurationUnit(targetUnit) {
 		return nil, fmt.Errorf("invalid duration unit: %s", targetUnit)
 	}
 

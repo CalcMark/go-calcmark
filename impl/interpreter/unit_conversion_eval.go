@@ -38,10 +38,19 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 			u.TargetUnit, rate.String(), rate.Amount.Unit, u.TargetUnit, rate.String(), u.TargetUnit)
 	}
 
+	// Duration conversion: "1 day in seconds", "2 weeks in hours"
+	if duration, ok := result.(*types.Duration); ok {
+		converted, err := duration.Convert(u.TargetUnit)
+		if err != nil {
+			return nil, fmt.Errorf("cannot convert duration: %w", err)
+		}
+		return converted, nil
+	}
+
 	// Standard quantity conversion
 	qty, ok := result.(*types.Quantity)
 	if !ok {
-		return nil, fmt.Errorf("'in' conversion requires a quantity, got %T", result)
+		return nil, fmt.Errorf("'in' conversion requires a quantity or duration, got %T", result)
 	}
 
 	// Use existing unit conversion logic

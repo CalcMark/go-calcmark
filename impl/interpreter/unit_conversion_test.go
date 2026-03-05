@@ -266,6 +266,159 @@ func TestRateUnitConversion(t *testing.T) {
 	}
 }
 
+// TestDurationConversion tests duration-to-duration conversion using "in" and "as" keywords.
+// Examples: "1 day in seconds", "2 weeks as hours", "1 year in days"
+func TestDurationConversion(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		expected  float64
+		tolerance float64
+		wantUnit  string // Expected unit in output
+	}{
+		// "in" keyword conversions
+		{
+			name:      "1 day in seconds",
+			input:     "1 day in seconds\n",
+			expected:  86400,
+			tolerance: 0.001,
+			wantUnit:  "seconds",
+		},
+		{
+			name:      "1 week in days",
+			input:     "1 week in days\n",
+			expected:  7,
+			tolerance: 0.001,
+			wantUnit:  "days",
+		},
+		{
+			name:      "2 hours in minutes",
+			input:     "2 hours in minutes\n",
+			expected:  120,
+			tolerance: 0.001,
+			wantUnit:  "minutes",
+		},
+		{
+			name:      "1 year in days",
+			input:     "1 year in days\n",
+			expected:  365,
+			tolerance: 0.001,
+			wantUnit:  "days",
+		},
+		{
+			name:      "1 month in hours",
+			input:     "1 month in hours\n",
+			expected:  720, // 30 days * 24 hours
+			tolerance: 0.001,
+			wantUnit:  "hours",
+		},
+		// "as" keyword conversions
+		{
+			name:      "1 day as seconds",
+			input:     "1 day as seconds\n",
+			expected:  86400,
+			tolerance: 0.001,
+			wantUnit:  "seconds",
+		},
+		{
+			name:      "3 hours as minutes",
+			input:     "3 hours as minutes\n",
+			expected:  180,
+			tolerance: 0.001,
+			wantUnit:  "minutes",
+		},
+		// Variable assignment with duration conversion
+		{
+			name:      "assigned duration conversion with in",
+			input:     "tt = 1 day in seconds\n",
+			expected:  86400,
+			tolerance: 0.001,
+			wantUnit:  "seconds",
+		},
+		{
+			name:      "assigned duration conversion with as",
+			input:     "tt = 2 weeks as days\n",
+			expected:  14,
+			tolerance: 0.001,
+			wantUnit:  "days",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := interpreter.NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[0].String()
+			t.Logf("Result: %s", result)
+
+			// Extract numeric value
+			var actual float64
+			_, err = fmt.Sscanf(result, "%f", &actual)
+			if err != nil {
+				t.Fatalf("Could not parse result %q as number: %v", result, err)
+			}
+
+			diff := math.Abs(actual - tt.expected)
+			if diff > tt.tolerance {
+				t.Errorf("Value = %f, expected %f (diff: %f, tolerance: %f)",
+					actual, tt.expected, diff, tt.tolerance)
+			}
+
+			// Check output contains expected unit
+			if !strings.Contains(result, tt.wantUnit) {
+				t.Errorf("Result %q does not contain expected unit %q", result, tt.wantUnit)
+			}
+		})
+	}
+}
+
+// TestDurationConversionErrors tests error cases for duration conversion.
+func TestDurationConversionErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantErrPart string
+	}{
+		{
+			name:        "duration to invalid unit",
+			input:       "1 day in meters\n",
+			wantErrPart: "invalid duration unit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := interpreter.NewInterpreter()
+			_, err = interp.Eval(nodes)
+			if err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !strings.Contains(err.Error(), tt.wantErrPart) {
+				t.Errorf("Error %q does not contain %q", err.Error(), tt.wantErrPart)
+			}
+		})
+	}
+}
+
 // TestRateUnitConversionErrors tests error cases for rate unit conversion.
 func TestRateUnitConversionErrors(t *testing.T) {
 	tests := []struct {
