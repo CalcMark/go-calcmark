@@ -38,6 +38,8 @@ cm                    # New document
 cm budget.cm          # Open existing file
 ```
 
+<img src="/images/tui-screenshot.png" alt="CalcMark TUI editor showing a budget calculation with live results" width="700">
+
 ### Evaluate a File
 
 Process a file and see results:
@@ -55,6 +57,16 @@ echo "price = 100 USD" | cm eval
 echo "24 celsius in fahrenheit" | cm eval
 echo "500 gram in oz" | cm eval
 ```
+
+## The Editor
+
+The editor includes **autosuggest** that helps you discover functions and units as you type. Type at least 2 characters and suggestions appear automatically:
+
+<img src="/images/feature-autocomplete.gif" alt="CalcMark autocomplete popup showing function and NL suggestions" width="600">
+
+Every function has both a traditional `fn(args)` form and a natural language form. The autocomplete shows both -- select the function name for `compound(...)` syntax, or the NL row for `compound $1000 by 5% over 10 years`:
+
+<img src="/images/feature-growth-autocomplete.gif" alt="CalcMark autocomplete showing growth function NL completion" width="600">
 
 ## Core Concepts
 
