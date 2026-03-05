@@ -7,12 +7,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// accumulateRate calculates the total quantity from a rate over a time period.
+// accumulateRate calculates the total from a rate over a time period.
+// When the rate's unit is a currency symbol or code, returns *types.Currency.
+// Otherwise returns *types.Quantity.
 // Examples:
-//   - 100 MB/s over 1 day → 8.64 TB
-//   - $0.10/hour over 30 days → $72
-//   - 5 GB/day over 1 year → 1.825 TB
-func accumulateRate(rate *types.Rate, timePeriod decimal.Decimal, periodUnit string) (*types.Quantity, error) {
+//   - 100 MB/s over 1 day → 8,640,000 MB (Quantity)
+//   - $0.10/hour over 30 days → $72 (Currency)
+//   - 5 GB/day over 1 year → 1,825 GB (Quantity)
+func accumulateRate(rate *types.Rate, timePeriod decimal.Decimal, periodUnit string) (types.Type, error) {
 	if rate == nil {
 		return nil, fmt.Errorf("rate cannot be nil")
 	}
@@ -34,6 +36,12 @@ func accumulateRate(rate *types.Rate, timePeriod decimal.Decimal, periodUnit str
 	// Formula: (amount per rate_time) * (total_time / rate_time)
 	// Example: (100 MB/s) * (86400 s / 1 s) = 8,640,000 MB
 	totalAmount := rate.Amount.Value.Mul(totalSeconds).Div(rateSeconds)
+
+	// If the rate's unit is a currency, return a Currency type so it
+	// can interoperate with other currency values in arithmetic.
+	if types.IsCurrencyCode(rate.Amount.Unit) {
+		return types.NewCurrency(totalAmount, rate.Amount.Unit), nil
+	}
 
 	return &types.Quantity{
 		Value: totalAmount,

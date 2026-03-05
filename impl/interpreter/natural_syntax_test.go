@@ -35,14 +35,17 @@ func TestNaturalSyntaxInterpreter(t *testing.T) {
 			input:       "$0.10/hour over 30 days\n",
 			expectError: false,
 			checkResult: func(t *testing.T, result types.Type) {
-				qty, ok := result.(*types.Quantity)
+				// Currency rates should produce Currency, not Quantity
+				cur, ok := result.(*types.Currency)
 				if !ok {
-					t.Fatalf("Expected Quantity, got %T", result)
+					t.Fatalf("Expected Currency, got %T", result)
 				}
 				// $0.10/hour * (30 days * 24 hours) = $72
-				// The $ symbol is preserved in rates (not converted to USD)
-				if qty.Unit != "$" {
-					t.Errorf("Expected unit $, got %s", qty.Unit)
+				if cur.Symbol != "$" {
+					t.Errorf("Expected symbol $, got %s", cur.Symbol)
+				}
+				if cur.Code != "USD" {
+					t.Errorf("Expected code USD, got %s", cur.Code)
 				}
 				t.Logf("✓ Result: %s", result.String())
 			},

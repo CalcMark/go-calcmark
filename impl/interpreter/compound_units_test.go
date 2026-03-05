@@ -381,11 +381,11 @@ func TestRateTypePreservation(t *testing.T) {
 			expectType: "Quantity",
 		},
 
-		// Cost rate accumulation preserves currency in Quantity
+		// Cost rate accumulation produces Currency (not Quantity)
 		{
-			name:       "cost rate over duration produces Quantity",
+			name:       "cost rate over duration produces Currency",
 			input:      "$0.10 per hour over 24 hours\n",
-			expectType: "Quantity",
+			expectType: "Currency",
 		},
 	}
 

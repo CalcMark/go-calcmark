@@ -8,79 +8,142 @@ import (
 )
 
 func TestAccumulateRate(t *testing.T) {
-	tests := []struct {
-		name          string
-		rate          *types.Rate
-		timePeriod    decimal.Decimal
-		periodUnit    string
-		expectedValue string
-		expectedUnit  string
-		expectError   bool
-	}{
-		{
-			name: "100 MB/s over 1 day",
-			rate: types.NewRate(
-				&types.Quantity{Value: decimal.NewFromInt(100), Unit: "MB"},
-				"second",
-			),
-			timePeriod:    decimal.NewFromInt(1),
-			periodUnit:    "day",
-			expectedValue: "8640000", // 100 * 86400
-			expectedUnit:  "MB",
-			expectError:   false,
-		},
-		{
-			name: "$0.10/hour over 30 days",
-			rate: types.NewRate(
-				&types.Quantity{Value: decimal.NewFromFloat(0.10), Unit: "USD"},
-				"hour",
-			),
-			timePeriod:    decimal.NewFromInt(30),
-			periodUnit:    "day",
-			expectedValue: "72", // 0.10 * 24 * 30
-			expectedUnit:  "USD",
-			expectError:   false,
-		},
-		{
-			name: "5 GB/day over 1 year",
-			rate: types.NewRate(
-				&types.Quantity{Value: decimal.NewFromInt(5), Unit: "GB"},
-				"day",
-			),
-			timePeriod:    decimal.NewFromInt(1),
-			periodUnit:    "year",
-			expectedValue: "1825", // 5 * 365
-			expectedUnit:  "GB",
-			expectError:   false,
-		},
-	}
+	t.Run("non-currency rates return Quantity", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			rate          *types.Rate
+			timePeriod    decimal.Decimal
+			periodUnit    string
+			expectedValue string
+			expectedUnit  string
+		}{
+			{
+				name: "100 MB/s over 1 day",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(100), Unit: "MB"},
+					"second",
+				),
+				timePeriod:    decimal.NewFromInt(1),
+				periodUnit:    "day",
+				expectedValue: "8640000", // 100 * 86400
+				expectedUnit:  "MB",
+			},
+			{
+				name: "5 GB/day over 1 year",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(5), Unit: "GB"},
+					"day",
+				),
+				timePeriod:    decimal.NewFromInt(1),
+				periodUnit:    "year",
+				expectedValue: "1825", // 5 * 365
+				expectedUnit:  "GB",
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := accumulateRate(tt.rate, tt.timePeriod, tt.periodUnit)
-
-			if tt.expectError {
-				if err == nil {
-					t.Error("Expected error but got none")
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result, err := accumulateRate(tt.rate, tt.timePeriod, tt.periodUnit)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
 				}
-				return
-			}
 
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
+				qty, ok := result.(*types.Quantity)
+				if !ok {
+					t.Fatalf("Expected *types.Quantity, got %T", result)
+				}
 
-			if result.Unit != tt.expectedUnit {
-				t.Errorf("Expected unit %q, got %q", tt.expectedUnit, result.Unit)
-			}
+				if qty.Unit != tt.expectedUnit {
+					t.Errorf("Expected unit %q, got %q", tt.expectedUnit, qty.Unit)
+				}
+				if qty.Value.String() != tt.expectedValue {
+					t.Errorf("Expected value %s, got %s", tt.expectedValue, qty.Value.String())
+				}
+				t.Logf("✓ %s = %s %s", tt.name, qty.Value.String(), qty.Unit)
+			})
+		}
+	})
 
-			if result.Value.String() != tt.expectedValue {
-				t.Errorf("Expected value %s, got %s", tt.expectedValue, result.Value.String())
-			}
+	t.Run("currency rates return Currency", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			rate           *types.Rate
+			timePeriod     decimal.Decimal
+			periodUnit     string
+			expectedValue  string
+			expectedSymbol string
+			expectedCode   string
+		}{
+			{
+				name: "$0.10/hour over 30 days",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromFloat(0.10), Unit: "$"},
+					"hour",
+				),
+				timePeriod:     decimal.NewFromInt(30),
+				periodUnit:     "day",
+				expectedValue:  "72",
+				expectedSymbol: "$",
+				expectedCode:   "USD",
+			},
+			{
+				name: "€50/day over 1 year",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(50), Unit: "€"},
+					"day",
+				),
+				timePeriod:     decimal.NewFromInt(1),
+				periodUnit:     "year",
+				expectedValue:  "18250",
+				expectedSymbol: "€",
+				expectedCode:   "EUR",
+			},
+			{
+				name: "USD100/month over 3 years",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(100), Unit: "USD"},
+					"month",
+				),
+				timePeriod:     decimal.NewFromInt(3),
+				periodUnit:     "year",
+				expectedValue:  "3650", // 3 years = 36.5 months (365*3/30)
+				expectedSymbol: "USD",
+				expectedCode:   "USD",
+			},
+		}
 
-			t.Logf("✓ %s = %s %s", tt.name, result.Value.String(), result.Unit)
-		})
-	}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result, err := accumulateRate(tt.rate, tt.timePeriod, tt.periodUnit)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				cur, ok := result.(*types.Currency)
+				if !ok {
+					t.Fatalf("Expected *types.Currency, got %T (%s)", result, result.String())
+				}
+
+				if cur.Symbol != tt.expectedSymbol {
+					t.Errorf("Expected symbol %q, got %q", tt.expectedSymbol, cur.Symbol)
+				}
+				if cur.Code != tt.expectedCode {
+					t.Errorf("Expected code %q, got %q", tt.expectedCode, cur.Code)
+				}
+				if cur.Value.String() != tt.expectedValue {
+					t.Errorf("Expected value %s, got %s", tt.expectedValue, cur.Value.String())
+				}
+				t.Logf("✓ %s = %s", tt.name, cur.String())
+			})
+		}
+	})
+
+	t.Run("nil rate returns error", func(t *testing.T) {
+		_, err := accumulateRate(nil, decimal.NewFromInt(1), "day")
+		if err == nil {
+			t.Error("Expected error for nil rate but got none")
+		}
+	})
 }
 
 func TestConvertRateTimeUnit(t *testing.T) {
