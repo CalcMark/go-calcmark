@@ -53,10 +53,13 @@ cm eval testdata/examples/system-sizing.cm
 Quick calculations from the command line:
 
 ```bash
-echo "price = 100 USD" | cm eval
-echo "24 celsius in fahrenheit" | cm eval
-echo "500 gram in oz" | cm eval
+echo "price = 100 USD" | cm
+echo "24 celsius in fahrenheit" | cm
+echo "500 gram in oz" | cm
+echo "1 + 1" | cm --format json    # JSON output for scripting
 ```
+
+> **Note:** When stdin is piped, `cm` automatically evaluates and prints results instead of opening the editor. Use `--format json` for structured output.
 
 ## The Editor
 
