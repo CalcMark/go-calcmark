@@ -36,10 +36,11 @@ Pushing commits to `main` will automatically deploy the site if any `site/**` fi
 
 Pushing the tag will automatically:
 - Build `cm` binary for all platforms (macOS, Linux, Windows × amd64/arm64)
+- Sign and notarize macOS binaries (when signing secrets are configured)
 - Create `.tar.gz` (unix) and `.zip` (windows) archives
 - Generate SHA-256 checksums
 - Create a GitHub release with an auto-generated changelog
-- Update the Homebrew formula in `CalcMark/homebrew-tap`
+- Update the Homebrew Cask in `CalcMark/homebrew-tap`
 
 ## How Versioning Works
 
@@ -69,7 +70,40 @@ Each release produces the following archives:
 
 Plus `checksums.txt` (SHA-256 for all archives).
 
-Each archive contains only the `cm` binary.
+Each archive contains only the `cm` binary. macOS archives contain signed and notarized binaries when signing secrets are configured.
+
+## macOS Code Signing and Notarization
+
+GoReleaser v2 signs and notarizes macOS binaries automatically using [anchore/quill](https://github.com/anchore/quill). This runs cross-platform on the Linux CI runner — no macOS runner required.
+
+When the `MACOS_SIGN_P12` secret is set, GoReleaser will:
+
+1. Sign each darwin binary with a Developer ID Application certificate (hardened runtime enabled)
+2. Submit the signed binary to Apple's notary service and wait for approval
+3. Package the signed, notarized binary into the release archive
+
+This eliminates the need for users to run `xattr -d com.apple.quarantine $(which cm)` after installing via Homebrew.
+
+The `notarize.macos` block in `.goreleaser.yaml` controls this behavior. When the signing secrets are not configured (local builds, forks), signing is skipped automatically via the `enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'` guard.
+
+### Setting Up Signing Secrets (First Time Only)
+
+You need an [Apple Developer Program](https://developer.apple.com/programs/) membership.
+
+**Developer ID Application certificate (.p12):**
+
+1. In Xcode or Apple Developer portal, create a "Developer ID Application" certificate
+2. Export it as a `.p12` file with a password
+3. Base64-encode it: `base64 < DeveloperID.p12`
+4. Store as `MACOS_SIGN_P12` secret, and the password as `MACOS_SIGN_PASSWORD`
+
+**App Store Connect API key (.p8):**
+
+1. Go to [App Store Connect → Users and Access → Integrations → Keys](https://appstoreconnect.apple.com/access/integrations/api)
+2. Create a new key (note the Key ID and Issuer ID shown on the page)
+3. Download the `.p8` private key file
+4. Base64-encode it: `base64 < AuthKey_XXXXXXXXXX.p8`
+5. Store as `MACOS_NOTARY_KEY`, with `MACOS_NOTARY_KEY_ID` and `MACOS_NOTARY_ISSUER_ID` as separate secrets
 
 ## Pre-release Versions
 
@@ -149,7 +183,14 @@ This builds all archives locally in `dist/` without creating a GitHub release or
 | Secret | Purpose |
 |--------|---------|
 | `GITHUB_TOKEN` | Provided automatically by GitHub Actions. Creates releases, uploads artifacts, and deploys the site. |
-| `HOMEBREW_TAP_GITHUB_TOKEN` | Personal access token with write access to `CalcMark/homebrew-tap`. Required for updating the Homebrew formula. |
+| `HOMEBREW_TAP_GITHUB_TOKEN` | Personal access token with write access to `CalcMark/homebrew-tap`. Required for updating the Homebrew Cask. |
+| `MACOS_SIGN_P12` | Base64-encoded Developer ID Application `.p12` certificate. Required for macOS code signing. |
+| `MACOS_SIGN_PASSWORD` | Password for the `.p12` certificate. |
+| `MACOS_NOTARY_ISSUER_ID` | App Store Connect API issuer UUID (shown on the Keys page). Required for notarization. |
+| `MACOS_NOTARY_KEY_ID` | App Store Connect API key ID. |
+| `MACOS_NOTARY_KEY` | Base64-encoded `.p8` API private key from App Store Connect. |
+
+Signing secrets are optional — releases still work without them, but macOS binaries will be unsigned.
 
 ### Permissions
 
@@ -175,6 +216,8 @@ task quality
    - **Go version mismatch**: Workflow reads from `go.mod`, ensure it's current
    - **Permission denied**: Check repository Settings → Actions → Workflow permissions
    - **Homebrew tap push fails**: Verify `HOMEBREW_TAP_GITHUB_TOKEN` secret exists and has write access
+   - **macOS signing fails**: Verify `MACOS_SIGN_P12` is valid base64, the `.p12` password is correct, and the certificate has not expired
+   - **Notarization fails**: Verify the App Store Connect API key is active and the issuer ID / key ID are correct
 
 ### Site deploy fails
 
@@ -212,6 +255,8 @@ Before pushing a tag:
 - [ ] Tag created: `git tag -a "vX.Y.Z" -m "Release vX.Y.Z"`
 - [ ] Breaking changes documented (for major versions)
 - [ ] `HOMEBREW_TAP_GITHUB_TOKEN` secret is configured (first release only)
+- [ ] macOS signing secrets configured (first release only, see [macOS Code Signing](#macos-code-signing-and-notarization))
+- [ ] Apple Developer ID certificate has not expired
 
 ## Version Numbering
 
