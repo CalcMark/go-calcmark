@@ -170,8 +170,10 @@ tasks:
       - vhs scripts/feature-variables.tape
       - vhs scripts/feature-eval.tape
       - vhs scripts/feature-export.tape
+      - vhs scripts/feature-autocomplete.tape
       - vhs scripts/feature-growth-autocomplete.tape
-      - echo '✓ All demo GIFs regenerated to site/static/images/'
+      - vhs scripts/tui-screenshot.tape
+      - echo '✓ All demos regenerated to site/static/images/'
     sources:
       - scripts/*.tape
     generates:
@@ -179,7 +181,9 @@ tasks:
       - site/static/images/feature-variables.gif
       - site/static/images/feature-eval.gif
       - site/static/images/feature-export.gif
+      - site/static/images/feature-autocomplete.gif
       - site/static/images/feature-growth-autocomplete.gif
+      - site/static/images/tui-screenshot.png
 
   # ── Examples ───────────────────────────────────────────────────────
 
