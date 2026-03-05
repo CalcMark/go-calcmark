@@ -24,6 +24,7 @@ weight: 20
   - [Rates and `over`](#rates) -- Rate literals, accumulation, and conversion
   - [Date Arithmetic](#date-arithmetic) -- Date literals, durations, and `from`
   - [Napkin Math](#napkin-math) -- Quick estimates with `as napkin`
+  - [Precise Display](#precise-display) -- Full precision with `as precise`
   - [Capacity Planning](#capacity-planning) -- `at...per` syntax
   - [Multiplier Suffixes](#multiplier-suffixes) -- K, M, B shortcuts
   - [Percentages](#percentages) -- Percentage calculations
@@ -725,6 +726,19 @@ The `as napkin` modifier rounds results to 2 significant figures and normalizes 
 ```
 
 This is useful for quick back-of-the-envelope calculations where exact precision is not needed.
+
+### Precise Display {#precise-display}
+
+The `as precise` modifier is the opposite of `as napkin`. It shows full float precision, skipping all display rounding. This is useful when you need exact values from unit conversions.
+
+**Syntax:** `expression as precise`
+
+```cm
+10 meters as feet                  -> 32.8 feet
+10 meters as feet as precise       -> 32.808399 feet
+```
+
+Explicit unit conversions are rounded by default for readability. Use `as precise` when you need the exact value.
 
 ### Capacity Planning {#capacity-planning}
 

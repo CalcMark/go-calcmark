@@ -391,7 +391,7 @@ read, seek, compress, compound, grow, depreciate
 ### Language Keywords
 
 ```
-in, as, of, per, over, at, from, with, napkin
+in, as, of, per, over, at, from, with, napkin, precise
 ```
 
 ---
@@ -447,6 +447,18 @@ See the [User Guide: Natural Language Syntax](/docs/user-guide/#natural-language
 The `as napkin` modifier rounds results to 2 significant figures and normalizes units. See the [User Guide: Napkin Math](/docs/user-guide/#napkin-math) for usage examples.
 
 **Syntax:** `expression as napkin`
+
+**Works with:** Number, Quantity, Currency, Duration, Rate
+
+---
+
+## Precise Display {#as-precise}
+
+The `as precise` modifier shows full float precision, skipping all display rounding. This is the opposite of `as napkin` and is useful when you need exact values from unit conversions.
+
+**Syntax:** `expression as precise`
+
+Can be chained after a unit conversion: `10 meters as feet as precise`
 
 **Works with:** Number, Quantity, Currency, Duration, Rate
 
