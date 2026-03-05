@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
@@ -340,176 +341,137 @@ func getDateFeatures() []Feature {
 	}
 }
 
-// getNetworkFeatures returns network-related features.
+// networkScopeMeta holds presentation metadata for network scope identifiers.
+type networkScopeMeta struct {
+	Description string
+	Example     string
+}
+
+// networkTypeMeta holds presentation metadata for network type identifiers.
+type networkTypeMeta struct {
+	Description string
+	Example     string
+}
+
+var networkScopes = map[string]networkScopeMeta{
+	"local":       {Description: "Same datacenter latency (~0.5ms)", Example: "rtt(local) → 0.5 ms"},
+	"regional":    {Description: "Same region latency (~10ms)", Example: "rtt(regional) → 10 ms"},
+	"continental": {Description: "Cross-continent latency (~50ms)", Example: "rtt(continental) → 50 ms"},
+	"global":      {Description: "Global latency (~150ms)", Example: "rtt(global) → 150 ms"},
+}
+
+var networkTypes = map[string]networkTypeMeta{
+	"gigabit":     {Description: "1 Gbps network (~125 MB/s)", Example: "throughput(gigabit) → 125 MB/s"},
+	"ten_gig":     {Description: "10 Gbps network (~1.25 GB/s)", Example: "throughput(ten_gig) → 1250 MB/s"},
+	"hundred_gig": {Description: "100 Gbps network (~12.5 GB/s)", Example: "throughput(hundred_gig) → 12500 MB/s"},
+	"wifi":        {Description: "Typical WiFi (~12.5 MB/s)", Example: "throughput(wifi) → 12.5 MB/s"},
+	"four_g":      {Description: "4G mobile network (~2.5 MB/s)", Example: "throughput(four_g) → 2.5 MB/s"},
+	"five_g":      {Description: "5G mobile network (~50 MB/s)", Example: "throughput(five_g) → 50 MB/s"},
+}
+
+// getNetworkFeatures returns network-related features derived from canonical identifiers.
 func getNetworkFeatures() []Feature {
-	return []Feature{
-		// RTT scopes
-		{
-			Name:        "local",
+	var features []Feature
+
+	// RTT scopes — iterate canonical slice to preserve ordering
+	for _, name := range identifiers.NetworkScopes {
+		meta := networkScopes[name]
+		features = append(features, Feature{
+			Name:        name,
 			Category:    CategoryNetwork,
-			Syntax:      "rtt(local)",
-			Description: "Same datacenter latency (~0.5ms)",
-			Aliases:     nil,
-			Example:     "rtt(local) → 0.5 ms",
-		},
-		{
-			Name:        "regional",
-			Category:    CategoryNetwork,
-			Syntax:      "rtt(regional)",
-			Description: "Same region latency (~10ms)",
-			Aliases:     nil,
-			Example:     "rtt(regional) → 10 ms",
-		},
-		{
-			Name:        "continental",
-			Category:    CategoryNetwork,
-			Syntax:      "rtt(continental)",
-			Description: "Cross-continent latency (~50ms)",
-			Aliases:     nil,
-			Example:     "rtt(continental) → 50 ms",
-		},
-		{
-			Name:        "global",
-			Category:    CategoryNetwork,
-			Syntax:      "rtt(global)",
-			Description: "Global latency (~150ms)",
-			Aliases:     nil,
-			Example:     "rtt(global) → 150 ms",
-		},
-		// Throughput types
-		{
-			Name:        "gigabit",
-			Category:    CategoryNetwork,
-			Syntax:      "throughput(gigabit)",
-			Description: "1 Gbps network (~125 MB/s)",
-			Aliases:     nil,
-			Example:     "throughput(gigabit) → 125 MB/s",
-		},
-		{
-			Name:        "ten_gig",
-			Category:    CategoryNetwork,
-			Syntax:      "throughput(ten_gig)",
-			Description: "10 Gbps network (~1.25 GB/s)",
-			Aliases:     nil,
-			Example:     "throughput(ten_gig) → 1250 MB/s",
-		},
-		{
-			Name:        "hundred_gig",
-			Category:    CategoryNetwork,
-			Syntax:      "throughput(hundred_gig)",
-			Description: "100 Gbps network (~12.5 GB/s)",
-			Aliases:     nil,
-			Example:     "throughput(hundred_gig) → 12500 MB/s",
-		},
-		{
-			Name:        "wifi",
-			Category:    CategoryNetwork,
-			Syntax:      "throughput(wifi)",
-			Description: "Typical WiFi (~12.5 MB/s)",
-			Aliases:     nil,
-			Example:     "throughput(wifi) → 12.5 MB/s",
-		},
-		{
-			Name:        "four_g",
-			Category:    CategoryNetwork,
-			Syntax:      "throughput(four_g)",
-			Description: "4G mobile network (~2.5 MB/s)",
-			Aliases:     nil,
-			Example:     "throughput(four_g) → 2.5 MB/s",
-		},
-		{
-			Name:        "five_g",
-			Category:    CategoryNetwork,
-			Syntax:      "throughput(five_g)",
-			Description: "5G mobile network (~50 MB/s)",
-			Aliases:     nil,
-			Example:     "throughput(five_g) → 50 MB/s",
-		},
+			Syntax:      "rtt(" + name + ")",
+			Description: meta.Description,
+			Example:     meta.Example,
+		})
 	}
+
+	// Throughput types
+	for _, name := range identifiers.NetworkTypes {
+		meta := networkTypes[name]
+		features = append(features, Feature{
+			Name:        name,
+			Category:    CategoryNetwork,
+			Syntax:      "throughput(" + name + ")",
+			Description: meta.Description,
+			Example:     meta.Example,
+		})
+	}
+
+	return features
 }
 
-// getStorageFeatures returns storage-related features.
+// storageMeta holds presentation metadata for storage type identifiers.
+type storageMeta struct {
+	Description string
+	Example     string
+}
+
+var storageTypes = map[string]storageMeta{
+	"ssd":      {Description: "SATA SSD (~550 MB/s, 0.1ms seek)", Example: "read(1 GB, ssd)"},
+	"nvme":     {Description: "NVMe SSD (~3.5 GB/s, 0.01ms seek)", Example: "read(1 GB, nvme)"},
+	"pcie_ssd": {Description: "PCIe Gen4 SSD (~7 GB/s, 0.01ms seek)", Example: "read(1 GB, pcie_ssd)"},
+	"hdd":      {Description: "7200 RPM HDD (~150 MB/s, 10ms seek)", Example: "seek(hdd) → 10 ms"},
+}
+
+// getStorageFeatures returns storage-related features derived from canonical identifiers.
 func getStorageFeatures() []Feature {
-	return []Feature{
-		{
-			Name:        "ssd",
+	var features []Feature
+
+	for _, name := range identifiers.StorageTypes {
+		meta := storageTypes[name]
+
+		// Build aliases from the canonical StorageAliases map
+		var aliases []Alias
+		for alias, canonical := range identifiers.StorageAliases {
+			if canonical == name {
+				aliases = append(aliases, Alias{Name: alias, Parseable: true})
+			}
+		}
+
+		features = append(features, Feature{
+			Name:        name,
 			Category:    CategoryStorage,
-			Syntax:      "read(size, ssd) or seek(ssd)",
-			Description: "SATA SSD (~550 MB/s, 0.1ms seek)",
-			Aliases:     []Alias{{Name: "sata_ssd", Parseable: true}},
-			Example:     "read(1 GB, ssd)",
-		},
-		{
-			Name:        "nvme",
-			Category:    CategoryStorage,
-			Syntax:      "read(size, nvme) or seek(nvme)",
-			Description: "NVMe SSD (~3.5 GB/s, 0.01ms seek)",
-			Aliases:     nil,
-			Example:     "read(1 GB, nvme)",
-		},
-		{
-			Name:        "pcie_ssd",
-			Category:    CategoryStorage,
-			Syntax:      "read(size, pcie_ssd) or seek(pcie_ssd)",
-			Description: "PCIe Gen4 SSD (~7 GB/s, 0.01ms seek)",
-			Aliases:     nil,
-			Example:     "read(1 GB, pcie_ssd)",
-		},
-		{
-			Name:        "hdd",
-			Category:    CategoryStorage,
-			Syntax:      "read(size, hdd) or seek(hdd)",
-			Description: "7200 RPM HDD (~150 MB/s, 10ms seek)",
-			Aliases:     nil,
-			Example:     "seek(hdd) → 10 ms",
-		},
+			Syntax:      "read(size, " + name + ") or seek(" + name + ")",
+			Description: meta.Description,
+			Aliases:     aliases,
+			Example:     meta.Example,
+		})
 	}
+
+	return features
 }
 
-// getCompressionFeatures returns compression-related features.
+// compressionMeta holds presentation metadata for compression type identifiers.
+type compressionMeta struct {
+	Description string
+	Example     string
+}
+
+var compressionTypes = map[string]compressionMeta{
+	"gzip":   {Description: "Gzip compression (~3:1 ratio)", Example: "compress(1 GB, gzip) → 333 MB"},
+	"zstd":   {Description: "Zstandard compression (~3.5:1 ratio)", Example: "compress(1 GB, zstd) → 286 MB"},
+	"lz4":    {Description: "LZ4 fast compression (~2:1 ratio)", Example: "compress(1 GB, lz4) → 500 MB"},
+	"snappy": {Description: "Snappy fast compression (~2.5:1 ratio)", Example: "compress(1 GB, snappy) → 400 MB"},
+	"bzip2":  {Description: "Bzip2 compression (~4:1 ratio, slow)", Example: "compress(1 GB, bzip2) → 250 MB"},
+	"none":   {Description: "No compression (1:1 ratio)", Example: "compress(1 GB, none) → 1 GB"},
+}
+
+// getCompressionFeatures returns compression-related features derived from canonical identifiers.
 func getCompressionFeatures() []Feature {
-	return []Feature{
-		{
-			Name:        "gzip",
+	var features []Feature
+
+	for _, name := range identifiers.CompressionTypes {
+		meta := compressionTypes[name]
+		features = append(features, Feature{
+			Name:        name,
 			Category:    CategoryCompression,
-			Syntax:      "compress(size, gzip)",
-			Description: "Gzip compression (~3:1 ratio)",
-			Aliases:     nil,
-			Example:     "compress(1 GB, gzip) → 333 MB",
-		},
-		{
-			Name:        "lz4",
-			Category:    CategoryCompression,
-			Syntax:      "compress(size, lz4)",
-			Description: "LZ4 fast compression (~2:1 ratio)",
-			Aliases:     nil,
-			Example:     "compress(1 GB, lz4) → 500 MB",
-		},
-		{
-			Name:        "zstd",
-			Category:    CategoryCompression,
-			Syntax:      "compress(size, zstd)",
-			Description: "Zstandard compression (~3.5:1 ratio)",
-			Aliases:     nil,
-			Example:     "compress(1 GB, zstd) → 286 MB",
-		},
-		{
-			Name:        "bzip2",
-			Category:    CategoryCompression,
-			Syntax:      "compress(size, bzip2)",
-			Description: "Bzip2 compression (~4:1 ratio, slow)",
-			Aliases:     nil,
-			Example:     "compress(1 GB, bzip2) → 250 MB",
-		},
-		{
-			Name:        "snappy",
-			Category:    CategoryCompression,
-			Syntax:      "compress(size, snappy)",
-			Description: "Snappy fast compression (~2.5:1 ratio)",
-			Aliases:     nil,
-			Example:     "compress(1 GB, snappy) → 400 MB",
-		},
+			Syntax:      "compress(size, " + name + ")",
+			Description: meta.Description,
+			Example:     meta.Example,
+		})
 	}
+
+	return features
 }
 
 // getGrowthFeatures returns growth and depreciation function features.
