@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
@@ -42,8 +43,8 @@ func calculateRead(size *types.Quantity, storageType string) (*types.Duration, e
 	throughputMBPS, exists := storageThroughput[typeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown storage type '%s' (valid types: ssd, sata_ssd, nvme, pcie_ssd, hdd)",
-			storageType,
+			"unknown storage type '%s' (valid types: %s)",
+			storageType, identifiers.JoinNames(identifiers.AllStorageNames()),
 		)
 	}
 
@@ -87,8 +88,8 @@ func calculateSeek(storageType string) (*types.Duration, error) {
 	latencyMs, exists := storageSeekTime[typeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown storage type '%s' (valid types: hdd, sata_ssd, ssd, nvme, pcie_ssd)",
-			storageType,
+			"unknown storage type '%s' (valid types: %s)",
+			storageType, identifiers.JoinNames(identifiers.AllStorageNames()),
 		)
 	}
 

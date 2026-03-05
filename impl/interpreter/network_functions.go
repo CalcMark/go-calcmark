@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
@@ -42,8 +43,8 @@ func calculateRTT(scope string) (*types.Duration, error) {
 	latencyMs, exists := networkLatencies[scopeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown network scope '%s' (valid scopes: local, regional, continental, global)",
-			scope,
+			"unknown network scope '%s' (valid scopes: %s)",
+			scope, identifiers.JoinNames(identifiers.NetworkScopes),
 		)
 	}
 
@@ -70,8 +71,8 @@ func calculateThroughput(networkType string) (*types.Rate, error) {
 	mbps, exists := networkThroughput[typeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown network type '%s' (valid types: gigabit, ten_gig, hundred_gig, wifi, four_g, five_g)",
-			networkType,
+			"unknown network type '%s' (valid types: %s)",
+			networkType, identifiers.JoinNames(identifiers.NetworkTypes),
 		)
 	}
 

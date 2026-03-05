@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
@@ -33,8 +34,8 @@ func calculateCompression(size *types.Quantity, compressionType string) (*types.
 	ratio, exists := compressionRatios[typeLower]
 	if !exists {
 		return nil, fmt.Errorf(
-			"unknown compression type '%s' (valid types: gzip, lz4, zstd, bzip2, snappy, none)",
-			compressionType,
+			"unknown compression type '%s' (valid types: %s)",
+			compressionType, identifiers.JoinNames(identifiers.CompressionTypes),
 		)
 	}
 
