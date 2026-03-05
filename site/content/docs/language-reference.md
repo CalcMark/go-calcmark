@@ -422,7 +422,23 @@ average of $50, €100, £150 -> 100  (no units)
 
 ## Natural Language Syntax {#natural-language-syntax}
 
-CalcMark supports natural language forms for many functions. These are equivalent to the function-call syntax. See the [User Guide: Natural Language Syntax](/docs/user-guide/#natural-language-syntax) for the complete reference table and examples.
+CalcMark supports natural language forms for many functions. These are equivalent to the function-call syntax.
+
+| Pattern | Equivalent |
+|---------|------------|
+| `average of X, Y, Z` | `avg(X, Y, Z)` |
+| `square root of X` | `sqrt(X)` |
+| `read X from Y` | `read(X, Y)` |
+| `compress X using Y` | `compress(X, Y)` |
+| `transfer X across Y Z` | `transfer_time(X, Y, Z)` |
+| `compound X by Y% over Z` | `compound(X, Y%, Z)` |
+| `compound X by Y% per P over Z` | `compound(X, Y%, Z, P)` |
+| `compound X by Y% compounded F over Z` | `compound(X, Y%, Z, compounded F)` |
+| `grow X by Y over Z` | `grow(X, Y, Z)` |
+| `depreciate X by Y% over Z` | `depreciate(X, Y%, Z)` |
+| `depreciate X by Y% over Z to W` | `depreciate(X, Y%, Z, W)` |
+
+See the [User Guide: Natural Language Syntax](/docs/user-guide/#natural-language-syntax) for the complete reference table with examples.
 
 ---
 
@@ -462,7 +478,41 @@ CalcMark provides `read`, `seek`, and `compress` for storage planning. See the [
 
 ## Growth Functions {#growth}
 
-CalcMark provides `compound`, `grow`, and `depreciate` for modeling growth and depreciation over time. See the [User Guide: Growth Functions](/docs/user-guide/#growth-functions) for argument reference and examples.
+CalcMark provides `compound`, `grow`, and `depreciate` for modeling growth and depreciation over time.
+
+### Compound Growth
+
+```cm
+compound($1000, 5%, 10)                              -> $1628.89
+compound(500 customers, 20%, 12)                     -> 4458.05 customers
+compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
+```
+
+**Natural language forms:**
+
+```cm
+compound $1000 by 5% over 10 years
+compound $1000 by 5% per month over 12 months
+compound $1000 by 12% compounded monthly over 10 years
+```
+
+### Linear Growth
+
+```cm
+grow($500, $100, 36)               -> $4100.00
+grow 100 by 20 over 5 months       -> 200  (NL form)
+```
+
+### Depreciation
+
+```cm
+depreciate($50000, 15%, 5)                -> $22185.27
+depreciate($50000, 15%, 20, $5000)        -> $5000.00  (salvage floor)
+depreciate $50000 by 15% over 5 years     -> (NL form)
+depreciate $50000 by 15% over 5 years to $5000
+```
+
+See the [User Guide: Growth Functions](/docs/user-guide/#growth-functions) for the full argument reference.
 
 ---
 
