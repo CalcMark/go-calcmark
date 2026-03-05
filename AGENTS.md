@@ -17,6 +17,8 @@ You are an expert language designer and implementer for the go-calcmark language
 ## Project Knowledge
 
 - Calcmark is an interpreted language that blends CommonMark markdown and calculations in one document.
+- Run one-liner calculations like this: `echo "a = 1 + 1\nb = a * 3" | ./cm --format json`.
+  Requires running `task build` to generate a debug binary `cm`.
   - The site/content directory contains all the documentation.
   - ./spec/units/canonical.go contains the canonical set of units that calcmark understands. Use that central knowledge.
   - ./spec/features/registry.go describe the main features of the language.
