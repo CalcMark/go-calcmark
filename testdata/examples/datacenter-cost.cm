@@ -1,0 +1,152 @@
+---
+exchange:
+  USD_EUR: 0.92
+  EUR_USD: 1.09
+  USD_GBP: 0.79
+  GBP_USD: 1.27
+globals:
+  sqft: 1000
+---
+
+# Datacenter Build Cost Analysis
+
+Should you build a small dedicated datacenter or rent space in someone else's?
+This document models the full lifecycle cost: capital expenditure (capex),
+operating expenditure (opex), equipment depreciation, cost growth over time,
+and a head-to-head comparison with colocation (colo).
+
+All costs are in USD unless noted. The facility is 1,000 square feet (sqft),
+a typical size for a small private datacenter.
+
+## Facility Sizing & Baseline CapEx
+
+Construction costs for dedicated datacenters typically range from $625 to
+$1,135 per gross square foot. We use a midpoint estimate:
+
+cost_sqft = $875
+capex = sqft * cost_sqft
+
+## CapEx Breakdown by Component
+
+The budget is heavily weighted toward electrical and mechanical systems,
+not the building shell itself. Industry benchmarks:
+
+elec = 42.5% of capex
+hvac = 17.5% of capex
+fitout = 22.5% of capex
+shell = 17.5% of capex
+
+Sanity check -- components should sum to total:
+
+components = elec + hvac + fitout + shell
+
+## Tier Comparison
+
+Uptime Institute tiers define redundancy levels. Tier II (partial redundancy)
+costs roughly $2,300/sqft. Tier III (concurrently maintainable) costs roughly
+$7,700/sqft. Moving up tiers more than triples the price:
+
+tier_ii = $2300 * sqft
+tier_iii = $7700 * sqft
+tier_mult = 7700 / 2300
+
+## Power Infrastructure
+
+Datacenter construction is often quoted per megawatt (MW) of commissioned
+IT load. Standard facilities average $7M to $12M per MW:
+
+it_load = 200 kilowatts
+
+A standard 1 MW facility costs $7M-$12M. Our load as a fraction of 1 MW:
+
+load_frac = 200 / 1000
+mw_cost = $9.5M
+power = load_frac * mw_cost
+
+For reference, 1000 kilowatts converts cleanly:
+
+1000 kilowatts in megawatts
+
+## International Equipment Pricing
+
+Specialized cooling equipment from a European vendor, quoted in euros.
+Exchange rates are defined in the document frontmatter:
+
+eu_cooling = €45000
+cooling = eu_cooling in USD
+
+## Operating Expenses
+
+Ongoing costs for a small datacenter typically fall between $50,000 and
+$100,000 annually, dominated by maintenance (40%), electricity, and labor:
+
+opex = $75000
+maint = 40% of opex
+
+Electricity is often quoted per kilowatt-hour. At $0.10/hour for our
+200 kW load, the annual electricity cost accumulates quickly:
+
+annual_elec = $0.10/hour over 1 year
+
+What does that rate look like per day?
+
+daily_elec = $0.10/hour per day
+
+## OpEx Growth Projection
+
+Operating costs don't stay flat. Assuming 4% annual inflation,
+here's where opex lands after 5 and 10 years:
+
+opex_5yr = compound $75000 by 4% over 5 years
+opex_10yr = compound $75000 by 4% over 10 years
+
+## Equipment Depreciation
+
+Servers and networking gear lose value quickly. Using declining-balance
+depreciation at 20% per year over a 5-year refresh cycle:
+
+servers = depreciate $200000 by 20% over 5 years
+
+Cooling systems last longer but still depreciate. A $45,000 unit
+at 15% per year, with a $5,000 salvage floor:
+
+cooling_depr = depreciate $45000 by 15% over 10 years to $5000
+
+## Build vs. Colocation
+
+Colocation means renting space in a third-party facility. A typical
+10-cabinet setup in the UK runs about £2,200/month:
+
+colo_mo = £2200
+colo_usd = colo_mo in USD
+
+Using the rate-over-time syntax to accumulate monthly costs:
+
+colo_3yr = $2794/month over 3 years
+
+Compare with building your own over the same 3 years:
+
+build_tco = capex + (opex * 3)
+savings = colo_3yr - build_tco
+build_cheaper = build_tco < colo_3yr
+
+## Modular Alternative
+
+Modular (prefab) datacenters offer a pay-as-you-grow model. Each module
+costs $150,000 to $1,000,000 and can be added incrementally.
+Starting with one module and adding one per year for 4 years:
+
+grow $150000 by $150000 over 4
+
+Modular builds typically save 20-30% on upfront capital vs traditional:
+
+modular_savings = 25% of capex
+
+## Executive Summary
+
+Key figures rounded for quick reference:
+
+capex as napkin
+opex as napkin
+build_tco as napkin
+colo_3yr as napkin
