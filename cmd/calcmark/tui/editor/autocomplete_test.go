@@ -53,7 +53,7 @@ func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
 		{
 			name:         "empty prefix returns all functions plus NL rows",
 			prefix:       "",
-			wantMinCount: 21, // 12 builtin functions + 9 NL example rows
+			wantMinCount: 24, // 15 builtin functions + NL example rows (parseable aliases + NLExample fallbacks)
 		},
 		{
 			name:         "xyz prefix matches nothing",
@@ -449,6 +449,28 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 		}
 		if !found {
 			t.Error("expected NL row when typing NL keyword prefix 'aver'")
+		}
+	})
+
+	t.Run("compound prefix returns fn and nl rows", func(t *testing.T) {
+		suggestions := source.GetSuggestions("comp")
+		var fnRow, nlRow *components.Suggestion
+		for i := range suggestions {
+			if suggestions[i].InsertText == "compound" {
+				fnRow = &suggestions[i]
+			}
+			if suggestions[i].Category == "example" && suggestions[i].InsertText == "compound $1000 by 5% over 10 years" {
+				nlRow = &suggestions[i]
+			}
+		}
+		if fnRow == nil {
+			t.Error("expected fn row for compound")
+		}
+		if nlRow == nil {
+			t.Fatal("expected nl row for compound")
+		}
+		if nlRow.Name != "compound by over" {
+			t.Errorf("NL row Name = %q, want %q", nlRow.Name, "compound by over")
 		}
 	})
 

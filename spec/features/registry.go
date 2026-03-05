@@ -521,7 +521,7 @@ func getGrowthFeatures() []Feature {
 			Syntax:      "compound(principal, rate, periods)",
 			Description: "Calculate compound growth over time periods",
 			Aliases: []Alias{
-				{Name: "compound...by...over", Parseable: true},
+				{Name: "compound...by...over", Parseable: true, Example: "compound $1000 by 5% over 10 years"},
 			},
 			Example: "compound(1000, 5%, 10) → 1628.89",
 		},
@@ -531,7 +531,7 @@ func getGrowthFeatures() []Feature {
 			Syntax:      "grow(amount, increment, periods)",
 			Description: "Calculate linear growth by adding a fixed amount each period",
 			Aliases: []Alias{
-				{Name: "grow...by...over", Parseable: true},
+				{Name: "grow...by...over", Parseable: true, Example: "grow 100 by 20 over 5 months"},
 			},
 			Example: "grow(100, 20 GB, 5) → 200 GB",
 		},
@@ -541,7 +541,7 @@ func getGrowthFeatures() []Feature {
 			Syntax:      "depreciate(value, rate, periods)",
 			Description: "Calculate declining balance depreciation over time",
 			Aliases: []Alias{
-				{Name: "depreciate...by...over", Parseable: true},
+				{Name: "depreciate...by...over", Parseable: true, Example: "depreciate $50000 by 15% over 5 years"},
 			},
 			Example: "depreciate(10000, 20%, 5) → 3276.80",
 		},
