@@ -1,0 +1,10 @@
+# Precise Conversion - Full precision display
+
+# as precise on a plain number
+x = 3.14159265358979 as precise
+
+# as precise on a quantity conversion
+y = 10 meters as feet as precise
+
+# as precise on a napkin conversion (napkin takes precedence)
+z = 1234567 as napkin

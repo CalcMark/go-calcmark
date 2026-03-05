@@ -70,6 +70,7 @@ const (
 	FROM     // "from" - for date expressions: "2 days from today"
 	IN       // "in" - for unit conversions: "10 meters in feet"
 	NAPKIN   // "napkin" - for human-readable number formatting (e.g., "1234567 as napkin")
+	PRECISE  // "precise" - for full-precision display (e.g., "1 second as hour as precise")
 	OF       // "of" - for percentage expressions: "10% of 200"
 	PER      // "per" - rate expressions: "100 MB per second"
 	OVER     // "over" - rate accumulation: "100 MB/s over 1 day"
@@ -208,6 +209,8 @@ func (tt TokenType) String() string {
 		return "IN"
 	case NAPKIN:
 		return "NAPKIN"
+	case PRECISE:
+		return "PRECISE"
 	case OF:
 		return "OF"
 	case PER:

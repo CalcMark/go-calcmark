@@ -92,6 +92,20 @@ func (n *NapkinConversion) GetRange() *Range {
 	return n.Range
 }
 
+// PreciseConversion represents full-precision display (e.g., "1 second as hour as precise").
+type PreciseConversion struct {
+	Expression Node
+	Range      *Range
+}
+
+func (n *PreciseConversion) String() string {
+	return fmt.Sprintf("PreciseConversion(%s)", n.Expression.String())
+}
+
+func (n *PreciseConversion) GetRange() *Range {
+	return n.Range
+}
+
 // PercentageOf represents percentage of a value (e.g., "10% of 200").
 type PercentageOf struct {
 	Percentage Node // The percentage value (e.g., NumberLiteral for "10%")

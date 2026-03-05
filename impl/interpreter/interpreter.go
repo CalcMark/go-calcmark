@@ -87,6 +87,8 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalUnitConversion(n)
 	case *ast.NapkinConversion:
 		return interp.evalNapkinConversion(n)
+	case *ast.PreciseConversion:
+		return interp.evalPreciseConversion(n)
 	case *ast.PercentageOf:
 		return interp.evalPercentageOf(n)
 	case *ast.FunctionCall:

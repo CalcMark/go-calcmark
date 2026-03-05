@@ -111,8 +111,8 @@ func (f Formatter) formatExplicitQuantity(q *types.Quantity) string {
 
 	absVal := math.Abs(fv)
 
-	// Use scientific notation for extreme values
-	if absVal != 0 && (absVal < 0.001 || absVal >= 1e12) {
+	// Use scientific notation for extreme values (check original magnitude)
+	if absVal != 0 && (absVal < 1e-4 || absVal >= 1e12) {
 		s := f.localizeDecimal(fmt.Sprintf("%g", fv))
 		if q.Unit == "" {
 			return s
@@ -120,7 +120,18 @@ func (f Formatter) formatExplicitQuantity(q *types.Quantity) string {
 		return s + " " + q.Unit
 	}
 
-	return f.formatWithSuffix(q.Value, q.Unit)
+	// Apply magnitude-based rounding unless full precision requested
+	value := q.Value
+	if !q.IsPrecise {
+		value = roundForDisplay(value)
+	}
+
+	// Format without K/M/B/T suffixes — explicit conversions show the actual number
+	numStr := f.formatExplicitNumber(value)
+	if q.Unit == "" {
+		return numStr
+	}
+	return numStr + " " + q.Unit
 }
 
 // FormatRate formats a rate (quantity per time) in human-readable form.
@@ -182,6 +193,29 @@ func (f Formatter) FormatDuration(d *types.Duration) string {
 		return ""
 	}
 	return d.String()
+}
+
+// formatExplicitNumber formats a number with comma separators but without K/M/B/T suffixes.
+// Used for explicit conversions where the user chose a specific unit.
+func (f Formatter) formatExplicitNumber(value decimal.Decimal) string {
+	fv, _ := value.Float64()
+
+	if fv == math.Floor(fv) {
+		// Integer: format with thousand separators
+		intStr := fmt.Sprintf("%d", int64(fv))
+		return f.insertGroupSeparators(intStr)
+	}
+
+	// Decimal: format with precision, trim trailing zeros, add group separators to integer part
+	str := fmt.Sprintf("%.6f", fv)
+	str = strings.TrimRight(strings.TrimRight(str, "0"), ".")
+
+	parts := strings.Split(str, ".")
+	intPart := f.insertGroupSeparators(parts[0])
+	if len(parts) == 2 {
+		return f.localizeDecimal(intPart + "." + parts[1])
+	}
+	return intPart
 }
 
 // formatWithSuffix formats a number with optional unit suffix using K/M/B/T.
