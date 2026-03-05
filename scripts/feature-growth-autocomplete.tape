@@ -31,12 +31,14 @@ Type "rate = 5%"
 Enter
 Sleep 500ms
 
-# Type 'comp' to trigger autocomplete popup showing compound fn + NL row
-Type "comp"
+# Type 'compou' to trigger autocomplete popup showing compound fn + NL row
+# (Using 'compou' instead of 'comp' to avoid also matching 'compress')
+Type "compou"
 Sleep 1500ms
 
-# Navigate to the NL example row (compound by over) and accept
+# Navigate to the NL example row (compound...by...over) and accept
 Down
+Sleep 500ms
 Tab
 Sleep 2000ms
 
