@@ -1,5 +1,17 @@
 package semantic
 
+import "github.com/CalcMark/go-calcmark/spec/identifiers"
+
+// quotedNames wraps each name in double quotes for ParamSpec.Examples display.
+// Computed once at package init via the var block — not called per-access.
+func quotedNames(names []string) []string {
+	quoted := make([]string, len(names))
+	for i, n := range names {
+		quoted[i] = `"` + n + `"`
+	}
+	return quoted
+}
+
 // ArgType represents the semantic type expected for a function argument.
 // This defines what kinds of values are valid for each parameter position.
 type ArgType string
@@ -87,21 +99,21 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"rtt": {
 		Name: "rtt",
 		Params: []ParamSpec{
-			{Name: "scope", Type: ArgTypeString, Examples: []string{`"local"`, `"regional"`, `"continental"`, `"global"`}},
+			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes)},
 		},
 	},
 	"throughput": {
 		Name: "throughput",
 		Params: []ParamSpec{
-			{Name: "network_type", Type: ArgTypeString, Examples: []string{`"gigabit"`, `"ten_gig"`, `"wifi"`, `"four_g"`, `"five_g"`}},
+			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes)},
 		},
 	},
 	"transfer_time": {
 		Name: "transfer_time",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 GB", "100 MB", "10 TB"}},
-			{Name: "scope", Type: ArgTypeString, Examples: []string{`"local"`, `"regional"`, `"continental"`, `"global"`}},
-			{Name: "network_type", Type: ArgTypeString, Examples: []string{`"gigabit"`, `"ten_gig"`, `"wifi"`}},
+			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes)},
+			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes)},
 		},
 	},
 
@@ -110,20 +122,20 @@ var FunctionSpecs = map[string]FunctionSpec{
 		Name: "read",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 MB", "4 KB", "1 GB"}},
-			{Name: "storage_type", Type: ArgTypeString, Examples: []string{`"ssd"`, `"hdd"`, `"memory"`}},
+			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes)},
 		},
 	},
 	"seek": {
 		Name: "seek",
 		Params: []ParamSpec{
-			{Name: "storage_type", Type: ArgTypeString, Examples: []string{`"ssd"`, `"hdd"`, `"memory"`}},
+			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes)},
 		},
 	},
 	"compress": {
 		Name: "compress",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 MB", "100 KB", "1 GB"}},
-			{Name: "compression_type", Type: ArgTypeString, Examples: []string{`"gzip"`, `"snappy"`, `"zstd"`}},
+			{Name: "compression_type", Type: ArgTypeString, Examples: quotedNames(identifiers.CompressionTypes)},
 		},
 	},
 
