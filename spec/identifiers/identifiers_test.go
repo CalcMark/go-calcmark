@@ -87,7 +87,7 @@ func TestJoinNames(t *testing.T) {
 func TestOrderingIsDeterministic(t *testing.T) {
 	// Verify slices return the same order on repeated access.
 	// This matters because view_footer.go:144 displays Examples[0].
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if NetworkScopes[0] != "local" {
 			t.Fatal("NetworkScopes[0] is not deterministic")
 		}
