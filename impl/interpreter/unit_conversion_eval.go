@@ -59,6 +59,8 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		return nil, err
 	}
 
+	// Mark as explicit so formatters skip auto-scaling
+	converted.IsExplicit = true
 	return converted, nil
 }
 

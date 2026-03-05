@@ -74,6 +74,12 @@ func (f Formatter) FormatQuantity(q *types.Quantity) string {
 		return ""
 	}
 
+	// Explicit conversions (via `in`/`as`) skip auto-scaling to respect user intent.
+	// Use scientific notation for extreme values to keep output readable.
+	if q.IsExplicit {
+		return f.formatExplicitQuantity(q)
+	}
+
 	normValue, normUnit := NormalizeForDisplay(q.Value, q.Unit)
 
 	var result string
@@ -87,6 +93,34 @@ func (f Formatter) FormatQuantity(q *types.Quantity) string {
 		return "~" + result
 	}
 	return result
+}
+
+// formatExplicitQuantity formats a quantity whose unit was explicitly chosen.
+// Skips NormalizeForDisplay. Uses scientific notation for extreme values.
+func (f Formatter) formatExplicitQuantity(q *types.Quantity) string {
+	fv, _ := q.Value.Float64()
+
+	// Guard against values beyond float64 range
+	if math.IsInf(fv, 0) || math.IsNaN(fv) {
+		s := q.Value.String()
+		if q.Unit == "" {
+			return s
+		}
+		return s + " " + q.Unit
+	}
+
+	absVal := math.Abs(fv)
+
+	// Use scientific notation for extreme values
+	if absVal != 0 && (absVal < 0.001 || absVal >= 1e12) {
+		s := f.localizeDecimal(fmt.Sprintf("%g", fv))
+		if q.Unit == "" {
+			return s
+		}
+		return s + " " + q.Unit
+	}
+
+	return f.formatWithSuffix(q.Value, q.Unit)
 }
 
 // FormatRate formats a rate (quantity per time) in human-readable form.

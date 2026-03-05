@@ -52,6 +52,7 @@ type JSONResult struct {
 	Unit          string   `json:"unit,omitempty"`
 	DateValue     string   `json:"date_value,omitempty"`
 	IsApproximate bool     `json:"is_approximate,omitempty"`
+	IsExplicit    bool     `json:"is_explicit,omitempty"`
 	Error         string   `json:"error,omitempty"`
 	Variable      string   `json:"variable,omitempty"`
 }
@@ -84,6 +85,9 @@ func populateResult(jr *JSONResult, result types.Type) {
 		jr.Unit = v.Unit
 		if v.IsNapkin {
 			jr.IsApproximate = true
+		}
+		if v.IsExplicit {
+			jr.IsExplicit = true
 		}
 	case *types.Rate:
 		jr.Type = "rate"
