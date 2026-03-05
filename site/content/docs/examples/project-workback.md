@@ -139,6 +139,8 @@ needed_time = total_planned + risk_buffer
 
 ## Try It
 
+{{< repo-file path="testdata/examples/project-workback.cm" >}}
+
 ```bash
 cm testdata/examples/project-workback.cm
 ```

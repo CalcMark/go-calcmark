@@ -6,7 +6,7 @@ weight: 55
 
 Should you build a small dedicated datacenter or rent space in someone else's? This walkthrough models the full lifecycle cost using CalcMark, showcasing exchange rates, growth functions, depreciation, and napkin math along the way.
 
-The complete CalcMark file is available at [`testdata/examples/datacenter-cost.cm`](https://github.com/AKinetix/go-calcmark/blob/main/testdata/examples/datacenter-cost.cm).
+The complete CalcMark file is available at {{< repo-file path="testdata/examples/datacenter-cost.cm" >}}.
 
 ---
 
@@ -254,6 +254,8 @@ This example showcases the following CalcMark features:
 - **Markdown prose** -- headings, paragraphs, and inline comments between calculations
 
 ## Try It
+
+{{< repo-file path="testdata/examples/datacenter-cost.cm" >}}
 
 ```bash
 cm testdata/examples/datacenter-cost.cm

@@ -21,7 +21,7 @@ cm testdata/examples/<filename>.cm
 
 ## Feature Reference
 
-These examples are drawn from the project's [golden test suite](https://github.com/CalcMark/go-calcmark/tree/main/testdata/eval/success/features) and demonstrate every language feature:
+These examples are drawn from the project's {{< repo-file path="testdata/eval/success/features" type="tree" text="golden test suite" >}} and demonstrate every language feature:
 
 - [Functions & Natural Language](functions-and-nl/) -- All function call styles
 - [Network & Storage](network-and-storage/) -- Latency, throughput, read/seek, compression

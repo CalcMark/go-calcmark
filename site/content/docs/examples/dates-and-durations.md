@@ -4,7 +4,7 @@ summary: "Date keywords, literals, arithmetic, and duration calculations."
 weight: 45
 ---
 
-From [`testdata/eval/success/features/dates.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/dates.cm).
+From {{< repo-file path="testdata/eval/success/features/dates.cm" >}}.
 
 ## Date Keywords
 

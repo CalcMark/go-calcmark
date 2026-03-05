@@ -4,7 +4,7 @@ summary: "Quick estimation with human-readable rounding using 'as napkin'."
 weight: 40
 ---
 
-From [`testdata/eval/success/features/napkin.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/napkin.cm).
+From {{< repo-file path="testdata/eval/success/features/napkin.cm" >}}.
 
 ## Basic Numbers
 
