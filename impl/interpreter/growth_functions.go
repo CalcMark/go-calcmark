@@ -171,8 +171,7 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	modName := modifierIdent.Name
 
 	// Mode 3: "compounded:monthly" — financial compounding A = P(1+r/n)^(nt)
-	if strings.HasPrefix(modName, "compounded:") {
-		freq := strings.TrimPrefix(modName, "compounded:")
+	if freq, ok := strings.CutPrefix(modName, "compounded:"); ok {
 		periodsPerYear, ok := types.PeriodToPeriodsPerYear(freq)
 		if !ok {
 			return nil, fmt.Errorf("compound: unknown compounding frequency %q", freq)

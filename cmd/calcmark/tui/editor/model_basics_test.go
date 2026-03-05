@@ -7,14 +7,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
-
-func init() {
-	// Initialize config for tests
-	config.Load()
-}
 
 func TestNew(t *testing.T) {
 	// Test with nil document

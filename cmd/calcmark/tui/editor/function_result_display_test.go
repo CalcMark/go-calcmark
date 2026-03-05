@@ -3,14 +3,9 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
-
-func init() {
-	config.Load()
-}
 
 // TestFunctionResultDisplay verifies that function calls display results in preview.
 // This is a regression test for the bug where avg(2,4,4) didn't show results.

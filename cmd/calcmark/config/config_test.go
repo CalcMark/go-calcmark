@@ -8,6 +8,9 @@ import (
 )
 
 func TestLoad_DefaultsOnly(t *testing.T) {
+	// Isolate from user config
+	t.Setenv("HOME", t.TempDir())
+
 	// Reset state and load fresh
 	cfg, err := Reload()
 	if err != nil {

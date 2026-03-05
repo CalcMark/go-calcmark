@@ -54,10 +54,11 @@ remaining = total_income - fixed_total - savings`
 		if strings.Contains(line, "savings") {
 			foundWrappedSegment = true
 			// Check if it has selection highlighting background.
-			// The palette Selection color (#1f3a5f dark) renders as:
-			// - TrueColor: "48;2;30;58;95" (RGB background)
-			// - ANSI256: "48;5;23m" (fallback)
-			if strings.Contains(line, "48;2;30;58;95") || strings.Contains(line, "48;5;23m") || strings.Contains(line, "48;5;240") {
+			// The palette Selection color renders as:
+			// - Light mode (#DBEAFE): "48;2;219;234;254"
+			// - Dark mode (#1E3A5F): "48;2;30;58;95"
+			// - ANSI256 fallbacks: "48;5;23m", "48;5;240"
+			if strings.Contains(line, "48;2;219;234;254") || strings.Contains(line, "48;2;30;58;95") || strings.Contains(line, "48;5;23m") || strings.Contains(line, "48;5;240") {
 				wrappedSegmentHighlighted = true
 			}
 			t.Logf("Wrapped segment line: %q", line)
@@ -68,9 +69,9 @@ remaining = total_income - fixed_total - savings`
 		t.Log("Warning: Could not find wrapped segment in view - test may need adjustment")
 	}
 
-	// This test documents the bug - wrapped line continuation should be highlighted
+	// Wrapped line continuation must be highlighted when selected
 	if foundWrappedSegment && !wrappedSegmentHighlighted {
-		t.Error("Wrapped line continuation is NOT highlighted when selected - bug confirmed")
+		t.Error("Wrapped line continuation is NOT highlighted when selected")
 	}
 }
 

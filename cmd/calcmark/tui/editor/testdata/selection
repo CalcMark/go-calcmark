@@ -43,7 +43,7 @@ key ctrl+a
 type x
 ----
 -- debug:
-mode=StateAutocomplete cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="x" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test backspace clears selection
 run observe=debug
