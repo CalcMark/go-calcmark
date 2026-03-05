@@ -29,16 +29,16 @@ func TestFormatExplicitQuantity(t *testing.T) {
 			expected: "0.5 megawatts",
 		},
 		{
-			name:     "1 m in mm shows 1000 mm",
+			name:     "1 m in mm shows 1,000 mm",
 			value:    decimal.NewFromInt(1000),
 			unit:     "millimeters",
-			expected: "1K millimeters",
+			expected: "1,000 millimeters",
 		},
 		{
-			name:     "1 GB in MB shows ~1024 MB",
+			name:     "1 GB in MB shows 1,024 MB",
 			value:    decimal.NewFromFloat(1024),
 			unit:     "MB",
-			expected: "1.02K MB",
+			expected: "1,024 MB",
 		},
 		{
 			name:     "extreme small value uses scientific notation",
@@ -60,6 +60,95 @@ func TestFormatExplicitQuantity(t *testing.T) {
 				Value:      tt.value,
 				Unit:       tt.unit,
 				IsExplicit: true,
+			}
+			result := f.FormatQuantity(q)
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestExplicitQuantityRounding(t *testing.T) {
+	f := DefaultFormatter()
+
+	tests := []struct {
+		name     string
+		value    decimal.Decimal
+		unit     string
+		expected string
+	}{
+		{
+			name:     "value >= 100 rounds to 0 dp",
+			value:    decimal.NewFromFloat(156521.739),
+			unit:     "millisecond",
+			expected: "156,522 millisecond",
+		},
+		{
+			name:     "value 10-99 rounds to 1 dp",
+			value:    decimal.NewFromFloat(32.808399),
+			unit:     "feet",
+			expected: "32.8 feet",
+		},
+		{
+			name:     "value 1-9 rounds to 2 dp",
+			value:    decimal.NewFromFloat(3.14159),
+			unit:     "meters",
+			expected: "3.14 meters",
+		},
+		{
+			name:     "value < 1 rounds to 4 dp",
+			value:    decimal.NewFromFloat(0.00027778),
+			unit:     "hour",
+			expected: "0.0003 hour",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q := &types.Quantity{
+				Value:      tt.value,
+				Unit:       tt.unit,
+				IsExplicit: true,
+			}
+			result := f.FormatQuantity(q)
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestExplicitQuantityPreciseSkipsRounding(t *testing.T) {
+	f := DefaultFormatter()
+
+	tests := []struct {
+		name     string
+		value    decimal.Decimal
+		unit     string
+		expected string
+	}{
+		{
+			name:     "precise shows full value for large number",
+			value:    decimal.NewFromFloat(156521.739),
+			unit:     "millisecond",
+			expected: "156,521.739 millisecond",
+		},
+		{
+			name:     "precise shows full value for medium number",
+			value:    decimal.NewFromFloat(32.808399),
+			unit:     "feet",
+			expected: "32.808399 feet",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q := &types.Quantity{
+				Value:      tt.value,
+				Unit:       tt.unit,
+				IsExplicit: true,
+				IsPrecise:  true,
 			}
 			result := f.FormatQuantity(q)
 			if result != tt.expected {

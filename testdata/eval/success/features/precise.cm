@@ -1,0 +1,10 @@
+# Precise Conversion - Full precision display
+
+# Plain expression
+precise_num = 3.14159265358979 as precise
+
+# Quantity conversion with precise
+explicit_precise = 10 meters as feet as precise
+
+# Napkin and precise are independent
+napkin_num = 1234567 as napkin

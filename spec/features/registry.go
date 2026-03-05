@@ -562,6 +562,14 @@ func getKeywords() []Feature {
 			Example:     "432000 MB as napkin → ~400 GB",
 		},
 		{
+			Name:        "as precise",
+			Category:    CategoryKeyword,
+			Syntax:      "expression as precise",
+			Description: "Show full float precision, skipping display rounding",
+			Aliases:     []Alias{{Name: "precise", Parseable: false}},
+			Example:     "1 second as hour as precise",
+		},
+		{
 			Name:        "at",
 			Category:    CategoryKeyword,
 			Syntax:      "demand at capacity per unit [with N% buffer]",

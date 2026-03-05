@@ -362,20 +362,37 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 				Range:      &ast.Range{},
 			}, nil
 		}
+		if p.match(lexer.PRECISE) {
+			return &ast.PreciseConversion{
+				Expression: left,
+				Range:      &ast.Range{},
+			}, nil
+		}
 		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
 		if p.check(lexer.IDENTIFIER) {
 			targetUnit := string(p.peek().Value)
 			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
 			if types.IsValidDurationUnit(targetUnit) || isQuantityUnit {
 				p.advance() // consume the target unit
-				return &ast.UnitConversion{
+				node := &ast.UnitConversion{
 					Quantity:   left,
 					TargetUnit: targetUnit,
 					Range:      &ast.Range{},
-				}, nil
+				}
+				// Allow chaining: "1 second as hour as precise" or "as napkin"
+				if p.match(lexer.AS) {
+					if p.match(lexer.PRECISE) {
+						return &ast.PreciseConversion{Expression: node, Range: &ast.Range{}}, nil
+					}
+					if p.match(lexer.NAPKIN) {
+						return &ast.NapkinConversion{Expression: node, Range: &ast.Range{}}, nil
+					}
+					return nil, p.error("expected 'napkin' or 'precise' after unit conversion 'as'")
+				}
+				return node, nil
 			}
 		}
-		return nil, p.error("expected 'napkin' or a valid unit after 'as'")
+		return nil, p.error("expected 'napkin', 'precise', or a valid unit after 'as'")
 	}
 
 	return left, nil
@@ -730,20 +747,38 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 				Range:      &ast.Range{},
 			}, nil
 		}
+		if p.match(lexer.PRECISE) {
+			return &ast.PreciseConversion{
+				Expression: result,
+				Range:      &ast.Range{},
+			}, nil
+		}
 		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
 		if p.check(lexer.IDENTIFIER) {
 			targetUnit := string(p.peek().Value)
 			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
 			if types.IsValidDurationUnit(targetUnit) || isQuantityUnit {
 				p.advance() // consume the target unit
-				return &ast.UnitConversion{
+				node := &ast.UnitConversion{
 					Quantity:   result,
 					TargetUnit: targetUnit,
 					Range:      &ast.Range{},
-				}, nil
+				}
+				// Allow chaining: "1 second as hour as precise" or "as napkin"
+				if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "as" {
+					p.advance() // consume "as"
+					if p.match(lexer.PRECISE) {
+						return &ast.PreciseConversion{Expression: node, Range: &ast.Range{}}, nil
+					}
+					if p.match(lexer.NAPKIN) {
+						return &ast.NapkinConversion{Expression: node, Range: &ast.Range{}}, nil
+					}
+					return nil, p.error("expected 'napkin' or 'precise' after unit conversion 'as'")
+				}
+				return node, nil
 			}
 		}
-		return nil, p.error("expected 'napkin' or a valid unit after 'as'")
+		return nil, p.error("expected 'napkin', 'precise', or a valid unit after 'as'")
 	}
 
 	return result, nil

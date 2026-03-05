@@ -25,21 +25,22 @@ var ReservedKeywords = map[string]TokenType{
 	"not": NOT,
 
 	// Future control flow keywords
-	"if":     IF,
-	"then":   THEN,
-	"else":   ELSE,
-	"elif":   ELIF,
-	"end":    END,
-	"for":    FOR,
-	"from":   FROM, // Date expressions: "2 days from today"
-	"in":     IN,
-	"as":     AS,     // Conversion: "1234567 as napkin"
-	"at":     AT,     // Capacity planning: "10 TB at 2 TB per disk"
-	"napkin": NAPKIN, // Human-readable formatting: "1234567 as napkin"
-	"of":     OF,     // Percentage expressions: "10% of 200"
-	"per":    PER,    // Rate expressions: "100 MB per second"
-	"over":   OVER,   // Rate accumulation: "100 MB/s over 1 day"
-	"with":   WITH,   // Capacity planning (legacy): "10000 req/s with 450 req/s"
+	"if":      IF,
+	"then":    THEN,
+	"else":    ELSE,
+	"elif":    ELIF,
+	"end":     END,
+	"for":     FOR,
+	"from":    FROM, // Date expressions: "2 days from today"
+	"in":      IN,
+	"as":      AS,      // Conversion: "1234567 as napkin"
+	"at":      AT,      // Capacity planning: "10 TB at 2 TB per disk"
+	"napkin":  NAPKIN,  // Human-readable formatting: "1234567 as napkin"
+	"precise": PRECISE, // Full-precision display: "1 second as hour as precise"
+	"of":      OF,      // Percentage expressions: "10% of 200"
+	"per":     PER,     // Rate expressions: "100 MB per second"
+	"over":    OVER,    // Rate accumulation: "100 MB/s over 1 day"
+	"with":    WITH,    // Capacity planning (legacy): "10000 req/s with 450 req/s"
 	// NOTE: "downtime" is NOT a reserved keyword - checked contextually in parser
 	"while":    WHILE,
 	"return":   RETURN,

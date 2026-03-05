@@ -14,6 +14,7 @@ type Quantity struct {
 	Unit       string
 	IsNapkin   bool // True if this is a napkin estimate (approximate value)
 	IsExplicit bool // True if unit was explicitly chosen via `in`/`as` conversion
+	IsPrecise  bool // True if full precision requested via `as precise`
 }
 
 // NewQuantity creates a new Quantity with the given value and unit.

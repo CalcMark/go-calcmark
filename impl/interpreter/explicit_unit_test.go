@@ -32,9 +32,9 @@ func TestExplicitUnitConversionDisplay(t *testing.T) {
 			expectExplicit:  true,
 		},
 		{
-			name:            "1 m in mm displays as 1K mm",
+			name:            "1 m in mm displays as 1,000 mm",
 			input:           "1 meter in millimeters\n",
-			expectedDisplay: "1K millimeters",
+			expectedDisplay: "1,000 millimeters",
 			expectExplicit:  true,
 		},
 		{
@@ -60,6 +60,12 @@ func TestExplicitUnitConversionDisplay(t *testing.T) {
 			input:           "200 kilowatts in megawatts as napkin\n",
 			expectedDisplay: "~200 kW",
 			expectExplicit:  false,
+		},
+		{
+			name:            "precise on explicit shows full precision",
+			input:           "10 meters in feet as precise\n",
+			expectedDisplay: "32.808399 feet",
+			expectExplicit:  true,
 		},
 	}
 
