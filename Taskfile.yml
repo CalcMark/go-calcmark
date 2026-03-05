@@ -165,25 +165,12 @@ tasks:
 
   record-demos:
     desc: Regenerate all demo GIFs for the website
-    cmds:
-      - vhs scripts/hero.tape
-      - vhs scripts/feature-variables.tape
-      - vhs scripts/feature-eval.tape
-      - vhs scripts/feature-export.tape
-      - vhs scripts/feature-autocomplete.tape
-      - vhs scripts/feature-growth-autocomplete.tape
-      - vhs scripts/tui-screenshot.tape
-      - echo '✓ All demos regenerated to site/static/images/'
     sources:
       - scripts/*.tape
-    generates:
-      - site/static/images/hero.gif
-      - site/static/images/feature-variables.gif
-      - site/static/images/feature-eval.gif
-      - site/static/images/feature-export.gif
-      - site/static/images/feature-autocomplete.gif
-      - site/static/images/feature-growth-autocomplete.gif
-      - site/static/images/tui-screenshot.png
+    cmds:
+      - for: sources
+        cmd: vhs {{.ITEM}}
+      - echo '✓ All demos regenerated to site/static/images/'
 
   # ── Examples ───────────────────────────────────────────────────────
 
