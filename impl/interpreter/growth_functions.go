@@ -85,7 +85,7 @@ func extractPeriodsFromDuration(val types.Type) (decimal.Decimal, string, error)
 func wrapResult(result decimal.Decimal, original types.Type) types.Type {
 	switch v := original.(type) {
 	case *types.Currency:
-		return &types.Currency{Value: result.Round(2), Symbol: v.Symbol}
+		return &types.Currency{Value: result.Round(2), Symbol: v.Symbol, Code: v.Code}
 	case *types.Quantity:
 		return &types.Quantity{Value: result.Round(2), Unit: v.Unit}
 	default:

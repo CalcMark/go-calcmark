@@ -150,6 +150,7 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "value", Type: ArgTypeAny, Examples: []string{"10000", "$50000", "1000 units"}},
 			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"20%", "0.15", "10%"}},
 			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"5", "10", "7"}},
+			{Name: "salvage", Type: ArgTypeAny, Optional: true, Examples: []string{"$5000", "1000"}},
 		},
 	},
 

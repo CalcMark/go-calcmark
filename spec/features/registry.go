@@ -538,10 +538,10 @@ func getGrowthFeatures() []Feature {
 		{
 			Name:        "depreciate",
 			Category:    CategoryFunction,
-			Syntax:      "depreciate(value, rate, periods)",
+			Syntax:      "depreciate(value, rate, periods, salvage?)",
 			Description: "Calculate declining balance depreciation over time",
 			Aliases: []Alias{
-				{Name: "depreciate...by...over", Parseable: true, Example: "depreciate $50000 by 15% over 5 years"},
+				{Name: "depreciate...by...over...to", Parseable: true, Example: "depreciate $50000 by 15% over 5 years to $5000"},
 			},
 			Example: "depreciate(10000, 20%, 5) → 3276.80",
 		},

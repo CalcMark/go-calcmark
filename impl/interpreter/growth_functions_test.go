@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/shopspring/decimal"
@@ -210,6 +211,59 @@ func TestCompoundGrowthMath(t *testing.T) {
 
 	if !expectedRounded.Equal(decimal.RequireFromString("1628.89")) {
 		t.Errorf("math check: 1000*(1.05)^10 = %s, want 1628.89", expectedRounded)
+	}
+}
+
+// TestGrowthResultsPreserveDisplayFormat verifies that growth function results
+// preserve type metadata (Currency.Code, Quantity.Unit) needed by the display
+// formatter, not just the String() method.
+func TestGrowthResultsPreserveDisplayFormat(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "compound currency preserves symbol in formatter",
+			input: "compound($475000, 3.2%, 30)",
+			want:  "$1.22M",
+		},
+		{
+			name:  "compound quantity preserves unit in formatter",
+			input: "compound(500 customers, 20%, 12)",
+			want:  "4.46K customers",
+		},
+		{
+			name:  "depreciate currency preserves symbol in formatter",
+			input: "depreciate($50000, 15%, 5)",
+			want:  "$22.19K",
+		},
+		{
+			name:  "grow currency preserves symbol in formatter",
+			input: "grow($500, $100, 36)",
+			want:  "$4,100.00",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			interp := interpreter.NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			if len(results) == 0 {
+				t.Fatalf("Eval(%q) returned no results", tt.input)
+			}
+			got := display.Format(results[0])
+			if got != tt.want {
+				t.Errorf("display.Format(Eval(%q)) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
 	}
 }
 
