@@ -65,6 +65,10 @@ func overlayPadLine(content string, targetWidth int, bg color.Color) string {
 
 // wrapStyledLine wraps a line containing ANSI escape codes using visual width.
 // This is needed for styled content where len(string) != visual width.
+//
+// ANSI escape codes are preserved across wrap boundaries: each continuation
+// line is prepended with the accumulated ANSI state (non-reset codes) from
+// prior segments, matching the overlayStringAt pattern for state tracking.
 func wrapStyledLine(line string, maxWidth int) []string {
 	if maxWidth <= 0 {
 		return []string{line}
@@ -75,20 +79,90 @@ func wrapStyledLine(line string, maxWidth int) []string {
 		return []string{line}
 	}
 
-	// For styled content that exceeds maxWidth, we need to wrap it properly.
-	// Strategy: Use lipgloss to extract plain text, wrap it, then let lipgloss handle rendering.
-	// This preserves styles while ensuring proper wrapping.
-
-	// Extract plain text (removes ANSI codes)
+	// Determine wrap points from plain text.
 	plainText := stripANSI(line)
+	wrappedPlain := geometry.WrapText(plainText, maxWidth)
+	if len(wrappedPlain) <= 1 {
+		return []string{line}
+	}
 
-	// Wrap the plain text
-	wrappedPlainLines := geometry.WrapText(plainText, maxWidth)
+	// Walk the styled string rune-by-rune, splitting at the same boundaries
+	// that WrapText computed. Track ANSI state so each continuation line
+	// inherits the active foreground/background codes.
+	styledRunes := []rune(line)
+	styledIdx := 0
 
-	// Return wrapped lines (styles will be handled by caller if needed)
-	// For calc results like "a -> 2", the arrow and value are usually short enough
-	// that wrapping preserves the basic format
-	return wrappedPlainLines
+	// ansiState accumulates non-reset ANSI codes; cleared on reset.
+	var ansiState []rune
+
+	result := make([]string, 0, len(wrappedPlain))
+
+	for _, segment := range wrappedPlain {
+		segmentRunes := []rune(segment)
+		var buf strings.Builder
+
+		// Replay accumulated ANSI state on continuation lines.
+		if len(result) > 0 && len(ansiState) > 0 {
+			buf.WriteString(string(ansiState))
+		}
+
+		// Consume styled runes matching this plain-text segment.
+		plainIdx := 0
+		for styledIdx < len(styledRunes) && plainIdx < len(segmentRunes) {
+			r := styledRunes[styledIdx]
+
+			if r == '\x1b' {
+				// Collect the full ANSI escape sequence.
+				esc := collectEscape(styledRunes, &styledIdx)
+				buf.WriteString(string(esc))
+				trackANSIState(&ansiState, esc)
+			} else {
+				buf.WriteRune(r)
+				plainIdx++
+				styledIdx++
+			}
+		}
+
+		// Consume trailing ANSI codes between segments (e.g., reset after
+		// the last visible char before the wrap boundary).
+		for styledIdx < len(styledRunes) && styledRunes[styledIdx] == '\x1b' {
+			esc := collectEscape(styledRunes, &styledIdx)
+			buf.WriteString(string(esc))
+			trackANSIState(&ansiState, esc)
+		}
+
+		result = append(result, buf.String())
+	}
+
+	return result
+}
+
+// collectEscape reads a complete ANSI escape sequence starting at runes[*idx]
+// (which must be '\x1b') and advances *idx past the terminal 'm'.
+func collectEscape(runes []rune, idx *int) []rune {
+	var esc []rune
+	esc = append(esc, runes[*idx])
+	*idx++
+	for *idx < len(runes) {
+		esc = append(esc, runes[*idx])
+		if runes[*idx] == 'm' {
+			*idx++
+			break
+		}
+		*idx++
+	}
+	return esc
+}
+
+// trackANSIState updates the accumulated ANSI state slice. Reset codes
+// (\x1b[0m, \x1b[m) clear the state; all other SGR codes accumulate.
+func trackANSIState(state *[]rune, esc []rune) {
+	s := string(esc)
+	if s == "\x1b[0m" || s == "\x1b[m" {
+		*state = (*state)[:0]
+	} else {
+		*state = append(*state, esc...)
+	}
 }
 
 // stripANSI removes ANSI escape codes from a string, returning plain text.
