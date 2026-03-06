@@ -192,7 +192,8 @@ func (f Formatter) FormatDuration(d *types.Duration) string {
 	if d == nil {
 		return ""
 	}
-	return d.String()
+	rounded := roundForDisplay(d.Value)
+	return fmt.Sprintf("%s %s", rounded, d.Unit)
 }
 
 // formatExplicitNumber formats a number with comma separators but without K/M/B/T suffixes.
