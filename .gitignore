@@ -37,6 +37,7 @@ Thumbs.db
 # Claude Code - ignore everything except project-specific commands
 .claude/*
 !.claude/commands/
+!.claude/skills/
 .claude/commands/gsd/
 
 # Hugo site build artifacts
