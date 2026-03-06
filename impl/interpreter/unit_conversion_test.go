@@ -312,6 +312,14 @@ func TestDurationConversion(t *testing.T) {
 			tolerance: 0.001,
 			wantUnit:  "hours",
 		},
+		// "in" keyword with abbreviation (issue #31)
+		{
+			name:      "1 second in ms",
+			input:     "1 second in ms\n",
+			expected:  1000,
+			tolerance: 0.001,
+			wantUnit:  "millisecond",
+		},
 		// "as" keyword conversions
 		{
 			name:      "1 day as seconds",
@@ -326,6 +334,28 @@ func TestDurationConversion(t *testing.T) {
 			expected:  180,
 			tolerance: 0.001,
 			wantUnit:  "minutes",
+		},
+		// Abbreviation "ms" should work as synonym for "millisecond" (issue #31)
+		{
+			name:      "1 second as ms",
+			input:     "1 second as ms\n",
+			expected:  1000,
+			tolerance: 0.001,
+			wantUnit:  "millisecond",
+		},
+		{
+			name:      "1 second as millisecond",
+			input:     "1 second as millisecond\n",
+			expected:  1000,
+			tolerance: 0.001,
+			wantUnit:  "millisecond",
+		},
+		{
+			name:      "1 second as milliseconds",
+			input:     "1 second as milliseconds\n",
+			expected:  1000,
+			tolerance: 0.001,
+			wantUnit:  "millisecond",
 		},
 		// Variable assignment with duration conversion
 		{

@@ -371,12 +371,20 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
 		if p.check(lexer.IDENTIFIER) {
 			targetUnit := string(p.peek().Value)
+			// Resolve time unit abbreviations (e.g., "ms" → "millisecond")
+			normalizedTimeUnit := types.NormalizeTimeUnit(targetUnit)
 			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
-			if types.IsValidDurationUnit(targetUnit) || isQuantityUnit {
+			isDuration := types.IsValidDurationUnit(targetUnit) || types.IsValidDurationUnit(normalizedTimeUnit)
+			if isDuration || isQuantityUnit {
 				p.advance() // consume the target unit
+				// Use the raw form if already valid, normalize only for abbreviations
+				resolvedUnit := targetUnit
+				if !types.IsValidDurationUnit(targetUnit) && types.IsValidDurationUnit(normalizedTimeUnit) {
+					resolvedUnit = normalizedTimeUnit
+				}
 				node := &ast.UnitConversion{
 					Quantity:   left,
-					TargetUnit: targetUnit,
+					TargetUnit: resolvedUnit,
 					Range:      &ast.Range{},
 				}
 				// Allow chaining: "1 second as hour as precise" or "as napkin"
@@ -654,6 +662,15 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			targetTimeUnit = timeUnit
 		}
 
+		// Resolve time unit abbreviations for duration-only conversions (e.g., "ms" → "millisecond")
+		// Only normalize when there's no rate time unit (targetTimeUnit == ""),
+		// to avoid converting quantity units like "m" (meters) to "minute".
+		if targetTimeUnit == "" {
+			if normalized := types.NormalizeTimeUnit(targetUnitName); types.IsValidDurationUnit(normalized) && !types.IsValidDurationUnit(targetUnitName) {
+				targetUnitName = normalized
+			}
+		}
+
 		return &ast.UnitConversion{
 			Quantity:       left,
 			TargetUnit:     targetUnitName,
@@ -756,12 +773,20 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
 		if p.check(lexer.IDENTIFIER) {
 			targetUnit := string(p.peek().Value)
+			// Resolve time unit abbreviations (e.g., "ms" → "millisecond")
+			normalizedTimeUnit := types.NormalizeTimeUnit(targetUnit)
 			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
-			if types.IsValidDurationUnit(targetUnit) || isQuantityUnit {
+			isDuration := types.IsValidDurationUnit(targetUnit) || types.IsValidDurationUnit(normalizedTimeUnit)
+			if isDuration || isQuantityUnit {
 				p.advance() // consume the target unit
+				// Use the raw form if already valid, normalize only for abbreviations
+				resolvedUnit := targetUnit
+				if !types.IsValidDurationUnit(targetUnit) && types.IsValidDurationUnit(normalizedTimeUnit) {
+					resolvedUnit = normalizedTimeUnit
+				}
 				node := &ast.UnitConversion{
 					Quantity:   result,
-					TargetUnit: targetUnit,
+					TargetUnit: resolvedUnit,
 					Range:      &ast.Range{},
 				}
 				// Allow chaining: "1 second as hour as precise" or "as napkin"
@@ -1301,7 +1326,7 @@ func isTimeUnit(unit string) bool {
 	// but returns a canonical form (second, minute, etc.) if recognized.
 	// If the output matches one of the canonical forms, it's a time unit.
 	switch normalized {
-	case "second", "minute", "hour", "day", "week", "month", "year":
+	case "millisecond", "second", "minute", "hour", "day", "week", "month", "year":
 		return true
 	default:
 		return false

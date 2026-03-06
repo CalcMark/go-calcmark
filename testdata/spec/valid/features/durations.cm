@@ -54,6 +54,8 @@ Tests all valid duration literal formats.
 1 day as seconds
 3 hours as minutes
 tt = 2 weeks as days
+1 second as ms
+1 second as millisecond
 
 ## Durations in Context
 

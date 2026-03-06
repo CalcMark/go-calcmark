@@ -118,13 +118,14 @@ func getCurrencyDecimals(code string) int {
 
 // timeUnitAbbreviations maps time units to their short forms.
 var timeUnitAbbreviations = map[string]string{
-	"second": "s",
-	"minute": "min",
-	"hour":   "h",
-	"day":    "day",
-	"week":   "week",
-	"month":  "month",
-	"year":   "year",
+	"millisecond": "ms",
+	"second":      "s",
+	"minute":      "min",
+	"hour":        "h",
+	"day":         "day",
+	"week":        "week",
+	"month":       "month",
+	"year":        "year",
 }
 
 // abbreviateTimeUnit returns the short form of a time unit.

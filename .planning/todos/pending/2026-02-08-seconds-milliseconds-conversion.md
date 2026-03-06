@@ -20,4 +20,9 @@ Need to investigate:
 
 ## Solution
 
-TBD - Check spec/units/canonical.go for time unit definitions and ensure seconds <-> milliseconds conversion is properly defined.
+Fixed in issue #31 PR. The root cause was:
+1. `NormalizeTimeUnit()` in `spec/types/rate.go` was missing `ms`/`millisecond`/`milliseconds` entries.
+2. The parser's `as` and `in` keyword handlers did not normalize time unit abbreviations before checking `IsValidDurationUnit()`.
+3. `isTimeUnit()` in the parser was missing `"millisecond"` from its canonical forms switch.
+
+Note: seconds and milliseconds were already in `durationToSecondsDecimal` (spec/types/duration.go) and `TimeUnits` (spec/lexer/date_keywords.go). The gap was in the parser's conversion path, not the unit definitions themselves. Time units are NOT in `spec/units/canonical.go` — they live in the types/lexer layer. Consolidating them into canonical.go is a separate architectural improvement.

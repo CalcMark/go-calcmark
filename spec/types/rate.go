@@ -121,57 +121,83 @@ func (r *Rate) Multiply(scalar decimal.Decimal) *Rate {
 	}
 }
 
+// timeUnitAliases maps all time unit variants to their canonical form.
+// This is a package-level var to avoid per-call allocation.
+var timeUnitAliases = map[string]string{
+	"ms":           "millisecond",
+	"millisecond":  "millisecond",
+	"milliseconds": "millisecond",
+
+	"s":       "second",
+	"sec":     "second",
+	"second":  "second",
+	"seconds": "second",
+
+	"m":       "minute",
+	"min":     "minute",
+	"minute":  "minute",
+	"minutes": "minute",
+
+	"h":     "hour",
+	"hr":    "hour",
+	"hour":  "hour",
+	"hours": "hour",
+
+	"d":     "day",
+	"day":   "day",
+	"days":  "day",
+	"daily": "day",
+
+	"w":      "week",
+	"wk":     "week",
+	"week":   "week",
+	"weeks":  "week",
+	"weekly": "week",
+
+	"month":   "month",
+	"months":  "month",
+	"mo":      "month",
+	"monthly": "month",
+
+	"quarter":   "quarter",
+	"quarters":  "quarter",
+	"quarterly": "quarter",
+
+	"y":      "year",
+	"yr":     "year",
+	"year":   "year",
+	"years":  "year",
+	"yearly": "year",
+}
+
+// periodsPerYear maps canonical time units to periods per year.
+var periodsPerYear = map[string]int{
+	"year":    1,
+	"quarter": 4,
+	"month":   12,
+	"week":    52,
+	"day":     365,
+}
+
+// timeUnitAbbrevs maps canonical time units to short display forms.
+var timeUnitAbbrevs = map[string]string{
+	"millisecond": "ms",
+	"second":      "s",
+	"minute":      "min",
+	"hour":        "h",
+	"day":         "day",
+	"week":        "week",
+	"month":       "month",
+	"year":        "year",
+}
+
 // NormalizeTimeUnit converts various time unit formats to canonical form.
 // Handles abbreviations, plurals, and adjectival forms (e.g., "monthly" → "month").
 // Examples: "s" → "second", "seconds" → "second", "sec" → "second", "daily" → "day"
 func NormalizeTimeUnit(unit string) string {
 	lower := strings.ToLower(strings.TrimSpace(unit))
 
-	// Map of aliases to canonical forms
-	timeUnits := map[string]string{
-		"s":       "second",
-		"sec":     "second",
-		"second":  "second",
-		"seconds": "second",
-
-		"m":       "minute",
-		"min":     "minute",
-		"minute":  "minute",
-		"minutes": "minute",
-
-		"h":     "hour",
-		"hr":    "hour",
-		"hour":  "hour",
-		"hours": "hour",
-
-		"d":     "day",
-		"day":   "day",
-		"days":  "day",
-		"daily": "day",
-
-		"w":      "week",
-		"wk":     "week",
-		"week":   "week",
-		"weeks":  "week",
-		"weekly": "week",
-
-		"month":   "month",
-		"months":  "month",
-		"mo":      "month",
-		"monthly": "month",
-
-		"quarter":   "quarter",
-		"quarters":  "quarter",
-		"quarterly": "quarter",
-
-		"y":      "year",
-		"yr":     "year",
-		"year":   "year",
-		"years":  "year",
-		"yearly": "year",
-	}
-
-	if canonical, ok := timeUnits[lower]; ok {
+	if canonical, ok := timeUnitAliases[lower]; ok {
 		return canonical
 	}
 
@@ -184,30 +210,13 @@ func NormalizeTimeUnit(unit string) string {
 // Returns 0 and false for unrecognized periods.
 func PeriodToPeriodsPerYear(period string) (int, bool) {
 	normalized := NormalizeTimeUnit(period)
-	periods := map[string]int{
-		"year":    1,
-		"quarter": 4,
-		"month":   12,
-		"week":    52,
-		"day":     365,
-	}
-	n, ok := periods[normalized]
+	n, ok := periodsPerYear[normalized]
 	return n, ok
 }
 
 // abbreviateTimeUnit returns short form for display.
 func abbreviateTimeUnit(unit string) string {
-	abbrevs := map[string]string{
-		"second": "s",
-		"minute": "min",
-		"hour":   "h",
-		"day":    "day",
-		"week":   "week",
-		"month":  "month",
-		"year":   "year",
-	}
-
-	if abbrev, ok := abbrevs[unit]; ok {
+	if abbrev, ok := timeUnitAbbrevs[unit]; ok {
 		return abbrev
 	}
 	return unit

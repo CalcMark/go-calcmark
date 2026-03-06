@@ -90,6 +90,9 @@ func TestTimeUnitNormalization(t *testing.T) {
 		input    string
 		expected string
 	}{
+		{"ms", "millisecond"},
+		{"millisecond", "millisecond"},
+		{"milliseconds", "millisecond"},
 		{"s", "second"},
 		{"sec", "second"},
 		{"second", "second"},
