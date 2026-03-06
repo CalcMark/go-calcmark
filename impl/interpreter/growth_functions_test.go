@@ -77,7 +77,46 @@ func TestCompoundGrowthMode1(t *testing.T) {
 	}
 }
 
-// TestCompoundGrowthMode3 tests financial compounding: compound(p, r, d, compounded:freq)
+// TestCompoundGrowthMode2 tests bare period modifier: compound(p, r, n, period)
+// Mode 2 is a semantic annotation — the period identifier is accepted but the
+// math is identical to the 3-arg form (simple compound growth).
+func TestCompoundGrowthMode2(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		equiv string // equivalent 3-arg form (must produce same result)
+	}{
+		{
+			name:  "month",
+			input: "compound($1000, 5%, 12, month)",
+			equiv: "compound($1000, 5%, 12)",
+		},
+		{
+			name:  "quarter",
+			input: "compound($1000, 5%, 4, quarter)",
+			equiv: "compound($1000, 5%, 4)",
+		},
+		{
+			name:  "year",
+			input: "compound($1000, 5%, 10, year)",
+			equiv: "compound($1000, 5%, 10)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := evalGrowthLine(t, tt.input)
+			want := evalGrowthLine(t, tt.equiv)
+			if got != want {
+				t.Errorf("Mode 2 %q = %q, but 3-arg %q = %q (should be identical)",
+					tt.input, got, tt.equiv, want)
+			}
+		})
+	}
+}
+
+// TestCompoundGrowthMode3 tests financial compounding: compound(p, r, d, compounded freq)
+// Formula: A = P(1 + r/n)^(nt) where n = periods per year
 func TestCompoundGrowthMode3(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -85,14 +124,29 @@ func TestCompoundGrowthMode3(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "compounded monthly",
-			input: "compound($1000, 5%, 10 years, compounded monthly)",
-			want:  "$1647.01",
+			name:  "compounded yearly",
+			input: "compound($1000, 5%, 10 years, compounded yearly)",
+			want:  "$1628.89",
 		},
 		{
 			name:  "compounded quarterly",
 			input: "compound($1000, 5%, 10 years, compounded quarterly)",
 			want:  "$1643.62",
+		},
+		{
+			name:  "compounded monthly",
+			input: "compound($1000, 5%, 10 years, compounded monthly)",
+			want:  "$1647.01",
+		},
+		{
+			name:  "compounded weekly",
+			input: "compound($1000, 5%, 10 years, compounded weekly)",
+			want:  "$1648.33",
+		},
+		{
+			name:  "compounded daily",
+			input: "compound($1000, 5%, 10 years, compounded daily)",
+			want:  "$1648.66",
 		},
 	}
 
@@ -103,6 +157,24 @@ func TestCompoundGrowthMode3(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestCompoundGrowthMode3_Ordering verifies that more frequent compounding
+// produces higher returns (yearly < quarterly < monthly < weekly < daily).
+func TestCompoundGrowthMode3_Ordering(t *testing.T) {
+	yearly := evalGrowthLine(t, "compound(1000, 5%, 10 years, compounded yearly)")
+	quarterly := evalGrowthLine(t, "compound(1000, 5%, 10 years, compounded quarterly)")
+	monthly := evalGrowthLine(t, "compound(1000, 5%, 10 years, compounded monthly)")
+	weekly := evalGrowthLine(t, "compound(1000, 5%, 10 years, compounded weekly)")
+	daily := evalGrowthLine(t, "compound(1000, 5%, 10 years, compounded daily)")
+
+	results := []string{yearly, quarterly, monthly, weekly, daily}
+	for i := 1; i < len(results); i++ {
+		if results[i] <= results[i-1] {
+			t.Errorf("expected strictly increasing: results[%d]=%s <= results[%d]=%s",
+				i, results[i], i-1, results[i-1])
+		}
 	}
 }
 
@@ -184,6 +256,11 @@ func TestGrowthErrors(t *testing.T) {
 			name:    "compound too many periods",
 			input:   "compound(1000, 5%, 20000)",
 			wantErr: "too many periods",
+		},
+		{
+			name:    "compound unknown frequency",
+			input:   "compound($1000, 5%, 10 years, compounded biweekly)",
+			wantErr: "unknown compounding frequency",
 		},
 	}
 
