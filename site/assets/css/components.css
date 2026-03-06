@@ -404,7 +404,7 @@ h6:hover .heading-anchor {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-faint);
+  color: color-mix(in srgb, var(--color-primary) 50%, var(--color-text-faint));
   margin-bottom: var(--space-2);
 }
 
