@@ -5,7 +5,13 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "spec/**"
+      - "impl/**"
+      - "cmd/doceval/**"
+      - "cmd/docgen/**"
       - ".github/workflows/site.yml"
+  release:
+    types: [published]
 
 concurrency:
   group: "pages"
@@ -28,14 +34,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+        with:
+          version: 3.x
+
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
         with:
           hugo-version: ${{ env.HUGO_VERSION }}
           extended: false
 
-      - name: Build
-        run: hugo --source site --minify
+      - name: Build site
+        run: task site:build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
