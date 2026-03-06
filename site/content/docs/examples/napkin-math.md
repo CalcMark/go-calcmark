@@ -11,55 +11,55 @@ From {{< repo-file path="testdata/eval/success/features/napkin.cm" >}}.
 
 `as napkin` rounds to 2 significant figures and adds human-readable suffixes.
 
-```cm
+```calcmark
 small_num = 47 as napkin
 medium_num = 8734 as napkin
 ```
 
 ## Thousands
 
-```cm
+```calcmark
 thousands = 347234 as napkin
 twelve_k = 12500 as napkin
 ```
 
 ## Millions
 
-```cm
+```calcmark
 million = 1234567 as napkin
 two_million = 2347000 as napkin
 ```
 
 ## Billions
 
-```cm
+```calcmark
 billion = 1500000000 as napkin
 five_b = 5000000000 as napkin
 ```
 
 ## Trillions
 
-```cm
+```calcmark
 trillion = 1234000000000 as napkin
 ```
 
 ## Negative Numbers
 
-```cm
+```calcmark
 neg_million = -1234567 as napkin
 neg_thousand = -8734 as napkin
 ```
 
 ## With Quantities
 
-```cm
+```calcmark
 bandwidth = (100 MB/s * 3600) as napkin
 storage = (10 TB + 5 TB) as napkin
 ```
 
 ## In Calculations
 
-```cm
+```calcmark
 load = 10000 req/s as napkin
 capacity = 450 req/s as napkin
 ```

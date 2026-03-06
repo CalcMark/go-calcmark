@@ -13,7 +13,7 @@ and {{< repo-file path="testdata/eval/success/features/capacity_at.cm" >}}.
 
 CalcMark supports rates with any time unit. Both `/` and `per` syntaxes work.
 
-```cm
+```calcmark
 # Bandwidth rates
 r1 = 100 MB/s
 r2 = 1 GB/sec
@@ -40,7 +40,7 @@ r13 = 1000 cars/day
 
 Calculate totals from a rate over a time period.
 
-```cm
+```calcmark
 100 MB/s over 1 day
 5 GB/day over 1 year
 $0.10/hour over 30 days
@@ -54,7 +54,7 @@ $5/day over 365 days
 
 Convert a rate to a different time unit.
 
-```cm
+```calcmark
 5 million/day per second
 10 TB/month per second
 1000 req/s per minute
@@ -65,7 +65,7 @@ Convert a rate to a different time unit.
 
 Convert both quantity and time units.
 
-```cm
+```calcmark
 speed1 = 10 m/s in inch/s
 speed2 = 100 km/h in mile/h
 rate1 = 60 m/s in m/min
@@ -77,7 +77,7 @@ data_rate = 10 MB/day in seconds
 
 Calculate how many units are needed.
 
-```cm
+```calcmark
 # Basic capacity planning
 storage_disks = 10 TB at 2 TB per disk
 web_servers = 10000 req/s at 450 req/s per server
@@ -88,7 +88,7 @@ production_batches = 100 at 25 per batch
 
 ## Capacity with Buffer Percentages
 
-```cm
+```calcmark
 buffered_disks = 10 TB at 2 TB per disk with 10% buffer
 buffered_servers = 10000 req/s at 450 req/s per server with 20% buffer
 large_buffer = 100 at 50 per unit with 100% buffer
@@ -96,7 +96,7 @@ large_buffer = 100 at 50 per unit with 100% buffer
 
 ## Capacity with Slash Syntax
 
-```cm
+```calcmark
 slash_disks = 10 TB at 2 TB/disk
 slash_batches = 100 at 25/batch
 slash_with_buffer = 10 GB/day at 2 GB/disk with 30% buffer
@@ -104,7 +104,7 @@ slash_with_buffer = 10 GB/day at 2 GB/disk with 30% buffer
 
 ## Edge Cases
 
-```cm
+```calcmark
 # Demand less than capacity (minimum 1 unit)
 minimum_units = 5 at 10 per unit
 

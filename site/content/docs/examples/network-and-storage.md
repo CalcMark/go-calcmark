@@ -11,7 +11,7 @@ and {{< repo-file path="testdata/eval/success/features/compression.cm" >}}.
 
 ## Network Latency (RTT)
 
-```cm
+```calcmark
 local_latency = rtt(local)
 regional_latency = rtt(regional)
 continental_latency = rtt(continental)
@@ -20,7 +20,7 @@ global_latency = rtt(global)
 
 ## Network Throughput
 
-```cm
+```calcmark
 gigabit_speed = throughput(gigabit)
 ten_gig_speed = throughput(ten_gig)
 hundred_gig = throughput(hundred_gig)
@@ -31,7 +31,7 @@ five_g_speed = throughput(five_g)
 
 ## Transfer Time (RTT + Transmission)
 
-```cm
+```calcmark
 api_call = transfer_time(1 KB, regional, gigabit)
 file_download = transfer_time(1 GB, global, gigabit)
 video_chunk = transfer_time(10 MB, regional, ten_gig)
@@ -44,7 +44,7 @@ throughput_check = throughput(gigabit) * 0.9
 
 ## Storage Read Times
 
-```cm
+```calcmark
 ssd_read_100mb = read(100 MB, ssd)
 nvme_read_1gb = read(1 GB, nvme)
 hdd_read_10mb = read(10 MB, hdd)
@@ -54,7 +54,7 @@ sata_read = read(50 MB, sata_ssd)
 
 ## Seek/Access Latency
 
-```cm
+```calcmark
 hdd_seek = seek(hdd)
 ssd_seek = seek(ssd)
 nvme_seek = seek(nvme)
@@ -64,7 +64,7 @@ sata_seek = seek(sata_ssd)
 
 ## Combined Storage Operations
 
-```cm
+```calcmark
 db_query_hdd = seek(hdd) + read(5 MB, hdd)
 cache_hit_ssd = seek(ssd) + read(1 MB, ssd)
 sequential_scan = read(100 GB, nvme)
@@ -73,7 +73,7 @@ total_io_time = seek(hdd) * 100 + read(5 GB, hdd)
 
 ## Compression Estimates
 
-```cm
+```calcmark
 gzip_compressed = compress(1 GB, gzip)
 lz4_compressed = compress(100 MB, lz4)
 zstd_compressed = compress(500 MB, zstd)

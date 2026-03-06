@@ -37,7 +37,7 @@ CalcMark is a calculation language that blends seamlessly with markdown. It allo
 
 CalcMark uses "calculation by exclusion" - if a line looks like markdown, it's markdown. Only unambiguous calculations are treated as calculations.
 
-```cm
+```calcmark
 # My Budget          -> MARKDOWN (header prefix)
 salary = $5000       -> CALCULATION (assignment)
 This is text         -> MARKDOWN (natural language)
@@ -132,7 +132,7 @@ Lines are classified in this order:
 
 ### Context-Aware Classification
 
-```cm
+```calcmark
 x = 5               -> CALCULATION (assignment)
 y = x + 10          -> CALCULATION (x is defined)
 z = unknown * 2     -> MARKDOWN (unknown is undefined)
@@ -208,7 +208,7 @@ From **highest** to **lowest**:
 
 **Binary operations (preserve units):**
 
-```cm
+```calcmark
 Number + Number -> Number
 Currency + Number -> Currency  (unit preserved)
 Number + Currency -> Currency  (unit preserved)
@@ -222,7 +222,7 @@ Rate * Duration -> Quantity  (via "over" keyword)
 
 **Functions (drop units when mixed):**
 
-```cm
+```calcmark
 avg($100, $200) -> $150.00  (same unit preserved)
 avg($100, €200) -> 150  (Number, mixed units)
 sqrt($100) -> $10.00  (single unit preserved)
@@ -230,7 +230,7 @@ sqrt($100) -> $10.00  (single unit preserved)
 
 **Type errors:**
 
-```cm
+```calcmark
 Boolean + Number -> ERROR (no boolean arithmetic)
 Quantity + Currency -> ERROR (incompatible types)
 ```
@@ -251,7 +251,7 @@ Quantity + Currency -> ERROR (incompatible types)
 
 #### Multiplier Suffixes
 
-```cm
+```calcmark
 10K             -> 10000
 5M              -> 5000000
 2B              -> 2000000000
@@ -261,7 +261,7 @@ Quantity + Currency -> ERROR (incompatible types)
 
 #### Scientific Notation
 
-```cm
+```calcmark
 1.2e10          -> 12000000000 (displayed as 12B)
 5e3             -> 5000
 2.5e-2          -> 0.025
@@ -283,7 +283,7 @@ $ 100           Invalid (no space between symbol and number)
 
 Currency codes also work as postfix syntax:
 
-```cm
+```calcmark
 100 USD         -> $100.00
 50 EUR          -> €50.00
 25 GBP          -> £25.00
@@ -291,7 +291,7 @@ Currency codes also work as postfix syntax:
 
 #### Percentages
 
-```cm
+```calcmark
 50%             -> 0.5 (Number)
 8.25%           -> 0.0825
 15% of 200      -> 30
@@ -311,7 +311,7 @@ True, FALSE     Any case
 
 #### Quantities
 
-```cm
+```calcmark
 10 meters       Quantity: 10 in meters
 5 kg            Quantity: 5 in kilograms
 100 MB          Quantity: 100 in megabytes
@@ -321,7 +321,7 @@ True, FALSE     Any case
 
 Any identifier following a number becomes a unit. CalcMark does not require units to be predefined:
 
-```cm
+```calcmark
 5 apples        Quantity: 5 apples
 1000 req/s      Rate: 1000 requests per second
 10 servers      Quantity: 10 servers
@@ -329,7 +329,7 @@ Any identifier following a number becomes a unit. CalcMark does not require unit
 
 Arithmetic with matching arbitrary units preserves the unit. Mismatched arbitrary units produce an error:
 
-```cm
+```calcmark
 5 apples + 3 apples    -> 8 apples
 10 servers * 2         -> 20 servers
 5 apples + 3 oranges   -> ERROR (incompatible units)
@@ -337,7 +337,7 @@ Arithmetic with matching arbitrary units preserves the unit. Mismatched arbitrar
 
 #### Rates
 
-```cm
+```calcmark
 100 MB/s        Rate: 100 megabytes per second
 $50/hour        Rate: $50 per hour
 1000 req/s      Rate: 1000 requests per second
@@ -346,7 +346,7 @@ $120000/year    Rate: $120,000 per year
 
 #### Dates
 
-```cm
+```calcmark
 Jan 15 2025     Date literal
 Dec 25 2025     Date literal
 today           Current date
@@ -356,7 +356,7 @@ yesterday       Yesterday's date
 
 #### Durations
 
-```cm
+```calcmark
 5 days          Duration
 2 weeks         Duration
 3 months        Duration
@@ -392,7 +392,7 @@ Built-in constants (read-only, case-insensitive):
 
 Constants cannot be assigned:
 
-```cm
+```calcmark
 PI = 3          ERROR: Cannot assign to constant 'PI'
 radius = 5
 area = PI * radius ^ 2
@@ -486,7 +486,7 @@ These words have special meaning in specific syntactic positions but are not res
 by, compounded, buffer, to
 ```
 
-```cm
+```calcmark
 compound $1000 by 5% compounded monthly over 10   (by, compounded)
 10000 req/s at 500 per server with 20% buffer      (buffer)
 depreciate $50000 by 15% over 5 to $5000           (to)
@@ -504,14 +504,14 @@ For detailed examples of every function, including natural language syntax forms
 
 **Same units are preserved:**
 
-```cm
+```calcmark
 avg($100, $200, $300) -> $200.00
 sqrt($100) -> $10.00
 ```
 
 **Mixed units are dropped:**
 
-```cm
+```calcmark
 avg($100, €200) -> 150  (no units)
 average of $50, €100, £150 -> 100  (no units)
 ```
@@ -592,7 +592,7 @@ CalcMark provides `compound`, `grow`, and `depreciate` for modeling growth and d
 
 ### Compound Growth
 
-```cm
+```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
 compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
@@ -600,7 +600,7 @@ compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
 
 **Natural language forms:**
 
-```cm
+```calcmark
 compound $1000 by 5% over 10 years
 compound $1000 by 5% per month over 12 months
 compound $1000 by 12% compounded monthly over 10 years
@@ -608,14 +608,14 @@ compound $1000 by 12% compounded monthly over 10 years
 
 ### Linear Growth
 
-```cm
+```calcmark
 grow($500, $100, 36)               -> $4100.00
 grow 100 by 20 over 5 months       -> 200  (NL form)
 ```
 
 ### Depreciation
 
-```cm
+```calcmark
 depreciate($50000, 15%, 5)                -> $22185.27
 depreciate($50000, 15%, 20, $5000)        -> $5000.00  (salvage floor)
 depreciate $50000 by 15% over 5 years     -> (NL form)

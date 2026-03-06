@@ -74,7 +74,7 @@ Every function has both a traditional `fn(args)` form and a natural language for
 
 Variables must be defined before use. Later lines can reference earlier ones:
 
-```cm
+```calcmark
 base_salary = $85000
 bonus_pct = 15%
 bonus = base_salary * bonus_pct
@@ -85,7 +85,7 @@ total_comp = base_salary + bonus
 
 CalcMark understands physical units and currencies:
 
-```cm
+```calcmark
 marathon_pace = 12.06 km/hour
 race_time = 3 hours + 30 minutes
 distance_covered = marathon_pace over race_time
@@ -98,7 +98,7 @@ price_eur = 85 EUR
 
 Write prose freely. Only lines that parse as calculations are evaluated:
 
-```cm
+```calcmark
 # Project Budget
 
 We need to account for both development and infrastructure costs.

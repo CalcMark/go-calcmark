@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 Start by pinning the two anchors of your schedule: the launch date and today. Subtracting one date from another gives you a duration.
 
-```cm
+```calcmark
 launch_date = Mar 15 2025
 kickoff = today
 
@@ -34,7 +34,7 @@ days_to_launch = launch_date - kickoff
 
 Break the project into phases. CalcMark understands `weeks` and `days` as duration units, and you can add them together freely.
 
-```cm
+```calcmark
 development_time = 4 weeks
 qa_time = 2 weeks
 staging_time = 1 week
@@ -55,7 +55,7 @@ Durations with different units combine naturally: `4 weeks + 2 weeks + 1 week + 
 
 Subtract the total planned time from the available time to see how much slack you have.
 
-```cm
+```calcmark
 buffer = days_to_launch - total_planned
 ```
 
@@ -69,7 +69,7 @@ A positive buffer means you have room. A negative one means you are already behi
 
 This is the core of a workback schedule. Subtract each phase duration from a date to get milestone start dates.
 
-```cm
+```calcmark
 launch_prep_start = launch_date - launch_prep
 staging_start = launch_prep_start - staging_time
 qa_start = staging_start - qa_time
@@ -86,7 +86,7 @@ Subtracting a duration from a date produces a new date. You chain these to walk 
 
 With the development window defined, you can plan sprints and estimate total capacity.
 
-```cm
+```calcmark
 num_sprints = 2
 sprint_duration = 2 weeks
 
@@ -106,7 +106,7 @@ Plain arithmetic works alongside dates and durations. `2 * 40 = 80` story points
 
 The `from` keyword adds a duration to a date. Use it with `today` for quick relative dates, or with any calculated date for schedule milestones.
 
-```cm
+```calcmark
 one_week_from_now = 1 week from today
 two_weeks_from_now = 2 weeks from today
 next_month = 1 month from today
@@ -129,7 +129,7 @@ code_complete = qa_start
 
 Count your team, then multiply by phase duration to get person-weeks.
 
-```cm
+```calcmark
 developers = 4
 qa_engineers = 2
 devops = 1
@@ -153,7 +153,7 @@ Simple multiplication keeps the estimate transparent. 22 person-weeks across thr
 
 Rate literals like `$800/day` represent a cost per unit of time. The `over` keyword accumulates a rate across a duration.
 
-```cm
+```calcmark
 dev_daily_rate = $800/day
 qa_daily_rate = $700/day
 devops_daily_rate = $900/day
@@ -175,7 +175,7 @@ devops_cost = devops_daily_rate * devops over (staging_time + launch_prep)
 
 Add a contingency buffer and shift the start date earlier.
 
-```cm
+```calcmark
 risk_buffer = 8 days
 adjusted_dev_start = dev_start - risk_buffer
 ```
@@ -190,7 +190,7 @@ Subtracting `8 days` from a date moves it earlier. Your adjusted kickoff now acc
 
 Assign meaningful names to each milestone for a clean calendar view.
 
-```cm
+```calcmark
 project_kickoff = adjusted_dev_start
 dev_complete = qa_start
 qa_complete = staging_start
@@ -208,7 +208,7 @@ Variable aliasing makes the final output readable. Each name maps to a concrete 
 
 Compare available time against needed time to confirm the schedule is realistic.
 
-```cm
+```calcmark
 available_time = days_to_launch
 needed_time = total_planned + risk_buffer
 ```

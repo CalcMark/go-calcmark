@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 Start with the guaranteed cash. Offer A has a $180K base, a 15% annual bonus, and a $30K signing bonus. RSUs vest over four years with a one-year cliff.
 
-```cm
+```calcmark
 base_salary_a = 180000
 signing_bonus_a = 30000
 annual_bonus_pct_a = 0.15
@@ -38,7 +38,7 @@ The annual bonus comes out to 27,000 and the stock vests at 50,000 per year. Tot
 
 Offer B trades base salary for equity upside. The base is $150K with a 10% bonus and no signing bonus. Stock options are worth $400K on paper, but you only expect 50% appreciation.
 
-```cm
+```calcmark
 base_salary_b = 150000
 signing_bonus_b = 0
 annual_bonus_pct_b = 0.10
@@ -63,7 +63,7 @@ Even with a $400K option grant, the expected annual stock value is only 50,000 a
 
 You need after-tax numbers to make a real comparison. This uses simplified marginal rates for federal, state, and FICA. Stock comp has different tax treatment in practice, but a flat blended rate works for a first pass.
 
-```cm
+```calcmark
 federal_rate = 0.32
 state_rate = 0.093
 fica_rate = 0.0765
@@ -84,7 +84,7 @@ The combined tax rate is about 49%. After tax, Offer A yields roughly 141,000 an
 
 Convert annual after-tax pay to monthly so you can compare against your budget.
 
-```cm
+```calcmark
 monthly_a = after_tax_a / 12
 monthly_b = after_tax_b / 12
 monthly_difference = monthly_a - monthly_b
@@ -100,7 +100,7 @@ Offer A puts about $2,600 more in your pocket each month.
 
 Year one is different because Offer A includes a $30K signing bonus. You want to see how that changes the monthly picture.
 
-```cm
+```calcmark
 year1_gross_a = annual_comp_a + signing_bonus_a
 year1_gross_b = annual_comp_b + signing_bonus_b
 
@@ -121,7 +121,7 @@ The signing bonus pushes Offer A's first-year monthly take-home even higher. The
 
 Equity vests over four years, so you should compare the full vesting period. This is the total gross compensation including the signing bonus.
 
-```cm
+```calcmark
 four_year_a = annual_comp_a * 4 + signing_bonus_a
 four_year_b = annual_comp_b * 4 + signing_bonus_b
 
@@ -139,7 +139,7 @@ Over four years, Offer A delivers roughly $580K after tax vs $440K for Offer B. 
 
 Startup equity is inherently riskier than Big Tech RSUs. Apply a 40% discount to the startup stock value to reflect the chance the equity ends up worthless.
 
-```cm
+```calcmark
 startup_risk_discount = 0.40
 risk_adjusted_stock_b = annual_stock_b * (1 - startup_risk_discount)
 risk_adjusted_annual_b = base_salary_b + annual_bonus_b + risk_adjusted_stock_b
@@ -156,7 +156,7 @@ After risk-adjusting the equity, Offer B's monthly take-home drops significantly
 
 Benefits have real dollar value. Big Tech typically offers richer packages with better healthcare, 401(k) matching, and perks.
 
-```cm
+```calcmark
 benefits_a = 15000
 benefits_b = 8000
 
@@ -174,7 +174,7 @@ Adding $15K in benefits for Offer A and $8K for Offer B widens the gap further.
 
 Break the offers into cash comp vs equity to see how much of each package depends on stock performance.
 
-```cm
+```calcmark
 cash_comp_a = base_salary_a + annual_bonus_a
 cash_comp_b = base_salary_b + annual_bonus_b
 
@@ -192,7 +192,7 @@ Equity makes up about 18% of Offer A and 23% of Offer B. The startup bet is more
 
 Finally, calculate the monthly advantage and figure out how much the startup stock would need to appreciate for Offer B to match Offer A.
 
-```cm
+```calcmark
 monthly_advantage_a = monthly_a - monthly_b
 annual_advantage_a = monthly_advantage_a * 12
 

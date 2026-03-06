@@ -1,10 +1,10 @@
-// Command doceval scans Hugo markdown files for ```cm code blocks, evaluates
-// each through the CalcMark interpreter, and writes the results to
-// site/data/cm_results.json. Hugo's render-codeblock-cm.html render hook
+// Command doceval scans Hugo markdown files for ```calcmark code blocks,
+// evaluates each through the CalcMark interpreter, and writes the results to
+// site/data/cm_results.json. Hugo's render-codeblock-calcmark.html render hook
 // reads this file to display inline results alongside code blocks.
 //
 // Pages with `calcmark_build: progressive` in Hugo frontmatter evaluate all
-// ```cm blocks in a shared interpreter context so variables carry across
+// ```calcmark blocks in a shared interpreter context so variables carry across
 // blocks. The default (`standalone`) evaluates each block independently.
 //
 // Invoked by `task generate-docs` before Hugo builds the site.
@@ -25,7 +25,7 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
-// BlockResult holds the evaluated results for a single ```cm code block.
+// BlockResult holds the evaluated results for a single ```calcmark code block.
 type BlockResult struct {
 	Lines []LineResult `json:"lines"`
 	Error string       `json:"error,omitempty"`
@@ -146,7 +146,7 @@ func calcmarkBuildMode(content string) string {
 	return "standalone"
 }
 
-// evalProgressive evaluates all cm blocks in a shared interpreter context.
+// evalProgressive evaluates all calcmark blocks in a shared interpreter context.
 // Returns a list of error strings (empty on success).
 func evalProgressive(content string, blocks []string, results map[string]BlockResult, df display.Formatter) []string {
 	// Extract CalcMark frontmatter from ```yaml blocks in the markdown
@@ -165,72 +165,51 @@ func evalProgressive(content string, blocks []string, results map[string]BlockRe
 		return []string{fmt.Sprintf("eval error: %s", err)}
 	}
 
-	// Collect all statement results from the evaluated document
-	var allStmts []stmtResult
+	// Build a source-line → result map from the evaluated document.
+	// The interpreter classifies lines into CalcBlock/TextBlock, which may
+	// split a raw code block differently than the original source. We use
+	// exact source-line matching to map results back, avoiding index drift.
+	type lineResult struct {
+		result   string
+		variable string
+	}
+	resultBySource := make(map[string]lineResult)
+
 	for _, node := range doc.GetBlocks() {
-		switch block := node.Block.(type) {
-		case *document.CalcBlock:
-			stmts := format.AlignResults(block)
-			for _, stmt := range stmts {
-				sr := stmtResult{variable: stmt.Variable}
-				if stmt.Result != nil {
-					sr.result = df.Format(stmt.Result)
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			for _, stmt := range format.AlignResults(cb) {
+				if stmt.Result != nil && strings.TrimSpace(stmt.Source) != "" {
+					resultBySource[strings.TrimSpace(stmt.Source)] = lineResult{
+						result:   df.Format(stmt.Result),
+						variable: stmt.Variable,
+					}
 				}
-				allStmts = append(allStmts, sr)
-			}
-		case *document.TextBlock:
-			for _, line := range block.Source() {
-				allStmts = append(allStmts, stmtResult{
-					isBlank: strings.TrimSpace(line) == "",
-				})
 			}
 		}
 	}
 
-	// Map results back to individual blocks
-	stmtIdx := 0
+	// Map results back to individual blocks by matching source lines
 	for _, block := range blocks {
 		key := hashKey(block)
 		if _, exists := results[key]; exists {
-			// Skip statements for duplicate blocks
-			for line := range strings.SplitSeq(block, "\n") {
-				if strings.TrimSpace(line) != "" && stmtIdx < len(allStmts) {
-					stmtIdx++
-				}
-			}
 			continue
 		}
-		results[key] = mapBlockResults(block, allStmts, &stmtIdx)
+
+		lines := strings.Split(block, "\n")
+		var lineResults []LineResult
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			lr := LineResult{Source: line, IsBlank: trimmed == ""}
+			if r, ok := resultBySource[trimmed]; ok {
+				lr.Result = r.result
+				lr.Variable = r.variable
+			}
+			lineResults = append(lineResults, lr)
+		}
+		results[key] = BlockResult{Lines: lineResults}
 	}
 
 	return nil
-}
-
-// mapBlockResults maps evaluated statement results back to the source lines
-// of a single code block, advancing stmtIdx through the shared result list.
-func mapBlockResults(block string, allStmts []stmtResult, stmtIdx *int) BlockResult {
-	lines := strings.Split(block, "\n")
-	var lineResults []LineResult
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		lr := LineResult{Source: line, IsBlank: trimmed == ""}
-
-		if trimmed == "" {
-			lineResults = append(lineResults, lr)
-			continue
-		}
-
-		if *stmtIdx < len(allStmts) {
-			stmt := allStmts[*stmtIdx]
-			lr.Result = stmt.result
-			lr.Variable = stmt.variable
-			*stmtIdx++
-		}
-		lineResults = append(lineResults, lr)
-	}
-
-	return BlockResult{Lines: lineResults}
 }
 
 // evalBlockIndependent evaluates a single code block as a standalone document.
@@ -268,12 +247,6 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 	}
 
 	return BlockResult{Lines: lineResults}
-}
-
-type stmtResult struct {
-	result   string
-	isBlank  bool
-	variable string
 }
 
 // extractCMFrontmatter scans for ```yaml blocks containing CalcMark
@@ -317,7 +290,7 @@ func extractCMFrontmatter(markdown string) string {
 	return "---\n" + strings.Join(yamlBlocks, "\n") + "\n---\n"
 }
 
-// extractCMBlocks pulls all ```cm fenced code block contents from markdown.
+// extractCMBlocks pulls all ```calcmark fenced code block contents from markdown.
 func extractCMBlocks(markdown string) []string {
 	var blocks []string
 	lines := strings.Split(markdown, "\n")
@@ -329,8 +302,7 @@ func extractCMBlocks(markdown string) []string {
 		trimmed := strings.TrimSpace(line)
 
 		if !inBlock {
-			if strings.HasPrefix(trimmed, "```cm") && !strings.HasPrefix(trimmed, "```cmd") {
-				rest := strings.TrimPrefix(trimmed, "```cm")
+			if rest, ok := strings.CutPrefix(trimmed, "```calcmark"); ok {
 				if rest == "" || rest[0] == '{' || rest[0] == ' ' {
 					inBlock = true
 					current = nil

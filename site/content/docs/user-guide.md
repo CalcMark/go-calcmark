@@ -108,7 +108,7 @@ The `--locale` flag overrides the config file for that invocation.
 
 Given a CalcMark document:
 
-```cm
+```calcmark
 price = $1500
 pi = 3.14159
 users = 1500000
@@ -227,7 +227,7 @@ Run `cm constants` for the complete list with aliases and descriptions.
 
 Convert between compatible units using `in` or `as`:
 
-```cm
+```calcmark
 distance = 5 miles
 distance_km = distance in km
 
@@ -250,7 +250,7 @@ exchange:
 ---
 ```
 
-```cm
+```calcmark
 price_usd = $100
 price_eur = price_usd in EUR
 
@@ -275,7 +275,7 @@ globals:
 ---
 ```
 
-```cm
+```calcmark
 net_price = base_price * (1 - tax_rate)
 project_end = base_date + sprint_length * 6
 monthly_transfer = bandwidth over 30 days
@@ -305,7 +305,7 @@ Detailed examples for every built-in function, showing both function-call and na
 
 #### `avg` / `average of` {#avg-examples}
 
-```cm
+```calcmark
 avg(10, 20, 30)                    -> 20
 avg(1, 2, 3, 4, 5)                -> 3
 average of 100, 200, 300           -> 200  (NL form)
@@ -314,7 +314,7 @@ avg($100, $200, $300)              -> $200.00  (preserves currency)
 
 #### `sqrt` / `square root of` {#sqrt-examples}
 
-```cm
+```calcmark
 sqrt(16)                           -> 4
 sqrt(2)                            -> 1.4142...
 square root of 144                 -> 12  (NL form)
@@ -323,7 +323,7 @@ sqrt($100)                         -> $10.00  (preserves currency)
 
 #### `accumulate` / `over` {#accumulate-examples}
 
-```cm
+```calcmark
 accumulate(100 MB/s, 1 hour)       -> 360000 MB
 accumulate($75/hour, 8 hours)      -> $600
 100 MB/s over 1 day                -> ~8.64 TB  (keyword form)
@@ -332,14 +332,14 @@ $120000/year over 1 month          -> $10000
 
 #### `convert_rate` {#convert-rate-examples}
 
-```cm
+```calcmark
 convert_rate(1000 req/s, minute)   -> 60000 req/min
 convert_rate($120000/year, month)  -> $10000/month
 ```
 
 #### `capacity` / `at...per` {#capacity-examples}
 
-```cm
+```calcmark
 capacity(10 TB, 2 TB, disk)              -> 5 disks
 capacity(10000 req/s, 500 req/s, server) -> 20 servers
 10 TB at 2 TB per disk                   -> 5 disks  (NL form)
@@ -348,7 +348,7 @@ capacity(10000 req/s, 500 req/s, server) -> 20 servers
 
 #### `downtime` {#downtime-examples}
 
-```cm
+```calcmark
 downtime(0.999, year)              -> 8.76 hours
 downtime(0.999, month)             -> 43.2 minutes
 downtime(0.9999, month)            -> 4.32 minutes
@@ -356,7 +356,7 @@ downtime(0.9999, month)            -> 4.32 minutes
 
 #### `rtt` {#rtt-examples}
 
-```cm
+```calcmark
 rtt(local)                         -> 0.5 ms
 rtt(regional)                      -> 10 ms
 rtt(continental)                   -> 50 ms
@@ -365,7 +365,7 @@ rtt(global)                        -> 150 ms
 
 #### `throughput` {#throughput-examples}
 
-```cm
+```calcmark
 throughput(gigabit)                 -> 125 MB/s
 throughput(ten_gig)                -> 1250 MB/s
 throughput(wifi)                   -> 12.5 MB/s
@@ -374,7 +374,7 @@ throughput(five_g)                 -> 50 MB/s
 
 #### `transfer_time` / `transfer...across` {#transfer-time-examples}
 
-```cm
+```calcmark
 transfer_time(1 GB, regional, gigabit)   -> ~8 seconds
 transfer_time(500 MB, continental, gigabit)
 transfer 1 GB across regional gigabit    -> (NL form)
@@ -383,7 +383,7 @@ transfer 100 MB across local ten_gig
 
 #### `read` / `read...from` {#read-examples}
 
-```cm
+```calcmark
 read(100 MB, ssd)                  -> ~0.18 seconds
 read(1 GB, nvme)                   -> ~0.29 seconds
 read 100 MB from ssd               -> (NL form)
@@ -392,7 +392,7 @@ read 10 GB from pcie_ssd
 
 #### `seek` {#seek-examples}
 
-```cm
+```calcmark
 seek(hdd)                          -> 10 ms
 seek(ssd)                          -> 0.1 ms
 seek(nvme)                         -> 0.01 ms
@@ -401,7 +401,7 @@ db_query_hdd = seek(hdd) + read(5 MB, hdd)
 
 #### `compress` / `compress...using` {#compress-examples}
 
-```cm
+```calcmark
 compress(1 GB, gzip)               -> ~333 MB
 compress(500 MB, lz4)              -> ~250 MB
 compress(2 GB, zstd)               -> ~571 MB
@@ -411,7 +411,7 @@ compress 500 MB using lz4
 
 #### `compound` / `compound...by...over` {#compound-examples}
 
-```cm
+```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
 compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
@@ -423,7 +423,7 @@ compound $1000 by 5% per month over 12 months
 
 #### `grow` / `grow...by...over` {#grow-examples}
 
-```cm
+```calcmark
 grow(100, 20, 5)                   -> 200
 grow($500, $100, 36)               -> $4100.00
 grow 100 by 20 over 5 months       -> 200  (NL form)
@@ -431,7 +431,7 @@ grow 100 by 20 over 5 months       -> 200  (NL form)
 
 #### `depreciate` / `depreciate...by...over` {#depreciate-examples}
 
-```cm
+```calcmark
 depreciate($50000, 15%, 5)                -> $22185.27
 depreciate($50000, 15%, 20, $5000)        -> $5000.00  (salvage floor)
 depreciate $50000 by 15% over 5 years     -> $22185.27  (NL form)
@@ -442,14 +442,14 @@ depreciate $50000 by 15% over 5 years to $5000
 
 **Same units are preserved:**
 
-```cm
+```calcmark
 avg($100, $200, $300) -> $200.00
 sqrt($100) -> $10.00
 ```
 
 **Mixed units are dropped:**
 
-```cm
+```calcmark
 avg($100, €200) -> 150  (no units)
 average of $50, €100, £150 -> 100  (no units)
 ```
@@ -485,7 +485,7 @@ demand at capacity per unit with N% buffer
 
 Examples:
 
-```cm
+```calcmark
 10 TB at 2 TB per disk                         -> 5 disks
 10000 req/s at 450 req/s per server             -> 23 servers
 10000 req/s at 450 req/s per server with 20%    -> 27 servers
@@ -504,7 +504,7 @@ rate over duration
 
 This is equivalent to `accumulate(rate, duration)`:
 
-```cm
+```calcmark
 100 MB/s over 1 day         -> total data transferred
 $75/hour over 8 hours       -> daily earnings
 1000 req/s over 1 hour      -> total requests
@@ -514,7 +514,7 @@ $75/hour over 8 hours       -> daily earnings
 
 The `per` keyword in a rate context creates a rate literal:
 
-```cm
+```calcmark
 1000 requests per second    -> 1000 req/s
 $50 per hour                -> $50/hour
 ```
@@ -523,7 +523,7 @@ $50 per hour                -> $50/hour
 
 #### Round-Trip Time
 
-```cm
+```calcmark
 rtt(local)          -> 0.5 ms   (same datacenter)
 rtt(regional)       -> 10 ms    (same region)
 rtt(continental)    -> 50 ms    (cross-continent)
@@ -532,7 +532,7 @@ rtt(global)         -> 150 ms   (worldwide)
 
 #### Throughput
 
-```cm
+```calcmark
 throughput(gigabit)      -> 125 MB/s
 throughput(ten_gig)      -> 1.22 GB/s
 throughput(hundred_gig)  -> 12500 MB/s
@@ -545,14 +545,14 @@ throughput(five_g)       -> 50 MB/s
 
 Calculate data transfer time across a network:
 
-```cm
+```calcmark
 transfer_time(1 GB, regional, gigabit)
 transfer 1 GB across regional gigabit       (NL form)
 ```
 
 #### Downtime from Availability
 
-```cm
+```calcmark
 downtime(99.9%, year)     -> ~8.76 hours
 downtime(99.99%, month)   -> ~4.32 minutes
 ```
@@ -561,7 +561,7 @@ downtime(99.99%, month)   -> ~4.32 minutes
 
 #### Read Time
 
-```cm
+```calcmark
 read(1 GB, ssd)       read from SATA SSD (~550 MB/s)
 read(1 GB, nvme)      read from NVMe SSD (~3.5 GB/s)
 read(1 GB, pcie_ssd)  read from PCIe Gen4 SSD (~7 GB/s)
@@ -572,7 +572,7 @@ read 100 MB from ssd  (NL form)
 
 #### Seek Latency
 
-```cm
+```calcmark
 seek(ssd)       -> 0.1 ms
 seek(nvme)      -> 0.01 ms
 seek(pcie_ssd)  -> 0.01 ms
@@ -581,7 +581,7 @@ seek(hdd)       -> 10 ms
 
 #### Compression
 
-```cm
+```calcmark
 compress(1 GB, gzip)     -> 333 MB   (3:1 ratio)
 compress(1 GB, lz4)      -> 512 MB   (2:1 ratio)
 compress(1 GB, zstd)     -> 293 MB   (3.5:1 ratio)
@@ -598,7 +598,7 @@ compress 1 GB using gzip (NL form)
 
 Calculate compound growth over time. Supports simple compounding, per-period rates, and financial compounding frequencies:
 
-```cm
+```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
 compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
@@ -622,7 +622,7 @@ compound $1000 by 5% per month over 12 months
 
 Calculate linear (additive) growth over time:
 
-```cm
+```calcmark
 grow($500, $100, 36)               -> $4100.00
 grow(100, 20, 5)                   -> 200
 
@@ -641,7 +641,7 @@ grow 100 by 20 over 5 months       (NL form)
 
 Calculate declining-balance depreciation with optional salvage floor:
 
-```cm
+```calcmark
 depreciate($50000, 15%, 5)                -> $22185.27
 depreciate($50000, 15%, 20, $5000)        -> $5000.00  (salvage floor)
 
@@ -664,7 +664,7 @@ depreciate $50000 by 15% over 5 years to $5000
 
 Create rates using the slash syntax:
 
-```cm
+```calcmark
 net_bandwidth = 100 MB/s
 salary = $120000/year
 load = 1000 req/s
@@ -674,7 +674,7 @@ load = 1000 req/s
 
 Use `over` to calculate the total from a rate over time:
 
-```cm
+```calcmark
 link_speed = 100 MB/s
 daily_transfer = link_speed over 1 day
 
@@ -686,7 +686,7 @@ daily_earnings = hourly_rate over 8 hours
 
 Convert rates to different time units using `convert_rate()`:
 
-```cm
+```calcmark
 convert_rate(1000 req/s, minute)    -> 60000 req/min
 convert_rate($120000/year, month)   -> $10000/month
 ```
@@ -695,7 +695,7 @@ convert_rate($120000/year, month)   -> $10000/month
 
 #### Date Literals
 
-```cm
+```calcmark
 project_start = Jan 15 2025
 christmas = Dec 25 2025
 now = today
@@ -705,7 +705,7 @@ CalcMark recognizes `today`, `tomorrow`, and `yesterday` as date keywords.
 
 #### Duration Arithmetic
 
-```cm
+```calcmark
 project_start = Jan 15 2025
 duration = 12 weeks
 project_end = project_start + duration
@@ -716,7 +716,7 @@ launch = deadline - 2 weeks
 
 #### The `from` Keyword
 
-```cm
+```calcmark
 7 days from Jan 1 2025   -> Wednesday, January 8, 2025
 2 weeks from today       -> (today + 14 days)
 ```
@@ -729,7 +729,7 @@ The `as napkin` modifier rounds results to 2 significant figures and normalizes 
 
 **Works with:** Number, Quantity, Currency, Duration, Rate
 
-```cm
+```calcmark
 432000 MB as napkin                 -> ~420 GB
 100 MB/s over 30 days as napkin    -> ~248 TB
 $1234567 as napkin                  -> ~$1.2M
@@ -743,7 +743,7 @@ The `as precise` modifier is the opposite of `as napkin`. It shows full float pr
 
 **Syntax:** `expression as precise`
 
-```cm
+```calcmark
 10 meters as feet                  -> 32.8 feet
 10 meters as feet as precise       -> 32.808399 feet
 ```
@@ -754,7 +754,7 @@ Explicit unit conversions are rounded by default for readability. Use `as precis
 
 Use the `at...per` syntax to calculate how many units you need:
 
-```cm
+```calcmark
 disks = 10 TB at 2 TB per disk
 servers = 10000 req/s at 450 req/s per server
 servers_buffered = 10000 req/s at 450 req/s per server with 20% buffer
@@ -764,7 +764,7 @@ servers_buffered = 10000 req/s at 450 req/s per server with 20% buffer
 
 Use K, M, B for large numbers:
 
-```cm
+```calcmark
 users = 10M
 revenue = $5B
 requests = 100K
@@ -774,7 +774,7 @@ requests = 100K
 
 Percentages work naturally in calculations:
 
-```cm
+```calcmark
 price = $100
 discount = 20%
 sale_price = price * (1 - discount)
@@ -789,7 +789,7 @@ tax = price * tax_rate
 
 ### Basic Calculations
 
-```cm
+```calcmark
 # Simple Math
 
 5 + 3
@@ -802,7 +802,7 @@ tax = price * tax_rate
 
 ### Variables
 
-```cm
+```calcmark
 # Budget
 
 salary = $5000
@@ -814,7 +814,7 @@ net = salary + bonus - expenses
 
 ### Comparisons
 
-```cm
+```calcmark
 # Checks
 
 salary = $50000
@@ -827,7 +827,7 @@ meets_target = salary >= $50000
 
 ### Complex Expressions
 
-```cm
+```calcmark
 # Mortgage
 
 principal = $200000
@@ -841,7 +841,7 @@ payment = principal * (monthly_rate * (1 + monthly_rate) ^ months) / ((1 + month
 
 ### System Sizing
 
-```cm
+```calcmark
 # Server Capacity Planning
 
 peak_load = 50000 req/s
@@ -856,7 +856,7 @@ disks = monthly_storage at 2 TB per disk
 
 ### Mixed Markdown
 
-```cm
+```calcmark
 # My Monthly Budget
 
 I earn a salary and get bonuses.
@@ -899,7 +899,7 @@ can_save = surplus >= savings_goal
 
 Use headers and prose to structure your thinking:
 
-```cm
+```calcmark
 # Q1 Budget
 
 ## Revenue Assumptions

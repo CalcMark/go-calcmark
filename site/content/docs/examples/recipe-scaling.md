@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 Start by capturing the base recipe for a single loaf in grams. Then compute the hydration ratio -- a key baker's percentage that tells you how wet the dough is.
 
-```cm
+```calcmark
 original_flour_g = 500
 original_water_g = 350
 original_salt_g = 10
@@ -36,7 +36,7 @@ hydration_pct = original_water_g / original_flour_g * 100
 
 You want 4 loaves instead of 1. Define a scale factor and let CalcMark carry it through.
 
-```cm
+```calcmark
 original_yield = 1
 target_yield = 4
 scale = target_yield / original_yield
@@ -52,7 +52,7 @@ scale = target_yield / original_yield
 
 Multiply every ingredient by the scale factor. The recipe stays in metric for now.
 
-```cm
+```calcmark
 scaled_flour_g = original_flour_g * scale
 scaled_water_g = original_water_g * scale
 scaled_salt_g = original_salt_g * scale
@@ -69,7 +69,7 @@ You get `2000` g flour, `1400` g water, `40` g salt, and `28` g yeast. Each line
 
 Not everyone owns a kitchen scale. Define conversion factors and divide to get cups and teaspoons.
 
-```cm
+```calcmark
 grams_per_cup_flour = 120
 grams_per_cup_water = 237
 grams_per_tsp_salt = 6
@@ -91,7 +91,7 @@ Results: roughly `16.67` cups of flour, `5.91` cups of water, `6.67` tsp salt, a
 
 Here's where CalcMark's built-in unit conversion shines. Assign a value with a temperature unit, then convert it with `in`.
 
-```cm
+```calcmark
 proof_temp_c = 24 celsius
 proof_temp_f = proof_temp_c in fahrenheit
 
@@ -109,7 +109,7 @@ oven_temp_f = oven_temp_c in fahrenheit
 
 Larger batches need longer rise times. Apply a 15% adjustment factor and sum everything up.
 
-```cm
+```calcmark
 base_rise_minutes = 90
 rise_adjustment = 1.15
 adjusted_rise = base_rise_minutes * rise_adjustment
@@ -132,7 +132,7 @@ total_time_hours = total_time_minutes / 60
 
 Price out the scaled ingredients and find the cost per loaf.
 
-```cm
+```calcmark
 flour_price_per_kg = 3.50
 salt_price_per_kg = 1.50
 yeast_price_per_100g = 5.00
@@ -155,7 +155,7 @@ Total ingredient cost is `8.46` for 4 loaves, making `cost_per_loaf` just `2.115
 
 Round up to practical quantities you can actually buy at the store.
 
-```cm
+```calcmark
 flour_to_buy_kg = 2
 salt_to_buy_g = 50
 yeast_packets = 1
@@ -171,7 +171,7 @@ Plain assignments work as a quick reference table. CalcMark doesn't require ever
 
 Estimate calories per loaf and per slice using flour as the dominant calorie source.
 
-```cm
+```calcmark
 calories_per_gram_flour = 3.64
 total_calories = scaled_flour_g * calories_per_gram_flour
 calories_per_loaf = total_calories / target_yield

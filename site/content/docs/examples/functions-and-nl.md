@@ -11,7 +11,7 @@ and {{< repo-file path="testdata/eval/success/features/growth_functions.cm" >}}.
 
 ## Traditional Function Syntax
 
-```cm
+```calcmark
 avg(10, 20, 30)
 avg(1, 2, 3, 4, 5)
 sqrt(16)
@@ -20,7 +20,7 @@ sqrt(2)
 
 ## Natural Language Function Syntax
 
-```cm
+```calcmark
 average of 10, 20, 30
 average of 1, 2, 3, 4, 5
 square root of 16
@@ -29,7 +29,7 @@ square root of 2
 
 ## read...from / compress...using / transfer...across
 
-```cm
+```calcmark
 read 100 MB from ssd
 read 1 GB from nvme
 read 500 MB from hdd
@@ -48,7 +48,7 @@ transfer 10 GB across continental hundred_gig
 
 ## Growth Functions: compound...by...over / grow...by...over / depreciate...by...over
 
-```cm
+```calcmark
 # Compound growth - functional
 compound($1000, 5%, 10)
 compound(500 customers, 20%, 12)
@@ -78,7 +78,7 @@ depreciate $50000 by 15% over 5 years to $5000
 
 ## Functions with Expressions
 
-```cm
+```calcmark
 x = 10
 y = 20
 z = 30
@@ -93,7 +93,7 @@ square root of (a + b)
 
 ## Nested Functions
 
-```cm
+```calcmark
 avg(sqrt(16), sqrt(25))
 sqrt(avg(1, 2, 3))
 average of square root of 4, square root of 9
@@ -101,7 +101,7 @@ average of square root of 4, square root of 9
 
 ## Functions in Assignments
 
-```cm
+```calcmark
 mean = avg(10, 20, 30)
 root = sqrt(16)
 calculated = average of 100, 200, 300
@@ -110,7 +110,7 @@ side = square root of 25
 
 ## Mixed Syntax in Same Document
 
-```cm
+```calcmark
 Traditional syntax:
 total1 = avg(1, 2, 3)
 

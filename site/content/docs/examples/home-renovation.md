@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 You've collected three quotes for the kitchen remodel. The `avg` function takes any number of values and returns their mean:
 
-```cm
+```calcmark
 quote_a = 8500
 quote_b = 9200
 quote_c = 7800
@@ -33,7 +33,7 @@ The average comes out to 8,500. You can also write `average of 8500, 9200, 7800`
 
 You need the kitchen diagonal for countertop layout planning. CalcMark's `sqrt` function handles the Pythagorean theorem:
 
-```cm
+```calcmark
 kitchen_length = 15
 kitchen_width = 12
 kitchen_sqft = kitchen_length * kitchen_width
@@ -50,7 +50,7 @@ The kitchen is 180 sqft with a 19.2-foot diagonal. The `^` operator handles expo
 
 The backyard patio is a 12-foot diameter circle. CalcMark has `PI` as a built-in constant:
 
-```cm
+```calcmark
 patio_radius = 6
 patio_area = PI * patio_radius ^ 2
 ```
@@ -65,7 +65,7 @@ The area is approximately 113.1 square feet. `PI` is read-only — you can't rea
 
 Concrete is sold per square foot, so you need the exact area for your order. The `as precise` modifier shows full precision, skipping CalcMark's default display rounding:
 
-```cm
+```calcmark
 patio_area as precise
 ```
 
@@ -79,7 +79,7 @@ This shows 113.097336 instead of a rounded value. Useful when you need exact qua
 
 Cabinets, countertops, patio concrete, and tile flooring. Multiplying a number by a currency preserves the `$` unit:
 
-```cm
+```calcmark
 cabinets = $6200
 countertop_sqft = 45
 countertop_rate = $75
@@ -105,7 +105,7 @@ Countertops come to $3,375, patio concrete $904.78, and kitchen flooring $2,160.
 
 Your contractor charges $800/day. The `convert_rate` function converts a rate to a different time unit without accumulating:
 
-```cm
+```calcmark
 daily_rate = $800/day
 weekly_rate = convert_rate(daily_rate, week)
 ```
@@ -120,7 +120,7 @@ The weekly rate is $5,600/week. This is different from `$800/day over 1 week`, w
 
 Lumber arrives at 2 pallets per day over the 3-week build. The `accumulate` function totals a rate over a duration:
 
-```cm
+```calcmark
 total_deliveries = accumulate(2 pallets/day, 3 weeks)
 ```
 
@@ -134,7 +134,7 @@ That's 42 pallets total. CalcMark handles the unit conversion (days to weeks) au
 
 The `X% of value` syntax calculates a percentage directly:
 
-```cm
+```calcmark
 subtotal = cabinets + countertops + patio_concrete + flooring
 contingency = 15% of subtotal
 total = subtotal + contingency
@@ -150,7 +150,7 @@ Subtotal is $12,640, plus a 15% contingency of $1,896, for a total of $14,536.
 
 CalcMark supports `and`, `or`, and `not` operators that produce boolean results. Here you check two conditions at once:
 
-```cm
+```calcmark
 budget_ok = total < $50000 and contingency > $1500
 under_budget = not (total > $50000)
 ```
@@ -165,7 +165,7 @@ Both evaluate to `true`. The `and` operator requires both comparisons to be true
 
 The `as napkin` modifier rounds to 2 significant figures with a human-readable suffix:
 
-```cm
+```calcmark
 total as napkin
 ```
 

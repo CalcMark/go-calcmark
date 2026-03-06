@@ -9,7 +9,7 @@ From {{< repo-file path="testdata/eval/success/features/dates.cm" >}}.
 
 ## Date Keywords
 
-```cm
+```calcmark
 d1 = today
 d2 = tomorrow
 d3 = yesterday
@@ -17,7 +17,7 @@ d3 = yesterday
 
 ## Date Literals (Month Day)
 
-```cm
+```calcmark
 d4 = Dec 25
 d5 = January 15
 d6 = Jul 4
@@ -25,7 +25,7 @@ d6 = Jul 4
 
 ## Date Literals (Month Day Year)
 
-```cm
+```calcmark
 d7 = Dec 25 2025
 d8 = January 1 2026
 d9 = Jul 4 2024
@@ -33,7 +33,7 @@ d9 = Jul 4 2024
 
 ## Date Arithmetic
 
-```cm
+```calcmark
 d10 = today + 2 days
 d11 = tomorrow + 1 week
 d12 = Dec 25 2025 + 7 days
@@ -43,7 +43,7 @@ d14 = yesterday - 1 week
 
 ## Named Date References
 
-```cm
+```calcmark
 christmas = Dec 25 2025
 new_year = christmas + 7 days
 week_before = Dec 25 2025 - 1 week
@@ -51,7 +51,7 @@ week_before = Dec 25 2025 - 1 week
 
 ## Duration Literals
 
-```cm
+```calcmark
 dur1 = 2 days
 dur2 = 3 weeks
 dur3 = 1 hour
@@ -61,13 +61,13 @@ dur5 = 1 year
 
 ## Duration Arithmetic
 
-```cm
+```calcmark
 total_time = 2 weeks + 3 days
 ```
 
 ## "X from Y" Syntax
 
-```cm
+```calcmark
 d15 = 2 days from today
 d16 = 3 weeks from tomorrow
 d17 = 1 week from yesterday

@@ -1,8 +1,8 @@
 # doceval — CalcMark Documentation Evaluator
 
-`doceval` pre-evaluates all ` ```cm ` fenced code blocks in the Hugo site's
+`doceval` pre-evaluates all ` ```calcmark ` fenced code blocks in the Hugo site's
 markdown files and writes the results to `site/data/cm_results.json`. Hugo's
-[render-codeblock-cm.html](../../site/layouts/_default/_markup/render-codeblock-cm.html)
+[render-codeblock-calcmark.html](../../site/layouts/_default/_markup/render-codeblock-calcmark.html)
 render hook reads this file to display inline calculation results below each
 code block.
 
@@ -11,16 +11,16 @@ code block.
 ```
 ┌─────────────┐     ┌─────────────┐     ┌──────────────────┐
 │  Markdown   │────▶│   doceval   │────▶│ cm_results.json   │
-│  (```cm)    │     │  (Go tool)  │     │ (SHA-256 keyed)   │
+│(```calcmark)│     │  (Go tool)  │     │ (SHA-256 keyed)   │
 └─────────────┘     └─────────────┘     └────────┬─────────┘
                                                   │
                     ┌─────────────┐               ▼
-                    │ Hugo build  │◀── render-codeblock-cm.html
+                    │ Hugo build  │◀── render-codeblock-calcmark.html
                     │             │     looks up hash → results
                     └─────────────┘
 ```
 
-1. `doceval` scans `site/content/**/*.md` for ` ```cm ` code blocks
+1. `doceval` scans `site/content/**/*.md` for ` ```calcmark ` code blocks
 2. Each block is evaluated through the CalcMark interpreter
 3. Results are written to JSON, keyed by SHA-256 hash of the normalized block content
 4. Hugo's render hook computes the same hash and looks up results at build time
@@ -31,7 +31,7 @@ Add `calcmark_build` to Hugo frontmatter to control how code blocks are evaluate
 
 ### `standalone` (default)
 
-Each ` ```cm ` block is evaluated independently — its own interpreter, its own
+Each ` ```calcmark ` block is evaluated independently — its own interpreter, its own
 variable scope. Use this for reference documentation where different sections
 demonstrate the same concepts with overlapping variable names.
 
@@ -49,7 +49,7 @@ fine for documentation that shows the frontmatter separately.
 
 ### `progressive`
 
-All ` ```cm ` blocks on the page share a single interpreter context. Variables
+All ` ```calcmark ` blocks on the page share a single interpreter context. Variables
 defined in an earlier block are visible to later blocks — just like a single
 CalcMark document split across sections with prose in between.
 
@@ -84,7 +84,7 @@ different values, use distinct variable names.
 ` ```yaml ` blocks containing CalcMark frontmatter keys (`exchange:`, `globals:`)
 and prepends them as the document's frontmatter. This lets progressive pages
 demonstrate exchange rates or globals in a separate yaml block while still having
-the cm blocks use those values.
+the calcmark blocks use those values.
 
 **Hash matching.** The SHA-256 hash must match between doceval (Go) and Hugo
 (template). Both normalize by trimming trailing whitespace per line, then

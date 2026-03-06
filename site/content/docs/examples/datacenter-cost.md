@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 Every CalcMark document can start with YAML front matter. Here we define currency exchange rates and a global variable for facility size that's available throughout the document.
 
-```cm
+```calcmark
 ---
 exchange:
   USD_EUR: 0.92
@@ -35,7 +35,7 @@ globals:
 
 Construction costs for dedicated datacenters typically range from $625 to $1,135 per gross square foot. We use a midpoint estimate for a 1,000 sqft facility:
 
-```cm
+```calcmark
 cost_sqft = $875
 capex = sqft * cost_sqft
 ```
@@ -50,7 +50,7 @@ capex = sqft * cost_sqft
 
 The budget is heavily weighted toward electrical and mechanical systems, not the building shell. The `X% of value` syntax calculates a percentage directly:
 
-```cm
+```calcmark
 elec = 42.5% of capex
 hvac = 17.5% of capex
 fitout = 22.5% of capex
@@ -71,7 +71,7 @@ The percentages (42.5 + 17.5 + 22.5 + 17.5 = 100%) mirror industry benchmarks: e
 
 Uptime Institute tiers define redundancy levels. Tier II (partial redundancy) and Tier III (concurrently maintainable) differ dramatically in cost:
 
-```cm
+```calcmark
 tier_ii = $2300 * sqft
 tier_iii = $7700 * sqft
 tier_mult = 7700 / 2300
@@ -87,7 +87,7 @@ Moving to Tier III more than triples the cost per square foot. For AI-optimized 
 
 Datacenter construction is often quoted per megawatt (MW) of commissioned IT load. A small 1,000 sqft facility might support 200 kW of IT load:
 
-```cm
+```calcmark
 it_load = 200 kilowatts
 
 A standard 1 MW facility costs $7M-$12M. Our load as a fraction of 1 MW:
@@ -111,7 +111,7 @@ CalcMark knows SI power units and can convert between them using the `in` keywor
 
 Specialized cooling equipment from a European vendor is quoted in euros. The exchange rates defined in the front matter make conversion seamless:
 
-```cm
+```calcmark
 eu_cooling = €45000
 cooling = eu_cooling in USD
 ```
@@ -126,7 +126,7 @@ The `in USD` expression looks up the `EUR_USD` rate from the front matter (1.09)
 
 Ongoing costs for a small datacenter typically fall between $50,000 and $100,000 annually:
 
-```cm
+```calcmark
 opex = $75000
 maint = 40% of opex
 
@@ -150,7 +150,7 @@ The `$0.10/hour` is a rate literal. The `over 1 year` syntax accumulates that ra
 
 Operating costs don't stay flat. The `compound` function models exponential growth -- here, 4% annual inflation over 5 and 10 years:
 
-```cm
+```calcmark
 opex_5yr = compound $75000 by 4% over 5 years
 opex_10yr = compound $75000 by 4% over 10 years
 ```
@@ -165,7 +165,7 @@ This is the natural language form of `compound(principal, rate, periods)`. After
 
 The `depreciate` function models declining-balance depreciation. Servers lose value quickly at 20% per year:
 
-```cm
+```calcmark
 servers = depreciate $200000 by 20% over 5 years
 
 cooling_depr = depreciate $45000 by 15% over 10 years to $5000
@@ -181,7 +181,7 @@ The `to $5000` clause sets a salvage floor -- the asset won't depreciate below t
 
 Colocation means renting space in a third-party facility. A typical 10-cabinet setup in the UK runs about £2,200/month:
 
-```cm
+```calcmark
 colo_mo = £2200
 colo_usd = colo_mo in USD
 
@@ -206,7 +206,7 @@ The `$2794/month over 3 years` accumulates monthly colocation fees into a total.
 
 Modular (prefab) datacenters offer a pay-as-you-grow model. The `grow` function models linear growth -- adding one $150K module per year:
 
-```cm
+```calcmark
 grow $150000 by $150000 over 4
 
 modular_savings = 25% of capex
@@ -222,7 +222,7 @@ Unlike `compound` (exponential), `grow` adds a fixed increment each period. Four
 
 The `as napkin` modifier rounds any value to 2 significant figures with a human-readable suffix (K, M, B):
 
-```cm
+```calcmark
 capex as napkin
 opex as napkin
 build_tco as napkin

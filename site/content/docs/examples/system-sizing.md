@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 You start with 10M monthly active users. Assume 40% are active daily. Each user posts about twice a week, so you divide by 7 to get a daily rate.
 
-```cm
+```calcmark
 monthly_users = 10M
 daily_active_pct = 0.40
 daily_users = monthly_users * daily_active_pct
@@ -35,7 +35,7 @@ daily_posts_napkin = daily_posts as napkin
 
 Social media is read-heavy. Users scroll far more than they post. You assume 100 reads per user per day.
 
-```cm
+```calcmark
 reads_per_user_per_day = 100
 daily_reads = daily_users * reads_per_user_per_day
 read_write_ratio = daily_reads / daily_posts
@@ -51,7 +51,7 @@ That gives 400M daily reads versus ~1.14M daily writes -- a read-to-write ratio 
 
 You need per-second rates for capacity planning. CalcMark's rate conversion syntax turns daily totals into rates. Peak traffic is typically 3x average.
 
-```cm
+```calcmark
 read_rate = (daily_reads)/day per second
 write_rate = (daily_posts)/day per second
 
@@ -69,7 +69,7 @@ The `(value)/day per second` syntax divides the daily total by 86,400 seconds. Y
 
 Each post is about 2 KB of text and metadata. About 30% of posts include an image averaging 500 KB. CalcMark's `compress()` function estimates gzip compression on the text portion.
 
-```cm
+```calcmark
 avg_post_size = 2 KB
 daily_post_storage = daily_posts * avg_post_size
 yearly_post_storage = daily_post_storage * 365
@@ -93,7 +93,7 @@ Text storage is ~796 GB/year before compression. `compress(yearly_post_storage, 
 
 CalcMark's capacity planning syntax reads like a sentence. You specify a request rate, a per-server capacity, and a buffer percentage. It returns the number of servers needed.
 
-```cm
+```calcmark
 db_read_replicas = peak_read_rate at 5000 req/s per server with 20% buffer
 db_primaries = write_rate at 2000 req/s per server with 25% buffer
 total_db_servers = db_read_replicas + db_primaries
@@ -109,7 +109,7 @@ At 13.89K peak reads/s with each server handling 5,000 req/s and a 20% headroom 
 
 A typical database query reads ~5 MB of data. CalcMark's `seek()` and `read()` functions use well-known device characteristics to estimate I/O time across HDD, SSD, and NVMe.
 
-```cm
+```calcmark
 query_data = 5 MB
 hdd_query_time = seek(hdd) + read(query_data, hdd)
 ssd_query_time = seek(ssd) + read(query_data, ssd)
@@ -126,7 +126,7 @@ HDD: ~43 ms. SSD: ~9.2 ms. NVMe: ~1.4 ms. NVMe is 30x faster than HDD for this w
 
 You build a latency budget for an API response: network round-trip, database query, and application processing time.
 
-```cm
+```calcmark
 network_rtt = rtt(regional)
 db_query = nvme_query_time
 app_processing = 10 ms
@@ -143,7 +143,7 @@ total_latency = network_rtt + db_query + app_processing
 
 Each response averages 10 KB. You multiply by peak read rate to get bandwidth, then compare against standard network link capacities.
 
-```cm
+```calcmark
 avg_response_kb = 10
 peak_bandwidth_kbs = peak_read_rate * avg_response_kb
 peak_bandwidth_mbs = peak_bandwidth_kbs / 1000
@@ -162,7 +162,7 @@ Peak bandwidth is ~139 MB/s. A single gigabit link handles 125 MB/s -- not enoug
 
 With a 95% cache hit target, only 5% of reads hit the origin. You calculate origin traffic and the time to transfer a media file from origin to CDN edge.
 
-```cm
+```calcmark
 cache_hit_target = 0.95
 cache_miss_rate = 1 - cache_hit_target
 origin_read_rate = read_rate * cache_miss_rate
@@ -180,7 +180,7 @@ Origin sees ~231 req/s instead of ~4,630 req/s -- a 20x reduction. `transfer_tim
 
 The `downtime()` function converts an availability target into concrete allowed downtime. You compare three nines (99.9%) with four nines (99.99%).
 
-```cm
+```calcmark
 monthly_downtime = downtime(0.999, month)
 yearly_downtime = downtime(0.999, year)
 
@@ -197,7 +197,7 @@ Three nines gives you 43.2 minutes/month or 8.76 hours/year of allowed downtime.
 
 The `as napkin` modifier rounds everything into quick-reference numbers for stakeholder conversations.
 
-```cm
+```calcmark
 storage_napkin = total_yearly_storage as napkin
 traffic_napkin = daily_reads as napkin
 servers_napkin = total_db_servers as napkin

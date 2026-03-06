@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 You start with $50,000 in savings, a 7% annual return, and 30 years until retirement. The `compound()` function models exponential growth over time.
 
-```cm
+```calcmark
 initial_savings = $50000
 annual_return = 7%
 years_to_retire = 30
@@ -33,7 +33,7 @@ retirement_fund = compound($50000, 7%, 30)
 
 Real-world investments often compound more frequently than once per year. The `compounded monthly` modifier splits the annual rate into 12 smaller applications per year.
 
-```cm
+```calcmark
 retirement_monthly = compound($50000, 7%, 30 years, compounded monthly)
 ```
 
@@ -47,7 +47,7 @@ Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual
 
 Growth functions are not limited to money. You can use arbitrary units like `customers` or `users`. Here you model a startup's customer base growing 15% per month over 24 months.
 
-```cm
+```calcmark
 starting_customers = 500 customers
 monthly_growth = compound(500 customers, 15%, 24)
 ```
@@ -56,7 +56,7 @@ Starting from 500 customers at 15% monthly growth, you reach ~14.3K customers af
 
 The natural language form reads like a sentence:
 
-```cm
+```calcmark
 compound 1000 users by 10% over 12 months
 ```
 
@@ -70,7 +70,7 @@ Starting with 1,000 users and growing 10% per month for a year yields ~3.1K user
 
 Not all growth is exponential. The `grow()` function adds a fixed increment each period. Here you model adding $200 per month to a savings account over 5 years (60 months).
 
-```cm
+```calcmark
 savings_plan = grow($0, $200, 60)
 ```
 
@@ -78,7 +78,7 @@ savings_plan = grow($0, $200, 60)
 
 The natural language form works with arbitrary units too:
 
-```cm
+```calcmark
 grow 100 subscribers by 50 over 52 weeks
 ```
 
@@ -92,7 +92,7 @@ Starting with 100 subscribers and adding 50 per week for a year gives you 2,700 
 
 Assets lose value over time. The `depreciate()` function models declining-balance depreciation -- each period reduces the remaining value by a fixed percentage.
 
-```cm
+```calcmark
 car_value = depreciate($35000, 20%, 5)
 ```
 
@@ -100,7 +100,7 @@ A $35K car losing 20% per year is worth ~$11.5K after 5 years. Each year applies
 
 You can set a salvage floor with the `to` keyword. The asset will never depreciate below that value:
 
-```cm
+```calcmark
 depreciate $80000 by 25% over 10 years to $2000
 ```
 
@@ -108,7 +108,7 @@ This $80K piece of equipment depreciates at 25% per year but cannot drop below $
 
 Finally, office furniture at a gentler rate:
 
-```cm
+```calcmark
 furniture = depreciate($15000, 15%, 7)
 ```
 

@@ -198,7 +198,7 @@ Additionally:
 | Docgen (features.json) | `cmd/docgen/main.go` |
 | Doceval (cm_results.json) | `cmd/doceval/main.go` |
 | Doceval documentation | `cmd/doceval/README.md` |
-| Hugo render hook for cm blocks | `site/layouts/_default/_markup/render-codeblock-cm.html` |
+| Hugo render hook for calcmark blocks | `site/layouts/_default/_markup/render-codeblock-calcmark.html` |
 | Hugo site content | `site/content/docs/` |
 | Worked example sources | `testdata/examples/*.cm` |
 | Hugo shortcodes | `site/layouts/shortcodes/` |

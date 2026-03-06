@@ -30,10 +30,10 @@ A two-phase build bridges the gap with SHA-256 hash-based lookup:
 
 ```
 Phase 1: Go preprocessor (cmd/doceval)
-  scan markdown → extract ```cm blocks → evaluate → write cm_results.json (keyed by SHA-256)
+  scan markdown → extract ```calcmark blocks → evaluate → write cm_results.json (keyed by SHA-256)
 
 Phase 2: Hugo build
-  render-codeblock-cm.html → compute same SHA-256 → look up results → render inline table
+  render-codeblock-calcmark.html → compute same SHA-256 → look up results → render inline table
 ```
 
 Both sides normalize content identically: (1) split on `\n`, (2) trim trailing whitespace per line, (3) trim the whole block, (4) SHA-256. The hash is the contract.
@@ -135,7 +135,7 @@ Every ` ```cm ` block is now an executable test. The `task site:build` pipeline 
 |------|---------|
 | `cmd/doceval/main.go` | Go pre-evaluation tool |
 | `cmd/doceval/README.md` | Full documentation of the system |
-| `site/layouts/_default/_markup/render-codeblock-cm.html` | Hugo render hook |
+| `site/layouts/_default/_markup/render-codeblock-calcmark.html` | Hugo render hook |
 | `site/assets/css/components.css` (lines 389+) | Result panel styling |
 | `Taskfile.yml` (`site:build`) | Canonical build command |
 | `.github/workflows/site.yml` | GitHub Pages deployment |

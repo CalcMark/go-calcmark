@@ -386,7 +386,7 @@ h6:hover .heading-anchor {
   color: var(--color-text-muted);
 }
 
-/* CalcMark inline results (render-codeblock-cm) */
+/* CalcMark inline results (render-codeblock-calcmark) */
 .cm-codeblock {
   margin: var(--space-4) 0;
 }

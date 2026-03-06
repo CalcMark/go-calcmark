@@ -15,7 +15,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 Start with gross salaries. CalcMark's `$` currency literal tags values as US dollars, and adding two currency values preserves the unit.
 
-```cm
+```calcmark
 gross_salary_1 = $6500
 gross_salary_2 = $5200
 total_gross = gross_salary_1 + gross_salary_2
@@ -31,7 +31,7 @@ total_gross = gross_salary_1 + gross_salary_2
 
 Tax rates are plain decimals. Multiplying a currency value by a decimal produces a currency result, so you can compute taxes without losing the `$` unit.
 
-```cm
+```calcmark
 Estimated combined effective tax rates:
 
 federal_rate = 0.18
@@ -53,7 +53,7 @@ The combined rate is 0.3065 (about 30.7%), giving `total_taxes = $3,586.05` and 
 
 Fixed expenses stay the same each month. List them individually, then sum them up. CalcMark handles long addition chains cleanly.
 
-```cm
+```calcmark
 These don't change month to month:
 
 rent = $2200
@@ -77,7 +77,7 @@ total_fixed = rent + car_payment + car_insurance + health_insurance + phone_plan
 
 Variable expenses fluctuate month to month. Use estimates based on past spending and sum them the same way.
 
-```cm
+```calcmark
 Estimates based on past spending:
 
 groceries = $800
@@ -101,7 +101,7 @@ total_variable = groceries + gas + utilities + dining_out + entertainment + pers
 
 Savings are not expenses -- they're transfers to future-you. Defining them as their own category makes the budget easier to reason about.
 
-```cm
+```calcmark
 emergency_fund_contribution = $500
 retirement_401k = $600
 vacation_fund = $200
@@ -119,7 +119,7 @@ total_savings = emergency_fund_contribution + retirement_401k + vacation_fund
 
 Now pull everything together. Subtract total outflow from net income to see what's left over each month.
 
-```cm
+```calcmark
 total_expenses = total_fixed + total_variable
 total_outflow = total_expenses + total_savings
 remaining = net_income - total_outflow
@@ -135,7 +135,7 @@ remaining = net_income - total_outflow
 
 Express each category as a percentage of net income. Dividing currency by currency produces a plain number, which you can multiply by 100 for a percentage.
 
-```cm
+```calcmark
 Calculate percentages of net income:
 
 savings_rate = total_savings / net_income * 100
@@ -153,7 +153,7 @@ variable_pct = total_variable / net_income * 100
 
 The 50/30/20 rule is a popular budgeting guideline. You can reclassify your expenses into needs, wants, and savings, then check the split against the targets.
 
-```cm
+```calcmark
 The 50/30/20 rule suggests:
 - 50% on needs (fixed + essential variable)
 - 30% on wants (discretionary)
@@ -178,7 +178,7 @@ savings_pct = savings_check / net_income * 100
 
 How many months could your emergency fund cover? Divide the balance by monthly expenses. Then calculate how long it takes to reach the recommended six-month target.
 
-```cm
+```calcmark
 Current emergency fund balance:
 
 current_emergency = $8500
@@ -200,7 +200,7 @@ months_to_goal = shortfall / emergency_fund_contribution
 
 CalcMark's rate conversion syntax lets you express monthly costs as daily amounts. The `per day` keyword converts a monthly rate without accumulating it.
 
-```cm
+```calcmark
 Per-day discretionary spending as a rate:
 
 daily_dining = $300/month per day
