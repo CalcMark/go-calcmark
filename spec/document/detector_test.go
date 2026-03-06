@@ -1,6 +1,8 @@
 package document
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/lexer"
@@ -568,6 +570,100 @@ y = 20`
 	for i, block := range blocks {
 		if block.Type() != BlockCalculation {
 			t.Errorf("Block %d should be calculation, got %v", i, block.Type())
+		}
+	}
+}
+
+// --- Phase 4e: Regression safety net ---
+// Parse all existing .cm files through DetectBlocks and record block type counts.
+// This prevents detector changes from silently reclassifying existing documents.
+
+func TestDetectorRegressionAllCMFiles(t *testing.T) {
+	detector := NewDetector()
+
+	// Expected block type counts for each .cm file.
+	// Format: file path (relative to testdata/) -> {textBlocks, calcBlocks}
+	type blockCounts struct {
+		text int
+		calc int
+	}
+
+	// Walk testdata/ to find all .cm files and verify they all parse without error.
+	// Then check specific known files for stable block counts.
+	testdataDir := "../../testdata"
+
+	// Known files with expected block counts
+	knownFiles := map[string]blockCounts{
+		"spec/valid/documents/mixed_content.cm":    {text: 4, calc: 3},
+		"spec/valid/documents/block_boundaries.cm": {text: 6, calc: 5},
+	}
+
+	// First: verify ALL .cm files parse without error
+	err := filepath.Walk(testdataDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || filepath.Ext(path) != ".cm" {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("Failed to read %s: %v", path, err)
+			return nil
+		}
+
+		// Strip frontmatter before DetectBlocks (same as NewDocument does)
+		source := string(data)
+		_, remaining, fmErr := ParseFrontmatter(source)
+		if fmErr != nil {
+			// Some files may have intentionally invalid frontmatter
+			remaining = source
+		}
+
+		_, detectErr := detector.DetectBlocks(remaining)
+		if detectErr != nil {
+			t.Errorf("DetectBlocks failed for %s: %v", path, detectErr)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Walk error: %v", err)
+	}
+
+	// Second: verify known files have stable block type counts
+	for relPath, expected := range knownFiles {
+		fullPath := filepath.Join(testdataDir, relPath)
+		data, err := os.ReadFile(fullPath)
+		if err != nil {
+			t.Errorf("Failed to read %s: %v", fullPath, err)
+			continue
+		}
+
+		source := string(data)
+		_, remaining, _ := ParseFrontmatter(source)
+
+		blocks, err := detector.DetectBlocks(remaining)
+		if err != nil {
+			t.Errorf("DetectBlocks failed for %s: %v", relPath, err)
+			continue
+		}
+
+		textCount, calcCount := 0, 0
+		for _, b := range blocks {
+			switch b.Type() {
+			case BlockText:
+				textCount++
+			case BlockCalculation:
+				calcCount++
+			}
+		}
+
+		if textCount != expected.text || calcCount != expected.calc {
+			t.Errorf("%s: expected %d text + %d calc blocks, got %d text + %d calc",
+				relPath, expected.text, expected.calc, textCount, calcCount)
+			for i, b := range blocks {
+				t.Logf("  Block %d: type=%v lines=%d", i, b.Type(), len(b.Source()))
+			}
 		}
 	}
 }

@@ -2,6 +2,7 @@ package format
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 
@@ -355,5 +356,122 @@ func TestMarkdownFormatterMultipleBlankLines(t *testing.T) {
 	}
 	if !strings.Contains(output, "d = a + b + c → 6") {
 		t.Errorf("Expected 'd = a + b + c → 6', got:\n%s", output)
+	}
+}
+
+// --- Phase 4: Realistic document integration tests (Markdown formatter) ---
+
+// renderMarkdownFromFile loads a .cm file and renders it through the Markdown formatter.
+func renderMarkdownFromFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", path, err)
+	}
+
+	doc, err := document.NewDocument(string(data))
+	if err != nil {
+		t.Fatalf("Failed to create document from %s: %v", path, err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate %s: %v", path, err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Markdown format failed for %s: %v", path, err)
+	}
+	return buf.String()
+}
+
+func TestMarkdownFormatterEngineeringDocument(t *testing.T) {
+	output := renderMarkdownFromFile(t, "../testdata/examples/markdown_engineering.cm")
+
+	// TextBlock source lines should appear verbatim in output
+	textLines := []string{
+		"# Structural Load Analysis",
+		"## Material Properties",
+		"## Cross-Section",
+		"The cross-sectional area is used in stress calculations below.",
+		"## Safety Factor",
+		"> **Note:** This analysis assumes a simply-supported beam",
+	}
+	for _, line := range textLines {
+		if !strings.Contains(output, line) {
+			t.Errorf("Expected text line verbatim: %q", line)
+		}
+	}
+
+	// Calc blocks wrapped in calcmark fences with results
+	if !strings.Contains(output, "```calcmark") {
+		t.Error("Expected calcmark code fences for calc blocks")
+	}
+	if !strings.Contains(output, "→") {
+		t.Error("Expected result arrows in calc block output")
+	}
+
+	// Fenced code block in source should NOT be wrapped in calcmark fences
+	if !strings.Contains(output, "I = b * h^3 / 12") {
+		t.Error("Expected fenced code block content preserved")
+	}
+}
+
+func TestMarkdownFormatterFinancialDocument(t *testing.T) {
+	output := renderMarkdownFromFile(t, "../testdata/examples/markdown_financial.cm")
+
+	// TextBlock source lines verbatim
+	textLines := []string{
+		"# Quarterly Revenue Forecast",
+		"## Revenue Streams",
+		"1. Salaries and benefits",
+		"5. General and administrative",
+		"- **Operating Income**: The result of",
+		"> **Disclaimer:** These projections",
+	}
+	for _, line := range textLines {
+		if !strings.Contains(output, line) {
+			t.Errorf("Expected text line verbatim: %q", line)
+		}
+	}
+
+	// Calc blocks with results
+	if !strings.Contains(output, "```calcmark") {
+		t.Error("Expected calcmark code fences for calc blocks")
+	}
+	if !strings.Contains(output, "→") {
+		t.Error("Expected result arrows in calc block output")
+	}
+}
+
+func TestMarkdownFormatterScientificDocument(t *testing.T) {
+	output := renderMarkdownFromFile(t, "../testdata/examples/markdown_scientific.cm")
+
+	// TextBlock source lines verbatim
+	textLines := []string{
+		"# Photovoltaic Cell Efficiency Study",
+		"The *fill factor* represents how close",
+		"> The theoretical maximum efficiency",
+		"![I-V Curve](iv-curve-diagram.png)",
+		"<https://www.energy.gov/eere/solar>",
+	}
+	for _, line := range textLines {
+		if !strings.Contains(output, line) {
+			t.Errorf("Expected text line verbatim: %q", line)
+		}
+	}
+
+	// Fenced code block data preserved
+	if !strings.Contains(output, "Intensity (W/m2)") {
+		t.Error("Expected fenced code block data table preserved")
+	}
+
+	// Calc blocks with results
+	if !strings.Contains(output, "```calcmark") {
+		t.Error("Expected calcmark code fences for calc blocks")
 	}
 }

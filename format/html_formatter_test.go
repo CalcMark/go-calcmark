@@ -2,6 +2,7 @@ package format
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 
@@ -334,5 +335,127 @@ price = base_price * (1 + tax_rate)
 	}
 	if !strings.Contains(output, "<dd>") {
 		t.Errorf("Expected HTML to use definition descriptions")
+	}
+}
+
+// --- Phase 4: Realistic document integration tests (HTML formatter) ---
+
+// renderHTMLFromFile loads a .cm file and renders it through the HTML formatter.
+func renderHTMLFromFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", path, err)
+	}
+
+	doc, err := document.NewDocument(string(data))
+	if err != nil {
+		t.Fatalf("Failed to create document from %s: %v", path, err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate %s: %v", path, err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("HTML format failed for %s: %v", path, err)
+	}
+	return buf.String()
+}
+
+func TestHTMLFormatterEngineeringDocument(t *testing.T) {
+	output := renderHTMLFromFile(t, "../testdata/examples/markdown_engineering.cm")
+
+	// Structural HTML tags from CommonMark features used in this document
+	expectedTags := []struct {
+		tag     string
+		feature string
+	}{
+		{"<h1", "ATX heading H1"},
+		{"<h2", "ATX heading H2"},
+		{"<h3", "ATX heading H3"},
+		{"<hr", "horizontal rule"},
+		{"<code>", "inline code"},
+		{"<pre>", "fenced code block"},
+		{"<strong>", "bold text"},
+		{"<blockquote", "blockquote"},
+	}
+
+	for _, tc := range expectedTags {
+		if !strings.Contains(output, tc.tag) {
+			t.Errorf("Expected HTML tag %q for %s feature", tc.tag, tc.feature)
+		}
+	}
+
+	// Security: no raw HTML passthrough from source content
+	if strings.Contains(output, "<script") {
+		t.Error("No <script> tags should pass through to HTML output")
+	}
+
+	// Calc results present
+	if !strings.Contains(output, "calc-block") {
+		t.Error("Expected calc-block sections in HTML output")
+	}
+}
+
+func TestHTMLFormatterFinancialDocument(t *testing.T) {
+	output := renderHTMLFromFile(t, "../testdata/examples/markdown_financial.cm")
+
+	// Structural HTML tags
+	for _, tag := range []string{"<h1", "<h2", "<h3", "<ol", "<ul", "<li", "<strong>", "<code>", "<blockquote"} {
+		if !strings.Contains(output, tag) {
+			t.Errorf("Expected HTML tag %q in financial document output", tag)
+		}
+	}
+
+	// Nested blockquote
+	if !strings.Contains(output, "<blockquote") {
+		t.Error("Expected blockquote in financial document")
+	}
+
+	// Security
+	if strings.Contains(output, "<script") {
+		t.Error("No <script> tags should pass through to HTML output")
+	}
+
+	// Calc results present
+	if !strings.Contains(output, "calc-block") {
+		t.Error("Expected calc-block sections in HTML output")
+	}
+}
+
+func TestHTMLFormatterScientificDocument(t *testing.T) {
+	output := renderHTMLFromFile(t, "../testdata/examples/markdown_scientific.cm")
+
+	// Structural HTML tags
+	for _, tag := range []string{"<h1", "<h2", "<h3", "<em>", "<strong>", "<pre>", "<code>", "<blockquote", "<a href="} {
+		if !strings.Contains(output, tag) {
+			t.Errorf("Expected HTML tag %q in scientific document output", tag)
+		}
+	}
+
+	// Image tag
+	if !strings.Contains(output, "<img") {
+		t.Error("Expected <img> tag for image syntax")
+	}
+
+	// Autolink
+	if !strings.Contains(output, "energy.gov") {
+		t.Error("Expected autolink URL in output")
+	}
+
+	// Security
+	if strings.Contains(output, "<script") {
+		t.Error("No <script> tags should pass through to HTML output")
+	}
+
+	// Calc results present
+	if !strings.Contains(output, "calc-block") {
+		t.Error("Expected calc-block sections in HTML output")
 	}
 }
