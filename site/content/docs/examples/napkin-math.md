@@ -2,6 +2,7 @@
 title: "Napkin Math"
 summary: "Quick estimation with human-readable rounding using 'as napkin'."
 weight: 40
+calcmark_build: progressive
 ---
 
 From {{< repo-file path="testdata/eval/success/features/napkin.cm" >}}.

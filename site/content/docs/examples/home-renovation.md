@@ -2,6 +2,7 @@
 title: "Home Renovation"
 summary: "Kitchen remodel and patio budget using averages, square roots, constants, booleans, and rate conversions."
 weight: 57
+calcmark_build: progressive
 ---
 
 Planning a kitchen remodel and backyard patio is a great way to see CalcMark's math functions, constants, boolean logic, and rate conversions working together in one document.

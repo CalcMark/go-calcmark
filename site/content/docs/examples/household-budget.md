@@ -2,6 +2,7 @@
 title: "Household Budget"
 summary: "Monthly budget with income, taxes, expenses, savings goals, and the 50/30/20 rule."
 weight: 10
+calcmark_build: progressive
 ---
 
 Where does your paycheck actually go? This walkthrough builds a monthly budget for a two-income household, tracking income through taxes, fixed and variable expenses, savings goals, and a 50/30/20 rule health check. Along the way you'll see CalcMark's currency arithmetic, percentage calculations, and rate conversions in action.

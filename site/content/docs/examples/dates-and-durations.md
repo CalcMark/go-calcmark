@@ -2,6 +2,7 @@
 title: "Dates & Durations"
 summary: "Date keywords, literals, arithmetic, and duration calculations."
 weight: 45
+calcmark_build: progressive
 ---
 
 From {{< repo-file path="testdata/eval/success/features/dates.cm" >}}.

@@ -2,6 +2,7 @@
 title: "Investment & Growth"
 summary: "Compound growth, depreciation, and linear growth for financial and business modeling."
 weight: 56
+calcmark_build: progressive
 ---
 
 How fast does your retirement fund grow? How quickly does a car lose value? This walkthrough models investment returns, business growth, and asset depreciation using CalcMark's growth functions.

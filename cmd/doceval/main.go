@@ -3,13 +3,15 @@
 // site/data/cm_results.json. Hugo's render-codeblock-cm.html render hook
 // reads this file to display inline results alongside code blocks.
 //
-// All ```cm blocks within the same markdown file share a single interpreter
-// context, so variables defined in earlier blocks are visible to later ones.
+// Pages with `calcmark_build: progressive` in Hugo frontmatter evaluate all
+// ```cm blocks in a shared interpreter context so variables carry across
+// blocks. The default (`standalone`) evaluates each block independently.
 //
 // Invoked by `task generate-docs` before Hugo builds the site.
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -65,85 +67,29 @@ func run() error {
 			return fmt.Errorf("read %s: %w", mdFile, err)
 		}
 
-		blocks := extractCMBlocks(string(data))
+		content := string(data)
+		blocks := extractCMBlocks(content)
 		if len(blocks) == 0 {
 			continue
 		}
 
-		// Pages under docs/examples/ use shared interpreter state so
-		// variables carry across code blocks. All other pages evaluate
-		// each block independently (reference docs reuse variable names).
-		shared := strings.Contains(mdFile, filepath.Join("docs", "examples"))
+		mode := calcmarkBuildMode(content)
 
-		if shared {
-			// Extract CalcMark frontmatter from yaml blocks in the markdown
-			frontmatter := extractFrontmatter(string(data))
-
-			// Concatenate all blocks into a single document
-			combined := frontmatter + strings.Join(blocks, "\n\n")
-
-			doc, err := document.NewDocument(combined)
-			if err != nil {
-				evalErrors = append(evalErrors, fmt.Sprintf("  %s: parse error: %s", mdFile, err))
-				continue
-			}
-
-			eval := implDoc.NewEvaluator()
-			if err := eval.Evaluate(doc); err != nil {
-				evalErrors = append(evalErrors, fmt.Sprintf("  %s: eval error: %s", mdFile, err))
-				continue
-			}
-
-			// Collect all statement results
-			var allStmts []stmtResult
-			for _, node := range doc.GetBlocks() {
-				switch block := node.Block.(type) {
-				case *document.CalcBlock:
-					stmts := format.AlignResults(block)
-					for _, stmt := range stmts {
-						sr := stmtResult{source: stmt.Source, isBlank: stmt.IsBlank, variable: stmt.Variable}
-						if stmt.Result != nil {
-							sr.result = df.Format(stmt.Result)
-						}
-						allStmts = append(allStmts, sr)
-					}
-				case *document.TextBlock:
-					for _, line := range block.Source() {
-						allStmts = append(allStmts, stmtResult{
-							source:  line,
-							isBlank: strings.TrimSpace(line) == "",
-						})
-					}
-				}
-			}
-
-			// Map results back to individual blocks
-			stmtIdx := 0
-			for _, block := range blocks {
-				key := hashKey(block)
-				if _, exists := results[key]; exists {
-					lines := strings.Split(block, "\n")
-					for _, line := range lines {
-						if strings.TrimSpace(line) != "" && stmtIdx < len(allStmts) {
-							stmtIdx++
-						}
-					}
-					continue
-				}
-				br := mapBlockResults(block, allStmts, &stmtIdx)
-				results[key] = br
+		if mode == "progressive" {
+			errs := evalProgressive(content, blocks, results, df)
+			for _, e := range errs {
+				evalErrors = append(evalErrors, fmt.Sprintf("  %s: %s", mdFile, e))
 			}
 		} else {
-			// Independent evaluation: each block is a standalone document.
-			// Errors are expected (blocks may demo frontmatter features) so
-			// they are recorded in the JSON but don't fail the build.
+			// Standalone: each block is an independent document.
+			// Errors are recorded in JSON but don't fail the build
+			// (blocks may demo frontmatter features that aren't available).
 			for _, block := range blocks {
 				key := hashKey(block)
 				if _, exists := results[key]; exists {
 					continue
 				}
-				br := evalBlockIndependent(block, df)
-				results[key] = br
+				results[key] = evalBlockIndependent(block, df)
 			}
 		}
 	}
@@ -169,7 +115,93 @@ func run() error {
 		for _, e := range evalErrors {
 			fmt.Fprintln(os.Stderr, e)
 		}
-		return fmt.Errorf("%d file(s) failed evaluation", len(evalErrors))
+		return fmt.Errorf("%d block(s) failed evaluation", len(evalErrors))
+	}
+
+	return nil
+}
+
+// calcmarkBuildMode reads the Hugo frontmatter and returns the value of
+// calcmark_build ("progressive" or "standalone"). Defaults to "standalone".
+func calcmarkBuildMode(content string) string {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+
+	// Hugo frontmatter starts with ---
+	if !scanner.Scan() || strings.TrimSpace(scanner.Text()) != "---" {
+		return "standalone"
+	}
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "---" {
+			break
+		}
+		if strings.HasPrefix(line, "calcmark_build:") {
+			val := strings.TrimSpace(strings.TrimPrefix(line, "calcmark_build:"))
+			if val == "progressive" {
+				return "progressive"
+			}
+		}
+	}
+
+	return "standalone"
+}
+
+// evalProgressive evaluates all cm blocks in a shared interpreter context.
+// Returns a list of error strings (empty on success).
+func evalProgressive(content string, blocks []string, results map[string]BlockResult, df display.Formatter) []string {
+	// Extract CalcMark frontmatter from ```yaml blocks in the markdown
+	frontmatter := extractCMFrontmatter(content)
+
+	// Concatenate all blocks into a single CalcMark document
+	combined := frontmatter + strings.Join(blocks, "\n\n")
+
+	doc, err := document.NewDocument(combined)
+	if err != nil {
+		return []string{fmt.Sprintf("parse error: %s", err)}
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		return []string{fmt.Sprintf("eval error: %s", err)}
+	}
+
+	// Collect all statement results from the evaluated document
+	var allStmts []stmtResult
+	for _, node := range doc.GetBlocks() {
+		switch block := node.Block.(type) {
+		case *document.CalcBlock:
+			stmts := format.AlignResults(block)
+			for _, stmt := range stmts {
+				sr := stmtResult{variable: stmt.Variable}
+				if stmt.Result != nil {
+					sr.result = df.Format(stmt.Result)
+				}
+				allStmts = append(allStmts, sr)
+			}
+		case *document.TextBlock:
+			for _, line := range block.Source() {
+				allStmts = append(allStmts, stmtResult{
+					isBlank: strings.TrimSpace(line) == "",
+				})
+			}
+		}
+	}
+
+	// Map results back to individual blocks
+	stmtIdx := 0
+	for _, block := range blocks {
+		key := hashKey(block)
+		if _, exists := results[key]; exists {
+			// Skip statements for duplicate blocks
+			for _, line := range strings.Split(block, "\n") {
+				if strings.TrimSpace(line) != "" && stmtIdx < len(allStmts) {
+					stmtIdx++
+				}
+			}
+			continue
+		}
+		results[key] = mapBlockResults(block, allStmts, &stmtIdx)
 	}
 
 	return nil
@@ -239,18 +271,16 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 	return BlockResult{Lines: lineResults}
 }
 
-// stmtResult holds a single evaluated statement result (package-level for mapBlockResults).
 type stmtResult struct {
-	source   string
 	result   string
 	isBlank  bool
 	variable string
 }
 
-// extractFrontmatter scans for ```yaml blocks containing CalcMark frontmatter
-// (exchange rates, globals) and returns them as a CalcMark frontmatter string.
-// This allows cm blocks that depend on frontmatter to evaluate correctly.
-func extractFrontmatter(markdown string) string {
+// extractCMFrontmatter scans for ```yaml blocks containing CalcMark
+// frontmatter (exchange rates, globals) and returns them as a combined
+// CalcMark frontmatter string prefixed to the document.
+func extractCMFrontmatter(markdown string) string {
 	lines := strings.Split(markdown, "\n")
 	var yamlBlocks []string
 
@@ -263,34 +293,28 @@ func extractFrontmatter(markdown string) string {
 			if trimmed == "```yaml" {
 				inYaml = true
 				current = nil
-				continue
 			}
-		} else {
-			if trimmed == "```" {
-				inYaml = false
-				block := strings.Join(current, "\n")
-				// Only include blocks with CalcMark frontmatter keys
-				if strings.Contains(block, "exchange:") || strings.Contains(block, "globals:") {
-					// Strip the --- delimiters if present, we'll add our own
-					block = strings.TrimSpace(block)
-					block = strings.TrimPrefix(block, "---")
-					block = strings.TrimSuffix(block, "---")
-					block = strings.TrimSpace(block)
-					if block != "" {
-						yamlBlocks = append(yamlBlocks, block)
-					}
+		} else if trimmed == "```" {
+			inYaml = false
+			block := strings.Join(current, "\n")
+			if strings.Contains(block, "exchange:") || strings.Contains(block, "globals:") {
+				block = strings.TrimSpace(block)
+				block = strings.TrimPrefix(block, "---")
+				block = strings.TrimSuffix(block, "---")
+				block = strings.TrimSpace(block)
+				if block != "" {
+					yamlBlocks = append(yamlBlocks, block)
 				}
-				current = nil
-			} else {
-				current = append(current, line)
 			}
+			current = nil
+		} else {
+			current = append(current, line)
 		}
 	}
 
 	if len(yamlBlocks) == 0 {
 		return ""
 	}
-
 	return "---\n" + strings.Join(yamlBlocks, "\n") + "\n---\n"
 }
 
@@ -306,10 +330,8 @@ func extractCMBlocks(markdown string) []string {
 		trimmed := strings.TrimSpace(line)
 
 		if !inBlock {
-			// Match opening fence: ```cm with optional attributes
 			if strings.HasPrefix(trimmed, "```cm") && !strings.HasPrefix(trimmed, "```cmd") {
 				rest := strings.TrimPrefix(trimmed, "```cm")
-				// Accept ```cm, ```cm{...}, or ```cm followed by space/nothing
 				if rest == "" || rest[0] == '{' || rest[0] == ' ' {
 					inBlock = true
 					current = nil
@@ -333,7 +355,6 @@ func extractCMBlocks(markdown string) []string {
 // hashKey produces a stable SHA-256 hash of a code block's content,
 // used as the lookup key in cm_results.json.
 func hashKey(content string) string {
-	// Normalize: trim trailing whitespace from each line, then join
 	lines := strings.Split(content, "\n")
 	for i := range lines {
 		lines[i] = strings.TrimRight(lines[i], " \t")

@@ -2,6 +2,7 @@
 title: "Job Offer Comparison"
 summary: "Compare two job offers with salary, equity, bonuses, and risk-adjusted analysis."
 weight: 20
+calcmark_build: progressive
 ---
 
 You have two job offers. One is Big Tech with a higher base and signing bonus. The other is a growth startup with larger equity upside. How do you compare them fairly? This walkthrough builds a side-by-side model in CalcMark, converting everything to effective monthly take-home pay.

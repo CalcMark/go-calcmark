@@ -2,6 +2,7 @@
 title: "Rates & Capacity Planning"
 summary: "Rate expressions, accumulation with 'over', rate conversion, and capacity planning with 'at...per'."
 weight: 30
+calcmark_build: progressive
 ---
 
 From {{< repo-file path="testdata/eval/success/features/rates.cm" >}},

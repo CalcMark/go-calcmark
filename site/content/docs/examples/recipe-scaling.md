@@ -2,6 +2,7 @@
 title: "Recipe Scaling"
 summary: "Scale a bread recipe from 1 to 4 loaves, convert metric to US customary, and estimate cost per loaf."
 weight: 30
+calcmark_build: progressive
 ---
 
 You have a European bread recipe in metric units. You need 4 loaves for a dinner party. This walkthrough scales the recipe, converts units, handles temperature, estimates timing, and calculates cost per loaf -- all in one CalcMark document.

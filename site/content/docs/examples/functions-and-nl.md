@@ -2,6 +2,7 @@
 title: "Functions & Natural Language"
 summary: "All function call styles: traditional, natural language, nested, and mixed."
 weight: 10
+calcmark_build: progressive
 ---
 
 From {{< repo-file path="testdata/eval/success/features/functions.cm" >}},

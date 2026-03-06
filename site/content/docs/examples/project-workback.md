@@ -2,6 +2,7 @@
 title: "Project Workback"
 summary: "Work backwards from a launch date with date arithmetic, sprint planning, and cost estimates."
 weight: 40
+calcmark_build: progressive
 ---
 
 You have a fixed launch date and need to work backwards. This walkthrough builds a complete project workback schedule using CalcMark's date literals, duration arithmetic, the `from` keyword, and rate-based cost estimates.

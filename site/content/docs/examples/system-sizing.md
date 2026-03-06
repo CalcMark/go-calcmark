@@ -2,6 +2,7 @@
 title: "System Sizing"
 summary: "Back-of-napkin infrastructure estimation for a 10M user app with storage, bandwidth, and capacity planning."
 weight: 50
+calcmark_build: progressive
 ---
 
 How many servers do you need for a social media app with 10 million users? This walkthrough sizes the infrastructure from scratch -- user activity, storage, database capacity, network latency, and availability -- using CalcMark's built-in system functions.

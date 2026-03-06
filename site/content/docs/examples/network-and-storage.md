@@ -2,6 +2,7 @@
 title: "Network & Storage"
 summary: "Latency, throughput, transfer time, read/seek, and compression functions."
 weight: 20
+calcmark_build: progressive
 ---
 
 From {{< repo-file path="testdata/eval/success/features/network_functions.cm" >}},
