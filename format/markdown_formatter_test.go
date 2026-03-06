@@ -475,3 +475,62 @@ func TestMarkdownFormatterScientificDocument(t *testing.T) {
 		t.Error("Expected calcmark code fences for calc blocks")
 	}
 }
+
+// --- Phase 5b: Edge case tests (Markdown formatter) ---
+
+func TestMarkdownFormatterMixedDocumentRoundtrip(t *testing.T) {
+	// heading → calc → paragraph → calc → heading should roundtrip correctly
+	source := `# First Section
+
+x = 10
+
+This is a paragraph between calculations.
+
+y = x * 2
+
+## Second Section
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// All structural elements should be present in correct order
+	if !strings.Contains(output, "# First Section") {
+		t.Error("Expected first heading preserved")
+	}
+	if !strings.Contains(output, "x = 10 → 10") {
+		t.Error("Expected first calc with result")
+	}
+	if !strings.Contains(output, "This is a paragraph between calculations.") {
+		t.Error("Expected paragraph text preserved")
+	}
+	if !strings.Contains(output, "y = x * 2 → 20") {
+		t.Error("Expected second calc with result")
+	}
+	if !strings.Contains(output, "## Second Section") {
+		t.Error("Expected second heading preserved")
+	}
+
+	// Verify structure: headings are NOT inside calcmark fences
+	fenceIdx := strings.Index(output, "```calcmark")
+	headingIdx := strings.Index(output, "# First Section")
+	if fenceIdx >= 0 && headingIdx > fenceIdx {
+		t.Error("Heading should appear before first calcmark fence, not inside it")
+	}
+}

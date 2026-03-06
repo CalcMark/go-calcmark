@@ -185,20 +185,21 @@ CalcMark features: Scientific notation, unit conversions, function chaining.
 
 **5a. Fix rendering bugs** (specific bugs TBD based on Phase 4 results):
 
-- [ ] Fix each bug with a targeted test that reproduces the failure first (TDD)
-- [ ] Run `task test` after each fix
+- [x] Fix: gomarkdown requires trailing newline — `renderMarkdown()` now appends `\n` if missing (fixes setext headings and other trailing-construct parsing)
+- [x] Run `task test` after each fix
 
 **5b. Edge case tests for high-risk features:**
 
-- [ ] Test: Reference-style link within a single TextBlock resolves correctly in HTML
-- [ ] Test: Reference-style link across TextBlock boundary does NOT resolve (known limitation)
-- [ ] Test: Setext heading `---` after paragraph is H2, not horizontal rule
-- [ ] Test: Standalone `---` after blank line is horizontal rule, not setext heading
-- [ ] Test: CalcMark expression inside fenced code block is NOT executed
-- [ ] Test: Indented code block with calc-like content is NOT executed
-- [ ] Test: Mixed document: heading → calc → paragraph → calc → heading roundtrips through markdown formatter
+- [x] Test: Reference-style link within a single TextBlock resolves correctly in HTML
+- [x] Test: Reference-style link across TextBlock boundary does NOT resolve (known limitation)
+- [x] Test: Setext heading `---` after paragraph is H2, not horizontal rule
+- [x] Test: Setext heading `===` after paragraph is H1
+- [x] Test: Standalone `---` after blank line is horizontal rule, not setext heading
+- [x] Test: CalcMark expression inside fenced code block is NOT executed
+- [x] Test: Indented code block with calc-like content is NOT executed
+- [x] Test: Mixed document: heading → calc → paragraph → calc → heading roundtrips through markdown formatter
 
-- [ ] Run `task quality` — full quality gate pass
+- [x] Run `task quality` — full quality gate pass
 
 **Files:**
 - Bug-specific files TBD

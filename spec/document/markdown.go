@@ -27,6 +27,13 @@ func renderMarkdown(source string) string {
 		return ""
 	}
 
+	// gomarkdown requires a trailing newline to correctly parse certain
+	// constructs (e.g., setext headings). SourceText() joins lines with \n
+	// but does not append a final newline.
+	if source[len(source)-1] != '\n' {
+		source += "\n"
+	}
+
 	// CommonMark-only parser extensions (no GFM: Tables, Strikethrough, DefinitionLists excluded)
 	extensions := parser.NoIntraEmphasis | parser.FencedCode | parser.Autolink |
 		parser.SpaceHeadings | parser.HeadingIDs | parser.BackslashLineBreak |

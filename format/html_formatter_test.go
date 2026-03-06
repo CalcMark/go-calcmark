@@ -429,6 +429,72 @@ func TestHTMLFormatterFinancialDocument(t *testing.T) {
 	}
 }
 
+// --- Phase 5b: Edge case tests (HTML formatter) ---
+
+func TestHTMLFormatterFencedCodeBlockNotExecuted(t *testing.T) {
+	// CalcMark expressions inside fenced code blocks must NOT be executed
+	source := "# Demo\n\n```\nx = 10\ny = x * 2\n```\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain code block content as text, not as a calc-block
+	if !strings.Contains(output, "x = 10") {
+		t.Error("Expected fenced code block content in output")
+	}
+
+	// Should NOT have a calculation div — the calc-like content is inside a code fence
+	// Note: "calc-block" appears in CSS styles, so check for the actual div element
+	if strings.Contains(output, `class="calc-block"`) {
+		t.Error("Fenced code block content should NOT produce calc-block div sections")
+	}
+}
+
+func TestHTMLFormatterIndentedCodeBlockNotExecuted(t *testing.T) {
+	// 4-space indented code that looks like CalcMark must NOT be executed
+	source := "# Indented Code\n\n    x = 10\n    y = x * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should NOT have a calculation div — indented code is text, not calculation
+	if strings.Contains(output, `class="calc-block"`) {
+		t.Error("Indented code block content should NOT produce calc-block div sections")
+	}
+}
+
 func TestHTMLFormatterScientificDocument(t *testing.T) {
 	output := renderHTMLFromFile(t, "../testdata/examples/markdown_scientific.cm")
 
