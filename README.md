@@ -26,7 +26,7 @@ brew install calcmark/tap/calcmark
 | Linux (arm64) | [calcmark_VERSION_linux_arm64.tar.gz](https://github.com/CalcMark/go-calcmark/releases/latest) |
 | Windows (x64) | [calcmark_VERSION_windows_amd64.zip](https://github.com/CalcMark/go-calcmark/releases/latest) |
 
-After downloading, extract and move `cm` to a directory in your PATH.
+After downloading, extract and move `cm` to a directory in your PATH. On macOS, you may need to run `xattr -d com.apple.quarantine ./cm` before first use.
 
 ## Quick Start
 

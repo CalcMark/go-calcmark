@@ -52,5 +52,4 @@ test_*.gif
 test_*.png
 tiny.cm
 .task/
-*.p8
 .env
