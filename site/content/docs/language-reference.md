@@ -117,14 +117,18 @@ Globals support all CalcMark literal types (numbers, currencies, quantities, dat
 
 Lines are classified in this order:
 
-1. **BLANK** - Empty or only whitespace
-2. **MARKDOWN** - Has markdown prefix (`#`, `>`, `-`, `*`, `digit.`)
-3. **CALCULATION** - Attempt to parse/validate:
-   - Starts with literal (number, currency, boolean)
+1. **BLANK** — Empty or only whitespace
+2. **INDENTED CODE** → MARKDOWN — Line starts with 4+ spaces or a tab
+3. **FENCED CODE BLOCK** → MARKDOWN — Lines between `` ``` `` or `~~~` fences (stateful; all content inside is markdown regardless of what it looks like)
+4. **MARKDOWN pattern** — Matches a known CommonMark construct:
+   - Block-level: `#` (ATX heading), `>` (blockquote), `- ` / `* ` / `+ ` (unordered list), `digit.` (ordered list), `---` / `***` / `___` (horizontal rule), `===` / `---` (setext heading underline), `` ``` `` / `~~~` (fenced code fence)
+   - Inline-level at start of line: `![` (image), `[text](url)` (inline link), `[id]: url` (link definition), `**text**` (bold formatting)
+5. **CALCULATION** — Attempt to parse and validate:
+   - Starts with a literal (number, currency, boolean)
    - Contains assignment (`=`)
-   - Is valid expression
+   - Is a valid expression
    - All variables are defined (context-aware)
-4. **MARKDOWN** (fallback) - Anything else
+6. **MARKDOWN** (fallback) — Anything else
 
 ### Context-Aware Classification
 
@@ -141,6 +145,10 @@ z = unknown * 2     -> MARKDOWN (unknown is undefined)
 | `$100 budget` | MARKDOWN | Trailing text after valid token |
 | `-5 + 3` | CALCULATION | Negative number (no space after `-`) |
 | `- 5` | MARKDOWN | Bullet list (space after `-`) |
+| `+ item` | MARKDOWN | Unordered list (`+` marker with space) |
+| `    x = 10` | MARKDOWN | Indented code block (4-space prefix) |
+| `![alt](img.png)` | MARKDOWN | Image syntax |
+| `[ref]: https://…` | MARKDOWN | Link definition |
 | `x *` | MARKDOWN | Incomplete expression |
 | `average` | MARKDOWN | Not reserved, not in context |
 | `avg` | MARKDOWN | Reserved keyword alone (not a valid expression) |
