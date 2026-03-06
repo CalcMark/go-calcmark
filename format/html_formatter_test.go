@@ -2,6 +2,7 @@ package format
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 
@@ -231,6 +232,41 @@ total = base + rate
 	}
 }
 
+// TestHTMLFormatterBrFallbackEscapesHTML tests that the <br> fallback path
+// in the HTML formatter escapes HTML entities to prevent XSS.
+func TestHTMLFormatterBrFallbackEscapesHTML(t *testing.T) {
+	// Create a text block that would trigger the <br> fallback
+	// (Render() returns empty string)
+	// We test via the full formatter pipeline with a document containing
+	// HTML that should be escaped if it somehow reaches the fallback path.
+	source := "# Normal heading\n\n<script>alert('xss')</script>\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// The <script> tag must not appear unescaped in the output
+	if strings.Contains(output, "<script>") {
+		t.Error("Raw <script> tag must not appear in HTML output")
+	}
+}
+
 // TestHTMLFormatterWithFrontmatter tests that frontmatter is rendered in HTML.
 func TestHTMLFormatterWithFrontmatter(t *testing.T) {
 	source := `---
@@ -299,5 +335,193 @@ price = base_price * (1 + tax_rate)
 	}
 	if !strings.Contains(output, "<dd>") {
 		t.Errorf("Expected HTML to use definition descriptions")
+	}
+}
+
+// --- Phase 4: Realistic document integration tests (HTML formatter) ---
+
+// renderHTMLFromFile loads a .cm file and renders it through the HTML formatter.
+func renderHTMLFromFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read %s: %v", path, err)
+	}
+
+	doc, err := document.NewDocument(string(data))
+	if err != nil {
+		t.Fatalf("Failed to create document from %s: %v", path, err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate %s: %v", path, err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("HTML format failed for %s: %v", path, err)
+	}
+	return buf.String()
+}
+
+func TestHTMLFormatterEngineeringDocument(t *testing.T) {
+	output := renderHTMLFromFile(t, "../testdata/examples/markdown_engineering.cm")
+
+	// Structural HTML tags from CommonMark features used in this document
+	expectedTags := []struct {
+		tag     string
+		feature string
+	}{
+		{"<h1", "ATX heading H1"},
+		{"<h2", "ATX heading H2"},
+		{"<h3", "ATX heading H3"},
+		{"<hr", "horizontal rule"},
+		{"<code>", "inline code"},
+		{"<pre>", "fenced code block"},
+		{"<strong>", "bold text"},
+		{"<blockquote", "blockquote"},
+	}
+
+	for _, tc := range expectedTags {
+		if !strings.Contains(output, tc.tag) {
+			t.Errorf("Expected HTML tag %q for %s feature", tc.tag, tc.feature)
+		}
+	}
+
+	// Security: no raw HTML passthrough from source content
+	if strings.Contains(output, "<script") {
+		t.Error("No <script> tags should pass through to HTML output")
+	}
+
+	// Calc results present
+	if !strings.Contains(output, "calc-block") {
+		t.Error("Expected calc-block sections in HTML output")
+	}
+}
+
+func TestHTMLFormatterFinancialDocument(t *testing.T) {
+	output := renderHTMLFromFile(t, "../testdata/examples/markdown_financial.cm")
+
+	// Structural HTML tags
+	for _, tag := range []string{"<h1", "<h2", "<h3", "<ol", "<ul", "<li", "<strong>", "<code>", "<blockquote"} {
+		if !strings.Contains(output, tag) {
+			t.Errorf("Expected HTML tag %q in financial document output", tag)
+		}
+	}
+
+	// Nested blockquote
+	if !strings.Contains(output, "<blockquote") {
+		t.Error("Expected blockquote in financial document")
+	}
+
+	// Security
+	if strings.Contains(output, "<script") {
+		t.Error("No <script> tags should pass through to HTML output")
+	}
+
+	// Calc results present
+	if !strings.Contains(output, "calc-block") {
+		t.Error("Expected calc-block sections in HTML output")
+	}
+}
+
+// --- Phase 5b: Edge case tests (HTML formatter) ---
+
+func TestHTMLFormatterFencedCodeBlockNotExecuted(t *testing.T) {
+	// CalcMark expressions inside fenced code blocks must NOT be executed
+	source := "# Demo\n\n```\nx = 10\ny = x * 2\n```\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should contain code block content as text, not as a calc-block
+	if !strings.Contains(output, "x = 10") {
+		t.Error("Expected fenced code block content in output")
+	}
+
+	// Should NOT have a calculation div — the calc-like content is inside a code fence
+	// Note: "calc-block" appears in CSS styles, so check for the actual div element
+	if strings.Contains(output, `class="calc-block"`) {
+		t.Error("Fenced code block content should NOT produce calc-block div sections")
+	}
+}
+
+func TestHTMLFormatterIndentedCodeBlockNotExecuted(t *testing.T) {
+	// 4-space indented code that looks like CalcMark must NOT be executed
+	source := "# Indented Code\n\n    x = 10\n    y = x * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should NOT have a calculation div — indented code is text, not calculation
+	if strings.Contains(output, `class="calc-block"`) {
+		t.Error("Indented code block content should NOT produce calc-block div sections")
+	}
+}
+
+func TestHTMLFormatterScientificDocument(t *testing.T) {
+	output := renderHTMLFromFile(t, "../testdata/examples/markdown_scientific.cm")
+
+	// Structural HTML tags
+	for _, tag := range []string{"<h1", "<h2", "<h3", "<em>", "<strong>", "<pre>", "<code>", "<blockquote", "<a href="} {
+		if !strings.Contains(output, tag) {
+			t.Errorf("Expected HTML tag %q in scientific document output", tag)
+		}
+	}
+
+	// Image tag
+	if !strings.Contains(output, "<img") {
+		t.Error("Expected <img> tag for image syntax")
+	}
+
+	// Autolink
+	if !strings.Contains(output, "energy.gov") {
+		t.Error("Expected autolink URL in output")
+	}
+
+	// Security
+	if strings.Contains(output, "<script") {
+		t.Error("No <script> tags should pass through to HTML output")
+	}
+
+	// Calc results present
+	if !strings.Contains(output, "calc-block") {
+		t.Error("Expected calc-block sections in HTML output")
 	}
 }

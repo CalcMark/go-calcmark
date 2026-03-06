@@ -1,0 +1,79 @@
+# Quarterly Revenue Forecast
+
+## Revenue Streams
+
+### Software Licenses
+
+license_revenue = $450000
+license_growth = 12%
+projected_licenses = license_revenue * (1 + license_growth)
+
+### Consulting Services
+
+consulting_revenue = $280000
+consulting_growth = 8%
+projected_consulting = consulting_revenue * (1 + consulting_growth)
+
+### Maintenance Contracts
+
+maintenance_revenue = $120000
+maintenance_growth = 5%
+projected_maintenance = maintenance_revenue * (1 + maintenance_growth)
+
+## Total Revenue
+
+total_revenue = projected_licenses + projected_consulting + projected_maintenance
+
+## Expense Breakdown
+
+The following expenses are projected for the quarter:
+
+1. Salaries and benefits
+2. Infrastructure and hosting
+3. Marketing and sales
+4. Research and development
+5. General and administrative
+
+salaries = $320000
+infrastructure = $45000
+marketing = $60000
+rnd = $95000
+admin = $30000
+
+total_expenses = salaries + infrastructure + marketing + rnd + admin
+
+## Profitability
+
+operating_income = total_revenue - total_expenses
+profit_margin = operating_income / total_revenue * 100
+
+### Key Metrics
+
+- **Operating Income**: The result of `total_revenue - total_expenses`
+- **Profit Margin**: Expressed as a percentage of revenue
+- Revenue mix is weighted toward **software licenses**
+
+### Nested List Example
+
+- Revenue Categories
+  - Recurring
+    + License subscriptions
+    + Maintenance contracts
+  - Non-recurring
+    + Consulting engagements
+
+## Tax Estimate
+
+tax_rate = 21%
+tax_amount = operating_income * tax_rate
+net_income = operating_income - tax_amount
+
+> **Disclaimer:** These projections are based on current market conditions.
+> Past performance does not guarantee future results.
+>
+> > Consult your financial advisor before making investment decisions.
+
+## Year-Over-Year Comparison
+
+last_year_revenue = $780000
+yoy_growth = (total_revenue - last_year_revenue) / last_year_revenue * 100

@@ -1,0 +1,73 @@
+# Structural Load Analysis
+
+Calculate beam deflection and safety factors for a concrete bridge span.
+
+## Material Properties
+
+yield_strength = 250
+elastic_modulus = 200000
+density = 7850
+
+## Beam Geometry
+
+beam_length = 12
+beam_width = 0.3
+beam_depth = 0.6
+
+---
+
+## Cross-Section
+
+cross_area = beam_width * beam_depth
+
+The cross-sectional area is used in stress calculations below.
+
+moment_of_inertia = beam_width * beam_depth ^ 3 / 12
+
+## Load Analysis
+
+### Dead Load
+
+dead_load = cross_area * beam_length * density
+
+### Live Load
+
+live_load = 50000
+
+### Total
+
+total_load = dead_load + live_load
+
+---
+
+## Safety Factor
+
+The minimum acceptable safety factor per **ASCE 7-22** is `1.5` for this load type.
+
+allowable_stress = yield_strength * 0.6
+actual_stress = total_load / cross_area
+safety_factor = allowable_stress / actual_stress
+
+## Results Summary
+
+A safety factor above **1.5** indicates the beam is within acceptable limits.
+
+> **Note:** This analysis assumes a simply-supported beam with uniformly distributed load.
+> Real-world conditions may require additional considerations.
+
+## Example Code Block
+
+The formula for moment of inertia is:
+
+```
+I = b * h^3 / 12
+```
+
+For a **rectangular** cross-section where:
+- `b` is the width
+- `h` is the depth
+
+### Hard Line Break Demo
+
+This line has a hard break\
+and continues on the next line.

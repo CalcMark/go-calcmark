@@ -1,0 +1,84 @@
+# Photovoltaic Cell Efficiency Study
+
+## Solar Irradiance
+
+panel_area = 1.6
+irradiance = 1000
+solar_input = panel_area * irradiance
+
+## Cell Parameters
+
+### Open-Circuit Voltage
+
+open_circuit_v = 0.72
+short_circuit_i = 9.5
+
+### Fill Factor
+
+The *fill factor* represents how close the cell's **I-V curve** approaches the ***ideal*** rectangular shape.
+
+fill_factor = 0.78
+
+## Power Output
+
+max_power = open_circuit_v * short_circuit_i * fill_factor
+
+## Efficiency
+
+efficiency = max_power / solar_input * 100
+
+> The theoretical maximum efficiency for a single-junction silicon cell
+> is approximately 33.7% (the *Shockley-Queisser limit*).
+
+## Temperature Dependence
+
+The efficiency decreases by approximately **0.5%** per degree Celsius above 25C.
+
+base_temp = 25
+operating_temp = 45
+temp_coefficient = 0.005
+temp_loss = (operating_temp - base_temp) * temp_coefficient
+adjusted_efficiency = efficiency * (1 - temp_loss)
+
+## Data Sample
+
+Measured voltages at different light intensities:
+
+```
+Intensity (W/m2)  |  Voltage (V)
+200               |  0.65
+400               |  0.68
+600               |  0.70
+800               |  0.71
+1000              |  0.72
+```
+
+## Array Configuration
+
+### Series Connection
+
+modules_in_series = 12
+string_voltage = open_circuit_v * modules_in_series
+
+### Parallel Strings
+
+parallel_strings = 4
+total_current = short_circuit_i * parallel_strings
+
+### Total Array Output
+
+array_power = string_voltage * total_current * fill_factor
+
+## References
+
+For more on photovoltaics, see [NREL](https://www.nrel.gov/pv/) and related research.
+
+An image of a typical I-V curve:
+
+![I-V Curve](iv-curve-diagram.png)
+
+<https://www.energy.gov/eere/solar> provides additional resources.
+
+## Summary
+
+The panel achieves an efficiency of roughly **5%** under standard conditions, with a temperature-adjusted value lower at operating conditions. This analysis uses *basic* electrical parameters and does **not** account for shading, soiling, or inverter losses.

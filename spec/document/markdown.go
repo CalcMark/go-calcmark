@@ -27,15 +27,27 @@ func renderMarkdown(source string) string {
 		return ""
 	}
 
-	// Create parser with CommonMark extensions
-	extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+	// gomarkdown requires a trailing newline to correctly parse certain
+	// constructs (e.g., setext headings). SourceText() joins lines with \n
+	// but does not append a final newline.
+	if source[len(source)-1] != '\n' {
+		source += "\n"
+	}
+
+	// CommonMark-only parser extensions (no GFM: Tables, Strikethrough, DefinitionLists excluded)
+	extensions := parser.NoIntraEmphasis | parser.FencedCode | parser.Autolink |
+		parser.SpaceHeadings | parser.HeadingIDs | parser.BackslashLineBreak |
+		parser.AutoHeadingIDs
 	p := parser.NewWithExtensions(extensions)
 
 	// Parse markdown to AST
 	doc := p.Parse([]byte(source))
 
-	// Create HTML renderer
-	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	// Create HTML renderer with security flags:
+	// - SkipHTML: strip raw HTML to prevent XSS
+	// - Safelink: block javascript:, vbscript:, data: URI schemes
+	// - HrefTargetBlank: open links in new tab
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.SkipHTML | html.Safelink
 	opts := html.RendererOptions{Flags: htmlFlags}
 	renderer := html.NewRenderer(opts)
 
