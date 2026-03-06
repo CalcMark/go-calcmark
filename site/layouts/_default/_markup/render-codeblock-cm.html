@@ -39,9 +39,9 @@
         {{- range .lines -}}
           {{- if .result -}}
           <tr>
-            <td class="cm-result-source"><code>{{ .source }}</code></td>
+            <td class="cm-result-source">{{ .source }}</td>
             <td class="cm-result-arrow">→</td>
-            <td class="cm-result-value"><code>{{ .result }}</code></td>
+            <td class="cm-result-value">{{ .result }}</td>
           </tr>
           {{- end -}}
         {{- end -}}
