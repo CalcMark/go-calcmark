@@ -150,6 +150,8 @@ required_appreciation = required_total_stock / option_value_b
 
 ## Try It
 
+{{< repo-file path="testdata/examples/job-offer.cm" >}}
+
 ```bash
 cm testdata/examples/job-offer.cm
 ```

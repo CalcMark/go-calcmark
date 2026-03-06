@@ -122,6 +122,8 @@ calories_per_slice = calories_per_loaf / slices_per_loaf
 
 ## Try It
 
+{{< repo-file path="testdata/examples/recipe-scaling.cm" >}}
+
 ```bash
 cm testdata/examples/recipe-scaling.cm
 ```

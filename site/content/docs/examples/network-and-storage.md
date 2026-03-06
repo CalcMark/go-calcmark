@@ -4,9 +4,9 @@ summary: "Latency, throughput, transfer time, read/seek, and compression functio
 weight: 20
 ---
 
-From [`testdata/eval/success/features/network_functions.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/network_functions.cm),
-[`testdata/eval/success/features/storage_functions.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/storage_functions.cm),
-and [`testdata/eval/success/features/compression.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/compression.cm).
+From {{< repo-file path="testdata/eval/success/features/network_functions.cm" >}},
+{{< repo-file path="testdata/eval/success/features/storage_functions.cm" >}},
+and {{< repo-file path="testdata/eval/success/features/compression.cm" >}}.
 
 ## Network Latency (RTT)
 

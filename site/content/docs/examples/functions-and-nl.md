@@ -4,9 +4,9 @@ summary: "All function call styles: traditional, natural language, nested, and m
 weight: 10
 ---
 
-From [`testdata/eval/success/features/functions.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/functions.cm),
-[`testdata/eval/success/features/natural_language.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/natural_language.cm),
-and [`testdata/eval/success/features/growth_functions.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/growth_functions.cm).
+From {{< repo-file path="testdata/eval/success/features/functions.cm" >}},
+{{< repo-file path="testdata/eval/success/features/natural_language.cm" >}},
+and {{< repo-file path="testdata/eval/success/features/growth_functions.cm" >}}.
 
 ## Traditional Function Syntax
 

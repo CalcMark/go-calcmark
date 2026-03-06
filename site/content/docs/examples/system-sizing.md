@@ -151,6 +151,8 @@ servers_napkin = total_db_servers as napkin
 
 ## Try It
 
+{{< repo-file path="testdata/examples/system-sizing.cm" >}}
+
 ```bash
 cm testdata/examples/system-sizing.cm
 ```

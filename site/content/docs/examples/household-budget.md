@@ -129,6 +129,8 @@ daily_discretionary = $500/month per day
 
 ## Try It
 
+{{< repo-file path="testdata/examples/household-budget.cm" >}}
+
 ```bash
 cm testdata/examples/household-budget.cm
 ```

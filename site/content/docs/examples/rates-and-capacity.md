@@ -4,9 +4,9 @@ summary: "Rate expressions, accumulation with 'over', rate conversion, and capac
 weight: 30
 ---
 
-From [`testdata/eval/success/features/rates.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/rates.cm),
-[`testdata/eval/success/features/rate_functions.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/rate_functions.cm),
-and [`testdata/eval/success/features/capacity_at.cm`](https://github.com/CalcMark/go-calcmark/blob/main/testdata/eval/success/features/capacity_at.cm).
+From {{< repo-file path="testdata/eval/success/features/rates.cm" >}},
+{{< repo-file path="testdata/eval/success/features/rate_functions.cm" >}},
+and {{< repo-file path="testdata/eval/success/features/capacity_at.cm" >}}.
 
 ## Rate Expressions
 
