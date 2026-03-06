@@ -2,4 +2,4 @@
 {{- $text := .Get "text" | default $path -}}
 {{- $type := .Get "type" | default "blob" -}}
 {{- $branch := site.Params.githubBranch | default "main" -}}
-[`{{ $text }}`]({{ site.Params.githubURL }}/{{ $type }}/{{ $branch }}/{{ $path }})
+<a href="{{ site.Params.githubURL }}/{{ $type }}/{{ $branch }}/{{ $path }}"><code>{{ $text }}</code></a>
