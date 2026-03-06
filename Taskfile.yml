@@ -143,10 +143,13 @@ tasks:
     internal: true
     cmds:
       - go run ./cmd/docgen
+      - go run ./cmd/doceval
     sources:
       - spec/features/registry.go
+      - site/content/docs/**/*.md
     generates:
       - site/data/features.json
+      - site/data/cm_results.json
 
   site:
     desc: Start Hugo dev server for the website

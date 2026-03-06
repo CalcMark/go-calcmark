@@ -386,6 +386,69 @@ h6:hover .heading-anchor {
   color: var(--color-text-muted);
 }
 
+/* CalcMark inline results (render-codeblock-cm) */
+.cm-codeblock {
+  margin: var(--space-4) 0;
+}
+
+.cm-results {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-top: -0.5rem;
+}
+
+.cm-results-header {
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-2);
+}
+
+.cm-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.cm-results-table tr + tr {
+  border-top: 1px solid var(--color-border);
+}
+
+.cm-results-table td {
+  padding: var(--space-1) 0;
+}
+
+.cm-result-source {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.cm-result-arrow {
+  color: var(--color-text-faint);
+  padding: 0 var(--space-2);
+  text-align: center;
+}
+
+.cm-result-value {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-align: right;
+}
+
+.cm-results.cm-error {
+  border-color: var(--color-warning);
+}
+
+.cm-results.cm-error .cm-results-header {
+  color: var(--color-warning);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .docs-layout {

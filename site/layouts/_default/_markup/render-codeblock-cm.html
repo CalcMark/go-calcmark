@@ -1,0 +1,53 @@
+{{- /* Render hook for ```cm fenced code blocks.
+     Displays the CalcMark source with syntax highlighting, then appends
+     inline evaluation results from site/data/cm_results.json (generated
+     by cmd/doceval before Hugo build). */ -}}
+
+{{- $raw := .Inner -}}
+{{- /* Normalize: trim trailing whitespace per line, then trim the whole block */ -}}
+{{- $lines := split $raw "\n" -}}
+{{- $cleaned := slice -}}
+{{- range $lines -}}
+  {{- $cleaned = $cleaned | append (strings.TrimRight " \t" .) -}}
+{{- end -}}
+{{- $normalized := strings.TrimSpace (delimit $cleaned "\n") -}}
+{{- $hash := sha256 $normalized -}}
+
+{{- /* Look up pre-computed results */ -}}
+{{- $results := index .Page.Site.Data.cm_results $hash -}}
+
+<div class="cm-codeblock" data-hash="{{ $hash }}">
+{{- /* Render the source code with Hugo syntax highlighting */ -}}
+{{ transform.Highlight $raw "text" (dict "lineNos" false) }}
+
+{{- with $results -}}
+  {{- if .error -}}
+    <div class="cm-results cm-error">
+      <div class="cm-results-header">Error</div>
+      <pre><code>{{ .error }}</code></pre>
+    </div>
+  {{- else -}}
+    {{- /* Only show results div if there are actual results */ -}}
+    {{- $hasResults := false -}}
+    {{- range .lines -}}
+      {{- if .result -}}{{ $hasResults = true }}{{- end -}}
+    {{- end -}}
+    {{- if $hasResults -}}
+    <div class="cm-results">
+      <div class="cm-results-header">Results</div>
+      <table class="cm-results-table">
+        {{- range .lines -}}
+          {{- if .result -}}
+          <tr>
+            <td class="cm-result-source"><code>{{ .source }}</code></td>
+            <td class="cm-result-arrow">→</td>
+            <td class="cm-result-value"><code>{{ .result }}</code></td>
+          </tr>
+          {{- end -}}
+        {{- end -}}
+      </table>
+    </div>
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+</div>
