@@ -3,34 +3,37 @@
 Estimating infrastructure for a social media app with 10M monthly active users.
 Uses CalcMark's built-in network, storage, and capacity planning functions.
 
-## User Activity Assumptions
+## User Activity
 
 monthly_users = 10M
-daily_active_pct = 0.40
-daily_users = monthly_users * daily_active_pct
+daily_users = 40% of monthly_users
 
-Posts per day (each user posts ~2x/week on average):
+A 40% DAU/MAU ratio is typical for an engaged social platform.
+Each user posts about twice per week:
 
-posts_per_user_per_day = 2 / 7
-daily_posts = daily_users * posts_per_user_per_day
+posts_per_user_per_week = 2
+daily_posts = daily_users * posts_per_user_per_week / 7
 daily_posts_napkin = daily_posts as napkin
 
 ## Read vs Write Ratio
 
-Social media is read-heavy. Users scroll far more than they post.
+Social media is read-heavy -- users scroll far more than they post.
+Assume 100 reads per user per day (timeline, profiles, search):
 
 reads_per_user_per_day = 100
 daily_reads = daily_users * reads_per_user_per_day
 read_write_ratio = daily_reads / daily_posts
 
+A 350:1 ratio means you invest heavily in caching and read replicas.
+
 ## Traffic Rates
 
-Convert daily totals to per-second rates using CalcMark rate conversion:
+Convert daily totals to per-second rates for capacity planning:
 
 read_rate = (daily_reads)/day per second
 write_rate = (daily_posts)/day per second
 
-Peak traffic is typically 3x average:
+Peak traffic is typically 3x average (lunch hour, evenings, breaking news):
 
 peak_multiplier = 3
 peak_read_rate = read_rate * peak_multiplier
@@ -43,21 +46,19 @@ avg_post_size = 2 KB
 daily_post_storage = daily_posts * avg_post_size
 yearly_post_storage = daily_post_storage * 365
 
-Media storage (images average 500KB, 30% of posts have images):
+30% of posts include an image averaging 500 KB:
 
-posts_with_media_pct = 0.30
-avg_image_size = 500 KB
-daily_media_storage = daily_posts * posts_with_media_pct * avg_image_size
+daily_media_storage = daily_posts * 30% * 500 KB
 yearly_media_storage = daily_media_storage * 365
 
-Total storage with compression (gzip typically achieves 3:1 on text):
+Gzip text storage (images are already compressed):
 
 compressed_posts = compress(yearly_post_storage, gzip)
 total_yearly_storage = compressed_posts + yearly_media_storage
 
 ## Database Sizing
 
-Using natural capacity planning syntax:
+Size the database tier against peak read traffic:
 
 db_read_replicas = peak_read_rate at 5000 req/s per server with 20% buffer
 db_primaries = write_rate at 2000 req/s per server with 25% buffer
@@ -65,63 +66,63 @@ total_db_servers = db_read_replicas + db_primaries
 
 ## Storage I/O Performance
 
-Typical database query reads ~5MB of data. Compare storage options:
+A typical database query reads ~5 MB of data. Compare storage tiers:
 
-query_data = 5 MB
-hdd_query_time = seek(hdd) + read(query_data, hdd)
-ssd_query_time = seek(ssd) + read(query_data, ssd)
-nvme_query_time = seek(nvme) + read(query_data, nvme)
+hdd_query_time = seek(hdd) + read 5 MB from hdd
+ssd_query_time = seek(ssd) + read 5 MB from ssd
+nvme_query_time = seek(nvme) + read 5 MB from nvme
 
-NVMe is clearly the right choice for hot data.
+NVMe is 30x faster than HDD -- the right choice for hot data.
 
 ## Network Latency Budget
 
-API response latency breakdown for regional users:
+Build a latency budget for a single API response:
 
 network_rtt = rtt(regional)
 db_query = nvme_query_time
 app_processing = 10 ms
 total_latency = network_rtt + db_query + app_processing
 
+Under 100 ms means users perceive the response as instant.
+
 ## Bandwidth Requirements
 
-Average response is 10KB, peak bandwidth in MB/s:
+Average API response is 10 KB. Peak bandwidth per second:
 
-avg_response_kb = 10
-peak_bandwidth_kbs = peak_read_rate * avg_response_kb
-peak_bandwidth_mbs = peak_bandwidth_kbs / 1000
+peak_bandwidth = (peak_read_rate over 1 second) * 10 KB
 
-Compare to network capacity:
+Compare to standard network links:
 
 gigabit_capacity = throughput(gigabit)
 ten_gig_capacity = throughput(ten_gig)
 
+A single gigabit link is not enough. A 10-gig link gives plenty of headroom.
+
 ## CDN and Caching
 
-Cache hit ratio target and origin traffic:
+Target a 95% cache hit rate so only 5% of reads hit origin:
 
-cache_hit_target = 0.95
-cache_miss_rate = 1 - cache_hit_target
-origin_read_rate = read_rate * cache_miss_rate
+cache_hit_target = 95%
+origin_read_rate = read_rate * (1 - cache_hit_target)
 
 Media transfer time from origin to CDN edge:
 
-media_transfer = transfer_time(avg_image_size, continental, ten_gig)
+media_transfer = transfer 500 KB across continental ten_gig
 
 ## Availability and Downtime
 
-Target 99.9% availability (three nines):
+Three nines (99.9%) is the standard SaaS target:
 
-monthly_downtime = downtime(0.999, month)
-yearly_downtime = downtime(0.999, year)
+monthly_downtime = downtime(99.9%, month)
+yearly_downtime = downtime(99.9%, year)
 
-For 99.99% (four nines):
+Four nines (99.99%) cuts the error budget by 10x:
 
-strict_monthly_downtime = downtime(0.9999, month)
+strict_monthly_downtime = downtime(99.99%, month)
 
 ## Summary
 
-Key metrics in human-readable format:
+Key metrics rounded for stakeholder conversations:
 
 storage_napkin = total_yearly_storage as napkin
 traffic_napkin = daily_reads as napkin

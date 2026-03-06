@@ -574,6 +574,54 @@ y = 20`
 	}
 }
 
+// TestNLFunctionVariableDetection verifies that NL function syntax with variable
+// references is classified as calculation, not prose.
+func TestNLFunctionVariableDetection(t *testing.T) {
+	detector := NewDetector()
+
+	calcTests := []string{
+		"compress data using gzip",
+		"read data from ssd",
+		"transfer data across regional gigabit",
+		"result = compress data using gzip",
+		"result = read data from ssd",
+	}
+	for _, input := range calcTests {
+		t.Run("calc:"+input, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(input)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block, got %d", len(blocks))
+			}
+			if blocks[0].Type() != BlockCalculation {
+				t.Errorf("Expected calculation, got %v for %q", blocks[0].Type(), input)
+			}
+		})
+	}
+
+	proseTests := []string{
+		"Read more about this topic",
+		"Compress your files before uploading",
+		"Transfer money to your account",
+	}
+	for _, input := range proseTests {
+		t.Run("prose:"+input, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(input)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block, got %d", len(blocks))
+			}
+			if blocks[0].Type() != BlockText {
+				t.Errorf("Expected text, got %v for %q", blocks[0].Type(), input)
+			}
+		})
+	}
+}
+
 // --- Phase 4e: Regression safety net ---
 // Parse all existing .cm files through DetectBlocks and record block type counts.
 // This prevents detector changes from silently reclassifying existing documents.

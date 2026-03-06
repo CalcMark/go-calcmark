@@ -50,6 +50,15 @@ func (interp *Interpreter) evalUnaryOp(u *ast.UnaryOp) (types.Type, error) {
 // evalBinaryOperation performs binary arithmetic operations.
 // This is a pure function for easier testing.
 func evalBinaryOperation(left, right types.Type, operator string) (types.Type, error) {
+	// Normalize unitless quantities to numbers before type dispatch.
+	// Unitless quantities arise from accumulate/over on unitless rates.
+	if q, ok := left.(*types.Quantity); ok && q.Unit == "" {
+		return evalBinaryOperation(types.NewNumber(q.Value), right, operator)
+	}
+	if q, ok := right.(*types.Quantity); ok && q.Unit == "" {
+		return evalBinaryOperation(left, types.NewNumber(q.Value), operator)
+	}
+
 	// Boolean operations (AND, OR)
 	if leftBool, ok := left.(*types.Boolean); ok {
 		if rightBool, ok := right.(*types.Boolean); ok {
@@ -93,6 +102,13 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		if rightDur, ok := right.(*types.Duration); ok && operator == "*" {
 			result := leftNum.Value.Mul(rightDur.Value)
 			return &types.Duration{Value: result, Unit: rightDur.Unit}, nil
+		}
+		// Number * Rate → Rate (commutative: mirrors Rate * Number)
+		if rightRate, ok := right.(*types.Rate); ok && operator == "*" {
+			return &types.Rate{
+				Amount:  &types.Quantity{Value: leftNum.Value.Mul(rightRate.Amount.Value), Unit: rightRate.Amount.Unit},
+				PerUnit: rightRate.PerUnit,
+			}, nil
 		}
 	}
 
@@ -181,20 +197,22 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 				return types.NewNumber(result), nil
 			}
 		}
+		// Rate * Quantity → Quantity (e.g., "100/second * 10 KB" = "1000 KB")
+		if rightQty, ok := right.(*types.Quantity); ok && operator == "*" {
+			result := leftRate.Amount.Value.Mul(rightQty.Value)
+			return &types.Quantity{Value: result, Unit: rightQty.Unit}, nil
+		}
 	}
 
 	// Quantity operations (with unit conversion - USER REQUIREMENT: first-unit-wins)
 	if leftQty, ok := left.(*types.Quantity); ok {
 		if rightQty, ok := right.(*types.Quantity); ok {
-			// Unitless quantities (e.g., from accumulating a unitless rate like "1M / month")
-			// act as scalars for arithmetic. Re-dispatch as Number to reuse existing paths.
-			if leftQty.Unit == "" {
-				return evalBinaryOperation(types.NewNumber(leftQty.Value), right, operator)
-			}
-			if rightQty.Unit == "" {
-				return evalBinaryOperation(left, types.NewNumber(rightQty.Value), operator)
-			}
 			return evalQuantityOperation(leftQty, rightQty, operator)
+		}
+		// Quantity * Rate → Quantity (e.g., "10 KB * 100/second" = "1000 KB")
+		if rightRate, ok := right.(*types.Rate); ok && operator == "*" {
+			result := leftQty.Value.Mul(rightRate.Amount.Value)
+			return &types.Quantity{Value: result, Unit: leftQty.Unit}, nil
 		}
 		// Quantity op Number (e.g., "10 dogs * 2" = "20 dogs", "5 dogs + 3" = "8 dogs")
 		if rightNum, ok := right.(*types.Number); ok {

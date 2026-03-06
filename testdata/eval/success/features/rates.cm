@@ -65,3 +65,11 @@ cost_per_hour = $0.10/h
 daily_data = 5 GB per day
 qps = 1000 req/s
 processing_rate = 20 apples/sec
+
+# Number * Rate = Rate (scaling)
+scale = 3
+scaled_rate = scale * bandwidth
+scaled_qps = 10 * qps
+
+# Rate * Quantity = Quantity
+total_data = bandwidth * 500 MB

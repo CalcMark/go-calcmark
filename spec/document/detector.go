@@ -330,8 +330,17 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 		if isOperatorToken(second.Type) || second.Type == lexer.LPAREN {
 			return true
 		}
-		// Identifier followed by another identifier = likely prose
+		// Identifier followed by another identifier = likely prose,
+		// EXCEPT NL function patterns: compress <var> using, read <var> from, transfer <var> across
 		if second.Type == lexer.IDENTIFIER {
+			firstLower := strings.ToLower(string(first.Value))
+			if len(tokens) >= 3 {
+				if (firstLower == "compress" && tokens[2].Type == lexer.IDENTIFIER && strings.ToLower(string(tokens[2].Value)) == "using") ||
+					(firstLower == "read" && tokens[2].Type == lexer.FROM) ||
+					(firstLower == "transfer" && tokens[2].Type == lexer.IDENTIFIER && strings.ToLower(string(tokens[2].Value)) == "across") {
+					return true
+				}
+			}
 			return false
 		}
 		// Identifier followed by keyword (like "in", "as") = calculation

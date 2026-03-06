@@ -30,3 +30,9 @@ transfer 1 GB across regional gigabit
 transfer 500 MB across global wifi
 transfer 100 MB across local ten_gig
 transfer 10 GB across continental hundred_gig
+
+## NL functions with variable references
+data = 1 GB
+compress data using gzip
+read data from ssd
+transfer data across regional gigabit

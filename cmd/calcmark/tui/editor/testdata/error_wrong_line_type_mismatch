@@ -1,13 +1,9 @@
-# Bug: Type mismatch error appears on variable definition instead of usage
+# Number * Rate now produces a scaled Rate (e.g., 5 * 10 MB/s = 50 MB/s)
 # Given: b = 5, a = 10 MB/s, c = b * a
-# Error "cannot multiply number by data rate" should appear on line 2 (c = b * a)
-# Actual (bug): Error appears on line 0 (b = 5)
-
-# Initial document with type mismatch
-# EXPECTED: Error on line 2 where c = b * a (the invalid operation)
+# EXPECTED: c = 50 MB/s (number scales the rate)
 run observe=results
 ----
 -- results:
 Line 0 (b = 5): value=5, error=""
 Line 1 (a = 10 MB/s): value=10 MB/s, error=""
-Line 2 (c = b * a): value=, error="eval_error: cannot multiply number (5) and rate (10 MB/s)"
+Line 2 (c = b * a): value=50 MB/s, error=""

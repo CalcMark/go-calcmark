@@ -1092,22 +1092,22 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		name := p.previous()
 		identName := strings.ToLower(string(name.Value))
 
-		// NL function lookahead: "read <qty> from <ident>"
-		if identName == "read" && p.check(lexer.QUANTITY) {
+		// NL function lookahead: "read <qty|var> from <ident>"
+		if identName == "read" && (p.check(lexer.QUANTITY) || p.check(lexer.IDENTIFIER)) {
 			if p.peekAhead(1).Type == lexer.FROM {
 				return p.parseNLReadFunction()
 			}
 		}
 
-		// NL function lookahead: "compress <qty> using <ident>"
-		if identName == "compress" && p.check(lexer.QUANTITY) {
+		// NL function lookahead: "compress <qty|var> using <ident>"
+		if identName == "compress" && (p.check(lexer.QUANTITY) || p.check(lexer.IDENTIFIER)) {
 			if p.peekAhead(1).Type == lexer.IDENTIFIER && strings.ToLower(string(p.peekAhead(1).Value)) == "using" {
 				return p.parseNLCompressFunction()
 			}
 		}
 
-		// NL function lookahead: "transfer <qty> across <ident> <ident>"
-		if identName == "transfer" && p.check(lexer.QUANTITY) {
+		// NL function lookahead: "transfer <qty|var> across <ident> <ident>"
+		if identName == "transfer" && (p.check(lexer.QUANTITY) || p.check(lexer.IDENTIFIER)) {
 			if p.peekAhead(1).Type == lexer.IDENTIFIER && strings.ToLower(string(p.peekAhead(1).Value)) == "across" {
 				return p.parseNLTransferFunction()
 			}

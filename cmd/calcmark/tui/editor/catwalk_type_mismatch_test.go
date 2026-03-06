@@ -12,10 +12,9 @@ import (
 	"github.com/cockroachdb/datadriven"
 )
 
-// TestEditorCatwalkTypeMismatch tests that type mismatch errors appear on the correct line.
-// Bug: Error appears on the line where the variable is defined, not where it's used incorrectly.
+// TestEditorCatwalkTypeMismatch tests Number * Rate produces a scaled Rate.
 func TestEditorCatwalkTypeMismatch(t *testing.T) {
-	// Document with type mismatch: cannot multiply number by data rate
+	// Document with number * rate: 5 * 10 MB/s = 50 MB/s
 	content := `b = 5
 a = 10 MB/s
 c = b * a
@@ -70,9 +69,9 @@ c = b * a
 	})
 }
 
-// TestEditorCatwalkValidValues tests that valid variables show their values even when a later statement has an error.
+// TestEditorCatwalkValidValues tests that Number * Rate shows correct values for all lines.
 func TestEditorCatwalkValidValues(t *testing.T) {
-	// Document with valid variables a and b, but c has type mismatch error
+	// Document with number * rate: 3 * 10 MB/s = 30 MB/s
 	content := `a = 3
 b = 10 MB/s
 c = a * b

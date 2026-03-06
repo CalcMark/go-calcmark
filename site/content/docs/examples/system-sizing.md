@@ -11,29 +11,32 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ---
 
-## User Activity Assumptions
+## User Activity
 
-You start with 10M monthly active users. Assume 40% are active daily. Each user posts about twice a week, so you divide by 7 to get a daily rate.
+Start with 10M monthly active users. A 40% DAU/MAU ratio is typical for an engaged social platform -- Instagram-class engagement. The `% of` syntax reads like plain English.
 
 ```calcmark
 monthly_users = 10M
-daily_active_pct = 0.40
-daily_users = monthly_users * daily_active_pct
+daily_users = 40% of monthly_users
+```
 
-posts_per_user_per_day = 2 / 7
-daily_posts = daily_users * posts_per_user_per_day
+Each user posts about twice per week. Name the variable clearly and divide by 7 to get the daily rate. `as napkin` rounds to two significant figures for quick reference.
+
+```calcmark
+posts_per_user_per_week = 2
+daily_posts = daily_users * posts_per_user_per_week / 7
 daily_posts_napkin = daily_posts as napkin
 ```
 
-`10M` is a multiplier suffix -- CalcMark expands it to 10,000,000. That gives you 4M daily active users generating roughly 1.14M posts per day. The `as napkin` modifier rounds to two significant figures: `~1.1M`.
+That gives 4M daily active users generating ~1.1M posts per day.
 
-**CalcMark features:** Multiplier suffixes (`10M`); `as napkin` for human-readable rounding.
+**CalcMark features:** Multiplier suffixes (`10M`); `% of` for percentages; `as napkin` for human-readable rounding.
 
 ---
 
 ## Read vs Write Ratio
 
-Social media is read-heavy. Users scroll far more than they post. You assume 100 reads per user per day.
+Social media is read-heavy -- users scroll far more than they post. Assume 100 reads per user per day across timeline, profiles, and search.
 
 ```calcmark
 reads_per_user_per_day = 100
@@ -41,7 +44,7 @@ daily_reads = daily_users * reads_per_user_per_day
 read_write_ratio = daily_reads / daily_posts
 ```
 
-That gives 400M daily reads versus ~1.14M daily writes -- a read-to-write ratio of 350:1. This ratio drives your caching and replication strategy.
+400M daily reads versus ~1.14M daily writes -- a read-to-write ratio of 350:1. This ratio drives your caching and replication strategy: invest heavily in read replicas and edge caching.
 
 **CalcMark features:** Plain division for ratios; variable references across sections.
 
@@ -49,7 +52,7 @@ That gives 400M daily reads versus ~1.14M daily writes -- a read-to-write ratio 
 
 ## Traffic Rates
 
-You need per-second rates for capacity planning. CalcMark's rate conversion syntax turns daily totals into rates. Peak traffic is typically 3x average.
+You need per-second rates for capacity planning. CalcMark's rate conversion syntax turns daily totals into rates. Peak traffic is typically 3x average (lunch hour, evening scrolling, breaking news).
 
 ```calcmark
 read_rate = (daily_reads)/day per second
@@ -59,7 +62,7 @@ peak_multiplier = 3
 peak_read_rate = read_rate * peak_multiplier
 ```
 
-The `(value)/day per second` syntax divides the daily total by 86,400 seconds. You get ~4.63K reads/s average, peaking at ~13.89K reads/s. Write rate is a modest ~13.2/s.
+~4.63K reads/s average, peaking at ~13.89K reads/s. Write rate is a modest ~13.2/s -- your bottleneck is reads, not writes.
 
 **CalcMark features:** Rate conversion (`(value)/day per second`); arithmetic on rate values.
 
@@ -67,25 +70,23 @@ The `(value)/day per second` syntax divides the daily total by 86,400 seconds. Y
 
 ## Storage Requirements
 
-Each post is about 2 KB of text and metadata. About 30% of posts include an image averaging 500 KB. CalcMark's `compress()` function estimates gzip compression on the text portion.
+Each post is about 2 KB of text and metadata. 30% of posts include an image averaging 500 KB. CalcMark's `compress()` function estimates gzip compression on the text portion.
 
 ```calcmark
 avg_post_size = 2 KB
 daily_post_storage = daily_posts * avg_post_size
 yearly_post_storage = daily_post_storage * 365
 
-posts_with_media_pct = 0.30
-avg_image_size = 500 KB
-daily_media_storage = daily_posts * posts_with_media_pct * avg_image_size
+daily_media_storage = daily_posts * 30% * 500 KB
 yearly_media_storage = daily_media_storage * 365
 
 compressed_posts = compress(yearly_post_storage, gzip)
 total_yearly_storage = compressed_posts + yearly_media_storage
 ```
 
-Text storage is ~796 GB/year before compression. `compress(yearly_post_storage, gzip)` applies a typical 3:1 gzip ratio, bringing it down to ~265 GB. Media dominates at ~58.3 TB/year. Total yearly storage lands at ~58.5 TB.
+Text storage is ~796 GB/year before compression. `compress()` applies a typical 3:1 gzip ratio, bringing it down to ~265 GB. Media dominates at ~58.3 TB/year. Total yearly storage lands at ~58.5 TB.
 
-**CalcMark features:** Arbitrary units (`KB`, `GB`, `TB`); `compress()` function with compression algorithm argument.
+**CalcMark features:** Data size units (`KB`, `GB`, `TB`); inline `30%` for percentages; `compress()` with compression algorithm argument.
 
 ---
 
@@ -107,24 +108,23 @@ At 13.89K peak reads/s with each server handling 5,000 req/s and a 20% headroom 
 
 ## Storage I/O Performance
 
-A typical database query reads ~5 MB of data. CalcMark's `seek()` and `read()` functions use well-known device characteristics to estimate I/O time across HDD, SSD, and NVMe.
+A typical database query reads ~5 MB of data. CalcMark's `seek()` and `read ... from` syntax uses well-known device characteristics to estimate I/O time across HDD, SSD, and NVMe.
 
 ```calcmark
-query_data = 5 MB
-hdd_query_time = seek(hdd) + read(query_data, hdd)
-ssd_query_time = seek(ssd) + read(query_data, ssd)
-nvme_query_time = seek(nvme) + read(query_data, nvme)
+hdd_query_time = seek(hdd) + read 5 MB from hdd
+ssd_query_time = seek(ssd) + read 5 MB from ssd
+nvme_query_time = seek(nvme) + read 5 MB from nvme
 ```
 
 HDD: ~43 ms. SSD: ~9.2 ms. NVMe: ~1.4 ms. NVMe is 30x faster than HDD for this workload. The right choice for hot data is clear.
 
-**CalcMark features:** `seek()` function for device seek latency; `read()` function for data read time by device type.
+**CalcMark features:** `seek()` for device seek latency; `read ... from` natural language syntax for data read time by device type.
 
 ---
 
 ## Network Latency Budget
 
-You build a latency budget for an API response: network round-trip, database query, and application processing time.
+Build a latency budget for an API response: network round-trip, database query, and application processing time.
 
 ```calcmark
 network_rtt = rtt(regional)
@@ -135,61 +135,58 @@ total_latency = network_rtt + db_query + app_processing
 
 `rtt(regional)` returns 10 ms for a regional network hop. Adding the NVMe query (~1.4 ms) and 10 ms of app processing, your total latency budget is ~21.4 ms. Well under the 100 ms threshold users notice.
 
-**CalcMark features:** `rtt()` function with network distance argument; millisecond units; time addition.
+**CalcMark features:** `rtt()` with network distance argument; millisecond units; time addition.
 
 ---
 
 ## Bandwidth Requirements
 
-Each response averages 10 KB. You multiply by peak read rate to get bandwidth, then compare against standard network link capacities.
+Each response averages 10 KB. The `over` keyword accumulates the peak read rate over one second, then multiplies by response size to get bandwidth.
 
 ```calcmark
-avg_response_kb = 10
-peak_bandwidth_kbs = peak_read_rate * avg_response_kb
-peak_bandwidth_mbs = peak_bandwidth_kbs / 1000
+peak_bandwidth = (peak_read_rate over 1 second) * 10 KB
 
 gigabit_capacity = throughput(gigabit)
 ten_gig_capacity = throughput(ten_gig)
 ```
 
-Peak bandwidth is ~139 MB/s. A single gigabit link handles 125 MB/s -- not enough. A 10-gigabit link at ~1.22 GB/s gives you plenty of headroom.
+Peak bandwidth is ~136 MB/s. A single gigabit link handles 125 MB/s -- not enough. A 10-gigabit link at ~1.22 GB/s gives plenty of headroom.
 
-**CalcMark features:** `throughput()` function for standard network link capacities.
+**CalcMark features:** `over` for rate accumulation; `throughput()` for standard network link capacities.
 
 ---
 
 ## CDN and Caching
 
-With a 95% cache hit target, only 5% of reads hit the origin. You calculate origin traffic and the time to transfer a media file from origin to CDN edge.
+With a 95% cache hit target, only 5% of reads hit the origin. The `transfer ... across` syntax estimates time to push a media file from origin to CDN edge.
 
 ```calcmark
-cache_hit_target = 0.95
-cache_miss_rate = 1 - cache_hit_target
-origin_read_rate = read_rate * cache_miss_rate
+cache_hit_target = 95%
+origin_read_rate = read_rate * (1 - cache_hit_target)
 
-media_transfer = transfer_time(avg_image_size, continental, ten_gig)
+media_transfer = transfer 500 KB across continental ten_gig
 ```
 
-Origin sees ~231 req/s instead of ~4,630 req/s -- a 20x reduction. `transfer_time()` estimates ~50 ms to push a 500 KB image across a continental distance over a 10-gig link.
+Origin sees ~231 req/s instead of ~4,630 req/s -- a 20x reduction. Transfer time is ~50 ms to push a 500 KB image across a continental distance over a 10-gig link.
 
-**CalcMark features:** `transfer_time()` function with data size, distance, and link speed arguments.
+**CalcMark features:** Percentage syntax (`95%`); `transfer ... across` natural language syntax with data size, distance, and link speed.
 
 ---
 
 ## Availability and Downtime
 
-The `downtime()` function converts an availability target into concrete allowed downtime. You compare three nines (99.9%) with four nines (99.99%).
+The `downtime()` function converts an availability target into concrete allowed downtime. CalcMark accepts percentage syntax directly -- `99.9%` instead of `0.999`.
 
 ```calcmark
-monthly_downtime = downtime(0.999, month)
-yearly_downtime = downtime(0.999, year)
+monthly_downtime = downtime(99.9%, month)
+yearly_downtime = downtime(99.9%, year)
 
-strict_monthly_downtime = downtime(0.9999, month)
+strict_monthly_downtime = downtime(99.99%, month)
 ```
 
 Three nines gives you 43.2 minutes/month or 8.76 hours/year of allowed downtime. Four nines shrinks that to just 4.32 minutes/month. The jump from three to four nines is a 10x reduction in error budget.
 
-**CalcMark features:** `downtime()` function with availability target and time period.
+**CalcMark features:** `downtime()` with percentage availability target and time period.
 
 ---
 
@@ -214,17 +211,20 @@ Bottom line: ~58.7 TB of storage per year, 400M daily reads, 5 database servers.
 This example showcases the following CalcMark features:
 
 - **Multiplier suffixes** -- `10M` expands to 10,000,000
+- **Percentage syntax** -- `40%`, `30%`, `95%`, `99.9%` for readable proportions
+- **`% of`** -- `40% of monthly_users` reads like plain English
 - **`as napkin`** -- human-readable rounding to 2 significant figures
 - **Rate conversion** -- `(value)/day per second` for daily-to-per-second rates
+- **`over`** -- `peak_read_rate over 1 second` accumulates a rate over time
 - **Capacity planning** -- `at ... per server with N% buffer`
 - **`compress()`** -- storage compression estimation with algorithm argument
-- **`seek()` and `read()`** -- storage I/O latency by device type (HDD, SSD, NVMe)
+- **`seek()` and `read ... from`** -- storage I/O latency by device type (HDD, SSD, NVMe)
 - **`rtt()`** -- network round-trip time by distance
 - **`throughput()`** -- standard network link capacities
-- **`transfer_time()`** -- data transfer time across distance and link speed
+- **`transfer ... across`** -- data transfer time across distance and link speed
 - **`downtime()`** -- availability target to allowed downtime conversion
-- **Arbitrary units** -- `KB`, `MB`, `GB`, `TB`, `ms`, `req/s`, `server`
-- **Markdown prose** -- headings, paragraphs, and inline comments between calculations
+- **Data size units** -- `KB`, `MB`, `GB`, `TB`, `ms`, `req/s`, `server`
+- **Markdown prose** -- headings, paragraphs, and inline commentary between calculations
 
 ## Try It
 

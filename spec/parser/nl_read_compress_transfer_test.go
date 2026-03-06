@@ -275,6 +275,61 @@ func TestNLFunctionBackwardsCompatibility(t *testing.T) {
 				}
 			},
 		},
+		// === NL functions with variable references ===
+		{
+			name:  "compress variable using algorithm",
+			input: "compress data using gzip\n",
+			checkFunc: func(t *testing.T, nodes []ast.Node) {
+				t.Helper()
+				fc := expectFunctionCall(t, nodes, "compress", 2)
+				if fc == nil {
+					return
+				}
+				ident, ok := fc.Arguments[0].(*ast.Identifier)
+				if !ok {
+					t.Fatalf("Expected Identifier for data arg, got %T", fc.Arguments[0])
+				}
+				if ident.Name != "data" {
+					t.Errorf("Expected data arg 'data', got %q", ident.Name)
+				}
+			},
+		},
+		{
+			name:  "read variable from storage",
+			input: "read data from ssd\n",
+			checkFunc: func(t *testing.T, nodes []ast.Node) {
+				t.Helper()
+				fc := expectFunctionCall(t, nodes, "read", 2)
+				if fc == nil {
+					return
+				}
+				ident, ok := fc.Arguments[0].(*ast.Identifier)
+				if !ok {
+					t.Fatalf("Expected Identifier for data arg, got %T", fc.Arguments[0])
+				}
+				if ident.Name != "data" {
+					t.Errorf("Expected data arg 'data', got %q", ident.Name)
+				}
+			},
+		},
+		{
+			name:  "transfer variable across scope network",
+			input: "transfer data across regional gigabit\n",
+			checkFunc: func(t *testing.T, nodes []ast.Node) {
+				t.Helper()
+				fc := expectFunctionCall(t, nodes, "transfer_time", 3)
+				if fc == nil {
+					return
+				}
+				ident, ok := fc.Arguments[0].(*ast.Identifier)
+				if !ok {
+					t.Fatalf("Expected Identifier for data arg, got %T", fc.Arguments[0])
+				}
+				if ident.Name != "data" {
+					t.Errorf("Expected data arg 'data', got %q", ident.Name)
+				}
+			},
+		},
 		{
 			name:  "using as variable assignment",
 			input: "using = 5\n",

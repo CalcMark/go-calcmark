@@ -459,16 +459,10 @@ monthly_data = avg_session_data * w
 `,
 			expectedUnit: "KB",
 		},
-		{
-			name: "unitless quantity times unitless quantity",
-			input: `a = 1M / month
-b = a over 1 week
-c = 2M / month
-d = c over 1 week
-result = b * d
-`,
-			expectedUnit: "", // both unitless, result is unitless quantity
-		},
+		// NOTE: "unitless quantity times unitless quantity" moved to
+		// TestUnitlessQuantityNormalization — unitless quantities are now
+		// normalized to Numbers at the top of evalBinaryOperation, so the
+		// result is *types.Number, not *types.Quantity.
 	}
 
 	for _, tt := range tests {
@@ -504,6 +498,172 @@ result = b * d
 			}
 
 			t.Logf("Result: %s", qty.String())
+		})
+	}
+}
+
+// TestUnitlessQuantityNormalization verifies that unitless quantities from
+// accumulate/over are normalized to Numbers before type dispatch.
+func TestUnitlessQuantityNormalization(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name: "unitless * unitless gives number",
+			input: `a = 1M / month
+b = a over 1 week
+c = 2M / month
+d = c over 1 week
+result = b * d
+`,
+		},
+		{
+			name: "number / unitless gives number",
+			input: `posts_rate = 2/week
+posts_per_day = posts_rate over 1 day
+result = 400M / posts_per_day
+`,
+		},
+		{
+			name: "unitless * number gives number",
+			input: `posts_rate = 2/week
+posts_per_day = posts_rate over 1 day
+result = posts_per_day * 100
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[len(results)-1]
+			_, ok := result.(*types.Number)
+			if !ok {
+				t.Fatalf("Expected *types.Number, got %T (%v)", result, result)
+			}
+		})
+	}
+}
+
+// TestNumberTimesRate verifies Number * Rate → Rate (commutative).
+func TestNumberTimesRate(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expectedValue string
+		expectedUnit  string
+	}{
+		{
+			name:          "integer * rate",
+			input:         "r = 100/second\nresult = 3 * r\n",
+			expectedValue: "300",
+			expectedUnit:  "/s",
+		},
+		{
+			name:          "fractional * rate",
+			input:         "r = 100 MB/s\nresult = 0.5 * r\n",
+			expectedValue: "50",
+			expectedUnit:  "MB/s",
+		},
+		{
+			name:          "zero * rate",
+			input:         "r = 100/second\nresult = 0 * r\n",
+			expectedValue: "0",
+			expectedUnit:  "/s",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+			result := results[len(results)-1]
+			rate, ok := result.(*types.Rate)
+			if !ok {
+				t.Fatalf("Expected *types.Rate, got %T (%v)", result, result)
+			}
+			if rate.Amount.Value.String() != tt.expectedValue {
+				t.Errorf("Expected amount %s, got %s", tt.expectedValue, rate.Amount.Value.String())
+			}
+			if rate.CompoundUnit() != tt.expectedUnit {
+				t.Errorf("Expected unit %s, got %s", tt.expectedUnit, rate.CompoundUnit())
+			}
+		})
+	}
+}
+
+// TestRateTimesQuantity verifies Rate * Quantity → Quantity and Quantity * Rate → Quantity.
+func TestRateTimesQuantity(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expectedUnit  string
+		expectNonZero bool
+	}{
+		{
+			name:          "rate * quantity",
+			input:         "r = 100/second\nresult = r * 10 KB\n",
+			expectedUnit:  "KB",
+			expectNonZero: true,
+		},
+		{
+			name:          "quantity * rate (commutative)",
+			input:         "r = 100/second\nresult = 10 KB * r\n",
+			expectedUnit:  "KB",
+			expectNonZero: true,
+		},
+		{
+			name:          "zero rate * quantity",
+			input:         "r = 0/second\nresult = r * 10 KB\n",
+			expectedUnit:  "KB",
+			expectNonZero: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+			result := results[len(results)-1]
+			qty, ok := result.(*types.Quantity)
+			if !ok {
+				t.Fatalf("Expected *types.Quantity, got %T (%v)", result, result)
+			}
+			if qty.Unit != tt.expectedUnit {
+				t.Errorf("Expected unit %q, got %q", tt.expectedUnit, qty.Unit)
+			}
+			if tt.expectNonZero && qty.Value.IsZero() {
+				t.Error("Result value should not be zero")
+			}
 		})
 	}
 }
