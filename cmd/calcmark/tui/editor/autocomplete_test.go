@@ -692,3 +692,129 @@ result = total + 10`
 		t.Error("should always suggest built-in constant 'PI'")
 	}
 }
+
+// TestAutocompleteSuppressesFunctionsInsideFunctionCall verifies that function
+// suggestions are suppressed when typing inside a function call's arguments,
+// but variable/unit suggestions still appear.
+// Bug: typing "comp" inside compound($10K, 5%, 10, comp) triggers the popup
+// for the "compound" function, but the user is already inside that call.
+func TestAutocompleteSuppressesFunctionsInsideFunctionCall(t *testing.T) {
+	content := `a = 1`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Simulate typing "compound($10K, 5%, 10, comp" — no closing paren yet
+	// Cursor is at col 27, right after 'p' of the 4th arg "comp"
+	m.cursorLine = 0
+	m.cursorCol = 27
+	m.editBuf = "compound($10K, 5%, 10, comp"
+	m.editBufLoaded = true // prevent loadCurrentLineIntoEditBuffer from overwriting
+
+	// Call updateAutocompleteState which is what triggers after each keystroke
+	m.updateAutocompleteState()
+
+	// "comp" only matches function suggestions (compound), so with function
+	// filtering the popup should not appear at all
+	if m.mode == StateAutocomplete {
+		// Check that no function suggestions leaked through
+		for _, s := range m.autocompleteState.Suggestions {
+			tag := suggestionTag(s.Category)
+			if tag == "fn" || tag == "nl" {
+				t.Errorf("function suggestion %q should be suppressed inside function call", s.InsertText)
+			}
+		}
+	}
+}
+
+// TestAutocompleteVariablesStillShowInsideFunctionCall verifies that variable
+// suggestions still appear when typing inside a function call's arguments.
+func TestAutocompleteVariablesStillShowInsideFunctionCall(t *testing.T) {
+	content := `price = 100
+total = avg(pr`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Simulate typing "avg(pr" — cursor inside avg() call, typing "pr"
+	m.cursorLine = 1
+	m.cursorCol = 14
+	m.editBuf = "total = avg(pr"
+	m.editBufLoaded = true
+
+	m.updateAutocompleteState()
+
+	if m.mode != StateAutocomplete {
+		t.Error("autocomplete popup SHOULD appear for variable 'price' inside function call")
+		return
+	}
+
+	// Verify only non-function suggestions are present
+	for _, s := range m.autocompleteState.Suggestions {
+		tag := suggestionTag(s.Category)
+		if tag == "fn" || tag == "nl" {
+			t.Errorf("function suggestion %q should be suppressed inside function call", s.InsertText)
+		}
+	}
+
+	// Verify 'price' variable is suggested
+	foundPrice := false
+	for _, s := range m.autocompleteState.Suggestions {
+		if s.Category == "variable" && s.InsertText == "price" {
+			foundPrice = true
+		}
+	}
+	if !foundPrice {
+		t.Error("should suggest variable 'price' inside function call")
+	}
+}
+
+// TestAutocompleteNotSuppressedOutsideFunctionCall verifies that the
+// autocomplete popup still appears normally when NOT inside a function call.
+func TestAutocompleteNotSuppressedOutsideFunctionCall(t *testing.T) {
+	content := `comp`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Cursor at end of "comp" — NOT inside any function call
+	m.cursorLine = 0
+	m.cursorCol = 4
+	m.editBuf = "comp"
+
+	m.updateAutocompleteState()
+
+	if m.mode != StateAutocomplete {
+		t.Error("autocomplete popup SHOULD appear when typing 'comp' outside any function call")
+	}
+
+	// Should include function suggestions
+	foundFn := false
+	for _, s := range m.autocompleteState.Suggestions {
+		if suggestionTag(s.Category) == "fn" {
+			foundFn = true
+			break
+		}
+	}
+	if !foundFn {
+		t.Error("function suggestions should appear outside function calls")
+	}
+}

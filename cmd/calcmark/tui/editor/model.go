@@ -939,6 +939,13 @@ func (m *Model) updateAutocompleteState() {
 
 	suggestions := m.suggestionSource.GetSuggestions(prefix)
 
+	// Inside a function call, suppress function/NL suggestions — the status bar
+	// already shows parameter help. Keep variable and unit suggestions.
+	cursorCtx := GetCursorContext(m.editBuf, m.cursorCol)
+	if cursorCtx.InFunctionCall {
+		suggestions = filterNonFunctionSuggestions(suggestions)
+	}
+
 	// No suggestions - dismiss popup if visible
 	if len(suggestions) == 0 {
 		if m.mode == StateAutocomplete {
@@ -961,6 +968,25 @@ func (m *Model) updateAutocompleteState() {
 		PopupWidth:  popupWidth,
 		PopupHeight: popupHeight,
 	}
+}
+
+// isFunctionSuggestion returns true for function and NL example suggestions.
+func isFunctionSuggestion(s components.Suggestion) bool {
+	tag := suggestionTag(s.Category)
+	return tag == "fn" || tag == "nl"
+}
+
+// filterNonFunctionSuggestions removes function and NL example suggestions,
+// keeping only variables and units. Used inside function call arguments where
+// function suggestions would be confusing.
+func filterNonFunctionSuggestions(suggestions []components.Suggestion) []components.Suggestion {
+	filtered := suggestions[:0:0] // new slice, no shared backing
+	for _, s := range suggestions {
+		if !isFunctionSuggestion(s) {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
 }
 
 // calculatePopupDimensions determines the popup size based on suggestions.
