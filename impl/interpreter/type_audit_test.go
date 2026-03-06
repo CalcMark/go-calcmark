@@ -43,8 +43,8 @@ func evalExpr(input string) (types.Type, error) {
 // INTENTIONAL: Math functions that aggregate/transform
 // - operators.go:164      - Rate / Rate -> dimensionless Number (ratio)
 // - operators.go:236      - Number op Number -> Number
-// - functions.go:470      - avg() aggregates to Number
-// - functions.go:494      - sqrt() math function returns Number
+// - functions.go:avg()    - preserves currency when all args same currency
+// - functions.go:sqrt()   - returns Number (dimensionless math transform)
 // - environment.go:40-41  - PI/E constants are Number
 //
 // This test file exercises type preservation across the evaluation chain
@@ -222,12 +222,11 @@ func TestTypePreservationAudit(t *testing.T) {
 	})
 }
 
-// TestIntentionalNumberReturns verifies that math functions intentionally
-// return Number type, not the input type. This is correct behavior for
-// aggregate/transformation functions.
-func TestIntentionalNumberReturns(t *testing.T) {
-	t.Run("avg returns Number (intentional)", func(t *testing.T) {
-		// avg() aggregates multiple values - returns dimensionless Number
+// TestFunctionTypePreservation verifies that aggregate/math functions
+// preserve currency type when all inputs share the same currency,
+// and return plain Number for plain number inputs.
+func TestFunctionTypePreservation(t *testing.T) {
+	t.Run("avg returns Number for plain numbers", func(t *testing.T) {
 		result, err := evalExpr("avg(10, 20, 30)")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -241,8 +240,36 @@ func TestIntentionalNumberReturns(t *testing.T) {
 		}
 	})
 
-	t.Run("sqrt returns Number (intentional)", func(t *testing.T) {
-		// sqrt() is a math transformation - returns dimensionless Number
+	t.Run("avg preserves currency when all args same currency", func(t *testing.T) {
+		result, err := evalExpr("avg($100, $200, $300)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		cur, ok := result.(*types.Currency)
+		if !ok {
+			t.Fatalf("avg($100,$200,$300) should return *types.Currency, got %T", result)
+		}
+		if !cur.Value.Equal(decimal.NewFromInt(200)) {
+			t.Errorf("expected 200, got %v", cur.Value)
+		}
+		if cur.Symbol != "$" {
+			t.Errorf("expected symbol $, got %s", cur.Symbol)
+		}
+	})
+
+	t.Run("avg returns Number for mixed currency and number", func(t *testing.T) {
+		// Mixed types can't preserve currency
+		result, err := evalExpr("avg(100, 200, 300)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		_, ok := result.(*types.Number)
+		if !ok {
+			t.Errorf("avg(mixed) should return *types.Number, got %T", result)
+		}
+	})
+
+	t.Run("sqrt returns Number for plain number", func(t *testing.T) {
 		result, err := evalExpr("sqrt(16)")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -251,7 +278,6 @@ func TestIntentionalNumberReturns(t *testing.T) {
 		if !ok {
 			t.Errorf("sqrt() should return *types.Number, got %T", result)
 		}
-		// sqrt(16) = 4
 		if !num.Value.Equal(decimal.NewFromInt(4)) {
 			t.Errorf("expected 4, got %v", num.Value)
 		}

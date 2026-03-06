@@ -472,6 +472,7 @@ func evalAccumulate(args []types.Type) (types.Type, error) {
 }
 
 // evalAverage calculates the average of numbers.
+// Preserves currency type when all arguments share the same currency.
 func evalAverage(args []types.Type) (types.Type, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("avg() requires at least one argument")
@@ -492,6 +493,11 @@ func evalAverage(args []types.Type) (types.Type, error) {
 	// Calculate average
 	count := len(numbers)
 	avg := sum.Div(decimal.NewFromInt(int64(count)))
+
+	// Preserve currency if all args are the same currency
+	if symbol, ok := uniformCurrency(args); ok {
+		return types.NewCurrency(avg, symbol), nil
+	}
 
 	return types.NewNumber(avg), nil
 }
@@ -518,6 +524,25 @@ func evalSqrt(args []types.Type) (types.Type, error) {
 	result := decimal.NewFromFloat(math.Sqrt(f))
 
 	return types.NewNumber(result), nil
+}
+
+// uniformCurrency returns the shared currency symbol if all args are
+// Currency with the same symbol. Returns ("", false) otherwise.
+func uniformCurrency(args []types.Type) (string, bool) {
+	if len(args) == 0 {
+		return "", false
+	}
+	first, ok := args[0].(*types.Currency)
+	if !ok {
+		return "", false
+	}
+	for _, arg := range args[1:] {
+		c, ok := arg.(*types.Currency)
+		if !ok || c.Symbol != first.Symbol {
+			return "", false
+		}
+	}
+	return first.Symbol, true
 }
 
 // extractNumbers extracts decimal values from typed arguments.
