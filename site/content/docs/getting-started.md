@@ -86,9 +86,9 @@ total_comp = base_salary + bonus
 CalcMark understands physical units and currencies:
 
 ```cm
-distance = 42.195 km
-time = 3 hours + 30 minutes
-pace = time / distance
+marathon_pace = 12.06 km/hour
+race_time = 3 hours + 30 minutes
+distance_covered = marathon_pace over race_time
 
 price_usd = 100 USD
 price_eur = 85 EUR
@@ -105,7 +105,7 @@ We need to account for both development and infrastructure costs.
 
 dev_team = 5
 monthly_salary = $12000
-dev_cost = dev_team * monthly_salary * 6 months
+dev_cost = dev_team * monthly_salary * 6
 
 Infrastructure will be roughly 20% of dev costs.
 

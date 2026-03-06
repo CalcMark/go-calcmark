@@ -245,8 +245,8 @@ Convert between currencies using `in` with exchange rates defined in YAML frontm
 ```yaml
 ---
 exchange:
-  USD/EUR: 0.92
-  EUR/GBP: 0.86
+  USD_EUR: 0.92
+  EUR_GBP: 0.86
 ---
 ```
 
@@ -258,7 +258,7 @@ salary = 50000 EUR
 salary_gbp = salary in GBP
 ```
 
-Exchange rates use the format `FROM/TO: rate` where 1 unit of FROM equals `rate` units of TO.
+Exchange rates use the format `FROM_TO: rate` where 1 unit of FROM equals `rate` units of TO.
 
 ### Global Variables {#global-variables}
 
@@ -478,7 +478,7 @@ CalcMark supports natural language forms for many functions. These are equivalen
 
 The `at...per` syntax is a natural language form for the `capacity()` function:
 
-```cm
+```text
 demand at capacity per unit
 demand at capacity per unit with N% buffer
 ```
@@ -498,7 +498,7 @@ The slash syntax also works: `10 TB at 2 TB/disk`.
 
 The `over` keyword accumulates a rate over a time duration:
 
-```cm
+```text
 rate over duration
 ```
 
@@ -665,7 +665,7 @@ depreciate $50000 by 15% over 5 years to $5000
 Create rates using the slash syntax:
 
 ```cm
-bandwidth = 100 MB/s
+net_bandwidth = 100 MB/s
 salary = $120000/year
 load = 1000 req/s
 ```
@@ -675,8 +675,8 @@ load = 1000 req/s
 Use `over` to calculate the total from a rate over time:
 
 ```cm
-bandwidth = 100 MB/s
-daily_transfer = bandwidth over 1 day
+link_speed = 100 MB/s
+daily_transfer = link_speed over 1 day
 
 hourly_rate = $75/hour
 daily_earnings = hourly_rate over 8 hours

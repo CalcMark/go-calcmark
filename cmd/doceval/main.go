@@ -3,6 +3,9 @@
 // site/data/cm_results.json. Hugo's render-codeblock-cm.html render hook
 // reads this file to display inline results alongside code blocks.
 //
+// All ```cm blocks within the same markdown file share a single interpreter
+// context, so variables defined in earlier blocks are visible to later ones.
+//
 // Invoked by `task generate-docs` before Hugo builds the site.
 package main
 
@@ -54,6 +57,7 @@ func run() error {
 
 	results := make(map[string]BlockResult)
 	df := display.DefaultFormatter()
+	var evalErrors []string
 
 	for _, mdFile := range mdFiles {
 		data, err := os.ReadFile(mdFile)
@@ -62,14 +66,85 @@ func run() error {
 		}
 
 		blocks := extractCMBlocks(string(data))
-		for _, block := range blocks {
-			key := hashKey(block)
-			if _, exists := results[key]; exists {
-				continue // deduplicate identical blocks
+		if len(blocks) == 0 {
+			continue
+		}
+
+		// Pages under docs/examples/ use shared interpreter state so
+		// variables carry across code blocks. All other pages evaluate
+		// each block independently (reference docs reuse variable names).
+		shared := strings.Contains(mdFile, filepath.Join("docs", "examples"))
+
+		if shared {
+			// Extract CalcMark frontmatter from yaml blocks in the markdown
+			frontmatter := extractFrontmatter(string(data))
+
+			// Concatenate all blocks into a single document
+			combined := frontmatter + strings.Join(blocks, "\n\n")
+
+			doc, err := document.NewDocument(combined)
+			if err != nil {
+				evalErrors = append(evalErrors, fmt.Sprintf("  %s: parse error: %s", mdFile, err))
+				continue
 			}
 
-			br := evalBlock(block, df)
-			results[key] = br
+			eval := implDoc.NewEvaluator()
+			if err := eval.Evaluate(doc); err != nil {
+				evalErrors = append(evalErrors, fmt.Sprintf("  %s: eval error: %s", mdFile, err))
+				continue
+			}
+
+			// Collect all statement results
+			var allStmts []stmtResult
+			for _, node := range doc.GetBlocks() {
+				switch block := node.Block.(type) {
+				case *document.CalcBlock:
+					stmts := format.AlignResults(block)
+					for _, stmt := range stmts {
+						sr := stmtResult{source: stmt.Source, isBlank: stmt.IsBlank, variable: stmt.Variable}
+						if stmt.Result != nil {
+							sr.result = df.Format(stmt.Result)
+						}
+						allStmts = append(allStmts, sr)
+					}
+				case *document.TextBlock:
+					for _, line := range block.Source() {
+						allStmts = append(allStmts, stmtResult{
+							source:  line,
+							isBlank: strings.TrimSpace(line) == "",
+						})
+					}
+				}
+			}
+
+			// Map results back to individual blocks
+			stmtIdx := 0
+			for _, block := range blocks {
+				key := hashKey(block)
+				if _, exists := results[key]; exists {
+					lines := strings.Split(block, "\n")
+					for _, line := range lines {
+						if strings.TrimSpace(line) != "" && stmtIdx < len(allStmts) {
+							stmtIdx++
+						}
+					}
+					continue
+				}
+				br := mapBlockResults(block, allStmts, &stmtIdx)
+				results[key] = br
+			}
+		} else {
+			// Independent evaluation: each block is a standalone document.
+			// Errors are expected (blocks may demo frontmatter features) so
+			// they are recorded in the JSON but don't fail the build.
+			for _, block := range blocks {
+				key := hashKey(block)
+				if _, exists := results[key]; exists {
+					continue
+				}
+				br := evalBlockIndependent(block, df)
+				results[key] = br
+			}
 		}
 	}
 
@@ -88,7 +163,135 @@ func run() error {
 	}
 
 	fmt.Printf("Generated %s (%d blocks from %d files)\n", outPath, len(results), len(mdFiles))
+
+	if len(evalErrors) > 0 {
+		fmt.Fprintf(os.Stderr, "\n%d evaluation error(s):\n", len(evalErrors))
+		for _, e := range evalErrors {
+			fmt.Fprintln(os.Stderr, e)
+		}
+		return fmt.Errorf("%d file(s) failed evaluation", len(evalErrors))
+	}
+
 	return nil
+}
+
+// mapBlockResults maps evaluated statement results back to the source lines
+// of a single code block, advancing stmtIdx through the shared result list.
+func mapBlockResults(block string, allStmts []stmtResult, stmtIdx *int) BlockResult {
+	lines := strings.Split(block, "\n")
+	var lineResults []LineResult
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		lr := LineResult{Source: line, IsBlank: trimmed == ""}
+
+		if trimmed == "" {
+			lineResults = append(lineResults, lr)
+			continue
+		}
+
+		if *stmtIdx < len(allStmts) {
+			stmt := allStmts[*stmtIdx]
+			lr.Result = stmt.result
+			lr.Variable = stmt.variable
+			*stmtIdx++
+		}
+		lineResults = append(lineResults, lr)
+	}
+
+	return BlockResult{Lines: lineResults}
+}
+
+// evalBlockIndependent evaluates a single code block as a standalone document.
+func evalBlockIndependent(source string, df display.Formatter) BlockResult {
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		return BlockResult{Error: err.Error()}
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		return BlockResult{Error: err.Error()}
+	}
+
+	var lineResults []LineResult
+	for _, node := range doc.GetBlocks() {
+		switch block := node.Block.(type) {
+		case *document.CalcBlock:
+			stmts := format.AlignResults(block)
+			for _, stmt := range stmts {
+				lr := LineResult{Source: stmt.Source, IsBlank: stmt.IsBlank, Variable: stmt.Variable}
+				if stmt.Result != nil {
+					lr.Result = df.Format(stmt.Result)
+				}
+				lineResults = append(lineResults, lr)
+			}
+		case *document.TextBlock:
+			for _, line := range block.Source() {
+				lineResults = append(lineResults, LineResult{
+					Source:  line,
+					IsBlank: strings.TrimSpace(line) == "",
+				})
+			}
+		}
+	}
+
+	return BlockResult{Lines: lineResults}
+}
+
+// stmtResult holds a single evaluated statement result (package-level for mapBlockResults).
+type stmtResult struct {
+	source   string
+	result   string
+	isBlank  bool
+	variable string
+}
+
+// extractFrontmatter scans for ```yaml blocks containing CalcMark frontmatter
+// (exchange rates, globals) and returns them as a CalcMark frontmatter string.
+// This allows cm blocks that depend on frontmatter to evaluate correctly.
+func extractFrontmatter(markdown string) string {
+	lines := strings.Split(markdown, "\n")
+	var yamlBlocks []string
+
+	inYaml := false
+	var current []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !inYaml {
+			if trimmed == "```yaml" {
+				inYaml = true
+				current = nil
+				continue
+			}
+		} else {
+			if trimmed == "```" {
+				inYaml = false
+				block := strings.Join(current, "\n")
+				// Only include blocks with CalcMark frontmatter keys
+				if strings.Contains(block, "exchange:") || strings.Contains(block, "globals:") {
+					// Strip the --- delimiters if present, we'll add our own
+					block = strings.TrimSpace(block)
+					block = strings.TrimPrefix(block, "---")
+					block = strings.TrimSuffix(block, "---")
+					block = strings.TrimSpace(block)
+					if block != "" {
+						yamlBlocks = append(yamlBlocks, block)
+					}
+				}
+				current = nil
+			} else {
+				current = append(current, line)
+			}
+		}
+	}
+
+	if len(yamlBlocks) == 0 {
+		return ""
+	}
+
+	return "---\n" + strings.Join(yamlBlocks, "\n") + "\n---\n"
 }
 
 // extractCMBlocks pulls all ```cm fenced code block contents from markdown.
@@ -138,44 +341,6 @@ func hashKey(content string) string {
 	normalized := strings.TrimSpace(strings.Join(lines, "\n"))
 	h := sha256.Sum256([]byte(normalized))
 	return fmt.Sprintf("%x", h)
-}
-
-// evalBlock evaluates a CalcMark code block and returns structured results.
-func evalBlock(source string, df display.Formatter) BlockResult {
-	doc, err := document.NewDocument(source)
-	if err != nil {
-		return BlockResult{Error: err.Error()}
-	}
-
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		return BlockResult{Error: err.Error()}
-	}
-
-	var lineResults []LineResult
-	for _, node := range doc.GetBlocks() {
-		switch block := node.Block.(type) {
-		case *document.CalcBlock:
-			stmts := format.AlignResults(block)
-			for _, stmt := range stmts {
-				lr := LineResult{Source: stmt.Source, IsBlank: stmt.IsBlank, Variable: stmt.Variable}
-				if stmt.Result != nil {
-					lr.Result = df.Format(stmt.Result)
-				}
-				lineResults = append(lineResults, lr)
-			}
-		case *document.TextBlock:
-			// Markdown lines within a cm block (e.g., prose between calculations)
-			for _, line := range block.Source() {
-				lineResults = append(lineResults, LineResult{
-					Source:  line,
-					IsBlank: strings.TrimSpace(line) == "",
-				})
-			}
-		}
-	}
-
-	return BlockResult{Lines: lineResults}
 }
 
 func main() {
