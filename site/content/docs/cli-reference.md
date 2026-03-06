@@ -28,7 +28,7 @@ cm completion [shell] # Generate shell completions
 | `--format` | `text`, `json`, `html`, `md`, `cm` | Output format when stdin is piped (default: `text`) |
 | `--verbose` / `-v` | | Show all intermediate values when stdin is piped |
 
-The `--color-mode` flag is available on all commands. When set to `auto` (default), CalcMark detects the terminal background color. Use `light` or `dark` to override.
+The `--color-mode` flag is available on all commands. Use `light` or `dark` to match your terminal background. The value `auto` is accepted but deprecated and treated as `dark`.
 
 The `--locale` flag controls decimal and thousands separators in output. See [Configuration: Display Locale](/docs/configuration/#locale) for details.
 
@@ -251,8 +251,6 @@ Browse CalcMark's built-in functions and unit constants.
 ```bash
 cm functions          # Show all functions
 cm constants          # Show all unit constants
-cm help functions     # Also works (Cobra routes help <topic>)
-cm help constants     # Also works
 ```
 
 ---
@@ -263,9 +261,11 @@ Print the CalcMark version and build time.
 
 ```bash
 cm version
-# CalcMark v0.8.0
-#   built: 2026-02-20T10:30:00Z
+# CalcMark v1.5.0
+#   built: 2026-03-06T19:40:55Z
 ```
+
+The version and build time reflect the installed release. Development builds show `CalcMark dev`.
 
 ---
 

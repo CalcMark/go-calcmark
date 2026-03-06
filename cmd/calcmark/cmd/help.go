@@ -51,8 +51,8 @@ func printFunctions() {
 	// Get functions by category
 	byCategory := interpreter.GetFunctionsByCategory()
 
-	// Define category order for consistent output
-	categoryOrder := []string{"Math", "Conversion", "Network", "Storage", "Capacity"}
+	// Derive category order from registered functions (no hardcoded list to drift)
+	categoryOrder := interpreter.GetCategoryOrder()
 
 	for _, category := range categoryOrder {
 		functions, ok := byCategory[category]

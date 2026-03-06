@@ -129,3 +129,4 @@ See [Sharing with GitHub Gist](/docs/user-guide/#sharing-gist) in the User Guide
 - Read the full [User Guide]({{< ref "docs/user-guide" >}}) for all features
 - Explore the [Examples]({{< ref "docs/examples" >}}) to see CalcMark in action
 - Check the [Language Reference]({{< ref "docs/language-reference" >}}) for the formal specification
+- Use CalcMark from code or AI agents -- see [Agent & API Integration]({{< ref "docs/agent-integration" >}})

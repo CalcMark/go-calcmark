@@ -75,6 +75,42 @@ A CalcMark document is a sequence of **lines**. Each line is independently:
 
 ---
 
+## Frontmatter
+
+A CalcMark document can begin with a YAML frontmatter block delimited by `---`. Frontmatter defines document-level configuration that is available to all calculations.
+
+### Exchange Rates
+
+Define currency conversion rates using `FROM_TO: rate` format (underscore separator):
+
+```yaml
+---
+exchange:
+  USD_EUR: 0.92
+  EUR_GBP: 0.86
+  USD_GBP: 0.79
+  GBP_USD: 1.27
+---
+```
+
+Rates are not automatically reversed. If you define `USD_EUR`, you must also define `EUR_USD` to convert in the other direction.
+
+### Global Variables
+
+Define values available throughout the document:
+
+```yaml
+---
+globals:
+  tax_rate: 0.32
+  base_price: $100
+  start_date: Jan 15 2025
+  bandwidth: 100 MB/s
+---
+```
+
+Globals support all CalcMark literal types (numbers, currencies, quantities, dates, durations, rates, booleans, percentages). Expressions like `1 + 1` are not allowed -- only literal values.
+
 ## Line Classification
 
 ### Classification Rules
@@ -118,7 +154,10 @@ z = unknown * 2     -> MARKDOWN (unknown is undefined)
 ```
 Statement       ::= Assignment | Expression
 Assignment      ::= IDENTIFIER "=" Expression
-Expression      ::= Comparison
+Expression      ::= Or
+Or              ::= And ("or" And)*
+And             ::= Not ("and" Not)*
+Not             ::= "not" Not | Comparison
 Comparison      ::= Additive (ComparisonOp Additive)?
 ComparisonOp    ::= ">" | "<" | ">=" | "<=" | "==" | "!="
 Additive        ::= Multiplicative (("+"|"-") Multiplicative)*
@@ -134,10 +173,12 @@ From **highest** to **lowest**:
 
 1. Parentheses `()`
 2. Exponentiation `^` (right-associative)
-3. Unary `-`, `+` (prefix)
+3. Unary `-`, `+`, `not` (prefix)
 4. Multiplicative `*`, `/`, `%` (left-associative)
 5. Additive `+`, `-` (left-associative)
 6. Comparison `>`, `<`, `>=`, `<=`, `==`, `!=` (non-associative)
+7. Logical AND `and` (left-associative)
+8. Logical OR `or` (left-associative)
 
 ---
 
@@ -206,7 +247,16 @@ Quantity + Currency -> ERROR (incompatible types)
 10K             -> 10000
 5M              -> 5000000
 2B              -> 2000000000
+1.5T            -> 1500000000000
 1.5K            -> 1500
+```
+
+#### Scientific Notation
+
+```cm
+1.2e10          -> 12000000000 (displayed as 12B)
+5e3             -> 5000
+2.5e-2          -> 0.025
 ```
 
 #### Currency
@@ -222,6 +272,14 @@ $ 100           Invalid (no space between symbol and number)
 ```
 
 **Supported symbols:** `$`, `€`, `£`, `¥`
+
+Currency codes also work as postfix syntax:
+
+```cm
+100 USD         -> $100.00
+50 EUR          -> €50.00
+25 GBP          -> £25.00
+```
 
 #### Percentages
 
@@ -249,6 +307,24 @@ True, FALSE     Any case
 10 meters       Quantity: 10 in meters
 5 kg            Quantity: 5 in kilograms
 100 MB          Quantity: 100 in megabytes
+```
+
+#### Arbitrary Units
+
+Any identifier following a number becomes a unit. CalcMark does not require units to be predefined:
+
+```cm
+5 apples        Quantity: 5 apples
+1000 req/s      Rate: 1000 requests per second
+10 servers      Quantity: 10 servers
+```
+
+Arithmetic with matching arbitrary units preserves the unit. Mismatched arbitrary units produce an error:
+
+```cm
+5 apples + 3 apples    -> 8 apples
+10 servers * 2         -> 20 servers
+5 apples + 3 oranges   -> ERROR (incompatible units)
 ```
 
 #### Rates
@@ -329,7 +405,6 @@ area = PI * radius ^ 2
 | `+` | Add | `5 + 3` | `8` | Left |
 | `-` | Subtract | `5 - 3` | `2` | Left |
 
-**Multiply aliases:** `*`, `x`, `X` (when following a number)
 
 ### Comparison
 
@@ -348,6 +423,7 @@ area = PI * radius ^ 2
 |----------|------|---------|--------|
 | `-` | Negation | `-5` | `-5` |
 | `+` | Plus | `+5` | `5` |
+| `not` | Logical NOT | `not true` | `false` |
 
 ### Assignment
 
@@ -392,6 +468,20 @@ read, seek, compress, compound, grow, depreciate
 
 ```
 in, as, of, per, over, at, from, with, napkin, precise
+```
+
+### Contextual Keywords
+
+These words have special meaning in specific syntactic positions but are not reserved as variable names:
+
+```
+by, compounded, buffer, to
+```
+
+```cm
+compound $1000 by 5% compounded monthly over 10   (by, compounded)
+10000 req/s at 500 per server with 20% buffer      (buffer)
+depreciate $50000 by 15% over 5 to $5000           (to)
 ```
 
 ---

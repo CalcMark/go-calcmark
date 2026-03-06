@@ -18,6 +18,7 @@ cm testdata/examples/<filename>.cm
 - [Recipe Scaling](recipe-scaling/) -- Unit conversions and proportional scaling
 - [System Sizing](system-sizing/) -- Infrastructure capacity planning
 - [Datacenter Build Cost](datacenter-cost/) -- Full lifecycle cost analysis with growth, depreciation, and exchange rates
+- [Investment & Growth](investment-growth/) -- Compound growth, depreciation, and linear growth for financial modeling
 
 ## Feature Reference
 

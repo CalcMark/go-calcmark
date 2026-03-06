@@ -56,6 +56,20 @@ func GetFunctionsByCategory() map[string][]FunctionInfo {
 	return result
 }
 
+// GetCategoryOrder returns category names in their registration order
+// (first-occurrence order from BuiltinFunctions).
+func GetCategoryOrder() []string {
+	seen := make(map[string]bool)
+	var order []string
+	for _, fn := range BuiltinFunctions {
+		if !seen[fn.Category] {
+			seen[fn.Category] = true
+			order = append(order, fn.Category)
+		}
+	}
+	return order
+}
+
 // GetFunctionNames returns all function names including synonyms.
 // Reads from BuiltinFunctions (single source of truth).
 func GetFunctionNames() []string {

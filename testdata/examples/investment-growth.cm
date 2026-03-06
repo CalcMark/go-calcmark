@@ -1,14 +1,3 @@
----
-title: "Investment & Growth"
-summary: "Compound growth, depreciation, and linear growth for financial and business modeling."
-weight: 10
----
-
-Model investment returns, asset depreciation, and business growth using CalcMark's growth functions.
-
-## The CalcMark File
-
-````cm
 # Investment Growth
 
 ## Retirement Savings
@@ -49,22 +38,3 @@ depreciate $80000 by 25% over 10 years to $2000
 
 # Office furniture
 furniture = depreciate($15000, 15%, 7)
-````
-
-### What This Demonstrates
-
-- `compound()` for exponential growth with percentage rates
-- Financial compounding frequencies (`compounded monthly`, `compounded quarterly`)
-- `grow()` for linear (additive) growth with fixed increments
-- `depreciate()` for declining-balance depreciation
-- Salvage floor with the `to` keyword in NL form
-- Quantities with arbitrary units (`customers`, `users`, `subscribers`)
-- Both functional and natural language syntax
-
-## Try It
-
-{{< repo-file path="testdata/examples/investment-growth.cm" >}}
-
-```bash
-cm testdata/examples/investment-growth.cm
-```

@@ -52,6 +52,9 @@ menus:
     - name: CLI Reference
       url: /docs/cli-reference/
       weight: 35
+    - name: Agent & API Integration
+      url: /docs/agent-integration/
+      weight: 36
     - name: Configuration
       url: /docs/configuration/
       weight: 40

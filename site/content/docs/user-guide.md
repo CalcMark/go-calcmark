@@ -56,12 +56,18 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Ctrl+Y | Redo last change |
 | Ctrl+K | Delete current line |
 | Ctrl+F | Add YAML frontmatter |
+| Ctrl+A | Select all |
+| Ctrl+C | Copy selection |
+| Ctrl+X | Cut selection |
+| Ctrl+V | Paste |
+| Ctrl+Backspace | Delete word |
 
 ### View {#shortcuts-view}
 
 | Shortcut | Action |
 |----------|--------|
 | Ctrl+P | Cycle preview mode |
+| Ctrl+H / F1 | Open command menu |
 
 ### Navigation {#shortcuts-navigation}
 
@@ -71,8 +77,10 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Opt+Right / Opt+F | Move to next word |
 | Ctrl+Home | Jump to document start |
 | Ctrl+End | Jump to document end |
+| Ctrl+Left / Ctrl+Right | Move word left/right |
 | Ctrl+D | Scroll down half page |
 | Ctrl+U | Scroll up half page |
+| Shift+Arrow | Extend selection |
 
 ## Locale Formatting {#locale-formatting}
 
@@ -202,17 +210,18 @@ Open the command menu, select **Open From Gist**, then paste a Gist URL or ID. C
 
 CalcMark supports a wide range of units across categories:
 
-- **Length**: m, km, ft, mi, in, cm, mm
-- **Mass**: kg, g, lb, oz
-- **Volume**: L, mL, gal, cup, tbsp, tsp
+- **Length**: m, cm, mm, km, in, ft, yd, mi, nmi (nautical mile)
+- **Mass**: mg, g, kg, metric ton (t), oz, lb
+- **Volume**: mL, L, tsp, tbsp, cup, pt, qt, gal
 - **Time**: second, minute, hour, day, week, month, year
 - **Temperature**: C, F, K
-- **Data**: byte, KB, MB, GB, TB
-- **Area**: m2, ft2, km2, acre
-- **Speed**: mph, km/h, m/s
-- **Data Rate**: Mbps, Gbps
+- **Energy**: J, kJ, cal, kcal, kWh
+- **Power**: W, kW, MW, hp
+- **Area**: cm2, m2, km2, ha, in2, ft2, yd2, mi2, acre
+- **Speed**: m/s, km/h, mph, knot
+- **Data**: byte, KB, MB, GB, TB (arbitrary units)
 
-Run `cm help constants` for the complete list.
+Run `cm constants` for the complete list with aliases and descriptions.
 
 ### Unit Conversion {#unit-conversion}
 
@@ -525,7 +534,7 @@ rtt(global)         -> 150 ms   (worldwide)
 
 ```cm
 throughput(gigabit)      -> 125 MB/s
-throughput(ten_gig)      -> 1250 MB/s
+throughput(ten_gig)      -> 1.22 GB/s
 throughput(hundred_gig)  -> 12500 MB/s
 throughput(wifi)         -> 12.5 MB/s
 throughput(four_g)       -> 2.5 MB/s
@@ -573,11 +582,12 @@ seek(hdd)       -> 10 ms
 #### Compression
 
 ```cm
-compress(1 GB, gzip)     -> ~333 MB  (3:1 ratio)
-compress(1 GB, lz4)      -> ~500 MB  (2:1 ratio)
-compress(1 GB, zstd)     -> ~286 MB  (3.5:1 ratio)
-compress(1 GB, bzip2)    -> ~250 MB  (4:1 ratio)
-compress(1 GB, snappy)   -> ~400 MB  (2.5:1 ratio)
+compress(1 GB, gzip)     -> 333 MB   (3:1 ratio)
+compress(1 GB, lz4)      -> 512 MB   (2:1 ratio)
+compress(1 GB, zstd)     -> 293 MB   (3.5:1 ratio)
+compress(1 GB, bzip2)    -> 250 MB   (4:1 ratio)
+compress(1 GB, snappy)   -> 400 MB   (2.5:1 ratio)
+compress(1 GB, none)     -> 1 GB     (1:1, no compression)
 
 compress 1 GB using gzip (NL form)
 ```
@@ -707,7 +717,7 @@ launch = deadline - 2 weeks
 #### The `from` Keyword
 
 ```cm
-7 days from Dec 25       -> Jan 1 2026
+7 days from Jan 1 2025   -> Wednesday, January 8, 2025
 2 weeks from today       -> (today + 14 days)
 ```
 
@@ -720,9 +730,9 @@ The `as napkin` modifier rounds results to 2 significant figures and normalizes 
 **Works with:** Number, Quantity, Currency, Duration, Rate
 
 ```cm
-432000 MB as napkin                 -> ~400 GB
-100 MB/s over 30 days as napkin    -> ~300 TB
-86400 seconds as napkin             -> ~1 day
+432000 MB as napkin                 -> ~420 GB
+100 MB/s over 30 days as napkin    -> ~248 TB
+$1234567 as napkin                  -> ~$1.2M
 ```
 
 This is useful for quick back-of-the-envelope calculations where exact precision is not needed.
@@ -909,7 +919,7 @@ Press **Ctrl+P** in the editor to toggle the preview pane, which shows evaluated
 
 ### Get Help on Functions {#tip-help}
 
-Run `cm help functions` to see all available functions with descriptions and usage patterns. Run `cm help constants` for unit constants.
+Run `cm functions` to see all available functions with descriptions and usage patterns. Run `cm constants` for unit constants.
 
 ## Troubleshooting {#troubleshooting}
 

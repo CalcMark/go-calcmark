@@ -5,6 +5,7 @@ current_requests = 10000 req/s
 current_servers = 25
 
 ## Growth Projection
+growth_rate = 0.25
 projected = current_requests * (1 + growth_rate)
 
 ## Capacity Math

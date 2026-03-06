@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/CalcMark/go-calcmark/impl/interpreter"
 )
 
 // TestHelpFunctionsOutput verifies that help functions shows all function names.
@@ -20,22 +22,15 @@ func TestHelpFunctionsOutput(t *testing.T) {
 		t.Error("missing 'CalcMark Functions' header")
 	}
 
-	// Verify all 12 function names are present
-	expectedFunctions := []string{
-		"avg", "sqrt", "accumulate", "convert_rate",
-		"downtime", "rtt", "throughput", "transfer_time",
-		"read", "seek", "compress", "capacity",
-	}
-
-	for _, fn := range expectedFunctions {
-		if !strings.Contains(output, fn) {
-			t.Errorf("function %q not found in output", fn)
+	// Verify every registered function name appears in the output
+	for _, fn := range interpreter.GetAllFunctions() {
+		if !strings.Contains(output, fn.Name) {
+			t.Errorf("function %q not found in output", fn.Name)
 		}
 	}
 
-	// Verify categories are present
-	expectedCategories := []string{"Math", "Conversion", "Network", "Storage", "Capacity"}
-	for _, cat := range expectedCategories {
+	// Verify every category from the registry appears in the output
+	for _, cat := range interpreter.GetCategoryOrder() {
 		if !strings.Contains(output, cat) {
 			t.Errorf("category %q not found in output", cat)
 		}
