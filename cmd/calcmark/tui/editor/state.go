@@ -65,7 +65,14 @@ func (m *Model) transitionToReady() {
 			// block iteration loops handle empty slices gracefully, and the user
 			// can fix the frontmatter to restore a valid state.
 		} else {
-			m.doc, _ = document.NewDocument("\n")
+			newDoc, err := document.NewDocument("\n")
+			if err != nil {
+				// Should never happen for a literal newline, but surface it defensively
+				m.statusMsg = "Internal error creating empty document"
+				m.statusIsErr = true
+			} else {
+				m.doc = newDoc
+			}
 		}
 	}
 

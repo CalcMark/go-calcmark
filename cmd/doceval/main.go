@@ -136,9 +136,8 @@ func calcmarkBuildMode(content string) string {
 		if line == "---" {
 			break
 		}
-		if strings.HasPrefix(line, "calcmark_build:") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "calcmark_build:"))
-			if val == "progressive" {
+		if val, ok := strings.CutPrefix(line, "calcmark_build:"); ok {
+			if strings.TrimSpace(val) == "progressive" {
 				return "progressive"
 			}
 		}
@@ -194,7 +193,7 @@ func evalProgressive(content string, blocks []string, results map[string]BlockRe
 		key := hashKey(block)
 		if _, exists := results[key]; exists {
 			// Skip statements for duplicate blocks
-			for _, line := range strings.Split(block, "\n") {
+			for line := range strings.SplitSeq(block, "\n") {
 				if strings.TrimSpace(line) != "" && stmtIdx < len(allStmts) {
 					stmtIdx++
 				}

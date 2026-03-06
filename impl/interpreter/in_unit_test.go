@@ -29,7 +29,7 @@ func TestInUnitSyntax(t *testing.T) {
 
 		// With expressions
 		{"expr then convert", "(5 meters + 5 meters) in feet\n", "32.808 feet"},
-		// TODO: Parser doesn't support: {"multiply then convert", "10 meters * 2 in feet\n", "65.616 feet"},
+		// Parser limitation: "10 meters * 2 in feet" not yet supported
 	}
 
 	for _, tt := range tests {

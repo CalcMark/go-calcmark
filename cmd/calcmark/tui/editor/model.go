@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"charm.land/bubbles/v2/filepicker"
@@ -122,16 +121,6 @@ const scrollMargin = 3
 // evalDebounceMsg is sent after the debounce delay to trigger evaluation.
 type evalDebounceMsg struct {
 	editBufSnapshot string // Snapshot of editBuf when timer was started
-}
-
-// alignedCacheKey stores the inputs that determine aligned pane output.
-// Used to avoid recomputing alignment when nothing has changed.
-type alignedCacheKey struct {
-	contentHash uint64      // Hash of document content
-	cursorLine  int         // Cursor position affects highlighting
-	previewMode PreviewMode // Affects rendering
-	totalLines  int         // Quick check for document changes
-	editBuf     string      // EditBuf changes should invalidate cache
 }
 
 // shareResultMsg carries the result of a Share To Gist operation.
@@ -277,7 +266,6 @@ type Model struct {
 	userIsTyping    bool            // True when user is actively typing (for debounce)
 	editBuf         string          // Buffer for line being edited
 	editBufLoaded   bool            // True when editBuf has been loaded for current line (distinguishes "" from "not loaded")
-	lineWrap        bool            // Whether to wrap long lines
 	changedBlockIDs map[string]bool // Track changed blocks for highlighting
 
 	// Undo/redo - UndoManager handles operation-based undo/redo with timer grouping
@@ -333,11 +321,6 @@ type Model struct {
 	// Keybindings
 	keys shared.KeyMap
 
-	// Cached alignment model - computed once and invalidated on changes
-	alignedCache       *AlignedModel
-	alignedCacheKey    alignedCacheKey // Key for cache validation
-	alignedCacheWidths [2]int          // [sourceWidth, previewWidth] used for cache
-
 	// Autocomplete state
 	autocompleteState components.AutosuggestState
 	suggestionSource  components.SuggestionSource
@@ -378,7 +361,6 @@ func New(doc *document.Document) Model {
 		width:               80,
 		height:              24,
 		previewMode:         PreviewFull,
-		lineWrap:            true,
 		styles:              config.GetStyles(),
 		keys:                shared.DefaultKeyMap(),
 		selectionAnchorLine: -1, // No selection initially
@@ -578,7 +560,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.WindowSizeMsg:
 			m.width = msg.Width
 			m.height = msg.Height
-			m.InvalidateAlignedCache()
 		default:
 			// Pass other messages to filepicker (e.g., directory read results)
 			var cmd tea.Cmd
@@ -600,7 +581,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.InvalidateAlignedCache()
 
 	case evalDebounceMsg:
 		// Only evaluate if editBuf hasn't changed since the timer was started
@@ -791,329 +771,4 @@ func truncateStr(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
-}
-
-// ========================================
-// Autocomplete functions
-// ========================================
-
-// handleAutocompleteKey processes keys when autocomplete popup is visible.
-// IMPORTANT: Typing continues to work normally - we just update suggestions.
-func (m Model) handleAutocompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "up":
-		if m.autocompleteState.Selected > 0 {
-			m.autocompleteState.Selected--
-		}
-		return m, nil
-	case "down":
-		if m.autocompleteState.Selected < len(m.autocompleteState.Suggestions)-1 {
-			m.autocompleteState.Selected++
-		}
-		return m, nil
-	case "esc":
-		// Dismiss autocomplete without inserting
-		m.exitAutocomplete()
-		return m, nil
-	case "tab":
-		// Accept current selection
-		return m.acceptAutocomplete()
-	case "backspace":
-		// Allow backspace to edit the prefix
-		// Capture state BEFORE the edit for undo
-		beforeLine := m.cursorLine
-		beforeCol := m.cursorCol
-		beforeScroll := m.scrollOffset
-
-		m.transitionToEditing()
-		if m.cursorCol > 0 && runeLen(m.editBuf) > 0 {
-			// Delete character before cursor (UTF-8 safe)
-			var deletedChar string
-			m.editBuf, deletedChar = runeDelete(m.editBuf, m.cursorCol-1, 1)
-			m.cursorCol--
-
-			// Record the delete operation for undo
-			op := EditOperation{
-				Type:         OpDelete,
-				Line:         beforeLine,
-				Col:          m.cursorCol, // Position where deletion occurred (rune position)
-				OldText:      deletedChar,
-				NewText:      "",
-				CursorLine:   beforeLine,
-				CursorCol:    beforeCol,
-				ScrollOffset: beforeScroll,
-			}
-			undoCmd := m.recordEdit(op)
-
-			// Update suggestions with new prefix (use pointer to modify)
-			m.updateAutocompleteState()
-			debounceModel, debounceCmd := m.debounceUpdate()
-			return debounceModel, tea.Batch(debounceCmd, undoCmd)
-		}
-		// If no character to delete, just update autocomplete state
-		m.updateAutocompleteState()
-		return m.debounceUpdate()
-	case "space":
-		// Space typically ends a word - dismiss and insert space
-		m.exitAutocomplete()
-		return m.handleRuneInput([]rune{' '})
-	case "enter":
-		// Enter accepts if there's a selection, otherwise just inserts newline
-		if len(m.autocompleteState.Suggestions) > 0 {
-			return m.acceptAutocomplete()
-		}
-		m.exitAutocomplete()
-		return m.handleEnterKey()
-	default:
-		if msg.Text != "" {
-			// Continue typing - insert characters and update suggestions
-			// Capture state BEFORE the edit for undo
-			beforeLine := m.cursorLine
-			beforeCol := m.cursorCol
-			beforeScroll := m.scrollOffset
-
-			m.transitionToEditing()
-			for _, r := range msg.Text {
-				m.insertRune(r)
-			}
-
-			// Record the insert operation for undo
-			insertText := msg.Text
-			op := EditOperation{
-				Type:         OpInsert,
-				Line:         beforeLine,
-				Col:          beforeCol,
-				OldText:      "",
-				NewText:      insertText,
-				CursorLine:   beforeLine,
-				CursorCol:    beforeCol,
-				ScrollOffset: beforeScroll,
-			}
-			undoCmd := m.recordEdit(op)
-
-			// Update suggestions with new prefix (use pointer to modify)
-			m.updateAutocompleteState()
-			debounceModel, debounceCmd := m.debounceUpdate()
-			return debounceModel, tea.Batch(debounceCmd, undoCmd)
-		}
-		// Navigation and other keys dismiss autocomplete
-		m.exitAutocomplete()
-		return m.handleDefaultKey(msg)
-	}
-}
-
-// triggerAutocomplete initiates autocomplete mode (called explicitly by TAB).
-func (m Model) triggerAutocomplete() (tea.Model, tea.Cmd) {
-	m.updateAutocompleteState()
-	return m, nil
-}
-
-// minAutocompletePrefix is the minimum number of characters needed to trigger autosuggest.
-const minAutocompletePrefix = 2
-
-// updateAutocompleteState checks for suggestions at current prefix and updates popup state.
-// This is called after every character typed to show/hide the popup automatically.
-// Uses pointer receiver because it modifies mode and autocompleteState.
-func (m *Model) updateAutocompleteState() {
-	// Extract word prefix at cursor position
-	prefix := m.getCurrentWordPrefix()
-
-	// Require at least 2 characters to reduce visual noise
-	if len(prefix) < minAutocompletePrefix {
-		if m.mode == StateAutocomplete {
-			m.mode = StateDefault
-			m.autocompleteState = components.AutosuggestState{}
-		}
-		return
-	}
-
-	// Check if we have a suggestion source
-	if m.suggestionSource == nil {
-		return
-	}
-
-	// Update variable source with current cursor position for position-aware filtering
-	if m.varSource != nil {
-		m.varSource.CursorLine = m.cursorLine
-	}
-
-	suggestions := m.suggestionSource.GetSuggestions(prefix)
-
-	// Inside a function call, suppress function/NL suggestions — the status bar
-	// already shows parameter help. Keep variable and unit suggestions.
-	cursorCtx := GetCursorContext(m.editBuf, m.cursorCol)
-	if cursorCtx.InFunctionCall {
-		suggestions = filterNonFunctionSuggestions(suggestions)
-	}
-
-	// No suggestions - dismiss popup if visible
-	if len(suggestions) == 0 {
-		if m.mode == StateAutocomplete {
-			m.mode = StateDefault
-			m.autocompleteState = components.AutosuggestState{}
-		}
-		return
-	}
-
-	// Calculate popup position based on cursor
-	popupWidth, popupHeight := m.calculatePopupDimensions(suggestions)
-
-	// We have suggestions - show/update the popup
-	m.mode = StateAutocomplete
-	m.autocompleteState = components.AutosuggestState{
-		Suggestions: suggestions,
-		Selected:    0,
-		Visible:     true,
-		Prefix:      prefix,
-		PopupWidth:  popupWidth,
-		PopupHeight: popupHeight,
-	}
-}
-
-// isFunctionSuggestion returns true for function and NL example suggestions.
-func isFunctionSuggestion(s components.Suggestion) bool {
-	tag := suggestionTag(s.Category)
-	return tag == "fn" || tag == "nl"
-}
-
-// filterNonFunctionSuggestions removes function and NL example suggestions,
-// keeping only variables and units. Used inside function call arguments where
-// function suggestions would be confusing.
-func filterNonFunctionSuggestions(suggestions []components.Suggestion) []components.Suggestion {
-	filtered := suggestions[:0:0] // new slice, no shared backing
-	for _, s := range suggestions {
-		if !isFunctionSuggestion(s) {
-			filtered = append(filtered, s)
-		}
-	}
-	return filtered
-}
-
-// calculatePopupDimensions determines the popup size based on suggestions.
-func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (width, height int) {
-	// Calculate width based on longest suggestion name + syntax + category tag
-	width = 30 // minimum width for readability
-	for _, s := range suggestions {
-		tag := suggestionTag(s.Category)
-		// Tag + space + syntax/name is the rendered content
-		w := len(tag) + 1
-		if s.Syntax != "" {
-			w += len(s.Syntax)
-			// Synonym hint from Name (e.g., " (average)")
-			if idx := strings.Index(s.Name, " ("); idx >= 0 {
-				w += 1 + len(s.Name[idx+1:])
-			}
-		} else {
-			w += len(s.Name)
-		}
-		if w+6 > width { // +6 for padding, borders
-			width = w + 6
-		}
-	}
-
-	// Allow up to 70% of screen width for function signatures
-	maxWidth := max(m.width*7/10, 40) // minimum usable width
-	if width > maxWidth {
-		width = maxWidth
-	}
-
-	// Height is number of items, capped at 8
-	height = min(len(suggestions), 8)
-
-	return width, height
-}
-
-// getCurrentWordPrefix extracts the word being typed at cursor (UTF-8 safe).
-func (m *Model) getCurrentWordPrefix() string {
-	m.loadCurrentLineIntoEditBuffer()
-	if m.cursorCol == 0 {
-		return ""
-	}
-
-	// Convert to runes for UTF-8 safe iteration
-	runes := []rune(m.editBuf)
-	if m.cursorCol > len(runes) {
-		return ""
-	}
-
-	// Walk backwards to find word start
-	start := m.cursorCol
-	for start > 0 {
-		ch := runes[start-1]
-		if !isWordRune(ch) {
-			break
-		}
-		start--
-	}
-
-	if start >= m.cursorCol {
-		return ""
-	}
-	return string(runes[start:m.cursorCol])
-}
-
-// isWordRune returns true if the rune is a valid word character for autocomplete.
-// This is UTF-8 safe and handles Unicode letters/digits.
-func isWordRune(ch rune) bool {
-	return unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_'
-}
-
-// acceptAutocomplete inserts the selected suggestion at the cursor.
-// Records an OpReplace on the undo stack so the acceptance can be undone.
-func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {
-	if m.autocompleteState.Selected < 0 ||
-		m.autocompleteState.Selected >= len(m.autocompleteState.Suggestions) {
-		m.exitAutocomplete()
-		return m, nil
-	}
-
-	selected := m.autocompleteState.Suggestions[m.autocompleteState.Selected]
-	insertText := selected.InsertText
-	if insertText == "" {
-		insertText = selected.Name
-	}
-
-	// For functions (identified by having a Syntax like "func(...)"), add opening paren
-	// This positions the cursor inside the function call so parameter help is shown.
-	isFunction := strings.Contains(selected.Syntax, "(")
-	if isFunction {
-		insertText += "("
-	}
-
-	// Capture state BEFORE the edit for undo
-	beforeCol := m.cursorCol
-	beforeScroll := m.scrollOffset
-
-	// Replace prefix with selected suggestion (UTF-8 safe)
-	prefix := m.autocompleteState.Prefix
-	prefixStart := max(m.cursorCol-runeLen(prefix), 0)
-
-	// Commit any pending typing batch as a separate undo step
-	m.undoManager.ForceBoundary()
-
-	// Delete the prefix, then insert the completion text
-	beforePrefix, _ := runeSlice(m.editBuf, prefixStart)
-	_, afterCursor := runeSlice(m.editBuf, m.cursorCol)
-	m.editBuf = beforePrefix + insertText + afterCursor
-	m.cursorCol = prefixStart + runeLen(insertText)
-
-	// Record the replacement for undo (Col = where replacement starts, not cursor)
-	m.undoManager.AddOperation(EditOperation{
-		Type:         OpReplace,
-		Line:         m.cursorLine,
-		Col:          prefixStart,
-		OldText:      prefix,
-		NewText:      insertText,
-		CursorLine:   m.cursorLine,
-		CursorCol:    beforeCol,
-		ScrollOffset: beforeScroll,
-	})
-
-	// Commit as a discrete undo step (like paste)
-	m.undoManager.ForceBoundary()
-
-	m.modified = true
-	m.exitAutocomplete()
-	m.transitionToEditing()
-	return m.debounceUpdate()
 }

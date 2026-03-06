@@ -13,9 +13,6 @@ import (
 // 2. Mode-specific handlers (help, autocomplete, command menu, file picker, etc.)
 // 3. Default editing mode
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	// Invalidate aligned model cache - state may change
-	m.InvalidateAlignedCache()
-
 	// Clear status message on any key — but only in modes that don't use
 	// the status bar for prompts. Modal overlays manage their own state.
 	switch m.mode {
@@ -39,8 +36,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			if handled {
 				return newModel, cmd
 			}
-			m.quitting = true
-			return m, tea.Quit
+			return m.executeCommandByName("Quit")
 		case 'q':
 			return m.executeCommandByName("Quit")
 		case 'n':

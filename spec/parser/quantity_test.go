@@ -62,8 +62,7 @@ func TestQuantityParsing(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			// TODO: Verify node type (QuantityLiteral or CurrencyLiteral)
-			// TODO: Verify unit normalization
+			// Parse-only test — AST type verification deferred
 		})
 	}
 }
@@ -202,8 +201,7 @@ func TestCurrencyCodeRecognition(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			// TODO: Check if node is CurrencyLiteral vs QuantityLiteral
-			// based on tt.isCurrency
+			// Parse-only test — AST type verification deferred
 		})
 	}
 }

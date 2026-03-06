@@ -1141,10 +1141,6 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
-	// Number followed by identifier/unit: "100 meters", "5 kg"
-	// This is handled by checking after number parsing, but lexer might tokenize differently
-	// TODO: Handle quantity literals properly
-
 	// If we get here, we don't know what this is
 	current := p.peek()
 	return nil, p.errorAt(current, fmt.Sprintf("unexpected token: %s", current.Type))

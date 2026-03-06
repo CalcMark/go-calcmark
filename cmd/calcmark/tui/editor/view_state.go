@@ -222,45 +222,9 @@ func (m *Model) GetGlobalsPanelState() components.GlobalsPanelState {
 	}
 }
 
-// computeCacheKey computes a cache key from current model state.
-func (m *Model) computeCacheKey() alignedCacheKey {
-	// Simple hash of content - just use length and first/last chars for speed
-	// A proper implementation would use a real hash, but this catches most changes
-	lines := m.GetLines()
-	var contentHash uint64
-	for i, line := range lines {
-		contentHash ^= uint64(len(line)) << (uint(i%8) * 8)
-		if len(line) > 0 {
-			contentHash ^= uint64(line[0]) << 32
-			contentHash ^= uint64(line[len(line)-1]) << 40
-		}
-	}
-
-	return alignedCacheKey{
-		contentHash: contentHash,
-		cursorLine:  m.cursorLine,
-		previewMode: m.previewMode,
-		totalLines:  len(lines),
-		editBuf:     m.editBuf, // Include editBuf so cache updates while typing
-	}
-}
-
-// GetAlignedModel returns the cached aligned model, computing it if necessary.
-// This is the single source of truth for visual line alignment.
-// The cache is automatically invalidated when inputs change.
+// GetAlignedModel computes the aligned model for the given pane widths.
+// Used by tests and non-View() callers to inspect visual alignment.
 func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
-	currentKey := m.computeCacheKey()
-
-	// Check if cache is valid: same key and same widths
-	if m.alignedCache != nil &&
-		m.alignedCacheKey == currentKey &&
-		m.alignedCacheWidths[0] == sourceWidth &&
-		m.alignedCacheWidths[1] == previewWidth {
-		return m.alignedCache
-	}
-
-	// Cache miss - recompute
-	// Calculate content width for source pane (accounting for line numbers)
 	lineNumWidth := 4
 	sourceContentWidth := max(sourceWidth-lineNumWidth-2, 10)
 
@@ -272,10 +236,9 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 		CursorLine:         m.cursorLine,
 		PreviewMode:        m.previewMode,
 		EditBuf:            m.editBuf,
-		EditBufLine:        m.cursorLine, // EditBuf applies to current cursor line
+		EditBufLine:        m.cursorLine,
 	}
 
-	// Compute with render functions that match view.go behavior
 	aligned := ComputeAlignedModel(input, m.renderCalcLine, func(line string, width int) []string {
 		mdRenderer, _ := NewMarkdownRenderer(width)
 		if mdRenderer != nil {
@@ -284,19 +247,7 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 		return geometry.WrapText(line, width)
 	})
 
-	// Update cache
-	m.alignedCache = &aligned
-	m.alignedCacheKey = currentKey
-	m.alignedCacheWidths = [2]int{sourceWidth, previewWidth}
-
-	return m.alignedCache
-}
-
-// InvalidateAlignedCache explicitly invalidates the cache.
-// This is called on key presses, but the cache will also auto-invalidate
-// when computeCacheKey() detects changed inputs.
-func (m *Model) InvalidateAlignedCache() {
-	m.alignedCache = nil
+	return &aligned
 }
 
 // GetAutocompleteState returns the current autocomplete state for rendering.

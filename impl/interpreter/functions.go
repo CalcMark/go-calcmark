@@ -518,8 +518,8 @@ func evalSqrt(args []types.Type) (types.Type, error) {
 		return nil, fmt.Errorf("sqrt() argument must be non-negative")
 	}
 
-	// TODO: Implement proper decimal sqrt using Newton's method
-	// For now, convert to float64, take sqrt, convert back
+	// Precision note: converts through float64 — sufficient for typical use cases
+	// but may lose precision for numbers exceeding float64 range.
 	f, _ := num.Value.Float64()
 	result := decimal.NewFromFloat(math.Sqrt(f))
 

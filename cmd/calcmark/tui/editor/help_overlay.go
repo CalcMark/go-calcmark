@@ -44,6 +44,7 @@ func helpCategories() []HelpCategory {
 		{
 			Name: "File",
 			Items: []HelpItem{
+				{Name: "New", Accelerator: "Ctrl+N", Kind: HelpActionable, CommandName: "New"},
 				{Name: "Save", Accelerator: "Ctrl+S", Kind: HelpActionable, CommandName: "Save"},
 				{Name: "Save As", Accelerator: "", Kind: HelpActionable, CommandName: "Save As"},
 				{Name: "Open", Accelerator: "Ctrl+O", Kind: HelpActionable, CommandName: "Open"},

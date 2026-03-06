@@ -811,7 +811,6 @@ func (m *Model) deleteLine() {
 
 				m.modified = true
 				m.fullReEvaluate()
-				m.InvalidateAlignedCache()
 
 				// Adjust cursor if needed
 				total := m.TotalLines()
@@ -872,7 +871,6 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	m.globalsExpanded = true
 	m.modified = true
 	m.autoPinVariables()
-	m.InvalidateAlignedCache()
 
 	// Record the operation for undo/redo
 	op := EditOperation{

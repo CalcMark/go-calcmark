@@ -581,7 +581,7 @@ compressed_transfer = transfer_time(compress(1 GB, lz4), global, gigabit)`,
 // Tests for bug: Navigation broken after pressing 'o' to insert a line
 // Cursor highlights wrong visual line after insert operations
 
-func TestAlignedModelCache(t *testing.T) {
+func TestGetAlignedModel(t *testing.T) {
 	content := `# Header
 x = 10
 y = 20`
@@ -594,37 +594,19 @@ y = 20`
 	m.width = 80
 	m.height = 24
 
-	// First call should compute fresh
-	aligned1 := m.GetAlignedModel(40, 40)
-	if aligned1 == nil {
+	aligned := m.GetAlignedModel(40, 40)
+	if aligned == nil {
 		t.Fatal("GetAlignedModel returned nil")
 	}
 
-	// Second call with same params should return cached
-	aligned2 := m.GetAlignedModel(40, 40)
-	if aligned2 != aligned1 {
-		t.Error("Cache miss: expected same pointer for identical inputs")
+	if len(aligned.SourceLines) == 0 {
+		t.Error("Expected source lines in aligned model")
 	}
-
-	// Change cursor - should invalidate cache
-	m.cursorLine = 1
-	aligned3 := m.GetAlignedModel(40, 40)
-	if aligned3 == aligned1 {
-		t.Error("Cache should have been invalidated when cursor changed")
+	if len(aligned.PreviewLines) == 0 {
+		t.Error("Expected preview lines in aligned model")
 	}
-
-	// Different width - should recompute
-	aligned4 := m.GetAlignedModel(50, 40)
-	if aligned4 == aligned3 {
-		t.Error("Cache should have been invalidated when width changed")
-	}
-
-	// Back to same params as aligned3 should still be fresh (cursor changed)
-	m.cursorLine = 1 // same as before
-	aligned5 := m.GetAlignedModel(40, 40)
-	// This is a fresh computation since we went to different width in between
-	// The cache now has width 50, not 40
-	if aligned5 == aligned4 {
-		t.Error("Different widths should produce different cache entries")
+	if len(aligned.SourceLines) != len(aligned.PreviewLines) {
+		t.Errorf("Source/preview line count mismatch: %d vs %d",
+			len(aligned.SourceLines), len(aligned.PreviewLines))
 	}
 }

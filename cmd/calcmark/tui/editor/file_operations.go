@@ -213,7 +213,10 @@ func (m *Model) newFile() {
 	}
 
 	eval := implDoc.NewEvaluator()
-	_ = eval.Evaluate(doc) // empty doc — no errors expected
+	if err := eval.Evaluate(doc); err != nil {
+		m.statusMsg = fmt.Sprintf("New file has errors: %v", err)
+		m.statusIsErr = true
+	}
 
 	m.resetForNewDocument(doc, eval, "", "\n")
 	m.statusMsg = "New document"

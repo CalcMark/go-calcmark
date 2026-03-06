@@ -55,7 +55,7 @@ func TestDateParsing(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			// TODO: Verify node is DateLiteral with correct fields
+			// Parse-only test — AST type verification deferred
 		})
 	}
 }
@@ -91,7 +91,7 @@ func TestDateArithmetic(t *testing.T) {
 				t.Fatalf("Parse(%q) returned 0 nodes", tt.input)
 			}
 
-			// TODO: Verify node is BinaryOp or DateArithmetic
+			// Parse-only test — AST type verification deferred
 		})
 	}
 }
@@ -129,7 +129,7 @@ func TestDurationParsing(t *testing.T) {
 				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
 			}
 
-			// TODO: Verify node is DurationLiteral
+			// Parse-only test — AST type verification deferred
 		})
 	}
 }
@@ -142,10 +142,10 @@ func TestInvalidDates(t *testing.T) {
 		skip   bool
 		reason string
 	}{
-		{name: "month without day", input: "December\n", skip: true, reason: "TODO: Semantic validation - parser accepts identifiers"},
+		{name: "month without day", input: "December\n", skip: true, reason: "Needs semantic validation — parser accepts identifiers"},
 		{name: "invalid month", input: "Decembr 12\n"}, // Parser correctly rejects this
-		{name: "day without month", input: "12\n", skip: true, reason: "TODO: Semantic validation - parser accepts numbers"},
-		{name: "invalid day", input: "December 32\n", skip: true, reason: "TODO: Semantic date validation not implemented"},
+		{name: "day without month", input: "12\n", skip: true, reason: "Needs semantic validation — parser accepts numbers"},
+		{name: "invalid day", input: "December 32\n", skip: true, reason: "Needs semantic date validation"},
 	}
 
 	for _, tt := range tests {

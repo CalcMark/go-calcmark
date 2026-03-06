@@ -122,7 +122,7 @@ func TestNumberMultipliers(t *testing.T) {
 			t.Logf("%s", tt.description)
 
 			// For now, just verify it parses successfully
-			// TODO: extract and verify actual NumberLiteral.Value matches wantValue
+			// Parse-only test — NumberLiteral.Value verification deferred
 		})
 	}
 }

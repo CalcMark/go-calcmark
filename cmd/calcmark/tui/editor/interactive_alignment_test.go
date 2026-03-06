@@ -156,9 +156,6 @@ func TestInteractive_HeadingVisibilityWhileTyping(t *testing.T) {
 	}
 
 	// Check if the heading is visible in preview WHILE TYPING
-	// Explicitly invalidate cache to ensure fresh computation
-	m.InvalidateAlignedCache()
-
 	sourceLines := m.GetLines()
 	results := m.GetLineResults()
 

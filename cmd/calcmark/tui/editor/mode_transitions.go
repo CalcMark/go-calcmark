@@ -112,5 +112,4 @@ func (m *Model) resetForNewDocument(doc *document.Document, eval *implDoc.Evalua
 	m.autoPinVariables()
 
 	m.transitionToReady()
-	m.InvalidateAlignedCache()
 }
