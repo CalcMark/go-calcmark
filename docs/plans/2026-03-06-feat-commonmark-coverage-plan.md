@@ -1,7 +1,7 @@
 ---
 title: "feat: CommonMark coverage for HTML and Markdown export"
 type: feat
-status: active
+status: completed
 date: 2026-03-06
 issue: https://github.com/CalcMark/go-calcmark/issues/33
 brainstorm: docs/brainstorms/2026-03-06-commonmark-coverage-brainstorm.md
