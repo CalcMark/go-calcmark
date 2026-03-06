@@ -46,6 +46,17 @@ transfer 100 MB across local ten_gig
 transfer 10 GB across continental hundred_gig
 ```
 
+## NL Functions with Variable References
+
+NL functions accept variables in place of literal quantities:
+
+```calcmark
+data = 1 GB
+compress data using gzip
+read data from ssd
+transfer data across regional gigabit
+```
+
 ## Growth Functions: compound...by...over / grow...by...over / depreciate...by...over
 
 ```calcmark
@@ -124,7 +135,7 @@ same = total1 == total2
 ### What This Demonstrates
 
 - Traditional `fn(args)` and natural language `name of args` syntax
-- Multi-argument `read...from`, `compress...using`, `transfer...across` patterns
+- Multi-argument `read...from`, `compress...using`, `transfer...across` patterns (with literals or variables)
 - Growth functions: `compound...by...over`, `grow...by...over`, `depreciate...by...over`
 - Expressions and variables as function arguments
 - Nested function calls

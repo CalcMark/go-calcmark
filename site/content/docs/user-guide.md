@@ -379,6 +379,9 @@ transfer_time(1 GB, regional, gigabit)   -> ~8 seconds
 transfer_time(500 MB, continental, gigabit)
 transfer 1 GB across regional gigabit    -> (NL form)
 transfer 100 MB across local ten_gig
+
+data = 500 KB
+transfer data across continental ten_gig -> (variable reference)
 ```
 
 #### `read` / `read...from` {#read-examples}
@@ -388,6 +391,9 @@ read(100 MB, ssd)                  -> ~0.18 seconds
 read(1 GB, nvme)                   -> ~0.29 seconds
 read 100 MB from ssd               -> (NL form)
 read 10 GB from pcie_ssd
+
+data = 5 MB
+read data from nvme                -> (variable reference)
 ```
 
 #### `seek` {#seek-examples}
@@ -407,6 +413,9 @@ compress(500 MB, lz4)              -> ~250 MB
 compress(2 GB, zstd)               -> ~571 MB
 compress 1 GB using gzip            -> (NL form)
 compress 500 MB using lz4
+
+data = 1 GB
+compress data using zstd            -> (variable reference)
 ```
 
 #### `compound` / `compound...by...over` {#compound-examples}
@@ -456,7 +465,7 @@ average of $50, €100, £150 -> 100  (no units)
 
 ### Natural Language Syntax {#natural-language-syntax}
 
-CalcMark supports natural language forms for many functions. These are equivalent to the function-call syntax.
+CalcMark supports natural language forms for many functions. These are equivalent to the function-call syntax. Arguments can be literal values (`100 MB`) or variable references (`data`).
 
 #### Function Aliases
 

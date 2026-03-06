@@ -218,6 +218,10 @@ Quantity + Quantity (same unit) -> Quantity
 Date + Duration -> Date
 Date - Date -> Duration
 Rate * Duration -> Quantity  (via "over" keyword)
+Number * Rate -> Rate        (scaling: 3 * 10 MB/s = 30 MB/s)
+Rate * Number -> Rate        (commutative)
+Rate * Quantity -> Quantity   (e.g., 10 MB/s * 500 MB = 5000 MB)
+Quantity * Rate -> Quantity   (commutative)
 ```
 
 **Functions (drop units when mixed):**
@@ -520,7 +524,7 @@ average of $50, €100, £150 -> 100  (no units)
 
 ## Natural Language Syntax {#natural-language-syntax}
 
-CalcMark supports natural language forms for many functions. These are equivalent to the function-call syntax.
+CalcMark supports natural language forms for many functions. These are equivalent to the function-call syntax. Arguments can be literal values (`100 MB`) or variable references (`data`).
 
 | Pattern | Equivalent |
 |---------|------------|

@@ -173,20 +173,36 @@ Origin sees ~231 req/s instead of ~4,630 req/s -- a 20x reduction. Transfer time
 
 ---
 
-## Availability and Downtime
+## Availability and Error Budget
 
-The `downtime()` function converts an availability target into concrete allowed downtime. CalcMark accepts percentage syntax directly -- `99.9%` instead of `0.999`.
+The `downtime()` function converts an availability target into concrete allowed downtime. But raw downtime means nothing until you spend it against real operational costs.
 
 ```calcmark
 monthly_downtime = downtime(99.9%, month)
 yearly_downtime = downtime(99.9%, year)
-
-strict_monthly_downtime = downtime(99.99%, month)
 ```
 
-Three nines gives you 43.2 minutes/month or 8.76 hours/year of allowed downtime. Four nines shrinks that to just 4.32 minutes/month. The jump from three to four nines is a 10x reduction in error budget.
+Three nines gives you 43.2 minutes/month or 8.76 hours/year. Now subtract deploy costs -- assume each rolling deploy takes 5 minutes (draining, health checks, restart):
 
-**CalcMark features:** `downtime()` with percentage availability target and time period.
+```calcmark
+deploy_time = 5 minutes
+deploys_per_month = 8
+total_deploy_downtime = deploy_time * deploys_per_month
+remaining_error_budget = monthly_downtime - total_deploy_downtime
+```
+
+Eight deploys consume 40 of your 43.2 minutes, leaving only **3.2 minutes** for actual incidents. That is a razor-thin margin.
+
+Now check four nines:
+
+```calcmark
+strict_monthly_downtime = downtime(99.99%, month)
+strict_deploy_budget = strict_monthly_downtime - total_deploy_downtime
+```
+
+The budget goes **negative** (-35.7 minutes). At four nines your entire monthly allowance is 4.32 minutes -- eight 5-minute deploys already exceed it by 8x. This is the calculation that forces a zero-downtime deployment strategy (blue-green, canary).
+
+**CalcMark features:** `downtime()` with percentage availability target and time period; Duration arithmetic (subtraction, scaling) to spend the error budget.
 
 ---
 
@@ -198,9 +214,10 @@ The `as napkin` modifier rounds everything into quick-reference numbers for stak
 storage_napkin = total_yearly_storage as napkin
 traffic_napkin = daily_reads as napkin
 servers_napkin = total_db_servers as napkin
+error_budget_napkin = remaining_error_budget as napkin
 ```
 
-Bottom line: ~58.7 TB of storage per year, 400M daily reads, 5 database servers. That is the back-of-napkin infrastructure for a 10M-user social media app.
+Bottom line: ~58.7 TB of storage per year, 400M daily reads, 5 database servers, and ~3.2 minutes of monthly error budget after deploys. That is the back-of-napkin infrastructure for a 10M-user social media app.
 
 **CalcMark features:** `as napkin` for executive-summary rounding.
 
@@ -222,7 +239,7 @@ This example showcases the following CalcMark features:
 - **`rtt()`** -- network round-trip time by distance
 - **`throughput()`** -- standard network link capacities
 - **`transfer ... across`** -- data transfer time across distance and link speed
-- **`downtime()`** -- availability target to allowed downtime conversion
+- **`downtime()`** -- availability target to allowed downtime conversion; Duration arithmetic to spend the error budget
 - **Data size units** -- `KB`, `MB`, `GB`, `TB`, `ms`, `req/s`, `server`
 - **Markdown prose** -- headings, paragraphs, and inline commentary between calculations
 

@@ -109,16 +109,30 @@ Media transfer time from origin to CDN edge:
 
 media_transfer = transfer 500 KB across continental ten_gig
 
-## Availability and Downtime
+## Availability and Error Budget
 
 Three nines (99.9%) is the standard SaaS target:
 
 monthly_downtime = downtime(99.9%, month)
 yearly_downtime = downtime(99.9%, year)
 
-Four nines (99.99%) cuts the error budget by 10x:
+But raw downtime means nothing until you spend it. Assume each deploy
+takes 5 minutes of downtime (rolling restarts, health checks, draining):
+
+deploy_time = 5 minutes
+deploys_per_month = 8
+total_deploy_downtime = deploy_time * deploys_per_month
+remaining_error_budget = monthly_downtime - total_deploy_downtime
+
+At three nines, 8 deploys leave only 3.2 minutes of error budget.
+
+Four nines (99.99%) makes scheduled deploys impossible:
 
 strict_monthly_downtime = downtime(99.99%, month)
+strict_deploy_budget = strict_monthly_downtime - total_deploy_downtime
+
+A negative budget means you cannot afford any downtime deploys at four
+nines. Zero-downtime deploys (blue-green, canary) are a hard requirement.
 
 ## Summary
 
@@ -127,3 +141,4 @@ Key metrics rounded for stakeholder conversations:
 storage_napkin = total_yearly_storage as napkin
 traffic_napkin = daily_reads as napkin
 servers_napkin = total_db_servers as napkin
+error_budget_napkin = remaining_error_budget as napkin
