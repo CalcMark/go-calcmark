@@ -1,0 +1,82 @@
+# Home Renovation Budget
+
+Planning a kitchen remodel and backyard patio.
+Uses averages, square roots, constants, booleans, and rate conversions.
+
+## Kitchen Remodel
+
+Three contractor quotes for the full kitchen:
+
+quote_a = 8500
+quote_b = 9200
+quote_c = 7800
+
+average_quote = avg(quote_a, quote_b, quote_c)
+
+## Room Measurements
+
+Kitchen dimensions (in feet) and the diagonal for countertop layout:
+
+kitchen_length = 15
+kitchen_width = 12
+kitchen_sqft = kitchen_length * kitchen_width
+diagonal = sqrt(kitchen_length ^ 2 + kitchen_width ^ 2)
+
+## Circular Patio
+
+The backyard patio is a 12-foot diameter circle:
+
+patio_radius = 6
+patio_area = PI * patio_radius ^ 2
+
+Concrete is sold per square foot. Show exact area for the order:
+
+patio_area as precise
+
+## Material Costs
+
+Cabinets and countertops:
+
+cabinets = $6200
+countertop_sqft = 45
+countertop_rate = $75
+countertops = countertop_sqft * countertop_rate
+
+Patio concrete at $8/sqft (rounded up to nearest whole number):
+
+patio_concrete = patio_area * $8
+
+Tile flooring for the kitchen:
+
+tile_per_sqft = $12
+flooring = kitchen_sqft * tile_per_sqft
+
+## Labor Rates
+
+Contractor charges $800/day. What does that cost per week?
+
+daily_rate = $800/day
+weekly_rate = convert_rate(daily_rate, week)
+
+## Material Delivery
+
+Lumber arrives at 2 pallets per day over the 3-week build:
+
+total_deliveries = accumulate(2 pallets/day, 3 weeks)
+
+## Project Budget
+
+subtotal = cabinets + countertops + patio_concrete + flooring
+contingency = 15% of subtotal
+total = subtotal + contingency
+
+## Budget Check
+
+The project must stay under $50,000 with at least $2,000 contingency:
+
+budget_ok = total < $50000 and contingency > $1500
+under_budget = not (total > $50000)
+
+## Quick Summary
+
+total as napkin

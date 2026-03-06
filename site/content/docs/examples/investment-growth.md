@@ -1,65 +1,138 @@
 ---
 title: "Investment & Growth"
 summary: "Compound growth, depreciation, and linear growth for financial and business modeling."
-weight: 10
+weight: 56
 ---
 
-Model investment returns, asset depreciation, and business growth using CalcMark's growth functions.
+How fast does your retirement fund grow? How quickly does a car lose value? This walkthrough models investment returns, business growth, and asset depreciation using CalcMark's growth functions.
 
-## The CalcMark File
+The complete CalcMark file is available at {{< repo-file path="testdata/examples/investment-growth.cm" >}}.
 
-````cm
-# Investment Growth
+---
 
 ## Retirement Savings
+
+You start with $50,000 in savings, a 7% annual return, and 30 years until retirement. The `compound()` function models exponential growth over time.
+
+```cm
 initial_savings = $50000
 annual_return = 7%
 years_to_retire = 30
 
-# Simple compound growth
 retirement_fund = compound($50000, 7%, 30)
+```
 
-# With monthly compounding (higher return)
+`compound(principal, rate, periods)` applies the rate once per period. After 30 years at 7%, your $50K grows to ~$380.6K.
+
+**CalcMark features:** `compound()` function for exponential growth; currency literals (`$50000`); percentage literals (`7%`).
+
+---
+
+## Monthly Compounding
+
+Real-world investments often compound more frequently than once per year. The `compounded monthly` modifier splits the annual rate into 12 smaller applications per year.
+
+```cm
 retirement_monthly = compound($50000, 7%, 30 years, compounded monthly)
+```
+
+Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual compounding over the same 30 years. The `compounded monthly` syntax is a fourth argument that changes the compounding frequency.
+
+**CalcMark features:** `compounded monthly` frequency modifier; `30 years` unit annotation on the periods argument.
+
+---
 
 ## Business Growth
 
-# Customer base growing 15% per month
+Growth functions are not limited to money. You can use arbitrary units like `customers` or `users`. Here you model a startup's customer base growing 15% per month over 24 months.
+
+```cm
 starting_customers = 500 customers
 monthly_growth = compound(500 customers, 15%, 24)
+```
 
-# Natural language form
+Starting from 500 customers at 15% monthly growth, you reach ~14.3K customers after two years. CalcMark preserves the `customers` unit through the calculation.
+
+The natural language form reads like a sentence:
+
+```cm
 compound 1000 users by 10% over 12 months
+```
+
+Starting with 1,000 users and growing 10% per month for a year yields ~3.1K users. The NL form (`compound X by Y% over Z`) is equivalent to calling `compound(X, Y%, Z)`.
+
+**CalcMark features:** Arbitrary units (`customers`, `users`); `compound` natural language form (`compound X by Y% over Z`); unit preservation through growth functions.
+
+---
 
 ## Linear Growth
 
-# Adding $200/month to savings for 5 years
-savings_plan = grow($0, $200, 60)
+Not all growth is exponential. The `grow()` function adds a fixed increment each period. Here you model adding $200 per month to a savings account over 5 years (60 months).
 
-# Adding 50 subscribers per week
+```cm
+savings_plan = grow($0, $200, 60)
+```
+
+`grow(start, increment, periods)` adds the increment once per period: `$0 + ($200 * 60) = $12K`. No compounding -- just steady accumulation.
+
+The natural language form works with arbitrary units too:
+
+```cm
 grow 100 subscribers by 50 over 52 weeks
+```
+
+Starting with 100 subscribers and adding 50 per week for a year gives you 2,700 subscribers. The NL form (`grow X by Y over Z`) is equivalent to `grow(X, Y, Z)`.
+
+**CalcMark features:** `grow()` function for linear (additive) growth; `grow` natural language form; arbitrary units (`subscribers`).
+
+---
 
 ## Asset Depreciation
 
-# Car loses 20% per year
+Assets lose value over time. The `depreciate()` function models declining-balance depreciation -- each period reduces the remaining value by a fixed percentage.
+
+```cm
 car_value = depreciate($35000, 20%, 5)
+```
 
-# Equipment with $2000 salvage floor
+A $35K car losing 20% per year is worth ~$11.5K after 5 years. Each year applies the 20% rate to the current value, not the original price.
+
+You can set a salvage floor with the `to` keyword. The asset will never depreciate below that value:
+
+```cm
 depreciate $80000 by 25% over 10 years to $2000
+```
 
-# Office furniture
+This $80K piece of equipment depreciates at 25% per year but cannot drop below $2,000. After 10 years it lands at ~$4,505 -- still above the floor. Without the floor, it would reach the same value here, but the `to` clause protects against longer time horizons.
+
+Finally, office furniture at a gentler rate:
+
+```cm
 furniture = depreciate($15000, 15%, 7)
-````
+```
 
-### What This Demonstrates
+$15K in furniture at 15% per year is worth ~$4,809 after 7 years.
 
-- `compound()` for exponential growth with percentage rates
-- Financial compounding frequencies (`compounded monthly`, `compounded quarterly`)
-- `grow()` for linear (additive) growth with fixed increments
-- `depreciate()` for declining-balance depreciation
-- Salvage floor with the `to` keyword in NL form
-- Quantities with arbitrary units (`customers`, `users`, `subscribers`)
-- Both functional and natural language syntax
+**CalcMark features:** `depreciate()` function for declining-balance depreciation; `depreciate` natural language form (`depreciate X by Y% over Z`); salvage floor with `to` keyword.
+
+---
+
+## Features Demonstrated
+
+This example showcases the following CalcMark features:
+
+- **`compound()`** -- exponential growth with percentage rates
+- **`compounded monthly`** -- compounding frequency modifier
+- **`compound` NL form** -- `compound X by Y% over Z`
+- **`grow()`** -- linear (additive) growth with fixed increments
+- **`grow` NL form** -- `grow X by Y over Z`
+- **`depreciate()`** -- declining-balance depreciation
+- **`depreciate` NL form** -- `depreciate X by Y% over Z`
+- **Salvage floor** -- `to $2000` keyword in depreciation
+- **Arbitrary units** -- `customers`, `users`, `subscribers`
+- **Currency literals** -- `$50000`, `$35000`
+- **Percentage literals** -- `7%`, `15%`, `20%`
+- **Markdown prose** -- headings, paragraphs, and inline comments between calculations
 
 ## Try It
 

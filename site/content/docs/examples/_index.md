@@ -19,6 +19,7 @@ cm testdata/examples/<filename>.cm
 - [System Sizing](system-sizing/) -- Infrastructure capacity planning
 - [Datacenter Build Cost](datacenter-cost/) -- Full lifecycle cost analysis with growth, depreciation, and exchange rates
 - [Investment & Growth](investment-growth/) -- Compound growth, depreciation, and linear growth for financial modeling
+- [Home Renovation](home-renovation/) -- Averages, square roots, constants, booleans, and rate conversions
 
 ## Feature Reference
 
