@@ -131,7 +131,7 @@ func suggestionTag(category string) string {
 		return "nl"
 	case "variable":
 		return "var"
-	case "Math", "Conversion", "Network", "Storage", "Capacity":
+	case "Math", "Conversion", "Network", "Storage", "Capacity", "Growth":
 		return "fn"
 	default:
 		// Unit categories and others: show abbreviated category
