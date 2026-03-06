@@ -31,8 +31,27 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 	emptyLineCount := 0
 	var pendingEmpties []string // Track trailing empties for TUI line preservation
 
+	// Fenced code block state machine
+	inFencedCodeBlock := false
+	fenceMarker := "" // "```" or "~~~" — the opening fence pattern
+
 	for _, line := range lines {
 		isEmpty := isEmptyLine(line) // Unicode-aware empty check
+
+		// Inside a fenced code block, all lines are text regardless of content
+		if inFencedCodeBlock {
+			if !isEmpty {
+				trimmed := strings.TrimSpace(line)
+				// Check for closing fence (must match opening marker type)
+				if isMatchingCloseFence(trimmed, fenceMarker) {
+					inFencedCodeBlock = false
+				}
+			}
+			// Accumulate into current text block (reset empty count to avoid splitting)
+			emptyLineCount = 0
+			currentBlockLines = append(currentBlockLines, line)
+			continue
+		}
 
 		if isEmpty {
 			emptyLineCount++
@@ -78,6 +97,22 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 				}
 			}
 			pendingEmpties = nil
+
+			// Check for fenced code block opening
+			trimmed := strings.TrimSpace(line)
+			if marker := getFenceMarker(trimmed); marker != "" {
+				inFencedCodeBlock = true
+				fenceMarker = marker
+				// Force this line and everything until close into a text block
+				if len(currentBlockLines) > 0 && currentBlockType != BlockText {
+					// Flush current calc block before starting text block
+					blocks = append(blocks, d.createBlock(currentBlockType, currentBlockLines))
+					currentBlockLines = []string{}
+				}
+				currentBlockType = BlockText
+				currentBlockLines = append(currentBlockLines, line)
+				continue
+			}
 
 			// Determine if this line is a calculation
 			isCalc, err := d.IsCalculation(line)
@@ -164,6 +199,11 @@ func (d *Detector) IsCalculation(line string) (bool, error) {
 	trimmed := strings.TrimSpace(line)
 
 	if trimmed == "" {
+		return false, nil
+	}
+
+	// Indented code blocks: 4+ spaces or tab prefix = markdown, never a calculation
+	if hasIndentedCodePrefix(line) {
 		return false, nil
 	}
 
@@ -363,6 +403,79 @@ func isFunctionToken(t lexer.TokenType) bool {
 	return false
 }
 
+// hasIndentedCodePrefix checks if a line starts with 4+ spaces or a tab,
+// indicating a CommonMark indented code block.
+func hasIndentedCodePrefix(line string) bool {
+	if len(line) == 0 {
+		return false
+	}
+	if line[0] == '\t' {
+		return true
+	}
+	if len(line) >= 4 && line[0] == ' ' && line[1] == ' ' && line[2] == ' ' && line[3] == ' ' {
+		return true
+	}
+	return false
+}
+
+// isHorizontalRule checks if a line is a CommonMark horizontal rule.
+// Rules: 3+ of the same char (-, *, _) with optional spaces between.
+func isHorizontalRule(line string) bool {
+	if len(line) < 3 {
+		return false
+	}
+	// Determine the rule character (must be -, *, or _)
+	var ruleChar byte
+	for i := range len(line) {
+		if line[i] != ' ' {
+			ruleChar = line[i]
+			break
+		}
+	}
+	if ruleChar != '-' && ruleChar != '*' && ruleChar != '_' {
+		return false
+	}
+	count := 0
+	for i := range len(line) {
+		if line[i] == ruleChar {
+			count++
+		} else if line[i] != ' ' {
+			return false
+		}
+	}
+	return count >= 3
+}
+
+// isFencedCodeFence checks if a line is a fenced code block delimiter.
+// Pattern: 3+ backticks or 3+ tildes, optionally followed by info string.
+func isFencedCodeFence(line string) bool {
+	if len(line) < 3 {
+		return false
+	}
+	if strings.HasPrefix(line, "```") || strings.HasPrefix(line, "~~~") {
+		return true
+	}
+	return false
+}
+
+// isSetextUnderline checks if a line consists only of = or - characters (3+).
+// Used for setext-style heading detection.
+func isSetextUnderline(line string) bool {
+	if len(line) < 3 {
+		return false
+	}
+	char := line[0]
+	if char != '=' && char != '-' {
+		return false
+	}
+	for i := range len(line) {
+		if line[i] != char {
+			return false
+		}
+	}
+	return true
+}
+
 // isMarkdownPattern checks if a line matches common markdown patterns.
 // These patterns explicitly indicate the line is NOT a calculation.
 func isMarkdownPattern(line string) bool {
@@ -380,6 +493,12 @@ func isMarkdownPattern(line string) bool {
 		return true
 	}
 
+	// Plus list marker: "+ text" (but not += which is a calculation)
+	if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+=") &&
+		len(line) > 1 && line[1] == ' ' {
+		return true
+	}
+
 	// Ordered lists: "1. ", "2. ", "10. " etc.
 	// Pattern: digits followed by ". " (dot and space)
 	if isOrderedListItem(line) {
@@ -391,8 +510,33 @@ func isMarkdownPattern(line string) bool {
 		return true
 	}
 
-	// Links
+	// Images: ![alt](src)
+	if strings.HasPrefix(line, "![") {
+		return true
+	}
+
+	// Inline links: [text](url)
 	if strings.HasPrefix(line, "[") && strings.Contains(line, "](") {
+		return true
+	}
+
+	// Reference-style link definitions: [id]: url
+	if strings.HasPrefix(line, "[") && strings.Contains(line, "]:") {
+		return true
+	}
+
+	// Fenced code block fences
+	if isFencedCodeFence(line) {
+		return true
+	}
+
+	// Horizontal rules (---, ***, ___)
+	if isHorizontalRule(line) {
+		return true
+	}
+
+	// Setext heading underlines (===, ---)
+	if isSetextUnderline(line) {
 		return true
 	}
 
@@ -446,6 +590,53 @@ func hasInlineMarkdownFormatting(line string) bool {
 		}
 	}
 	return false
+}
+
+// getFenceMarker returns the fence marker ("```" or "~~~") if the line opens a
+// fenced code block. Returns "" if not a fence. The marker is the run of
+// backticks or tildes (without any info string).
+func getFenceMarker(line string) string {
+	if len(line) < 3 {
+		return ""
+	}
+	char := line[0]
+	if char != '`' && char != '~' {
+		return ""
+	}
+	count := 0
+	for i := range len(line) {
+		if line[i] == char {
+			count++
+		} else {
+			break
+		}
+	}
+	if count >= 3 {
+		return line[:count]
+	}
+	return ""
+}
+
+// isMatchingCloseFence checks if a line is a closing fence that matches the
+// opening fence marker. The closing fence must use the same character and have
+// at least as many characters as the opening, with no other non-space content.
+func isMatchingCloseFence(line string, openMarker string) bool {
+	if len(line) < len(openMarker) {
+		return false
+	}
+	char := openMarker[0]
+	if len(line) == 0 || line[0] != char {
+		return false
+	}
+	count := 0
+	for i := range len(line) {
+		if line[i] == char {
+			count++
+		} else if line[i] != ' ' {
+			return false // non-space, non-fence char = not a close fence
+		}
+	}
+	return count >= len(openMarker)
 }
 
 // createBlock creates the appropriate block type.
