@@ -1,6 +1,6 @@
 # Release Process
 
-This document describes how to create and publish releases for go-calcmark.
+This document is the single source of truth for creating and publishing go-calcmark releases.
 
 ## Overview
 
@@ -12,81 +12,42 @@ Two things happen automatically when you push to `main` and when you push a tag:
 **Push a semver tag** (`v*.*.*`):
 1. **Git tag is the single source of truth** for the version number
 2. **GoReleaser** builds cross-platform CLI binaries, creates archives with checksums, and generates a changelog
-3. **Homebrew tap** is updated automatically (`CalcMark/homebrew-tap`)
-4. **No manual scripts** — the release is driven by `.goreleaser.yaml` and `.github/workflows/release.yml`
+3. **Homebrew Cask** is updated automatically (`CalcMark/homebrew-tap`)
+4. **macOS binaries** are signed and notarized (when signing secrets are configured)
+5. **No manual scripts** — the release is driven by `.goreleaser.yaml` and `.github/workflows/release.yml`
 
-## Quick Start
+## First-Time Setup
 
-```bash
-# 1. Ensure all tests and quality checks pass
-task test
-task quality
+Complete these steps once before the first release. If joining an existing project where these are already configured, skip to [Pre-flight Checks](#pre-flight-checks).
 
-# 2. Push your commits to GitHub
-git push origin main
+### 1. Create the Homebrew tap repository
 
-# 3. Create an annotated tag
-git tag -a "v0.3.0" -m "Release v0.3.0"
+If `CalcMark/homebrew-tap` already exists on GitHub, skip to step 2.
 
-# 4. Push the tag (triggers the release workflow)
-git push origin v0.3.0
-```
+- Go to https://github.com/new
+- Repository name: `homebrew-tap`
+- Owner: `CalcMark` (or your org)
+- Visibility: **Public** (required for Homebrew taps)
+- Initialize with a README
 
-Pushing commits to `main` will automatically deploy the site if any `site/**` files changed.
+### 2. Create a Personal Access Token (PAT)
 
-Pushing the tag will automatically:
-- Build `cm` binary for all platforms (macOS, Linux, Windows × amd64/arm64)
-- Sign and notarize macOS binaries (when signing secrets are configured)
-- Create `.tar.gz` (unix) and `.zip` (windows) archives
-- Generate SHA-256 checksums
-- Create a GitHub release with an auto-generated changelog
-- Update the Homebrew Cask in `CalcMark/homebrew-tap`
+- Go to https://github.com/settings/tokens
+- Generate new token (**classic** — not fine-grained)
+- Name: `homebrew-tap-access`
+- Scopes: check **`repo`** (full control of private repositories)
+- Copy the token immediately (you won't see it again)
 
-## How Versioning Works
+### 3. Add the Homebrew secret
 
-The version is injected into the `cm` binary at build time via ldflags:
+- Go to https://github.com/CalcMark/go-calcmark/settings/secrets/actions
+- Click "New repository secret"
+- Name: `HOMEBREW_TAP_GITHUB_TOKEN`
+- Value: paste the PAT from step 2
 
-```
--X main.Version={{.Version}}
--X main.BuildTime={{.Date}}
-```
+### 4. macOS code signing and notarization (optional)
 
-GoReleaser derives `{{.Version}}` from the git tag (stripping the `v` prefix). There is no version constant in the source code — the git tag is the single source of truth.
-
-For local development builds, `task build` uses `git describe --tags --always --dirty` to set the version.
-
-## Release Artifacts
-
-Each release produces the following archives:
-
-| Platform | Archive |
-|----------|---------|
-| macOS (Apple Silicon) | `calcmark_VERSION_darwin_arm64.tar.gz` |
-| macOS (Intel) | `calcmark_VERSION_darwin_amd64.tar.gz` |
-| Linux (x64) | `calcmark_VERSION_linux_amd64.tar.gz` |
-| Linux (arm64) | `calcmark_VERSION_linux_arm64.tar.gz` |
-| Linux (arm v6) | `calcmark_VERSION_linux_armv6.tar.gz` |
-| Windows (x64) | `calcmark_VERSION_windows_amd64.zip` |
-
-Plus `checksums.txt` (SHA-256 for all archives).
-
-Each archive contains only the `cm` binary. macOS archives contain signed and notarized binaries when signing secrets are configured.
-
-## macOS Code Signing and Notarization
-
-GoReleaser v2 signs and notarizes macOS binaries automatically using [anchore/quill](https://github.com/anchore/quill). This runs cross-platform on the Linux CI runner — no macOS runner required.
-
-When the `MACOS_SIGN_P12` secret is set, GoReleaser will:
-
-1. Sign each darwin binary with a Developer ID Application certificate (hardened runtime enabled)
-2. Submit the signed binary to Apple's notary service and wait for approval
-3. Package the signed, notarized binary into the release archive
-
-This eliminates the need for users to run `xattr -d com.apple.quarantine $(which cm)` after installing via Homebrew.
-
-The `notarize.macos` block in `.goreleaser.yaml` controls this behavior. When the signing secrets are not configured (local builds, forks), signing is skipped automatically via the `enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'` guard.
-
-### Setting Up Signing Secrets (First Time Only)
+Signing is optional for your first release. Unsigned releases work, but macOS users must run `xattr -d com.apple.quarantine $(which cm)` after installing via Homebrew. You can add signing later.
 
 You need an [Apple Developer Program](https://developer.apple.com/programs/) membership.
 
@@ -105,22 +66,186 @@ You need an [Apple Developer Program](https://developer.apple.com/programs/) mem
 4. Base64-encode it: `base64 < AuthKey_XXXXXXXXXX.p8`
 5. Store as `MACOS_NOTARY_KEY`, with `MACOS_NOTARY_KEY_ID` and `MACOS_NOTARY_ISSUER_ID` as separate secrets
 
-## Pre-release Versions
+### 5. Verify secrets
+
+All secrets are configured at https://github.com/CalcMark/go-calcmark/settings/secrets/actions
+
+| Secret | Purpose | Required |
+|--------|---------|----------|
+| `GITHUB_TOKEN` | Provided automatically by GitHub Actions. Creates releases, uploads artifacts, and deploys the site. | Auto |
+| `HOMEBREW_TAP_GITHUB_TOKEN` | PAT with write access to `CalcMark/homebrew-tap`. Updates the Homebrew Cask. | Yes |
+| `MACOS_SIGN_P12` | Base64-encoded Developer ID Application `.p12` certificate. | Optional |
+| `MACOS_SIGN_PASSWORD` | Password for the `.p12` certificate. | Optional |
+| `MACOS_NOTARY_ISSUER_ID` | App Store Connect API issuer UUID (shown on the Keys page). | Optional |
+| `MACOS_NOTARY_KEY_ID` | App Store Connect API key ID. | Optional |
+| `MACOS_NOTARY_KEY` | Base64-encoded `.p8` API private key from App Store Connect. | Optional |
+
+Signing secrets are optional — releases still work without them, but macOS binaries will be unsigned.
+
+## Pre-flight Checks
+
+Before tagging a release:
+
+```bash
+# Ensure working tree is clean
+git status
+
+# Ensure you're on main
+git branch --show-current
+
+# Run full test suite
+task test
+
+# Run quality checks
+task quality
+```
+
+All tests and quality checks must pass before tagging. Do not skip this.
+
+**Dry run (optional):** To test what GoReleaser would produce without publishing:
+
+```bash
+# Requires: go install github.com/goreleaser/goreleaser/v2@latest
+goreleaser release --snapshot --clean
+```
+
+This builds all archives locally in `dist/` without creating a GitHub release or pushing to the Homebrew tap.
+
+## Tag & Push
+
+```bash
+# 1. Ensure all changes are committed and pushed to main
+git push origin main
+
+# 2. Create an annotated tag (annotated tags are required — GoReleaser
+#    uses the tag object for changelog generation)
+git tag -a "v0.4.0" -m "Release v0.4.0"
+
+# 3. Push the tag (triggers the release workflow)
+git push origin v0.4.0
+```
+
+Always push a single tag explicitly. Never use `git push --tags` — it pushes all local tags, including any stale or experimental ones.
+
+Pushing the tag will automatically:
+- Build `cm` binary for all platforms (macOS, Linux, Windows — 7 archives total)
+- Sign and notarize macOS binaries (when signing secrets are configured)
+- Create `.tar.gz` (unix) and `.zip` (windows) archives
+- Generate SHA-256 checksums
+- Create a GitHub release with an auto-generated changelog
+- Update the Homebrew Cask in `CalcMark/homebrew-tap`
+
+## Post-Release Verification
+
+After the GitHub Actions workflow completes:
+
+1. **Check the release page** at `https://github.com/CalcMark/go-calcmark/releases`
+   - Verify all 7 archives are present
+   - Verify `checksums.txt` exists
+
+2. **Test Homebrew installation** (on macOS/Linux)
+   ```bash
+   brew tap calcmark/tap
+   brew install calcmark/tap/calcmark
+   cm --version
+   ```
+
+3. **Test binary download**
+   - Download an archive from the releases page
+   - Extract and run `./cm --version`
+
+4. **Verify the site** at [calcmark.org](https://calcmark.org) if any `site/**` files were updated
+
+5. **Update downstream projects** that consume go-calcmark
+
+## Reference
+
+### How Versioning Works
+
+The version is injected into the `cm` binary at build time via ldflags:
+
+```
+-X main.Version={{.Version}}
+-X main.BuildTime={{.Date}}
+```
+
+GoReleaser derives `{{.Version}}` from the git tag (stripping the `v` prefix). There is no version constant in the source code — the git tag is the single source of truth.
+
+For local development builds, `task build` uses `git describe --tags --always --dirty` to set the version.
+
+### Version Numbering
+
+go-calcmark follows [Semantic Versioning 2.0.0](https://semver.org/):
+
+- **MAJOR**: Incompatible API or language changes
+- **MINOR**: New functionality (backward compatible)
+- **PATCH**: Bug fixes (backward compatible)
+
+### Release Artifacts
+
+Each release produces the following archives:
+
+| Platform | Archive |
+|----------|---------|
+| macOS (Apple Silicon) | `calcmark_VERSION_darwin_arm64.tar.gz` |
+| macOS (Intel) | `calcmark_VERSION_darwin_amd64.tar.gz` |
+| Linux (x64) | `calcmark_VERSION_linux_amd64.tar.gz` |
+| Linux (arm64) | `calcmark_VERSION_linux_arm64.tar.gz` |
+| Linux (arm v6) | `calcmark_VERSION_linux_armv6.tar.gz` |
+| Windows (x64) | `calcmark_VERSION_windows_amd64.zip` |
+| Windows (arm64) | `calcmark_VERSION_windows_arm64.zip` |
+
+Plus `checksums.txt` (SHA-256 for all archives).
+
+Each archive contains only the `cm` binary. macOS archives contain signed and notarized binaries when signing secrets are configured.
+
+### macOS Code Signing and Notarization
+
+GoReleaser v2 signs and notarizes macOS binaries automatically using [anchore/quill](https://github.com/anchore/quill). This runs cross-platform on the Linux CI runner — no macOS runner required.
+
+When the `MACOS_SIGN_P12` secret is set, GoReleaser will:
+
+1. Sign each darwin binary with a Developer ID Application certificate (hardened runtime enabled)
+2. Submit the signed binary to Apple's notary service and wait for approval
+3. Package the signed, notarized binary into the release archive
+
+The `notarize.macos` block in `.goreleaser.yaml` controls this behavior. When the signing secrets are not configured (local builds, forks), signing is skipped automatically via the `enabled: '{{ isEnvSet "MACOS_SIGN_P12" }}'` guard.
+
+### Pre-release Versions
 
 GoReleaser auto-detects pre-releases from the tag format:
 
-- `v0.3.0-alpha.1` → marked as pre-release on GitHub
-- `v0.3.0-beta.2` → marked as pre-release on GitHub
-- `v0.3.0-rc.1` → marked as pre-release on GitHub
-- `v0.3.0` → marked as latest release
+- `v0.4.0-alpha.1` → marked as pre-release on GitHub
+- `v0.4.0-beta.2` → marked as pre-release on GitHub
+- `v0.4.0-rc.1` → marked as pre-release on GitHub
+- `v0.4.0` → marked as latest release
 
-This is controlled by `prerelease: auto` in `.goreleaser.yaml`.
+This is controlled by `prerelease: auto` in `.goreleaser.yaml`. Pre-release tags must be created manually (the `/release` agent command only handles patch/minor/major).
 
-## Website (calcmark.org)
+### CI/CD Details
+
+#### GitHub Actions Workflows
+
+**Release** (`.github/workflows/release.yml`):
+
+1. **Trigger**: Push of tags matching `v*.*.*`
+2. **Setup**: Checks out code (full history), installs Go from `go.mod`
+3. **Execute**: Runs GoReleaser v2
+4. **Permissions**: `contents: write` to create releases and upload artifacts
+
+**Site deploy** (`.github/workflows/site.yml`):
+
+1. **Trigger**: Push to `main` when `site/**` or the workflow file itself changes
+2. **Build**: Installs Hugo, runs `hugo --source site --minify`
+3. **Deploy**: Uploads to GitHub Pages via `actions/deploy-pages`
+4. **Concurrency**: Only one site deploy runs at a time (`cancel-in-progress: true`)
+5. **Permissions**: `contents: read`, `pages: write`, and `id-token: write`
+
+### Website (calcmark.org)
 
 The documentation site lives in `site/` and is built with [Hugo](https://gohugo.io/).
 
-### Local Development
+#### Local Development
 
 ```bash
 # Start the dev server with live reload
@@ -130,18 +255,9 @@ task site
 task site:build
 ```
 
-### How Deployment Works
+#### How Deployment Works
 
-The site workflow (`.github/workflows/site.yml`) deploys to GitHub Pages:
-
-1. **Trigger**: Push to `main` when files in `site/**` or `.github/workflows/site.yml` change
-2. **Build**: Hugo v0.156.0 builds and minifies the site
-3. **Deploy**: The built site is uploaded and deployed to GitHub Pages
-4. **Domain**: Served at [calcmark.org](https://calcmark.org) via the `site/static/CNAME` file
-
-The site deployment is independent of the release workflow — updating docs does not require a new version tag, and tagging a release does not redeploy the site unless `site/**` files were also changed.
-
-### Updating Docs for a Release
+The site workflow deploys to GitHub Pages when files in `site/**` change on push to `main`. The site deployment is independent of the release workflow — updating docs does not require a new version tag, and tagging a release does not redeploy the site unless `site/**` files were also changed.
 
 If a release includes user-facing changes, update the site content before tagging:
 
@@ -150,74 +266,68 @@ If a release includes user-facing changes, update the site content before taggin
 3. Commit and push to `main` (triggers site deploy)
 4. Then tag and push the release
 
-## Dry Run (Local Testing)
-
-To test what GoReleaser would produce without publishing:
-
-```bash
-# Requires: go install github.com/goreleaser/goreleaser/v2@latest
-goreleaser release --snapshot --clean
-```
-
-This builds all archives locally in `dist/` without creating a GitHub release or pushing to the Homebrew tap.
-
-## CI/CD Details
-
-### GitHub Actions Workflows
-
-**Release** (`.github/workflows/release.yml`):
-
-1. **Trigger**: Push of tags matching `v*.*.*`
-2. **Setup**: Checks out code (full history), installs Go from `go.mod`
-3. **Execute**: Runs GoReleaser v2
-
-**Site deploy** (`.github/workflows/site.yml`):
-
-1. **Trigger**: Push to `main` when `site/**` or the workflow file itself changes
-2. **Build**: Installs Hugo, runs `hugo --source site --minify`
-3. **Deploy**: Uploads to GitHub Pages via `actions/deploy-pages`
-4. **Concurrency**: Only one site deploy runs at a time (`cancel-in-progress: true`)
-
-### Required Secrets
-
-| Secret | Purpose |
-|--------|---------|
-| `GITHUB_TOKEN` | Provided automatically by GitHub Actions. Creates releases, uploads artifacts, and deploys the site. |
-| `HOMEBREW_TAP_GITHUB_TOKEN` | Personal access token with write access to `CalcMark/homebrew-tap`. Required for updating the Homebrew Cask. |
-| `MACOS_SIGN_P12` | Base64-encoded Developer ID Application `.p12` certificate. Required for macOS code signing. |
-| `MACOS_SIGN_PASSWORD` | Password for the `.p12` certificate. |
-| `MACOS_NOTARY_ISSUER_ID` | App Store Connect API issuer UUID (shown on the Keys page). Required for notarization. |
-| `MACOS_NOTARY_KEY_ID` | App Store Connect API key ID. |
-| `MACOS_NOTARY_KEY` | Base64-encoded `.p8` API private key from App Store Connect. |
-
-Signing secrets are optional — releases still work without them, but macOS binaries will be unsigned.
-
-### Permissions
-
-- **Release workflow**: `contents: write` to create releases and upload artifacts.
-- **Site workflow**: `contents: read`, `pages: write`, and `id-token: write` for GitHub Pages deployment.
-
 ## Troubleshooting
 
 ### Tests fail before release
 
-**Solution**: Fix tests before tagging. Always run:
+Fix tests before tagging. Always run:
 
 ```bash
 task test
 task quality
 ```
 
-### GoReleaser build fails in CI
+### Tag already exists locally
+
+If you previously created a local tag but didn't push it (or aborted a release):
+
+```bash
+git tag -d v0.4.0           # delete the local tag
+git tag -a "v0.4.0" -m "Release v0.4.0"  # recreate it
+```
+
+### Workflow failed in CI
 
 1. Check the Actions tab: `https://github.com/CalcMark/go-calcmark/actions`
 2. Click the failed workflow run for detailed logs
-3. Common issues:
+3. Common CI failure causes:
    - **Go version mismatch**: Workflow reads from `go.mod`, ensure it's current
    - **Permission denied**: Check repository Settings → Actions → Workflow permissions
    - **Homebrew tap push fails**: Verify `HOMEBREW_TAP_GITHUB_TOKEN` secret exists and has write access
    - **macOS signing fails**: Verify `MACOS_SIGN_P12` is valid base64, the `.p12` password is correct, and the certificate has not expired
    - **Notarization fails**: Verify the App Store Connect API key is active and the issuer ID / key ID are correct
+
+To retry after fixing the underlying issue:
+
+```bash
+# 1. Delete the tag locally and remotely
+git tag -d v0.4.0
+git push origin :refs/tags/v0.4.0
+
+# 2. Delete the GitHub release manually (if created)
+#    Go to https://github.com/CalcMark/go-calcmark/releases and delete the draft
+
+# 3. Fix the issue and commit
+
+# 4. Re-tag and push
+git tag -a "v0.4.0" -m "Release v0.4.0"
+git push origin v0.4.0
+```
+
+### Need to redo a release
+
+If the release was published but something was wrong:
+
+```bash
+# Delete the tag locally and remotely
+git tag -d v0.4.0
+git push origin :refs/tags/v0.4.0
+
+# Delete the GitHub release manually (if created)
+# Then fix the issue, commit, and re-tag
+git tag -a "v0.4.0" -m "Release v0.4.0"
+git push origin v0.4.0
+```
 
 ### Site deploy fails
 
@@ -230,47 +340,3 @@ task quality
 ### Site didn't update after push
 
 The site workflow only triggers when `site/**` files change. If you only changed Go source code, the site will not redeploy. To force a redeploy, make a trivial change to a file under `site/` or re-run the workflow manually from the Actions tab.
-
-### Need to redo a release
-
-```bash
-# Delete the tag locally and remotely
-git tag -d v0.3.0
-git push origin :refs/tags/v0.3.0
-
-# Delete the GitHub release manually (if created)
-# Then fix the issue, commit, and re-tag
-git tag -a "v0.3.0" -m "Release v0.3.0"
-git push origin v0.3.0
-```
-
-## Release Checklist
-
-Before pushing a tag:
-
-- [ ] All tests pass: `task test`
-- [ ] Quality checks pass: `task quality`
-- [ ] Site docs updated for user-facing changes: `task site` to preview
-- [ ] All changes committed and pushed to `main`
-- [ ] Tag created: `git tag -a "vX.Y.Z" -m "Release vX.Y.Z"`
-- [ ] Breaking changes documented (for major versions)
-- [ ] `HOMEBREW_TAP_GITHUB_TOKEN` secret is configured (first release only)
-- [ ] macOS signing secrets configured (first release only, see [macOS Code Signing](#macos-code-signing-and-notarization))
-- [ ] Apple Developer ID certificate has not expired
-
-## Version Numbering
-
-go-calcmark follows [Semantic Versioning 2.0.0](https://semver.org/):
-
-- **MAJOR**: Incompatible API or language changes
-- **MINOR**: New functionality (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
-
-## Post-Release
-
-After a successful release:
-
-1. Verify the release at `https://github.com/CalcMark/go-calcmark/releases`
-2. Test Homebrew installation: `brew upgrade calcmark/tap/calcmark`
-3. Verify the site at [calcmark.org](https://calcmark.org) reflects any doc updates
-4. Update downstream projects that consume go-calcmark

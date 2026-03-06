@@ -10,23 +10,23 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-Prepare and publish a CalcMark release. This command enforces quality gates and produces a changelog before tagging.
+Prepare and publish a CalcMark release. See RELEASE.md for the full process and troubleshooting.
+
+Pre-release tags (alpha/beta/rc) are not supported by this command. See RELEASE.md > Pre-release Versions to tag those manually.
 
 ## Step 1: Determine release type and next version
-
-Run this to find the latest tag:
 
 ```bash
 git tag --sort=-version:refname | head -1
 ```
 
-Parse the latest tag into MAJOR.MINOR.PATCH components. Based on the argument (`$ARGUMENTS`), compute the next version:
+Parse the latest tag into MAJOR.MINOR.PATCH. Based on `$ARGUMENTS`, compute the next version:
 
 - `patch` → increment PATCH
 - `minor` → increment MINOR, reset PATCH to 0
 - `major` → increment MAJOR, reset MINOR and PATCH to 0
 
-If `$ARGUMENTS` is empty, ask the user:
+If `$ARGUMENTS` is empty, ask:
 
 ```
 AskUserQuestion(
@@ -40,39 +40,31 @@ AskUserQuestion(
 )
 ```
 
-Print the computed version (e.g., "Next release: v0.4.0") and continue.
+Print: "Next release: v{X.Y.Z}"
 
-## Step 2: Ensure working tree is clean
+## Step 2: Clean working tree
 
 ```bash
 git status --porcelain
 ```
 
-If there are uncommitted changes, **stop** and tell the user:
+If not clean, **stop**: "Working tree is not clean. Commit or stash all changes before releasing."
 
-> "Working tree is not clean. Commit or stash all changes before releasing."
-
-Do NOT proceed until the working tree is clean.
-
-## Step 3: Ensure we are on main
+## Step 3: On main branch
 
 ```bash
 git branch --show-current
 ```
 
-If not on `main`, **warn** the user and ask for confirmation before continuing. Releases from non-main branches are unusual and should be intentional.
+If not on `main`, **warn** and ask for confirmation.
 
-## Step 4: Run full test suite
+## Step 4: Run tests
 
 ```bash
 task test
 ```
 
-If **any** test fails, **stop immediately**. Print the failure summary and tell the user:
-
-> "Tests must pass before releasing. Fix the failures above and run `/release` again."
-
-Do NOT proceed past a test failure. Do NOT offer to skip tests. Do NOT tag.
+If **any** test fails, **stop immediately**. Do NOT proceed. Do NOT offer to skip tests. Do NOT tag.
 
 ## Step 5: Run quality checks
 
@@ -80,23 +72,21 @@ Do NOT proceed past a test failure. Do NOT offer to skip tests. Do NOT tag.
 task quality
 ```
 
-Review the output. The `modernize` step may produce warnings for pre-existing issues — that is acceptable. But if `go fmt`, `go vet`, or `staticcheck` fail, **stop** and report the errors.
+If `go fmt`, `go vet`, or `staticcheck` fail, **stop** and report.
 
 ## Step 6: Generate changelog
-
-Generate a human-readable changelog of what's new since the last tag. Run:
 
 ```bash
 git log $(git tag --sort=-version:refname | head -1)..HEAD --oneline --no-merges
 ```
 
-Present the commits to the user in a clean summary grouped by type:
+If there are **zero commits** since the last tag, **stop**: "No commits since the last release. There is nothing to release."
+
+Present commits grouped by type:
 
 - **Features**: commits starting with `feat`
 - **Fixes**: commits starting with `fix`
-- **Other**: everything else (refactor, docs, chore, test, perf, etc.)
-
-Then ask the user:
+- **Other**: everything else
 
 ```
 AskUserQuestion(
@@ -109,21 +99,25 @@ AskUserQuestion(
 )
 ```
 
-If the user says "Hold on", **stop** and wait for further instructions.
-
-If there are **zero commits** since the last tag, **stop** and tell the user:
-
-> "No commits since the last release. There is nothing to release."
+If "Hold on", **stop** and wait.
 
 ## Step 7: Tag and push
 
-Only after all gates pass and the user approves the changelog:
+First check if the tag already exists locally:
+
+```bash
+git tag -l "vX.Y.Z"
+```
+
+If the tag exists, **stop**: "Tag vX.Y.Z already exists locally. Delete it with `git tag -d vX.Y.Z` and run `/release` again. See RELEASE.md > Troubleshooting for details."
+
+Create the tag:
 
 ```bash
 git tag -a "vX.Y.Z" -m "Release vX.Y.Z"
 ```
 
-Then ask the user for final confirmation before pushing:
+Ask for final confirmation:
 
 ```
 AskUserQuestion(
@@ -144,8 +138,6 @@ git push origin vX.Y.Z
 
 ## Step 8: Post-release summary
 
-After pushing, print:
-
 ```
 Release v{X.Y.Z} tagged and pushed.
 
@@ -155,7 +147,7 @@ Run /release-status to check workflow progress, or monitor at:
 
 Once complete:
   - Release page: https://github.com/CalcMark/go-calcmark/releases/tag/vX.Y.Z
-  - Homebrew: brew upgrade calcmark/tap/calcmark
+  - Homebrew: brew tap calcmark/tap && brew upgrade calcmark/tap/calcmark
 ```
 
 ## Hard Rules
@@ -164,4 +156,4 @@ Once complete:
 - **Never tag on a dirty working tree.** All changes must be committed first.
 - **Never push without user confirmation.** The tag push is irreversible in practice.
 - **Always show the changelog.** The user must see and approve what's being released.
-- **Never amend or force-push tags.** If something went wrong, tell the user to delete the tag and start over per RELEASE.md troubleshooting.
+- **Never amend or force-push tags.** If something went wrong, see RELEASE.md > Troubleshooting.
