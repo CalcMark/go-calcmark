@@ -2,6 +2,7 @@ package format
 
 import (
 	_ "embed"
+	gohtml "html"
 	"html/template"
 	"io"
 	"strings"
@@ -140,12 +141,16 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		case *document.TextBlock:
 			tb.Type = "text"
 			// Call Render() to actively process markdown to HTML
-			html := block.Render()
-			if html == "" {
-				// Fallback: just show source with line breaks
-				html = strings.Join(block.Source(), "<br>")
+			renderedHTML := block.Render()
+			if renderedHTML == "" {
+				// Fallback: escape each source line to prevent XSS, then join with <br>
+				escaped := make([]string, len(block.Source()))
+				for i, line := range block.Source() {
+					escaped[i] = gohtml.EscapeString(line)
+				}
+				renderedHTML = strings.Join(escaped, "<br>")
 			}
-			tb.HTML = template.HTML(html) // Convert to template.HTML to mark as safe
+			tb.HTML = template.HTML(renderedHTML) // Convert to template.HTML to mark as safe
 		}
 
 		data.Blocks = append(data.Blocks, tb)

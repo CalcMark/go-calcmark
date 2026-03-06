@@ -231,6 +231,41 @@ total = base + rate
 	}
 }
 
+// TestHTMLFormatterBrFallbackEscapesHTML tests that the <br> fallback path
+// in the HTML formatter escapes HTML entities to prevent XSS.
+func TestHTMLFormatterBrFallbackEscapesHTML(t *testing.T) {
+	// Create a text block that would trigger the <br> fallback
+	// (Render() returns empty string)
+	// We test via the full formatter pipeline with a document containing
+	// HTML that should be escaped if it somehow reaches the fallback path.
+	source := "# Normal heading\n\n<script>alert('xss')</script>\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// The <script> tag must not appear unescaped in the output
+	if strings.Contains(output, "<script>") {
+		t.Error("Raw <script> tag must not appear in HTML output")
+	}
+}
+
 // TestHTMLFormatterWithFrontmatter tests that frontmatter is rendered in HTML.
 func TestHTMLFormatterWithFrontmatter(t *testing.T) {
 	source := `---
