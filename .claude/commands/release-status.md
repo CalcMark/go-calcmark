@@ -7,7 +7,7 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-Check the GoReleaser workflow status for a release tag. Uses `gh` CLI to query GitHub Actions directly.
+Check the GoReleaser workflow status for a release tag. Uses `gh` CLI to query GitHub Actions directly. See RELEASE.md for the full release process and troubleshooting.
 
 ## Step 1: Determine which tag to check
 
@@ -142,15 +142,7 @@ Print:
 Then advise:
 
 ```
-To retry after fixing:
-
-  1. Delete the tag locally and remotely:
-     git tag -d v{X.Y.Z}
-     git push origin :refs/tags/v{X.Y.Z}
-
-  2. Fix the issue and commit
-
-  3. Re-run /release to tag and push again
+See RELEASE.md > Troubleshooting > Workflow Failed in CI for recovery steps.
 ```
 
 ## Hard Rules
