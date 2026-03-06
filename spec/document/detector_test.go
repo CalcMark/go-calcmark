@@ -303,6 +303,249 @@ func TestQuantityLiterals(t *testing.T) {
 	}
 }
 
+// --- Phase 2: CommonMark detector gap tests ---
+// These tests verify that the detector correctly classifies CommonMark constructs.
+
+func TestReferenceStyleLinkDefinition(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		{"simple reference", "[wiki]: https://en.wikipedia.org", false},
+		{"reference with title", `[example]: https://example.com "Example"`, false},
+		{"short reference", "[1]: http://example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isCalc, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation error: %v", err)
+			}
+			if isCalc != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, isCalc, tt.isCalc)
+			}
+		})
+	}
+}
+
+func TestSetextHeadingKeepsSameBlock(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name          string
+		source        string
+		expectedTypes []BlockType
+		expectedCount int
+	}{
+		{
+			name:          "setext H1 with ===",
+			source:        "Heading\n=======",
+			expectedTypes: []BlockType{BlockText},
+			expectedCount: 1,
+		},
+		{
+			name:          "setext H2 with ---",
+			source:        "Heading\n-------",
+			expectedTypes: []BlockType{BlockText},
+			expectedCount: 1,
+		},
+		{
+			name:          "setext heading followed by calc",
+			source:        "Heading\n=======\nx = 10",
+			expectedTypes: []BlockType{BlockText, BlockCalculation},
+			expectedCount: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(tt.source)
+			if err != nil {
+				t.Fatalf("DetectBlocks error: %v", err)
+			}
+
+			if len(blocks) != tt.expectedCount {
+				t.Errorf("Expected %d blocks, got %d", tt.expectedCount, len(blocks))
+				for i, b := range blocks {
+					t.Logf("  Block %d: type=%v lines=%v", i, b.Type(), b.Source())
+				}
+			}
+
+			for i, expectedType := range tt.expectedTypes {
+				if i >= len(blocks) {
+					break
+				}
+				if blocks[i].Type() != expectedType {
+					t.Errorf("Block %d: expected type %v, got %v", i, expectedType, blocks[i].Type())
+				}
+			}
+		})
+	}
+}
+
+func TestHorizontalRuleAfterBlankLine(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		{"triple dash", "---", false},
+		{"triple asterisk", "***", false},
+		{"triple underscore", "___", false},
+		{"spaced dashes", "- - -", false},
+		{"spaced asterisks", "* * *", false},
+		{"long dashes", "----------", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isCalc, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation error: %v", err)
+			}
+			if isCalc != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, isCalc, tt.isCalc)
+			}
+		})
+	}
+}
+
+func TestFencedCodeBlockFence(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		{"backtick fence", "```", false},
+		{"tilde fence", "~~~", false},
+		{"backtick with lang", "```go", false},
+		{"long backtick fence", "````", false},
+		{"long tilde fence", "~~~~", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isCalc, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation error: %v", err)
+			}
+			if isCalc != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, isCalc, tt.isCalc)
+			}
+		})
+	}
+}
+
+func TestFencedCodeBlockContentsStayInTextBlock(t *testing.T) {
+	detector := NewDetector()
+
+	// Lines inside a fenced code block that look like calculations
+	// must NOT be classified as CalcBlocks
+	source := "```\nx = 10\ny = x * 2\n```"
+
+	blocks, err := detector.DetectBlocks(source)
+	if err != nil {
+		t.Fatalf("DetectBlocks error: %v", err)
+	}
+
+	if len(blocks) != 1 {
+		t.Errorf("Expected 1 TextBlock for fenced code block, got %d blocks", len(blocks))
+		for i, b := range blocks {
+			t.Logf("  Block %d: type=%v lines=%v", i, b.Type(), b.Source())
+		}
+		return
+	}
+
+	if blocks[0].Type() != BlockText {
+		t.Errorf("Fenced code block should be TextBlock, got %v", blocks[0].Type())
+	}
+}
+
+func TestIndentedCodeBlock(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		{"4-space indent with calc syntax", "    x = 10", false},
+		{"tab indent with calc syntax", "\tx = 10", false},
+		{"8-space indent", "        y = 20", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isCalc, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation error: %v", err)
+			}
+			if isCalc != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, isCalc, tt.isCalc)
+			}
+		})
+	}
+}
+
+func TestPlusListMarker(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		{"plus list item", "+ First item", false},
+		{"plus with nested", "+ Nested item here", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isCalc, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation error: %v", err)
+			}
+			if isCalc != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, isCalc, tt.isCalc)
+			}
+		})
+	}
+}
+
+func TestImageSyntax(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		{"simple image", "![alt text](image.png)", false},
+		{"image with title", `![photo](pic.jpg "A photo")`, false},
+		{"image at line start", "![diagram](https://example.com/diagram.svg)", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isCalc, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation error: %v", err)
+			}
+			if isCalc != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, isCalc, tt.isCalc)
+			}
+		})
+	}
+}
+
 func TestEmptyLineDelimiter(t *testing.T) {
 	detector := NewDetector()
 
