@@ -12,9 +12,6 @@ weight: 10
 brew install calcmark/tap/calcmark
 ```
 
-> **macOS Gatekeeper:** If macOS says it cannot verify the binary, run:
-> `xattr -d com.apple.quarantine $(which cm)`
-
 **Download binary:**
 
 | Platform | Download |

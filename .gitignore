@@ -54,6 +54,3 @@ tiny.cm
 .task/
 *.p8
 .env
-notarize.sh
-calcmark*.gz
-cm.zip
