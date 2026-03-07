@@ -1,101 +1,65 @@
-# Recipe Scaling and Unit Conversion
+# Scone Scaling
 
-Converting a European bread recipe from metric to US customary units,
-while scaling from 1 loaf to 4 loaves for a dinner party.
+Classic English scones — scaling from 9 to 36 for afternoon tea.
 
-## Original Recipe (1 loaf, metric)
+## Base Recipe (makes 9)
 
-original_flour_g = 500
-original_water_g = 350
-original_salt_g = 10
-original_yeast_g = 7
+flour = 280 grams
+sugar = 50 grams
+butter = 85 grams
+milk = 160 ml
+baking_powder = 4 teaspoons
+salt = 0.5 teaspoons
+eggs = 1
 
-Hydration ratio (baker's percentage):
+oven = 220 celsius
 
-hydration_pct = original_water_g / original_flour_g * 100
+## Scale Up
 
-## Scaling Factor
+makes = 9
+target = 36
+scale = target / makes
 
-original_yield = 1
-target_yield = 4
-scale = target_yield / original_yield
+## Scaled Batch
 
-## Scaled Quantities (Still Metric)
-
-scaled_flour_g = original_flour_g * scale
-scaled_water_g = original_water_g * scale
-scaled_salt_g = original_salt_g * scale
-scaled_yeast_g = original_yeast_g * scale
+batch_flour = flour * scale
+batch_sugar = sugar * scale
+batch_butter = butter * scale
+batch_milk = milk * scale
+batch_bp = baking_powder * scale
+batch_salt = salt * scale
+batch_eggs = eggs * scale
 
 ## Convert to US Customary
 
-Using standard conversions (grams per unit):
+Dry ingredients by weight:
 
-grams_per_cup_flour = 120
-grams_per_cup_water = 237
-grams_per_tsp_salt = 6
-grams_per_tsp_yeast = 3
+flour_oz = batch_flour in ounces
+sugar_oz = batch_sugar in ounces
+butter_lb = batch_butter in pounds
 
-flour_cups = scaled_flour_g / grams_per_cup_flour
-water_cups = scaled_water_g / grams_per_cup_water
-salt_tsp = scaled_salt_g / grams_per_tsp_salt
-yeast_tsp = scaled_yeast_g / grams_per_tsp_yeast
+Liquid by volume:
 
-## Temperature Conversion
+milk_cups = batch_milk in cups
 
-Original proofing temp in Celsius, converted to Fahrenheit:
+Leavening by volume:
 
-proof_temp_c = 24 celsius
-proof_temp_f = proof_temp_c in fahrenheit
+bp_tbsp = batch_bp in tablespoons
+salt_tbsp = batch_salt in tablespoons
 
 Oven temperature:
 
-oven_temp_c = 230 celsius
-oven_temp_f = oven_temp_c in fahrenheit
+oven_f = oven in fahrenheit
 
-## Timing Adjustments
+## Cost per Scone
 
-Larger batches may need slightly longer rise times:
+Grocery cost for the full batch:
 
-base_rise_minutes = 90
-rise_adjustment = 1.15
-adjusted_rise = base_rise_minutes * rise_adjustment
+cost_flour = $3.50
+cost_butter = $7.50
+cost_sugar = $1.00
+cost_milk = $2.00
+cost_eggs = $1.50
 
-base_proof_minutes = 45
-adjusted_proof = base_proof_minutes * rise_adjustment
-
-bake_time = 45
-total_time_minutes = adjusted_rise + adjusted_proof + bake_time
-total_time_hours = total_time_minutes / 60
-
-## Cost Analysis
-
-flour_price_per_kg = 3.50
-salt_price_per_kg = 1.50
-yeast_price_per_100g = 5.00
-
-flour_cost = scaled_flour_g / 1000 * flour_price_per_kg
-salt_cost = scaled_salt_g / 1000 * salt_price_per_kg
-yeast_cost = scaled_yeast_g / 100 * yeast_price_per_100g
-
-total_ingredient_cost = flour_cost + salt_cost + yeast_cost
-cost_per_loaf = total_ingredient_cost / target_yield
-
-## Shopping List Summary
-
-Rounding up for practical shopping:
-
-flour_to_buy_kg = 2
-salt_to_buy_g = 50
-yeast_packets = 1
-
-## Nutritional Estimate (per loaf)
-
-calories_per_gram_flour = 3.64
-total_calories = scaled_flour_g * calories_per_gram_flour
-calories_per_loaf = total_calories / target_yield
-
-Assuming 12 slices per loaf:
-
-slices_per_loaf = 12
-calories_per_slice = calories_per_loaf / slices_per_loaf
+groceries = cost_flour + cost_butter + cost_sugar + cost_milk + cost_eggs
+per_scone = groceries / target

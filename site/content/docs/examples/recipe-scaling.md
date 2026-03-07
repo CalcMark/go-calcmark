@@ -1,190 +1,125 @@
 ---
 title: "Recipe Scaling"
-summary: "Scale a bread recipe from 1 to 4 loaves, convert metric to US customary, and estimate cost per loaf."
+summary: "Scale English scones from 9 to 36, convert metric to US customary, and find cost per scone."
 weight: 30
 calcmark_build: progressive
 ---
 
-You have a European bread recipe in metric units. You need 4 loaves for a dinner party. This walkthrough scales the recipe, converts units, handles temperature, estimates timing, and calculates cost per loaf -- all in one CalcMark document.
+You have a scone recipe in metric units. You need 36 for a tea party. This walkthrough scales every ingredient, converts between metric and US customary, handles temperature, and prices out the batch -- all in one CalcMark document.
 
 The complete CalcMark file is available at {{< repo-file path="testdata/examples/recipe-scaling.cm" >}}.
 
 ---
 
-## Original Recipe
+## Base Recipe
 
-Start by capturing the base recipe for a single loaf in grams. Then compute the hydration ratio -- a key baker's percentage that tells you how wet the dough is.
+Capture the base recipe for 9 scones. Each ingredient carries its unit -- grams for dry, milliliters for liquid, teaspoons for leavening.
 
 ```calcmark
-original_flour_g = 500
-original_water_g = 350
-original_salt_g = 10
-original_yeast_g = 7
+flour = 280 grams
+sugar = 50 grams
+butter = 85 grams
+milk = 160 ml
+baking_powder = 4 teaspoons
+salt = 0.5 teaspoons
+eggs = 1
 
-Hydration ratio (baker's percentage):
-
-hydration_pct = original_water_g / original_flour_g * 100
+oven = 220 celsius
 ```
 
-`hydration_pct` evaluates to `70` -- a 70% hydration dough, which produces a nice open crumb. All values here are plain numbers since we're doing manual unit bookkeeping with variable names.
+Every value except `eggs` is a quantity with a unit. CalcMark tracks units through arithmetic, so `280 grams * 2` produces `560 g` -- not a bare number. Notice that `baking_powder` displays as `1.33 tbsp` because CalcMark auto-scales quantities to readable units.
 
-**CalcMark features:** Variable assignment; arithmetic expressions; markdown prose between calculations.
+**CalcMark features:** Quantities with units (`grams`, `ml`, `teaspoons`, `celsius`); automatic unit display scaling; plain numeric assignment.
 
 ---
 
-## Scaling Factor
+## Scale Up
 
-You want 4 loaves instead of 1. Define a scale factor and let CalcMark carry it through.
+You need 36 scones instead of 9. Define a scale factor and let CalcMark carry it forward.
 
 ```calcmark
-original_yield = 1
-target_yield = 4
-scale = target_yield / original_yield
+makes = 9
+target = 36
+scale = target / makes
 ```
 
-`scale` is `4`. Simple division, but naming the value makes the intent clear and lets you tweak the yield in one place.
+`scale` is `4`. Changing `target` in one place rescales the entire document.
 
-**CalcMark features:** Derived calculations; descriptive variable names for self-documenting math.
+**CalcMark features:** Derived calculations; descriptive variable names.
 
 ---
 
-## Scaled Quantities
+## Scaled Batch
 
-Multiply every ingredient by the scale factor. The recipe stays in metric for now.
+Multiply every ingredient by `scale`. Units propagate automatically.
 
 ```calcmark
-scaled_flour_g = original_flour_g * scale
-scaled_water_g = original_water_g * scale
-scaled_salt_g = original_salt_g * scale
-scaled_yeast_g = original_yeast_g * scale
+batch_flour = flour * scale
+batch_sugar = sugar * scale
+batch_butter = butter * scale
+batch_milk = milk * scale
+batch_bp = baking_powder * scale
+batch_salt = salt * scale
+batch_eggs = eggs * scale
 ```
 
-You get `2000` g flour, `1400` g water, `40` g salt, and `28` g yeast. Each line references both the original amount and the scale factor, so changing either propagates automatically.
+`batch_flour` displays as `1.12 kg` -- CalcMark auto-scales `1120 grams` to kilograms for readability. You also get `200 g` sugar, `640 ml` milk, `5.33 tbsp` baking powder, and `4` eggs. Each result inherits and scales the unit from the original ingredient.
 
-**CalcMark features:** Variable references across sections; multiplication for batch scaling.
+**CalcMark features:** Quantity arithmetic (quantity times scalar); automatic display scaling (`grams` to `kg`, `teaspoons` to `tbsp`); cross-section variable references.
 
 ---
 
 ## Convert to US Customary
 
-Not everyone owns a kitchen scale. Define conversion factors and divide to get cups and teaspoons.
+The `in` keyword converts between compatible units. Mass converts to mass, volume to volume, temperature to temperature.
 
 ```calcmark
-grams_per_cup_flour = 120
-grams_per_cup_water = 237
-grams_per_tsp_salt = 6
-grams_per_tsp_yeast = 3
+Dry ingredients by weight:
 
-flour_cups = scaled_flour_g / grams_per_cup_flour
-water_cups = scaled_water_g / grams_per_cup_water
-salt_tsp = scaled_salt_g / grams_per_tsp_salt
-yeast_tsp = scaled_yeast_g / grams_per_tsp_yeast
+flour_oz = batch_flour in ounces
+sugar_oz = batch_sugar in ounces
+butter_lb = batch_butter in pounds
+
+Liquid by volume:
+
+milk_cups = batch_milk in cups
+
+Leavening by volume:
+
+bp_tbsp = batch_bp in tablespoons
+salt_tbsp = batch_salt in tablespoons
+
+Oven temperature:
+
+oven_f = oven in fahrenheit
 ```
 
-Results: roughly `16.67` cups of flour, `5.91` cups of water, `6.67` tsp salt, and `9.33` tsp yeast. These are manual conversions using plain arithmetic -- useful when your target units aren't in CalcMark's built-in unit system.
+`batch_flour in ounces` yields `39.5 ounces`, `batch_butter in pounds` gives `0.7496 pounds`, and `640 ml in cups` produces `2.67 cups`. The oven converts from `220 celsius` to `428 fahrenheit` -- no need to remember conversion formulas.
 
-**CalcMark features:** Division for unit conversion; named conversion factors for clarity.
+**CalcMark features:** `in` unit conversion; mass conversion (grams to ounces, pounds); volume conversion (ml to cups, teaspoons to tablespoons); temperature conversion (celsius to fahrenheit); markdown prose between calculations.
 
 ---
 
-## Temperature Conversion
+## Cost per Scone
 
-Here's where CalcMark's built-in unit conversion shines. Assign a value with a temperature unit, then convert it with `in`.
-
-```calcmark
-proof_temp_c = 24 celsius
-proof_temp_f = proof_temp_c in fahrenheit
-
-oven_temp_c = 230 celsius
-oven_temp_f = oven_temp_c in fahrenheit
-```
-
-`24 celsius in fahrenheit` yields `75.2` and `230 celsius in fahrenheit` yields `446`. The `in` keyword handles the non-linear Celsius-to-Fahrenheit formula for you -- no need to remember `(C * 9/5) + 32`.
-
-**CalcMark features:** Temperature units (`celsius`); `in` unit conversion (`in fahrenheit`); quantities with units.
-
----
-
-## Timing Adjustments
-
-Larger batches need longer rise times. Apply a 15% adjustment factor and sum everything up.
+Price out the batch with currency literals and divide by the target yield.
 
 ```calcmark
-base_rise_minutes = 90
-rise_adjustment = 1.15
-adjusted_rise = base_rise_minutes * rise_adjustment
+Grocery cost for the full batch:
 
-base_proof_minutes = 45
-adjusted_proof = base_proof_minutes * rise_adjustment
+cost_flour = $3.50
+cost_butter = $7.50
+cost_sugar = $1.00
+cost_milk = $2.00
+cost_eggs = $1.50
 
-bake_time = 45
-total_time_minutes = adjusted_rise + adjusted_proof + bake_time
-total_time_hours = total_time_minutes / 60
+groceries = cost_flour + cost_butter + cost_sugar + cost_milk + cost_eggs
+per_scone = groceries / target
 ```
 
-`adjusted_rise` is `103.5` minutes, `adjusted_proof` is `51.75` minutes, and `total_time_minutes` sums to `200.25` -- about `3.34` hours from start to finish.
+Total grocery cost is `$15.50` for 36 scones, making each one `$0.43`. The `$` sign propagates through addition and division.
 
-**CalcMark features:** Multiplication for scaling; multi-step derived calculations; division for unit conversion.
-
----
-
-## Cost Analysis
-
-Price out the scaled ingredients and find the cost per loaf.
-
-```calcmark
-flour_price_per_kg = 3.50
-salt_price_per_kg = 1.50
-yeast_price_per_100g = 5.00
-
-flour_cost = scaled_flour_g / 1000 * flour_price_per_kg
-salt_cost = scaled_salt_g / 1000 * salt_price_per_kg
-yeast_cost = scaled_yeast_g / 100 * yeast_price_per_100g
-
-total_ingredient_cost = flour_cost + salt_cost + yeast_cost
-cost_per_loaf = total_ingredient_cost / target_yield
-```
-
-Total ingredient cost is `8.46` for 4 loaves, making `cost_per_loaf` just `2.115`. Homemade bread is cheap.
-
-**CalcMark features:** Chained arithmetic; cross-section variable references (`scaled_flour_g`, `target_yield`).
-
----
-
-## Shopping List Summary
-
-Round up to practical quantities you can actually buy at the store.
-
-```calcmark
-flour_to_buy_kg = 2
-salt_to_buy_g = 50
-yeast_packets = 1
-```
-
-Plain assignments work as a quick reference table. CalcMark doesn't require every line to be a formula -- simple constants are valid too.
-
-**CalcMark features:** Plain numeric assignments; markdown headings as section organizers.
-
----
-
-## Nutritional Estimate
-
-Estimate calories per loaf and per slice using flour as the dominant calorie source.
-
-```calcmark
-calories_per_gram_flour = 3.64
-total_calories = scaled_flour_g * calories_per_gram_flour
-calories_per_loaf = total_calories / target_yield
-
-Assuming 12 slices per loaf:
-
-slices_per_loaf = 12
-calories_per_slice = calories_per_loaf / slices_per_loaf
-```
-
-Each loaf has roughly `1820` calories, or about `151.67` calories per slice. The inline prose ("Assuming 12 slices per loaf") is rendered as markdown and keeps the reasoning visible alongside the math.
-
-**CalcMark features:** Markdown prose between calculations; multi-step derived values.
+**CalcMark features:** Currency literals (`$`); currency arithmetic; cross-section variable references (`target`).
 
 ---
 
@@ -192,13 +127,16 @@ Each loaf has roughly `1820` calories, or about `151.67` calories per slice. The
 
 This example showcases the following CalcMark features:
 
-- **Variable assignment and references** -- named values that propagate across sections
-- **Arithmetic operators** -- `+`, `-`, `*`, `/` for scaling, conversion, and cost analysis
-- **Temperature units** -- `celsius`, `fahrenheit` as first-class units
-- **Unit conversion** -- `in fahrenheit` to convert between temperature scales
-- **Derived calculations** -- multi-step chains like `scaled_flour_g / 1000 * flour_price_per_kg`
-- **Markdown prose** -- headings, paragraphs, and inline comments between calculations
-- **Plain constants** -- simple assignments for shopping lists and reference values
+- **Quantities with units** -- `280 grams`, `160 ml`, `4 teaspoons`, `220 celsius`
+- **Automatic display scaling** -- `1120 grams` displays as `1.12 kg`, `16 teaspoons` as `5.33 tbsp`
+- **Unit conversion with `in`** -- `batch_flour in ounces`, `oven in fahrenheit`
+- **Mass conversions** -- grams to ounces, grams to pounds
+- **Volume conversions** -- milliliters to cups, teaspoons to tablespoons
+- **Temperature conversion** -- celsius to fahrenheit
+- **Currency arithmetic** -- `$` preserved through addition and division
+- **Scaling via multiplication** -- quantity times scalar preserves units
+- **Cross-section references** -- variables propagate across sections
+- **Markdown prose** -- headings and paragraphs between calculations
 
 ## Try It
 
