@@ -1,6 +1,7 @@
 package features
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -242,6 +243,45 @@ func TestNonParseableAliases(t *testing.T) {
 			}
 			t.Errorf("Feature %q missing expected alias %q", tt.funcName, tt.aliasName)
 		})
+	}
+}
+
+func TestRegistry_FrontmatterCategory(t *testing.T) {
+	r := NewRegistry()
+	features := r.ByCategory(CategoryFrontmatter)
+
+	if len(features) != 4 {
+		t.Errorf("expected 4 frontmatter features, got %d", len(features))
+	}
+
+	expected := map[string]bool{
+		"exchange":   false,
+		"globals":    false,
+		"scale":      false,
+		"convert_to": false,
+	}
+	for _, f := range features {
+		if _, ok := expected[f.Name]; !ok {
+			t.Errorf("unexpected frontmatter feature %q", f.Name)
+		}
+		expected[f.Name] = true
+	}
+	for name, found := range expected {
+		if !found {
+			t.Errorf("missing frontmatter feature %q", name)
+		}
+	}
+
+	// scale and convert_to descriptions should contain derived categories
+	for _, f := range features {
+		if f.Name == "scale" || f.Name == "convert_to" {
+			if !strings.Contains(f.Description, "Length") {
+				t.Errorf("%q description should contain 'Length'", f.Name)
+			}
+			if !strings.Contains(f.Description, "DataSize") {
+				t.Errorf("%q description should contain 'DataSize'", f.Name)
+			}
+		}
 	}
 }
 

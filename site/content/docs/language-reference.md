@@ -79,6 +79,8 @@ A CalcMark document is a sequence of **lines**. Each line is independently:
 
 A CalcMark document can begin with a YAML frontmatter block delimited by `---`. Frontmatter defines document-level configuration that is available to all calculations.
 
+{{< feature-table category="frontmatter" >}}
+
 ### Exchange Rates
 
 Define currency conversion rates using `FROM_TO: rate` format (underscore separator):
@@ -110,6 +112,72 @@ globals:
 ```
 
 Globals support all CalcMark literal types (numbers, currencies, quantities, dates, durations, rates, booleans, percentages). Expressions like `1 + 1` are not allowed -- only literal values.
+
+### Scale
+
+Multiply all quantity results by a factor. Applied after evaluation, before display.
+
+```yaml
+---
+scale: 2
+---
+```
+
+Scale accepts a number or a map with `factor` and optional `unit_categories`:
+
+```yaml
+---
+scale:
+  factor: 4
+  unit_categories: [Length, Mass]
+---
+```
+
+**Rules:**
+
+- **Quantities** are multiplied by the factor
+- **Temperature** is excluded by default (doubling a recipe does not double the oven temperature)
+- **Currency**, **Number**, **Boolean**, **Date**, and **Duration** are unaffected
+- **Rates** are immune to scale
+- When `unit_categories` is specified, only quantities in those categories are scaled
+
+### Convert To
+
+Convert quantity results to a target measurement system. Applied after scale.
+
+```yaml
+---
+convert_to: si
+---
+```
+
+Valid systems: `si` (metric) and `imperial` (US customary). Accepts a string or a map with `system` and optional `unit_categories`:
+
+```yaml
+---
+convert_to:
+  system: imperial
+  unit_categories: [Length, Volume]
+---
+```
+
+**Rules:**
+
+- Quantities already in the target system are unchanged
+- Explicit `in` conversions override `convert_to` (the user chose the unit)
+- Arbitrary units (e.g., `eggs`, `servers`) have no system mapping and are skipped
+- Currency, numbers, and other non-quantity types are unaffected
+- Rates have their amount converted, leaving the time denominator unchanged
+
+### Transform Order
+
+When both `scale` and `convert_to` are present, transforms apply in this order:
+
+1. **Evaluate** all expressions
+2. **Scale** quantity results
+3. **Convert** to target measurement system
+
+See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough.
 
 ## Line Classification
 

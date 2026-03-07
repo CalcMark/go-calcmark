@@ -13,6 +13,67 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	helpShowFunctions   bool
+	helpShowConstants   bool
+	helpShowFrontmatter bool
+)
+
+var helpCmd = &cobra.Command{
+	Use:   "help [topic]",
+	Short: "Show CalcMark reference information",
+	Long: `Display CalcMark functions, constants, and frontmatter directives.
+
+Topics:
+  functions    All built-in functions with descriptions and usage patterns
+  constants    All unit constants grouped by quantity type
+  frontmatter  All frontmatter directives with valid options and examples
+
+Flags can filter output: --functions, --constants, --frontmatter
+With no topic or flags, all sections are shown.`,
+	// Accept arbitrary args so Cobra doesn't error on unknown subcommand names.
+	// This lets `cm help eval` still work via Cobra's default help routing.
+	Args:               cobra.ArbitraryArgs,
+	DisableFlagParsing: false,
+	Run: func(cmd *cobra.Command, args []string) {
+		// If args provided but not a known topic, delegate to Cobra's
+		// default help behavior (show help for that subcommand).
+		if len(args) > 0 {
+			// Check if arg is a known root subcommand
+			sub, _, err := rootCmd.Find(args)
+			if err == nil && sub != rootCmd {
+				sub.Help()
+				return
+			}
+		}
+
+		showFuncs := helpShowFunctions
+		showConsts := helpShowConstants
+		showFM := helpShowFrontmatter
+
+		// If no flags set, show all
+		if !showFuncs && !showConsts && !showFM {
+			showFuncs, showConsts, showFM = true, true, true
+		}
+
+		if showFuncs {
+			printFunctions()
+		}
+		if showConsts {
+			if showFuncs {
+				fmt.Println()
+			}
+			printConstants()
+		}
+		if showFM {
+			if showFuncs || showConsts {
+				fmt.Println()
+			}
+			printFrontmatter()
+		}
+	},
+}
+
 var helpFunctionsCmd = &cobra.Command{
 	Use:   "functions",
 	Short: "List all CalcMark functions",
@@ -31,10 +92,25 @@ var helpConstantsCmd = &cobra.Command{
 	},
 }
 
+var helpFrontmatterCmd = &cobra.Command{
+	Use:   "frontmatter",
+	Short: "List all frontmatter directives",
+	Long:  `List all frontmatter directives with valid options, sub-keys, defaults, and YAML examples.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		printFrontmatter()
+	},
+}
+
 func init() {
-	helpFunctionsCmd.GroupID = "topics"
-	helpConstantsCmd.GroupID = "topics"
-	rootCmd.AddCommand(helpFunctionsCmd, helpConstantsCmd)
+	helpCmd.Flags().BoolVar(&helpShowFunctions, "functions", false, "Show functions only")
+	helpCmd.Flags().BoolVar(&helpShowConstants, "constants", false, "Show constants only")
+	helpCmd.Flags().BoolVar(&helpShowFrontmatter, "frontmatter", false, "Show frontmatter directives only")
+
+	helpCmd.AddCommand(helpFunctionsCmd)
+	helpCmd.AddCommand(helpConstantsCmd)
+	helpCmd.AddCommand(helpFrontmatterCmd)
+
+	rootCmd.SetHelpCommand(helpCmd)
 }
 
 // printFunctions prints all functions grouped by category.
@@ -185,6 +261,74 @@ func printConstants() {
 			fmt.Fprintln(w)
 		}
 	}
+}
+
+// printFrontmatter prints all frontmatter directives with verbose YAML examples.
+func printFrontmatter() {
+	w := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+	defer w.Flush()
+
+	fmt.Fprintln(w, "CalcMark Frontmatter Directives")
+	fmt.Fprintln(w)
+
+	categories := units.Categories()
+
+	// exchange
+	fmt.Fprintln(w, "exchange")
+	fmt.Fprintln(w, "--------")
+	fmt.Fprintln(w, "  Define currency conversion rates.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "    exchange:")
+	fmt.Fprintln(w, "      USD_EUR: 0.92")
+	fmt.Fprintln(w, "      EUR_GBP: 0.86")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Keys: FROM_TO format, 3-letter ISO 4217 codes")
+	fmt.Fprintln(w, "  Values: positive numbers (exchange rate)")
+	fmt.Fprintln(w)
+
+	// globals
+	fmt.Fprintln(w, "globals")
+	fmt.Fprintln(w, "-------")
+	fmt.Fprintln(w, "  Define document-wide variables.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "    globals:")
+	fmt.Fprintln(w, "      tax_rate: 0.32")
+	fmt.Fprintln(w, "      base_price: $100")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Values are CalcMark expressions evaluated before the document body.")
+	fmt.Fprintln(w)
+
+	// scale
+	fmt.Fprintln(w, "scale")
+	fmt.Fprintln(w, "-----")
+	fmt.Fprintln(w, "  Multiply quantity results by a factor.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "    scale: 2")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "    scale:")
+	fmt.Fprintln(w, "      factor: 4")
+	fmt.Fprintln(w, "      unit_categories: [Length, Mass]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Sub-keys: factor (number, required), unit_categories (list, optional)")
+	fmt.Fprintf(w, "  Categories: %s\n", strings.Join(categories, ", "))
+	fmt.Fprintln(w, "  Default: all categories except Temperature")
+	fmt.Fprintln(w)
+
+	// convert_to
+	fmt.Fprintln(w, "convert_to")
+	fmt.Fprintln(w, "----------")
+	fmt.Fprintln(w, "  Convert quantity results to a measurement system.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "    convert_to: si")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "    convert_to:")
+	fmt.Fprintln(w, "      system: imperial")
+	fmt.Fprintln(w, "      unit_categories: [Length]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Sub-keys: system (si or imperial, required), unit_categories (list, optional)")
+	fmt.Fprintf(w, "  Categories: %s\n", strings.Join(categories, ", "))
+	fmt.Fprintln(w, "  Systems: si, imperial")
+	fmt.Fprintln(w)
 }
 
 // filterAliases returns aliases excluding the canonical name and symbol.

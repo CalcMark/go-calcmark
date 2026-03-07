@@ -70,8 +70,7 @@ var (
 )
 
 func init() {
-	// Command group for domain-specific help topics (functions, constants)
-	rootCmd.AddGroup(&cobra.Group{ID: "topics", Title: "Help Topics:"})
+	// Help command is registered in help.go via rootCmd.SetHelpCommand(helpCmd)
 
 	// Persistent flags available to all subcommands
 	rootCmd.PersistentFlags().StringVar(&colorModeFlag, "color-mode", "",

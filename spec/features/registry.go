@@ -3,6 +3,7 @@
 package features
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -23,6 +24,7 @@ const (
 	CategoryStorage     Category = "storage"
 	CategoryCompression Category = "compression"
 	CategoryGrowth      Category = "growth"
+	CategoryFrontmatter Category = "frontmatter"
 )
 
 // Alias represents an alternative name for a feature, with a flag indicating
@@ -78,6 +80,7 @@ func NewRegistry() *Registry {
 	r.features = append(r.features, getGrowthFeatures()...)
 	r.features = append(r.features, getKeywords()...)
 	r.features = append(r.features, getOperators()...)
+	r.features = append(r.features, getFrontmatterFeatures()...)
 	return r
 }
 
@@ -630,6 +633,54 @@ func getOperators() []Feature {
 			Description: "Modulo or percentage",
 			Aliases:     []Alias{{Name: "mod", Parseable: false}, {Name: "percent", Parseable: false}},
 			Example:     "10 % 3 → 1, 50% → 0.5",
+		},
+	}
+}
+
+// getFrontmatterFeatures returns frontmatter directive features.
+func getFrontmatterFeatures() []Feature {
+	categories := strings.Join(units.Categories(), ", ")
+
+	return []Feature{
+		{
+			Name:     "exchange",
+			Category: CategoryFrontmatter,
+			Syntax:   "exchange:\n  FROM_TO: rate",
+			Description: "Define currency conversion rates. " +
+				"Keys use FROM_TO format with 3-letter ISO 4217 codes (e.g., USD_EUR).",
+			Example: "exchange:\n  USD_EUR: 0.92",
+		},
+		{
+			Name:     "globals",
+			Category: CategoryFrontmatter,
+			Syntax:   "globals:\n  name: value",
+			Description: "Define document-wide variables. " +
+				"Values are CalcMark expressions evaluated before the document body.",
+			Example: "globals:\n  tax_rate: 0.32\n  base_price: $100",
+		},
+		{
+			Name:     "scale",
+			Category: CategoryFrontmatter,
+			Syntax:   "scale: <factor>",
+			Description: fmt.Sprintf("Multiply quantity results by a factor. "+
+				"Map form: scale: {factor: N, unit_categories: [...]}\n"+
+				"Sub-keys: factor (number, required), unit_categories (list, optional)\n"+
+				"Categories: %s\n"+
+				"Default: all categories except Temperature",
+				categories),
+			Example: "scale: 2",
+		},
+		{
+			Name:     "convert_to",
+			Category: CategoryFrontmatter,
+			Syntax:   "convert_to: <system>",
+			Description: fmt.Sprintf("Convert quantity results to a measurement system. "+
+				"Map form: convert_to: {system: si|imperial, unit_categories: [...]}\n"+
+				"Sub-keys: system (si or imperial, required), unit_categories (list, optional)\n"+
+				"Categories: %s\n"+
+				"Systems: si, imperial",
+				categories),
+			Example: "convert_to: si",
 		},
 	}
 }

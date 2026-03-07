@@ -15,6 +15,7 @@ weight: 20
   - [Unit Conversion](#unit-conversion) -- `in` and `as` keywords
   - [Currency Conversion](#currency-conversion) -- Exchange rates in frontmatter
   - [Global Variables](#global-variables) -- Reusable values in frontmatter
+  - [Scale and Convert](#scale-convert) -- Document-wide scaling and unit system conversion
   - [Built-in Functions](#built-in-functions) -- All 15 functions
   - [Function Reference](#function-reference) -- Detailed examples for every function
   - [Natural Language Syntax](#natural-language-syntax) -- NL forms reference table
@@ -221,7 +222,7 @@ CalcMark supports a wide range of units across categories:
 - **Speed**: m/s, km/h, mph, knot
 - **Data**: byte, KB, MB, GB, TB (arbitrary units)
 
-Run `cm constants` for the complete list with aliases and descriptions.
+Run `cm help constants` for the complete list with aliases and descriptions.
 
 ### Unit Conversion {#unit-conversion}
 
@@ -292,6 +293,81 @@ Globals support all CalcMark literal types:
 - **Booleans**: `true`, `false`
 
 Globals must be literal values. Expressions like `1 + 1` are not allowed.
+
+### Scale and Convert {#scale-convert}
+
+Use `scale` and `convert_to` in the frontmatter to transform results across an entire document. This is useful for recipes, engineering estimates, and any document where you want to change units or multiply quantities globally.
+
+#### Scaling
+
+Multiply all quantity results by a factor:
+
+```yaml
+---
+scale: 2
+---
+```
+
+```text
+flour = 1.5 cups       -> 3 cups (doubled)
+eggs = 3 eggs           -> 6 eggs (doubled)
+oven = 350 fahrenheit   -> 350 fahrenheit (unchanged)
+price = $5.00           -> $5.00 (unchanged)
+```
+
+`flour` displays as `3 cups` and `eggs` as `6 eggs`. Temperature and currency are unaffected — doubling a recipe does not double the oven temperature or the cost of an egg.
+
+#### Converting
+
+Convert all quantities to a target measurement system:
+
+```yaml
+---
+convert_to: si
+---
+```
+
+```text
+distance = 5 miles       -> 8.05 km
+weight = 10 pounds       -> 4.54 kg
+temp = 72 fahrenheit     -> 22.2222 celsius
+```
+
+`distance` displays as `8.05 km`, `weight` as `4.54 kg`, and `temp` as `22.2222 celsius`. If you use the `in` keyword explicitly (e.g., `distance in feet`), that conversion takes priority over `convert_to`.
+
+#### Both Together
+
+When both are present, scale applies first, then convert:
+
+```yaml
+---
+scale: 2
+convert_to: si
+---
+```
+
+```text
+butter = 4 ounces       -> 227 g (doubled, then converted)
+```
+
+`butter` is first doubled to `8 ounces`, then converted to `227 g`.
+
+#### Filtering by Category
+
+Limit scale or convert to specific unit categories:
+
+```yaml
+---
+scale:
+  factor: 4
+  unit_categories: [Mass, Volume]
+convert_to:
+  system: si
+  unit_categories: [Length]
+---
+```
+
+See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough.
 
 ### Built-in Functions {#built-in-functions}
 
@@ -928,7 +1004,7 @@ Press **Ctrl+P** in the editor to toggle the preview pane, which shows evaluated
 
 ### Get Help on Functions {#tip-help}
 
-Run `cm functions` to see all available functions with descriptions and usage patterns. Run `cm constants` for unit constants.
+Run `cm help functions` to see all available functions with descriptions and usage patterns. Run `cm help constants` for unit constants, or `cm help frontmatter` for frontmatter directives.
 
 ## Troubleshooting {#troubleshooting}
 

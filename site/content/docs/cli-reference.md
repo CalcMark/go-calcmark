@@ -14,9 +14,10 @@ cm eval [file.cm]    # Evaluate and print results
 cm convert <file.cm> # Convert to another format
 cm remote            # Open a remote document
 cm config            # Print or create configuration
-cm functions         # List all CalcMark functions
-cm constants         # List all unit constants
-cm help [command]     # Help for any command
+cm help              # Show all reference info (functions, constants, frontmatter)
+cm help functions    # List all CalcMark functions
+cm help constants    # List all unit constants
+cm help frontmatter  # List all frontmatter directives
 cm version           # Print version info
 cm completion [shell] # Generate shell completions
 ```
@@ -280,32 +281,27 @@ With `--check`, all config files are validated for TOML syntax, valid hex colors
 
 ---
 
-## `cm functions` / `cm constants` {#help-topics}
+## `cm help` {#help}
 
-Browse CalcMark's built-in functions and unit constants.
+Browse CalcMark's built-in reference — functions, unit constants, and frontmatter directives.
 
 | Command | Description |
 |---------|-------------|
-| `cm functions` | All built-in functions with descriptions and usage patterns |
-| `cm constants` | All unit constants grouped by quantity type |
+| `cm help` | All sections (functions + constants + frontmatter) |
+| `cm help functions` | All built-in functions with descriptions and usage patterns |
+| `cm help constants` | All unit constants grouped by quantity type |
+| `cm help frontmatter` | All frontmatter directives with valid options and examples |
+| `cm help eval` | Help for the eval command |
 
-### Examples
-
-```bash
-cm functions          # Show all functions
-cm constants          # Show all unit constants
-```
-
----
-
-## `cm help` {#help}
-
-Show help for any command. Equivalent to passing `--help` to a command.
+Flags can filter output when using `cm help` directly:
 
 ```bash
-cm help              # Show top-level help
-cm help eval         # Help for the eval command
-cm help convert      # Help for the convert command
+cm help                  # Show all reference info
+cm help functions        # Functions only
+cm help constants        # Unit constants only
+cm help frontmatter      # Frontmatter directives only
+cm help --functions      # Same as cm help functions
+cm help eval             # Help for a specific command
 ```
 
 ---

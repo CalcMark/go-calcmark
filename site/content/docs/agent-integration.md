@@ -129,11 +129,12 @@ In JSON mode (`--format json`), all results are always included regardless of `-
 
 ## Feature Discovery
 
-List all available functions and units at runtime:
+List all available functions, units, and frontmatter directives at runtime:
 
 ```bash
-cm functions    # All functions with signatures and NL forms
-cm constants    # All unit constants with aliases
+cm help functions    # All functions with signatures and NL forms
+cm help constants    # All unit constants with aliases
+cm help frontmatter  # All frontmatter directives with valid options
 ```
 
 ## What CalcMark Can Do
