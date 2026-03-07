@@ -896,6 +896,36 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
+	// Directive references: @scale, @globals.tax_rate
+	if p.match(lexer.AT_SIGN) {
+		if !p.match(lexer.IDENTIFIER) {
+			return nil, p.error("expected directive name after '@' (e.g., @scale, @globals.name)")
+		}
+		directiveTok := p.previous()
+		directive := string(directiveTok.Value)
+
+		var field string
+		if directive == "globals" {
+			if !p.match(lexer.DOT) {
+				return nil, p.error("@globals requires a field name (e.g., @globals.tax_rate)")
+			}
+			if !p.match(lexer.IDENTIFIER) {
+				return nil, p.error("expected field name after '@globals.' (e.g., @globals.tax_rate)")
+			}
+			field = string(p.previous().Value)
+
+			// Reject nested dots: @globals.a.b
+			if p.check(lexer.DOT) {
+				return nil, p.error("nested dot access is not supported (e.g., @globals.a.b); only @globals.<name> is valid")
+			}
+		}
+
+		return &ast.DirectiveRef{
+			Directive: directive,
+			Field:     field,
+		}, nil
+	}
+
 	// Prefix currency symbols: $100, €50, £30, ¥1000
 	// These create CurrencyLiteral for proper currency handling
 	if p.match(lexer.CURRENCY_SYM) {

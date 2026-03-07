@@ -356,3 +356,21 @@ func (f *FunctionCall) String() string {
 func (f *FunctionCall) GetRange() *Range {
 	return f.Range
 }
+
+// DirectiveRef represents a reference to a frontmatter directive (@scale, @globals.name).
+type DirectiveRef struct {
+	Directive string // "scale" or "globals" (or any identifier — semantic checker validates)
+	Field     string // "" for @scale, "tax_rate" for @globals.tax_rate
+	Range     *Range
+}
+
+func (d *DirectiveRef) String() string {
+	if d.Field != "" {
+		return fmt.Sprintf("DirectiveRef(@%s.%s)", d.Directive, d.Field)
+	}
+	return fmt.Sprintf("DirectiveRef(@%s)", d.Directive)
+}
+
+func (d *DirectiveRef) GetRange() *Range {
+	return d.Range
+}

@@ -116,7 +116,7 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 2: AST Node and Parser
 
-- [ ] Add `DirectiveRef` AST node in `spec/ast/nodes.go`:
+- [x] Add `DirectiveRef` AST node in `spec/ast/nodes.go`:
   ```go
   type DirectiveRef struct {
       Directive string   // "scale" or "globals"
@@ -125,7 +125,7 @@ Smallest, self-contained change. No parser work. Can ship independently.
   }
   ```
   Implement `Node` interface (`String()`, `GetRange()`)
-- [ ] Add `DirectiveRef` parsing in `parsePrimary()` in `spec/parser/rdparser.go`:
+- [x] Add `DirectiveRef` parsing in `parsePrimary()` in `spec/parser/rdparser.go`:
   - When current token is `AT_SIGN`:
     - Consume `AT_SIGN`
     - Expect `IDENTIFIER` — the directive name
@@ -133,14 +133,14 @@ Smallest, self-contained change. No parser work. Can ship independently.
     - If directive is `"globals"` and no DOT, parser error: `@globals requires a field name (e.g., @globals.tax_rate)`
     - Return `&ast.DirectiveRef{Directive: name, Field: field}`
   - Reject second DOT: `@globals.a.b` → parser error (only one level of dot-access)
-- [ ] Add parser tests:
+- [x] Add parser tests:
   - `x = @scale` parses to assignment with DirectiveRef
   - `x = @globals.tax_rate` parses to assignment with DirectiveRef
   - `x = @globals` → parser error
   - `x = @globals.a.b` → parser error (nested dots)
   - `x = @exchange` → parses (semantic checker will reject)
   - `x = 1 + @scale * 2` → correct precedence
-- [ ] Run `task test` — all tests pass
+- [x] Run `task test` — all tests pass
 
 **Success criteria**: Parser produces `DirectiveRef` AST nodes for valid `@` references and rejects malformed ones.
 
