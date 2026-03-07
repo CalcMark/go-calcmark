@@ -260,4 +260,7 @@ This example showcases the following CalcMark features:
 
 ```bash
 cm testdata/examples/datacenter-cost.cm
+
+# Or open directly from GitHub — no clone required:
+cm remote --http https://raw.githubusercontent.com/CalcMark/go-calcmark/refs/heads/main/testdata/examples/datacenter-cost.cm
 ```
