@@ -20,17 +20,18 @@ monthly_users = 10M
 daily_users = 40% of monthly_users
 ```
 
-Each user posts about twice per week. Name the variable clearly and divide by 7 to get the daily rate. `as napkin` rounds to two significant figures for quick reference.
+Each user posts about twice per week. Express that as a weekly total, then use `over 1 day` to get the daily count. `as napkin` rounds to two significant figures for quick reference.
 
 ```calcmark
 posts_per_user_per_week = 2
-daily_posts = daily_users * posts_per_user_per_week / 7
+weekly_posts = daily_users * posts_per_user_per_week
+daily_posts = weekly_posts/week over 1 day
 daily_posts_napkin = daily_posts as napkin
 ```
 
-That gives 4M daily active users generating ~1.1M posts per day.
+That gives 4M daily active users generating ~1.14M posts per day.
 
-**CalcMark features:** Multiplier suffixes (`10M`); `% of` for percentages; `as napkin` for human-readable rounding.
+**CalcMark features:** Multiplier suffixes (`10M`); `% of` for percentages; rate accumulation (`over`); `as napkin` for human-readable rounding.
 
 ---
 
