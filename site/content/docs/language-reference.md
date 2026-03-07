@@ -10,6 +10,28 @@ This is the complete and authoritative specification for the CalcMark language.
 
 ---
 
+- [Overview](#overview)
+- [Philosophy](#philosophy)
+- [Document Model](#document-model)
+- [Frontmatter](#frontmatter)
+- [Line Classification](#line-classification)
+- [Syntax & Grammar](#syntax--grammar)
+- [Type System](#type-system)
+- [Operators](#operators)
+- [Reserved Keywords](#reserved-keywords)
+- [Functions](#functions)
+- [Natural Language Syntax](#natural-language-syntax)
+- [Napkin Math](#as-napkin)
+- [Precise Display](#as-precise)
+- [Rates](#rates)
+- [Date Arithmetic](#dates)
+- [Network Functions](#network)
+- [Storage Functions](#storage)
+- [Growth Functions](#growth)
+- [Validation & Diagnostics](#validation--diagnostics)
+
+---
+
 ## Overview
 
 CalcMark is a calculation language that blends seamlessly with markdown. It allows calculations to live naturally within prose documents.
