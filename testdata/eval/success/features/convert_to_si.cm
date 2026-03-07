@@ -1,0 +1,9 @@
+---
+convert_to: si
+---
+# Convert imperial quantities to SI
+
+weight = 5 pounds
+distance = 10 miles
+temp = 72 fahrenheit
+volume = 2 gallons

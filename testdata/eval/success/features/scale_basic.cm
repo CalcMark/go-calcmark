@@ -1,0 +1,20 @@
+---
+scale: 4
+---
+# Scale all quantities by 4x
+
+flour = 280 grams
+butter = 100 grams
+water = 500 ml
+
+# Arbitrary units scale too
+eggs = 3 eggs
+
+# Temperature excluded from scale by default
+oven_temp = 220 celsius
+
+# Currency is immune to scale
+price = $100
+
+# Duration is immune to scale
+bake_time = 30 minutes

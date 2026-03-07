@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
 // TestDataRateUnitConversions tests that all data rate unit variations work correctly.
@@ -196,13 +197,13 @@ func TestDataSizeUnitRegistry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			info, ok := GetUnitInfo(tt.unit)
+			info, ok := units.GetUnitInfo(tt.unit)
 			if !ok {
 				t.Fatalf("Unit %q not found in registry", tt.unit)
 			}
 
-			if info.Category != CategoryDataSize {
-				t.Errorf("Expected category %q, got %q", CategoryDataSize, info.Category)
+			if info.Category != units.CategoryDataSize {
+				t.Errorf("Expected category %q, got %q", units.CategoryDataSize, info.Category)
 			}
 
 			gotBits := info.ToBaseUnit(tt.value)

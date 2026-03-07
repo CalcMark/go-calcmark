@@ -250,8 +250,8 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 }
 
 // extractCMFrontmatter scans for ```yaml blocks containing CalcMark
-// frontmatter (exchange rates, globals) and returns them as a combined
-// CalcMark frontmatter string prefixed to the document.
+// frontmatter (exchange rates, globals, scale, convert_to) and returns
+// them as a combined CalcMark frontmatter string prefixed to the document.
 func extractCMFrontmatter(markdown string) string {
 	lines := strings.Split(markdown, "\n")
 	var yamlBlocks []string
@@ -269,7 +269,8 @@ func extractCMFrontmatter(markdown string) string {
 		} else if trimmed == "```" {
 			inYaml = false
 			block := strings.Join(current, "\n")
-			if strings.Contains(block, "exchange:") || strings.Contains(block, "globals:") {
+			if strings.Contains(block, "exchange:") || strings.Contains(block, "globals:") ||
+				strings.Contains(block, "scale:") || strings.Contains(block, "convert_to:") {
 				block = strings.TrimSpace(block)
 				block = strings.TrimPrefix(block, "---")
 				block = strings.TrimSuffix(block, "---")

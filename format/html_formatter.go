@@ -2,6 +2,7 @@ package format
 
 import (
 	_ "embed"
+	"fmt"
 	gohtml "html"
 	"html/template"
 	"io"
@@ -44,8 +45,10 @@ type TemplateLine struct {
 
 // TemplateFrontmatter represents frontmatter for template rendering
 type TemplateFrontmatter struct {
-	Globals  []TemplateGlobal
-	Exchange []TemplateExchange
+	Globals   []TemplateGlobal
+	Exchange  []TemplateExchange
+	Scale     string // e.g. "2x" or "0.5x [Length, Mass]"
+	ConvertTo string // e.g. "imperial" or "si [Length]"
 }
 
 // TemplateGlobal represents a global variable for template rendering
@@ -107,8 +110,27 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			}
 		}
 
+		// Add scale config
+		if fm.Scale != nil {
+			f, _ := fm.Scale.Factor.Float64()
+			s := fmt.Sprintf("%gx", f)
+			if len(fm.Scale.UnitCategories) > 0 {
+				s += " [" + strings.Join(fm.Scale.UnitCategories, ", ") + "]"
+			}
+			tfm.Scale = s
+		}
+
+		// Add convert_to config
+		if fm.ConvertTo != nil {
+			s := fm.ConvertTo.System
+			if len(fm.ConvertTo.UnitCategories) > 0 {
+				s += " [" + strings.Join(fm.ConvertTo.UnitCategories, ", ") + "]"
+			}
+			tfm.ConvertTo = s
+		}
+
 		// Only set if there's content
-		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 {
+		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 || tfm.Scale != "" || tfm.ConvertTo != "" {
 			data.Frontmatter = tfm
 		}
 	}

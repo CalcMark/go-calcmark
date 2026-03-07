@@ -42,7 +42,7 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 
 	// Verbose mode: show frontmatter and source with results
 	if fm := doc.GetFrontmatter(); fm != nil {
-		hasFrontmatter := len(fm.Globals) > 0 || len(fm.Exchange) > 0
+		hasFrontmatter := len(fm.Globals) > 0 || len(fm.Exchange) > 0 || fm.Scale != nil || fm.ConvertTo != nil
 		if hasFrontmatter {
 			fmt.Fprintln(w, "--- Frontmatter ---")
 			for _, name := range fm.GlobalKeys() {
@@ -56,6 +56,12 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				} else {
 					fmt.Fprintf(w, "  %s: %s\n", key, rate.StringFixed(4))
 				}
+			}
+			if fm.Scale != nil {
+				fmt.Fprintf(w, "  scale: %s\n", fm.Scale.Factor.String())
+			}
+			if fm.ConvertTo != nil {
+				fmt.Fprintf(w, "  convert_to: %s\n", fm.ConvertTo.System)
 			}
 			fmt.Fprintln(w)
 		}

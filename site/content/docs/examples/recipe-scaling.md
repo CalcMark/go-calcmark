@@ -1,125 +1,102 @@
 ---
 title: "Recipe Scaling"
-summary: "Scale English scones from 9 to 36, convert metric to US customary, and find cost per scone."
+summary: "Double a banana bread recipe and convert imperial to metric — with two lines of frontmatter."
 weight: 30
 calcmark_build: progressive
 ---
 
-You have a scone recipe in metric units. You need 36 for a tea party. This walkthrough scales every ingredient, converts between metric and US customary, handles temperature, and prices out the batch -- all in one CalcMark document.
+You have an American banana bread recipe written in cups, ounces, and fahrenheit. You need to double the batch for a party, and your kitchen has metric measuring tools. Two lines of YAML frontmatter handle both transformations — every ingredient is scaled and converted automatically.
 
 The complete CalcMark file is available at {{< repo-file path="testdata/examples/recipe-scaling.cm" >}}.
 
 ---
 
-## Base Recipe
+## Frontmatter: Scale and Convert
 
-Capture the base recipe for 9 scones. Each ingredient carries its unit -- grams for dry, milliliters for liquid, teaspoons for leavening.
+The `scale` directive multiplies every quantity by a factor. The `convert_to` directive converts results to a target measurement system (`si` or `imperial`). Together, they transform the entire document.
 
-```calcmark
-flour = 280 grams
-sugar = 50 grams
-butter = 85 grams
-milk = 160 ml
-baking_powder = 4 teaspoons
-salt = 0.5 teaspoons
-eggs = 1
-
-oven = 220 celsius
+```yaml
+---
+scale: 2
+convert_to: si
+---
 ```
 
-Every value except `eggs` is a quantity with a unit. CalcMark tracks units through arithmetic, so `280 grams * 2` produces `560 g` -- not a bare number. Notice that `baking_powder` displays as `1.33 tbsp` because CalcMark auto-scales quantities to readable units.
+`scale: 2` doubles all quantities. `convert_to: si` converts imperial units (cups, ounces, fahrenheit) to metric (ml, grams, celsius). You write the recipe once in its original units — the frontmatter does the rest.
 
-**CalcMark features:** Quantities with units (`grams`, `ml`, `teaspoons`, `celsius`); automatic unit display scaling; plain numeric assignment.
+**CalcMark features:** `scale` frontmatter directive; `convert_to` frontmatter directive.
 
 ---
 
-## Scale Up
+## Ingredients
 
-You need 36 scones instead of 9. Define a scale factor and let CalcMark carry it forward.
+Write each ingredient as a quantity with its original unit. The displayed results are already doubled and in metric.
 
 ```calcmark
-makes = 9
-target = 36
-scale = target / makes
+flour = 1.5 cups
+sugar = 0.75 cups
+butter = 4 ounces
+milk = 0.25 cups
+bananas = 3 bananas
+eggs = 2 eggs
+baking_soda = 1 teaspoons
+salt = 0.25 teaspoons
+vanilla = 1 teaspoons
 ```
 
-`scale` is `4`. Changing `target` in one place rescales the entire document.
+`flour` is written as `1.5 cups` but displays as `720 ml` — that's `1.5 × 2 = 3 cups`, converted to milliliters. `butter` goes from `4 ounces` to `227 g`. Arbitrary units like `bananas` and `eggs` are scaled (3 → 6, 2 → 4) but not converted, since they have no metric equivalent.
 
-**CalcMark features:** Derived calculations; descriptive variable names.
+**CalcMark features:** Quantities with units (`cups`, `ounces`, `teaspoons`); arbitrary units (`bananas`, `eggs`); automatic scaling; automatic unit conversion.
 
 ---
 
-## Scaled Batch
+## Oven Temperature
 
-Multiply every ingredient by `scale`. Units propagate automatically.
+Temperature is a special case — `convert_to` converts it, but `scale` does not. Doubling a recipe does not mean doubling the oven temperature.
 
 ```calcmark
-batch_flour = flour * scale
-batch_sugar = sugar * scale
-batch_butter = butter * scale
-batch_milk = milk * scale
-batch_bp = baking_powder * scale
-batch_salt = salt * scale
-batch_eggs = eggs * scale
+oven = 350 fahrenheit
 ```
 
-`batch_flour` displays as `1.12 kg` -- CalcMark auto-scales `1120 grams` to kilograms for readability. You also get `200 g` sugar, `640 ml` milk, `5.33 tbsp` baking powder, and `4` eggs. Each result inherits and scales the unit from the original ingredient.
+`350 fahrenheit` converts to `176.666667 celsius`. The scale factor is ignored for temperature by default, which is exactly what you want.
 
-**CalcMark features:** Quantity arithmetic (quantity times scalar); automatic display scaling (`grams` to `kg`, `teaspoons` to `tbsp`); cross-section variable references.
+**CalcMark features:** Temperature conversion (fahrenheit to celsius); temperature excluded from scale by default.
 
 ---
 
-## Convert to US Customary
+## Cost per Loaf
 
-The `in` keyword converts between compatible units. Mass converts to mass, volume to volume, temperature to temperature.
+Currency values are immune to both `scale` and `convert_to`. Price out the ingredients at their original cost, then divide by the number of loaves.
 
 ```calcmark
-Dry ingredients by weight:
+cost_flour = $0.50
+cost_sugar = $0.30
+cost_butter = $1.50
+cost_milk = $0.25
+cost_bananas = $0.75
+cost_eggs = $0.60
 
-flour_oz = batch_flour in ounces
-sugar_oz = batch_sugar in ounces
-butter_lb = batch_butter in pounds
-
-Liquid by volume:
-
-milk_cups = batch_milk in cups
-
-Leavening by volume:
-
-bp_tbsp = batch_bp in tablespoons
-salt_tbsp = batch_salt in tablespoons
-
-Oven temperature:
-
-oven_f = oven in fahrenheit
+total_cost = cost_flour + cost_sugar + cost_butter + cost_milk + cost_bananas + cost_eggs
+per_loaf = total_cost / 2
 ```
 
-`batch_flour in ounces` yields `39.5 ounces`, `batch_butter in pounds` gives `0.7496 pounds`, and `640 ml in cups` produces `2.67 cups`. The oven converts from `220 celsius` to `428 fahrenheit` -- no need to remember conversion formulas.
+Total grocery cost is `$3.90` for two loaves, or `$1.95` per loaf. The `$` symbol propagates through addition and division. Currency is unaffected by frontmatter transforms — costs reflect what you actually pay, not a scaled quantity.
 
-**CalcMark features:** `in` unit conversion; mass conversion (grams to ounces, pounds); volume conversion (ml to cups, teaspoons to tablespoons); temperature conversion (celsius to fahrenheit); markdown prose between calculations.
+**CalcMark features:** Currency literals (`$`); currency arithmetic; currency immune to `scale` and `convert_to`.
 
 ---
 
-## Cost per Scone
+## What the Frontmatter Does
 
-Price out the batch with currency literals and divide by the target yield.
+| What | Scale | Convert |
+|------|-------|---------|
+| Quantities (`cups`, `ounces`) | Multiplied by factor | Converted to target system |
+| Temperature (`fahrenheit`) | Excluded by default | Converted to celsius |
+| Arbitrary units (`bananas`, `eggs`) | Multiplied by factor | No conversion (no system mapping) |
+| Currency (`$`) | Unaffected | Unaffected |
+| Numbers (bare) | Unaffected | Unaffected |
 
-```calcmark
-Grocery cost for the full batch:
-
-cost_flour = $3.50
-cost_butter = $7.50
-cost_sugar = $1.00
-cost_milk = $2.00
-cost_eggs = $1.50
-
-groceries = cost_flour + cost_butter + cost_sugar + cost_milk + cost_eggs
-per_scone = groceries / target
-```
-
-Total grocery cost is `$15.50` for 36 scones, making each one `$0.43`. The `$` sign propagates through addition and division.
-
-**CalcMark features:** Currency literals (`$`); currency arithmetic; cross-section variable references (`target`).
+To change the batch size, edit `scale`. To switch between metric and imperial, change `convert_to` to `si` or `imperial`. The rest of the document adjusts automatically.
 
 ---
 
@@ -127,16 +104,13 @@ Total grocery cost is `$15.50` for 36 scones, making each one `$0.43`. The `$` s
 
 This example showcases the following CalcMark features:
 
-- **Quantities with units** -- `280 grams`, `160 ml`, `4 teaspoons`, `220 celsius`
-- **Automatic display scaling** -- `1120 grams` displays as `1.12 kg`, `16 teaspoons` as `5.33 tbsp`
-- **Unit conversion with `in`** -- `batch_flour in ounces`, `oven in fahrenheit`
-- **Mass conversions** -- grams to ounces, grams to pounds
-- **Volume conversions** -- milliliters to cups, teaspoons to tablespoons
-- **Temperature conversion** -- celsius to fahrenheit
-- **Currency arithmetic** -- `$` preserved through addition and division
-- **Scaling via multiplication** -- quantity times scalar preserves units
-- **Cross-section references** -- variables propagate across sections
-- **Markdown prose** -- headings and paragraphs between calculations
+- **`scale` frontmatter** — doubles every quantity with one line of YAML
+- **`convert_to` frontmatter** — converts imperial to metric across the document
+- **Temperature exclusion** — oven temperature converts but does not scale
+- **Arbitrary units** — `bananas` and `eggs` scale without conversion
+- **Currency immunity** — costs are unaffected by transforms
+- **Quantities with units** — `cups`, `ounces`, `teaspoons`, `fahrenheit`
+- **Currency arithmetic** — `$` preserved through addition and division
 
 ## Try It
 

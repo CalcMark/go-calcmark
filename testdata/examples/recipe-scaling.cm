@@ -1,65 +1,34 @@
-# Scone Scaling
+---
+scale: 2
+convert_to: si
+---
+# Banana Bread
 
-Classic English scones — scaling from 9 to 36 for afternoon tea.
+An American recipe in cups and ounces. The frontmatter doubles the
+batch and converts everything to metric — no manual math required.
 
-## Base Recipe (makes 9)
+## Ingredients (1 loaf)
 
-flour = 280 grams
-sugar = 50 grams
-butter = 85 grams
-milk = 160 ml
-baking_powder = 4 teaspoons
-salt = 0.5 teaspoons
-eggs = 1
+flour = 1.5 cups
+sugar = 0.75 cups
+butter = 4 ounces
+milk = 0.25 cups
+bananas = 3 bananas
+eggs = 2 eggs
+baking_soda = 1 teaspoons
+salt = 0.25 teaspoons
+vanilla = 1 teaspoons
 
-oven = 220 celsius
+oven = 350 fahrenheit
 
-## Scale Up
+## Cost
 
-makes = 9
-target = 36
-scale = target / makes
+cost_flour = $0.50
+cost_sugar = $0.30
+cost_butter = $1.50
+cost_milk = $0.25
+cost_bananas = $0.75
+cost_eggs = $0.60
 
-## Scaled Batch
-
-batch_flour = flour * scale
-batch_sugar = sugar * scale
-batch_butter = butter * scale
-batch_milk = milk * scale
-batch_bp = baking_powder * scale
-batch_salt = salt * scale
-batch_eggs = eggs * scale
-
-## Convert to US Customary
-
-Dry ingredients by weight:
-
-flour_oz = batch_flour in ounces
-sugar_oz = batch_sugar in ounces
-butter_lb = batch_butter in pounds
-
-Liquid by volume:
-
-milk_cups = batch_milk in cups
-
-Leavening by volume:
-
-bp_tbsp = batch_bp in tablespoons
-salt_tbsp = batch_salt in tablespoons
-
-Oven temperature:
-
-oven_f = oven in fahrenheit
-
-## Cost per Scone
-
-Grocery cost for the full batch:
-
-cost_flour = $3.50
-cost_butter = $7.50
-cost_sugar = $1.00
-cost_milk = $2.00
-cost_eggs = $1.50
-
-groceries = cost_flour + cost_butter + cost_sugar + cost_milk + cost_eggs
-per_scone = groceries / target
+total_cost = cost_flour + cost_sugar + cost_butter + cost_milk + cost_bananas + cost_eggs
+per_loaf = total_cost / 2

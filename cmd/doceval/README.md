@@ -81,10 +81,10 @@ that was set in an earlier block. If you need to show the same concept with
 different values, use distinct variable names.
 
 **YAML frontmatter extraction.** In `progressive` mode, doceval also scans for
-` ```yaml ` blocks containing CalcMark frontmatter keys (`exchange:`, `globals:`)
-and prepends them as the document's frontmatter. This lets progressive pages
-demonstrate exchange rates or globals in a separate yaml block while still having
-the calcmark blocks use those values.
+` ```yaml ` blocks containing CalcMark frontmatter keys (`exchange:`, `globals:`,
+`scale:`, `convert_to:`) and prepends them as the document's frontmatter. This
+lets progressive pages demonstrate frontmatter features in a separate yaml block
+while still having the calcmark blocks use those values.
 
 **Hash matching.** The SHA-256 hash must match between doceval (Go) and Hugo
 (template). Both normalize by trimming trailing whitespace per line, then

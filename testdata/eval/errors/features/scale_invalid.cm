@@ -1,0 +1,10 @@
+---
+scale: 0
+---
+
+# Invalid Scale Factor
+
+Scale must be a positive number. Zero would eliminate all quantities
+and is rejected during frontmatter parsing.
+
+x = 280 grams

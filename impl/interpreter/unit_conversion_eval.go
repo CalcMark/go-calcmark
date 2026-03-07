@@ -59,9 +59,14 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		return nil, err
 	}
 
-	// Mark as explicit so formatters skip auto-scaling
-	converted.IsExplicit = true
-	return converted, nil
+	// Clone to avoid mutating the stored variable value, then mark as
+	// explicit so convert_to transforms and auto-scaling skip this result.
+	out := &types.Quantity{
+		Value: converted.Value,
+		Unit:  converted.Unit,
+	}
+	out.IsExplicit = true
+	return out, nil
 }
 
 // evalCurrencyConversion converts a currency value to another currency.

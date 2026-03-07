@@ -1,0 +1,10 @@
+---
+convert_to: metric
+---
+
+# Invalid System
+
+convert_to must be 'si' or 'imperial'. Unknown system values
+are rejected during frontmatter parsing.
+
+x = 280 grams

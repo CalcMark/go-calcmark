@@ -10,6 +10,7 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/transform"
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
@@ -57,6 +58,9 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 			e.checkTextBlockForLikelyCalculations(node.ID, block)
 		}
 	}
+
+	// Apply scale/convert_to transforms to all block results
+	applyTransforms(doc, nil)
 
 	return nil
 }
@@ -201,6 +205,9 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 	// Store reactive environment for variable lookups
 	e.env = reactiveEnv
 
+	// Apply scale/convert_to transforms to all block results
+	applyTransforms(doc, nil)
+
 	return nil
 }
 
@@ -229,6 +236,11 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 			}
 		}
 	}
+
+	// Only transform affected blocks — other blocks already hold
+	// transformed results from the previous full evaluation.
+	applyTransforms(doc, blockIDs)
+
 	return nil
 }
 
@@ -466,4 +478,51 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	block.SetDirty(false)
 
 	return nil
+}
+
+// applyTransforms applies scale/convert_to frontmatter transforms to block results.
+// If onlyIDs is nil, all blocks are transformed (used after full evaluation).
+// If onlyIDs is non-nil, only those blocks are transformed (used by
+// EvaluateAffectedBlocks to avoid double-transforming unaffected blocks).
+// The interpreter environment is NOT affected — variable values stay raw.
+func applyTransforms(doc *document.Document, onlyIDs []string) {
+	fm := doc.GetFrontmatter()
+	if fm == nil || (fm.Scale == nil && fm.ConvertTo == nil) {
+		return
+	}
+
+	var idSet map[string]bool
+	if len(onlyIDs) > 0 {
+		idSet = make(map[string]bool, len(onlyIDs))
+		for _, id := range onlyIDs {
+			idSet[id] = true
+		}
+	}
+
+	for _, node := range doc.GetBlocks() {
+		if idSet != nil && !idSet[node.ID] {
+			continue
+		}
+		applyBlockTransform(node, fm)
+	}
+}
+
+// applyBlockTransform applies scale/convert_to to a single block's results.
+func applyBlockTransform(node *document.BlockNode, fm *document.Frontmatter) {
+	cb, ok := node.Block.(*document.CalcBlock)
+	if !ok || cb.Error() != nil {
+		return
+	}
+
+	results := cb.Results()
+	if len(results) == 0 {
+		return
+	}
+
+	transformed := transform.ApplyToResults(results, fm.Scale, fm.ConvertTo)
+	cb.SetResults(transformed)
+
+	if len(transformed) > 0 {
+		cb.SetLastValue(transformed[len(transformed)-1])
+	}
 }

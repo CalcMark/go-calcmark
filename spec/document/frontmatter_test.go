@@ -906,3 +906,341 @@ globals:
 		})
 	}
 }
+
+// ============================================================
+// Scale and ConvertTo frontmatter tests
+// ============================================================
+
+func TestParseFrontmatter_ScaleScalar(t *testing.T) {
+	source := "---\nscale: 4\n---\nflour = 280 grams\n"
+	fm, remaining, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm == nil {
+		t.Fatal("expected frontmatter")
+	}
+	if fm.Scale == nil {
+		t.Fatal("expected Scale to be set")
+	}
+	if !fm.Scale.Factor.Equal(decimal.NewFromInt(4)) {
+		t.Errorf("expected factor 4, got %s", fm.Scale.Factor.String())
+	}
+	if len(fm.Scale.UnitCategories) != 0 {
+		t.Errorf("expected no unit categories, got %v", fm.Scale.UnitCategories)
+	}
+	if remaining != "flour = 280 grams\n" {
+		t.Errorf("unexpected remaining: %q", remaining)
+	}
+}
+
+func TestParseFrontmatter_ScaleFloat(t *testing.T) {
+	source := "---\nscale: 2.5\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Scale == nil {
+		t.Fatal("expected Scale")
+	}
+	if !fm.Scale.Factor.Equal(decimal.NewFromFloat(2.5)) {
+		t.Errorf("expected factor 2.5, got %s", fm.Scale.Factor.String())
+	}
+}
+
+func TestParseFrontmatter_ScaleMap(t *testing.T) {
+	source := "---\nscale:\n  factor: 4\n  unit_categories: [Mass, Volume]\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Scale == nil {
+		t.Fatal("expected Scale")
+	}
+	if !fm.Scale.Factor.Equal(decimal.NewFromInt(4)) {
+		t.Errorf("expected factor 4, got %s", fm.Scale.Factor.String())
+	}
+	if len(fm.Scale.UnitCategories) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(fm.Scale.UnitCategories))
+	}
+	if fm.Scale.UnitCategories[0] != "Mass" || fm.Scale.UnitCategories[1] != "Volume" {
+		t.Errorf("unexpected categories: %v", fm.Scale.UnitCategories)
+	}
+}
+
+func TestParseFrontmatter_ScaleValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		errMsg string
+	}{
+		{
+			name:   "zero",
+			source: "---\nscale: 0\n---\n",
+			errMsg: "scale factor must be positive",
+		},
+		{
+			name:   "negative",
+			source: "---\nscale: -1\n---\n",
+			errMsg: "scale factor must be positive",
+		},
+		{
+			name:   "invalid type",
+			source: "---\nscale: big\n---\n",
+			errMsg: "scale must be a number",
+		},
+		{
+			name:   "map missing factor",
+			source: "---\nscale:\n  unit_categories: [Mass]\n---\n",
+			errMsg: "scale map form requires 'factor' key",
+		},
+		{
+			name:   "invalid category",
+			source: "---\nscale:\n  factor: 4\n  unit_categories: [Flavor]\n---\n",
+			errMsg: "invalid unit category",
+		},
+		{
+			name:   "NaN",
+			source: "---\nscale: .nan\n---\n",
+			errMsg: "scale factor must be a finite number",
+		},
+		{
+			name:   "Inf",
+			source: "---\nscale: .inf\n---\n",
+			errMsg: "scale factor must be a finite number",
+		},
+		{
+			name:   "map factor NaN",
+			source: "---\nscale:\n  factor: .nan\n---\n",
+			errMsg: "scale.factor must be a finite number",
+		},
+		{
+			name:   "unknown sub-key",
+			source: "---\nscale:\n  factor: 4\n  bogus: true\n---\n",
+			errMsg: "unknown key",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := ParseFrontmatter(tt.source)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("expected error containing %q, got %q", tt.errMsg, err.Error())
+			}
+		})
+	}
+}
+
+func TestParseFrontmatter_ConvertToScalar(t *testing.T) {
+	source := "---\nconvert_to: imperial\n---\nflour = 280 grams\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.ConvertTo == nil {
+		t.Fatal("expected ConvertTo to be set")
+	}
+	if fm.ConvertTo.System != "imperial" {
+		t.Errorf("expected system 'imperial', got %q", fm.ConvertTo.System)
+	}
+	if len(fm.ConvertTo.UnitCategories) != 0 {
+		t.Errorf("expected no unit categories, got %v", fm.ConvertTo.UnitCategories)
+	}
+}
+
+func TestParseFrontmatter_ConvertToSI(t *testing.T) {
+	source := "---\nconvert_to: si\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.ConvertTo == nil || fm.ConvertTo.System != "si" {
+		t.Fatalf("expected ConvertTo with system 'si', got %+v", fm.ConvertTo)
+	}
+}
+
+func TestParseFrontmatter_ConvertToMap(t *testing.T) {
+	source := "---\nconvert_to:\n  system: si\n  unit_categories: [Mass]\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.ConvertTo == nil {
+		t.Fatal("expected ConvertTo")
+	}
+	if fm.ConvertTo.System != "si" {
+		t.Errorf("expected system 'si', got %q", fm.ConvertTo.System)
+	}
+	if len(fm.ConvertTo.UnitCategories) != 1 || fm.ConvertTo.UnitCategories[0] != "Mass" {
+		t.Errorf("unexpected categories: %v", fm.ConvertTo.UnitCategories)
+	}
+}
+
+func TestParseFrontmatter_ConvertToValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		errMsg string
+	}{
+		{
+			name:   "invalid system",
+			source: "---\nconvert_to: metric\n---\n",
+			errMsg: "convert_to system must be 'si' or 'imperial'",
+		},
+		{
+			name:   "map missing system",
+			source: "---\nconvert_to:\n  unit_categories: [Mass]\n---\n",
+			errMsg: "convert_to map form requires 'system' key",
+		},
+		{
+			name:   "invalid category",
+			source: "---\nconvert_to:\n  system: imperial\n  unit_categories: [Flavor]\n---\n",
+			errMsg: "invalid unit category",
+		},
+		{
+			name:   "unknown sub-key",
+			source: "---\nconvert_to:\n  system: imperial\n  bogus: true\n---\n",
+			errMsg: "unknown key",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := ParseFrontmatter(tt.source)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("expected error containing %q, got %q", tt.errMsg, err.Error())
+			}
+		})
+	}
+}
+
+func TestParseFrontmatter_UnitCategoryCaseInsensitive(t *testing.T) {
+	source := "---\nscale:\n  factor: 2\n  unit_categories: [mass, VOLUME, Temperature]\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Scale == nil {
+		t.Fatal("expected Scale")
+	}
+	expected := []string{"Mass", "Volume", "Temperature"}
+	if len(fm.Scale.UnitCategories) != len(expected) {
+		t.Fatalf("expected %d categories, got %d", len(expected), len(fm.Scale.UnitCategories))
+	}
+	for i, want := range expected {
+		if fm.Scale.UnitCategories[i] != want {
+			t.Errorf("category %d: got %q, want %q", i, fm.Scale.UnitCategories[i], want)
+		}
+	}
+}
+
+func TestParseFrontmatter_ScaleConvertToCoexist(t *testing.T) {
+	source := "---\nscale: 4\nconvert_to: imperial\nexchange:\n  USD_EUR: 0.92\nglobals:\n  tax: 0.1\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Scale == nil || fm.ConvertTo == nil {
+		t.Fatal("expected both Scale and ConvertTo")
+	}
+	if !fm.Scale.Factor.Equal(decimal.NewFromInt(4)) {
+		t.Errorf("unexpected scale factor: %s", fm.Scale.Factor.String())
+	}
+	if fm.ConvertTo.System != "imperial" {
+		t.Errorf("unexpected convert_to system: %s", fm.ConvertTo.System)
+	}
+	if len(fm.Exchange) != 1 {
+		t.Errorf("expected 1 exchange rate, got %d", len(fm.Exchange))
+	}
+	if fm.Globals["tax"] != "0.1" {
+		t.Errorf("expected global tax=0.1, got %q", fm.Globals["tax"])
+	}
+}
+
+func TestFrontmatter_Serialize_ScaleScalar(t *testing.T) {
+	fm := &Frontmatter{
+		Exchange: make(map[string]decimal.Decimal),
+		Globals:  make(map[string]string),
+		Scale:    &ScaleConfig{Factor: decimal.NewFromInt(4)},
+	}
+	result := fm.Serialize()
+	if !strings.Contains(result, "scale: 4") {
+		t.Errorf("expected 'scale: 4' in output, got %q", result)
+	}
+}
+
+func TestFrontmatter_Serialize_ScaleMap(t *testing.T) {
+	fm := &Frontmatter{
+		Exchange: make(map[string]decimal.Decimal),
+		Globals:  make(map[string]string),
+		Scale: &ScaleConfig{
+			Factor:         decimal.NewFromInt(4),
+			UnitCategories: []string{"Mass", "Volume"},
+		},
+	}
+	result := fm.Serialize()
+	if !strings.Contains(result, "factor: 4") {
+		t.Errorf("expected 'factor: 4' in output, got %q", result)
+	}
+	if !strings.Contains(result, "unit_categories: [Mass, Volume]") {
+		t.Errorf("expected categories in output, got %q", result)
+	}
+}
+
+func TestFrontmatter_Serialize_ConvertTo(t *testing.T) {
+	fm := &Frontmatter{
+		Exchange:  make(map[string]decimal.Decimal),
+		Globals:   make(map[string]string),
+		ConvertTo: &ConvertToConfig{System: "imperial"},
+	}
+	result := fm.Serialize()
+	if !strings.Contains(result, "convert_to: imperial") {
+		t.Errorf("expected 'convert_to: imperial' in output, got %q", result)
+	}
+}
+
+func TestFrontmatter_Serialize_ConvertToMap(t *testing.T) {
+	fm := &Frontmatter{
+		Exchange: make(map[string]decimal.Decimal),
+		Globals:  make(map[string]string),
+		ConvertTo: &ConvertToConfig{
+			System:         "si",
+			UnitCategories: []string{"Mass"},
+		},
+	}
+	result := fm.Serialize()
+	if !strings.Contains(result, "system: si") {
+		t.Errorf("expected 'system: si' in output, got %q", result)
+	}
+	if !strings.Contains(result, "unit_categories: [Mass]") {
+		t.Errorf("expected categories in output, got %q", result)
+	}
+}
+
+func TestFrontmatter_ScaleConvertTo_RoundTrip(t *testing.T) {
+	fm := &Frontmatter{
+		Exchange:  make(map[string]decimal.Decimal),
+		Globals:   make(map[string]string),
+		Scale:     &ScaleConfig{Factor: decimal.NewFromInt(4)},
+		ConvertTo: &ConvertToConfig{System: "imperial"},
+	}
+
+	serialized := fm.Serialize()
+	parsed, _, err := ParseFrontmatter(serialized)
+	if err != nil {
+		t.Fatalf("round-trip parse failed: %v", err)
+	}
+
+	if parsed.Scale == nil || !parsed.Scale.Factor.Equal(decimal.NewFromInt(4)) {
+		t.Errorf("scale lost in round-trip: %+v", parsed.Scale)
+	}
+	if parsed.ConvertTo == nil || parsed.ConvertTo.System != "imperial" {
+		t.Errorf("convert_to lost in round-trip: %+v", parsed.ConvertTo)
+	}
+}

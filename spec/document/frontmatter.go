@@ -7,22 +7,42 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 	"gopkg.in/yaml.v3"
 )
+
+// ScaleConfig configures the document-level scale transform.
+// When present, all eligible quantities are multiplied by Factor.
+// UnitCategories restricts scaling to specific categories (empty = all except Temperature).
+type ScaleConfig struct {
+	Factor         decimal.Decimal
+	UnitCategories []string // empty = all (except Temperature)
+}
+
+// ConvertToConfig configures the document-level unit system conversion.
+// When present, eligible quantities are converted to the target measurement system.
+// UnitCategories restricts conversion to specific categories (empty = all).
+type ConvertToConfig struct {
+	System         string   // "si" or "imperial"
+	UnitCategories []string // empty = all
+}
 
 // Frontmatter represents structured metadata at the start of a CalcMark document.
 // It is delimited by --- markers and contains YAML content.
 //
 // Reserved keys (CalcMark grammar):
 //   - exchange: Currency conversion rates
-//   - (future: precision, locale, etc.)
+//   - scale: Document-level quantity scaling
+//   - convert_to: Document-level unit system conversion
 //
 // User-defined variables go under 'globals':
 //
 //	---
 //	exchange:
 //	  USD_EUR: 0.92
+//	scale: 4
+//	convert_to: imperial
 //	globals:
 //	  base_date: Jan 15 2025
 //	  tax_rate: 0.32
@@ -36,6 +56,12 @@ type Frontmatter struct {
 	// Values are CalcMark expressions that will be parsed and evaluated.
 	// Example: "base_date" -> "Jan 15 2025", "tax_rate" -> "0.32"
 	Globals map[string]string
+
+	// Scale is the document-level scale transform (nil if not present).
+	Scale *ScaleConfig
+
+	// ConvertTo is the document-level unit system conversion (nil if not present).
+	ConvertTo *ConvertToConfig
 
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
@@ -56,8 +82,28 @@ type Frontmatter struct {
 // reservedKeys lists all top-level frontmatter keys reserved for CalcMark grammar.
 // Unknown keys at the top level are rejected to ensure forward compatibility.
 var reservedKeys = map[string]bool{
-	"exchange": true,
-	"globals":  true,
+	"exchange":   true,
+	"globals":    true,
+	"scale":      true,
+	"convert_to": true,
+}
+
+// validUnitCategories maps lowercase category names to their canonical form.
+// Derived from units.Categories() at init time so it stays in sync with the
+// actual unit definitions and never drifts.
+var validUnitCategories map[string]string
+
+func init() {
+	validUnitCategories = make(map[string]string)
+	for _, cat := range units.Categories() {
+		validUnitCategories[strings.ToLower(cat)] = cat
+	}
+}
+
+// validConvertToSystems lists the valid target systems for convert_to.
+var validConvertToSystems = map[string]bool{
+	"si":       true,
+	"imperial": true,
 }
 
 // ExchangeRateKey creates a normalized key for looking up exchange rates.
@@ -218,8 +264,143 @@ func (f *Frontmatter) HasExchangeRate(key string) bool {
 // frontmatterYAML is the intermediate struct for YAML unmarshaling.
 // This keeps the YAML structure separate from the normalized Frontmatter type.
 type frontmatterYAML struct {
-	Exchange map[string]float64 `yaml:"exchange"`
-	Globals  map[string]string  `yaml:"globals"`
+	Exchange  map[string]float64 `yaml:"exchange"`
+	Globals   map[string]string  `yaml:"globals"`
+	Scale     any                `yaml:"scale"`
+	ConvertTo any                `yaml:"convert_to"`
+}
+
+// parseScaleConfig parses the scale field which can be a scalar number or a map
+// with factor and unit_categories keys.
+func parseScaleConfig(raw any) (*ScaleConfig, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	switch v := raw.(type) {
+	case int:
+		return validateScaleConfig(decimal.NewFromInt(int64(v)), nil)
+	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return nil, fmt.Errorf("scale factor must be a finite number")
+		}
+		return validateScaleConfig(decimal.NewFromFloat(v), nil)
+	case map[string]any:
+		factorRaw, hasFactor := v["factor"]
+		if !hasFactor {
+			return nil, fmt.Errorf("scale map form requires 'factor' key")
+		}
+		var factor decimal.Decimal
+		switch f := factorRaw.(type) {
+		case int:
+			factor = decimal.NewFromInt(int64(f))
+		case float64:
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				return nil, fmt.Errorf("scale.factor must be a finite number")
+			}
+			factor = decimal.NewFromFloat(f)
+		default:
+			return nil, fmt.Errorf("scale.factor must be a number, got %T", factorRaw)
+		}
+		// Reject unknown sub-keys
+		for key := range v {
+			if key != "factor" && key != "unit_categories" {
+				return nil, fmt.Errorf("unknown key %q in scale; valid keys: factor, unit_categories", key)
+			}
+		}
+		cats, err := parseUnitCategories(v, "scale")
+		if err != nil {
+			return nil, err
+		}
+		return validateScaleConfig(factor, cats)
+	default:
+		return nil, fmt.Errorf("scale must be a number or a map with 'factor' key, got %T", raw)
+	}
+}
+
+// validateScaleConfig validates and returns a ScaleConfig.
+func validateScaleConfig(factor decimal.Decimal, categories []string) (*ScaleConfig, error) {
+	if !factor.IsPositive() {
+		return nil, fmt.Errorf("scale factor must be positive, got %s", factor.String())
+	}
+	return &ScaleConfig{Factor: factor, UnitCategories: categories}, nil
+}
+
+// parseConvertToConfig parses the convert_to field which can be a string ("si"/"imperial")
+// or a map with system and unit_categories keys.
+func parseConvertToConfig(raw any) (*ConvertToConfig, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	switch v := raw.(type) {
+	case string:
+		return validateConvertToConfig(v, nil)
+	case map[string]any:
+		systemRaw, hasSystem := v["system"]
+		if !hasSystem {
+			return nil, fmt.Errorf("convert_to map form requires 'system' key")
+		}
+		system, ok := systemRaw.(string)
+		if !ok {
+			return nil, fmt.Errorf("convert_to.system must be a string, got %T", systemRaw)
+		}
+		// Reject unknown sub-keys
+		for key := range v {
+			if key != "system" && key != "unit_categories" {
+				return nil, fmt.Errorf("unknown key %q in convert_to; valid keys: system, unit_categories", key)
+			}
+		}
+		cats, err := parseUnitCategories(v, "convert_to")
+		if err != nil {
+			return nil, err
+		}
+		return validateConvertToConfig(system, cats)
+	default:
+		return nil, fmt.Errorf("convert_to must be a string or a map with 'system' key, got %T", raw)
+	}
+}
+
+// validateConvertToConfig validates and returns a ConvertToConfig.
+func validateConvertToConfig(system string, categories []string) (*ConvertToConfig, error) {
+	normalized := strings.ToLower(strings.TrimSpace(system))
+	if !validConvertToSystems[normalized] {
+		return nil, fmt.Errorf("convert_to system must be 'si' or 'imperial', got %q", system)
+	}
+	return &ConvertToConfig{System: normalized, UnitCategories: categories}, nil
+}
+
+// parseUnitCategories extracts and validates unit_categories from a map form.
+func parseUnitCategories(m map[string]any, directive string) ([]string, error) {
+	catsRaw, hasCats := m["unit_categories"]
+	if !hasCats {
+		return nil, nil
+	}
+
+	catSlice, ok := catsRaw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s.unit_categories must be a list", directive)
+	}
+
+	var categories []string
+	for _, c := range catSlice {
+		name, ok := c.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s.unit_categories entries must be strings", directive)
+		}
+		canonical, valid := validUnitCategories[strings.ToLower(name)]
+		if !valid {
+			validNames := make([]string, 0, len(validUnitCategories))
+			for _, v := range validUnitCategories {
+				validNames = append(validNames, v)
+			}
+			sort.Strings(validNames)
+			return nil, fmt.Errorf("invalid unit category %q in %s.unit_categories; valid categories: %s",
+				name, directive, strings.Join(validNames, ", "))
+		}
+		categories = append(categories, canonical)
+	}
+	return categories, nil
 }
 
 // ParseFrontmatter extracts YAML frontmatter from the beginning of a document.
@@ -229,7 +410,7 @@ type frontmatterYAML struct {
 //   - Start at line 1 with exactly "---"
 //   - End with a line containing exactly "---"
 //   - Contain valid YAML between the delimiters
-//   - Only use reserved keys at top level (exchange, globals)
+//   - Only use reserved keys at top level (exchange, globals, scale, convert_to)
 //
 // If no frontmatter is present, returns (nil, source, nil).
 func ParseFrontmatter(source string) (*Frontmatter, string, error) {
@@ -345,6 +526,24 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		}
 	}
 
+	// Parse scale directive
+	if raw.Scale != nil {
+		sc, err := parseScaleConfig(raw.Scale)
+		if err != nil {
+			return nil, "", fmt.Errorf("frontmatter: %w", err)
+		}
+		fm.Scale = sc
+	}
+
+	// Parse convert_to directive
+	if raw.ConvertTo != nil {
+		ct, err := parseConvertToConfig(raw.ConvertTo)
+		if err != nil {
+			return nil, "", fmt.Errorf("frontmatter: %w", err)
+		}
+		fm.ConvertTo = ct
+	}
+
 	// Calculate remaining source (after closing delimiter)
 	remaining := ""
 	if closeIdx+1 < len(lines) {
@@ -435,7 +634,7 @@ func (f *Frontmatter) Serialize() string {
 		return f.rawSource + "\n" // Add CommonMark blank line
 	}
 
-	if len(f.Exchange) == 0 && len(f.Globals) == 0 {
+	if len(f.Exchange) == 0 && len(f.Globals) == 0 && f.Scale == nil && f.ConvertTo == nil {
 		return ""
 	}
 
@@ -450,6 +649,26 @@ func (f *Frontmatter) Serialize() string {
 			if rate, ok := f.Exchange[key]; ok {
 				sb.WriteString(fmt.Sprintf("  %s: %s\n", key, rate.String()))
 			}
+		}
+	}
+
+	// Serialize scale directive
+	if f.Scale != nil {
+		if len(f.Scale.UnitCategories) == 0 {
+			sb.WriteString(fmt.Sprintf("scale: %s\n", f.Scale.Factor.String()))
+		} else {
+			sb.WriteString(fmt.Sprintf("scale:\n  factor: %s\n  unit_categories: [%s]\n",
+				f.Scale.Factor.String(), strings.Join(f.Scale.UnitCategories, ", ")))
+		}
+	}
+
+	// Serialize convert_to directive
+	if f.ConvertTo != nil {
+		if len(f.ConvertTo.UnitCategories) == 0 {
+			sb.WriteString(fmt.Sprintf("convert_to: %s\n", f.ConvertTo.System))
+		} else {
+			sb.WriteString(fmt.Sprintf("convert_to:\n  system: %s\n  unit_categories: [%s]\n",
+				f.ConvertTo.System, strings.Join(f.ConvertTo.UnitCategories, ", ")))
 		}
 	}
 

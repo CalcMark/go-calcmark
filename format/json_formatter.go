@@ -26,8 +26,22 @@ type JSONDocument struct {
 
 // JSONFrontmatter represents frontmatter in JSON output
 type JSONFrontmatter struct {
-	Globals  map[string]string `json:"globals,omitempty"`
-	Exchange map[string]string `json:"exchange,omitempty"`
+	Globals   map[string]string `json:"globals,omitempty"`
+	Exchange  map[string]string `json:"exchange,omitempty"`
+	Scale     *JSONScale        `json:"scale,omitempty"`
+	ConvertTo *JSONConvertTo    `json:"convert_to,omitempty"`
+}
+
+// JSONScale represents scale config in JSON output
+type JSONScale struct {
+	Factor         float64  `json:"factor"`
+	UnitCategories []string `json:"unit_categories,omitempty"`
+}
+
+// JSONConvertTo represents convert_to config in JSON output
+type JSONConvertTo struct {
+	System         string   `json:"system"`
+	UnitCategories []string `json:"unit_categories,omitempty"`
 }
 
 // JSONBlock represents a single block in JSON output.
@@ -133,7 +147,22 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			}
 		}
 
-		if len(fm.Globals) > 0 || len(fm.Exchange) > 0 {
+		if fm.Scale != nil {
+			f, _ := fm.Scale.Factor.Float64()
+			jfm.Scale = &JSONScale{
+				Factor:         f,
+				UnitCategories: fm.Scale.UnitCategories,
+			}
+		}
+
+		if fm.ConvertTo != nil {
+			jfm.ConvertTo = &JSONConvertTo{
+				System:         fm.ConvertTo.System,
+				UnitCategories: fm.ConvertTo.UnitCategories,
+			}
+		}
+
+		if len(fm.Globals) > 0 || len(fm.Exchange) > 0 || fm.Scale != nil || fm.ConvertTo != nil {
 			result.Frontmatter = jfm
 		}
 	}
@@ -155,8 +184,8 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				}
 				jr := JSONResult{Source: stmt.Source}
 				if stmt.Result != nil {
-					jr.Value = df.Format(stmt.Result)
 					populateResult(&jr, stmt.Result)
+					jr.Value = df.Format(stmt.Result)
 				} else if block.Error() != nil {
 					// Per-result error: statement was reached but evaluation failed
 					jr.Error = block.Error().Error()

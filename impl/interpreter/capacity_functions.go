@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 )
 
@@ -218,8 +219,8 @@ func normalizeRateToThroughput(rate *types.Rate, throughput *types.Quantity) (de
 	// Convert rate's amount to bits (base unit) using the registry
 	var amountInBits float64
 	if rate.Amount.Unit != "" {
-		info, ok := GetUnitInfo(strings.ToLower(rate.Amount.Unit))
-		if ok && info.Category == CategoryDataSize {
+		info, ok := units.GetUnitInfo(strings.ToLower(rate.Amount.Unit))
+		if ok && info.Category == units.CategoryDataSize {
 			val, _ := rate.Amount.Value.Float64()
 			amountInBits = info.ToBaseUnit(val)
 		} else {
@@ -241,8 +242,8 @@ func normalizeRateToThroughput(rate *types.Rate, throughput *types.Quantity) (de
 
 	// Convert throughput to bits per second using the registry
 	var throughputBitsPerSecond float64
-	throughputInfo, ok := GetUnitInfo(strings.ToLower(throughput.Unit))
-	if ok && throughputInfo.Category == CategoryDataSize {
+	throughputInfo, ok := units.GetUnitInfo(strings.ToLower(throughput.Unit))
+	if ok && throughputInfo.Category == units.CategoryDataSize {
 		val, _ := throughput.Value.Float64()
 		throughputBitsPerSecond = throughputInfo.ToBaseUnit(val)
 	} else {

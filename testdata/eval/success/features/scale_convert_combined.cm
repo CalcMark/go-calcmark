@@ -1,0 +1,15 @@
+---
+scale: 4
+convert_to: imperial
+---
+# Scale 4x then convert to imperial
+
+flour = 280 grams
+butter = 100 grams
+water = 500 ml
+
+# Temperature converts but doesn't scale (default exclusion)
+oven_temp = 220 celsius
+
+# Explicit unit choice overrides convert_to
+explicit = 280 grams in ounces

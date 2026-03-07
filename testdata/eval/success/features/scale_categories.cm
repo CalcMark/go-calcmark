@@ -1,0 +1,16 @@
+---
+scale:
+  factor: 4
+  unit_categories: [Mass, Volume]
+---
+# Only scale Mass and Volume
+
+flour = 280 grams
+butter = 100 grams
+water = 500 ml
+
+# Length should NOT be scaled
+distance = 10 km
+
+# Temperature should NOT be scaled
+oven_temp = 220 celsius

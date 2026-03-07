@@ -360,3 +360,75 @@ z = x + y
 		t.Errorf("Expected redefinition error, got: %v", err)
 	}
 }
+
+// TestExplicitInDoesNotMutateVariable verifies that using "in" on a variable
+// in a later block does not set IsExplicit on the original value, which would
+// cause convert_to transforms to skip it.
+func TestExplicitInDoesNotMutateVariable(t *testing.T) {
+	source := `---
+scale: 2
+convert_to: si
+---
+butter = 4 ounces
+
+Text break
+
+butter_oz = butter in ounces`
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	blocks := doc.GetBlocks()
+
+	// Find the calc blocks
+	var butterBlock *document.CalcBlock
+	var butterOzBlock *document.CalcBlock
+	for _, node := range blocks {
+		cb, ok := node.Block.(*document.CalcBlock)
+		if !ok {
+			continue
+		}
+		src := strings.Join(cb.Source(), " ")
+		if strings.Contains(src, "butter = 4") {
+			butterBlock = cb
+		}
+		if strings.Contains(src, "butter_oz") {
+			butterOzBlock = cb
+		}
+	}
+
+	if butterBlock == nil {
+		t.Fatal("Could not find butter block")
+	}
+	if butterOzBlock == nil {
+		t.Fatal("Could not find butter_oz block")
+	}
+
+	// butter should be scaled (4→8) and converted to SI (ounces→grams ≈ 227g)
+	butterResults := butterBlock.Results()
+	if len(butterResults) == 0 {
+		t.Fatal("butter block has no results")
+	}
+	butterVal := butterResults[0].String()
+	if !strings.Contains(butterVal, "g") || strings.Contains(butterVal, "ounces") {
+		t.Errorf("butter should be converted to grams, got %q", butterVal)
+	}
+
+	// butter_oz should stay in ounces (explicit "in" overrides convert_to)
+	ozResults := butterOzBlock.Results()
+	if len(ozResults) == 0 {
+		t.Fatal("butter_oz block has no results")
+	}
+	ozVal := ozResults[0].String()
+	if !strings.Contains(ozVal, "ounces") {
+		t.Errorf("butter_oz should stay in ounces (explicit in), got %q", ozVal)
+	}
+}
