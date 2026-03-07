@@ -4,14 +4,11 @@ summary: "Worked examples showing CalcMark in action."
 weight: 50
 ---
 
-Explore complete CalcMark files that demonstrate real-world use cases. Run any example with:
-
-```bash
-cm testdata/examples/<filename>.cm
-```
+Explore complete CalcMark files that demonstrate real-world use cases. Each example page has a Larky icon you can click to copy the `cm remote` command — paste it into your terminal to open the file directly.
 
 ## Real-World Use Cases
 
+- [Markdown Showcase](markdown-showcase/) -- Headings, lists, quotes, links, tables, and live calculations
 - [Household Budget](household-budget/) -- Monthly budget with rates, conversions, and napkin math
 - [Job Offer Comparison](job-offer/) -- Comparing compensation packages
 - [Project Workback](project-workback/) -- Sprint planning with dates and durations

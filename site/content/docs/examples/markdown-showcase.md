@@ -1,0 +1,93 @@
+---
+title: "Markdown Showcase"
+summary: "A complete markdown document with headings, lists, quotes, links, tables, and live calculations."
+weight: 5
+calcmark_build: progressive
+---
+
+CalcMark documents are just markdown. This example shows how headings, bullet lists, blockquotes, links, tables, and inline formatting all coexist with live calculations. Nothing special is needed — write your thinking, add numbers, and results appear.
+
+The complete CalcMark file is available at {{< repo-file path="testdata/examples/markdown-showcase.cm" >}}.
+
+---
+
+```calcmark
+# Weekend Camping Trip
+
+Planning a weekend getaway. CalcMark lets you **think in prose**
+and *calculate inline* — no separate spreadsheet needed.
+
+## Budget
+
+gear = $120
+campsite = 2 * $35
+food = $60
+gas_price = 3 * $4.50
+total = gear + campsite + food + gas_price
+
+Per person, assuming a group of four:
+
+group = 4
+per_person = total / group
+
+## Packing Checklist
+
+Things to remember:
+
+- Tent and sleeping bags
+- Cooler with ice
+- Firewood (or buy at the site)
+- First aid kit
+- [Weather forecast](https://weather.gov)
+
+> **Tip:** Start packing the night before.
+> You always forget something if you rush.
+
+## Distance & Fuel
+
+The campground is 85 miles from home:
+
+distance = 85 miles
+distance in km
+
+Average fuel economy and round-trip cost:
+
+round_trip = 170
+mpg = 28
+gallons = round_trip / mpg
+fuel_cost = gallons * $4.50
+
+### Quick Conversions
+
+50 fahrenheit in celsius
+2 liters in gallons
+
+## Meal Plan
+
+### Day 1
+
+| Meal      | Cost  |
+|-----------|-------|
+| Breakfast | $8    |
+| Lunch     | $12   |
+| Dinner    | $15   |
+
+day1_food = $8 + $12 + $15
+
+### Day 2
+
+day2_food = day1_food * 0.90
+
+Slightly cheaper — we'll use leftovers.
+
+total_food = day1_food + day2_food
+
+## Summary
+
+> The real cost is always more than you think.
+>
+> > — Every camper, ever
+
+all_in = total + fuel_cost + total_food
+all_in_pp = all_in / group
+```

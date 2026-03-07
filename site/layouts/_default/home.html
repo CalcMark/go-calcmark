@@ -1,6 +1,12 @@
 {{ define "main" }}
 <section class="hero">
   <div class="container">
+    {{- $larkColor := resources.Get "images/lark-color.svg" | fingerprint -}}
+    {{- $logoColor := resources.Get "images/logo-color.svg" | fingerprint -}}
+    <div class="hero-lockup">
+      <img src="{{ $larkColor.RelPermalink }}" alt="Larky the CalcMark Lark" class="hero-lark">
+      <img src="{{ $logoColor.RelPermalink }}" alt="cm" class="hero-cm">
+    </div>
     <h1 class="hero-headline">Calculations embedded<br>in markdown documents.</h1>
     <p class="hero-sub">Write your thinking in plain text. Add calculations that reference each other. Watch results update as you type.</p>
     <div class="hero-install">
@@ -22,35 +28,48 @@
     <div class="feature-card">
       <h3>Variables flow downward</h3>
       <p>Define once, reference anywhere below. Change one number and watch everything update.</p>
-      <img src="{{ "images/feature-variables.gif" | relURL }}"
-           alt="CalcMark editor showing variables updating as you type"
-           class="feature-gif" loading="lazy">
+      <pre class="feature-snippet"><code>income = $5000           <span class="r">$5,000.00</span>
+rent = income * 0.30     <span class="r">$1,500.00</span>
+remaining = income - rent <span class="r">$3,500.00</span></code></pre>
     </div>
     <div class="feature-card">
       <h3>Units are first-class</h3>
       <p>Write <code>5 miles in km</code> or <code>20 celsius in fahrenheit</code>. CalcMark understands physical units.</p>
+      <pre class="feature-snippet"><code>5 miles in km              <span class="r">8.05 km</span>
+20 celsius in fahrenheit   <span class="r">68 fahrenheit</span>
+3 gallons in liters        <span class="r">11.4 liters</span></code></pre>
     </div>
     <div class="feature-card">
       <h3>Currencies built in</h3>
       <p><code>$100</code>, <code>50 EUR</code>, exchange rates via YAML frontmatter. Automatic formatting.</p>
+      <pre class="feature-snippet"><code>price = $1200      <span class="r">$1,200.00</span>
+price in EUR       <span class="r">€1,104.00</span>
+15% of price       <span class="r">$180.00</span></code></pre>
     </div>
     <div class="feature-card">
-      <h3>Markdown is ignored</h3>
-      <p>Write prose freely. Only lines that parse as calculations are evaluated. Your thinking stays in the document.</p>
+      <h3>Markdown meets math</h3>
+      <p>Write prose and calculations together. Your thinking stays in the document, right next to the numbers.</p>
+      <pre class="feature-snippet"><code># Planning a trip
+We need flights and a hotel.
+
+budget = $2000       <span class="r">$2,000.00</span>
+spent = $1350        <span class="r">$1,350.00</span>
+remaining = budget - spent <span class="r">$650.00</span></code></pre>
     </div>
     <div class="feature-card">
       <h3>Export anywhere</h3>
       <p>Convert to HTML, Markdown, JSON, or plain text. Pipe expressions from the command line.</p>
-      <img src="{{ "images/feature-export.gif" | relURL }}"
-           alt="CalcMark editor export overlay showing format options"
-           class="feature-gif" loading="lazy">
+      <pre class="feature-snippet"><code><span class="c">$</span> cm convert budget.cm --to=html
+<span class="c">$</span> cm convert budget.cm --to=json
+<span class="c">$</span> cm convert budget.cm --to=markdown
+<span class="c">$</span> cm convert budget.cm --to=text</code></pre>
     </div>
     <div class="feature-card">
-      <h3>Terminal-native</h3>
-      <p>A TUI editor that feels right at home in your terminal. Human-readable, diffable files.</p>
-      <img src="{{ "images/feature-eval.gif" | relURL }}"
-           alt="CalcMark evaluating a budget file from the command line"
-           class="feature-gif" loading="lazy">
+      <h3>Natural language</h3>
+      <p>Read from storage, compress data, transfer across networks — in plain English.</p>
+      <pre class="feature-snippet"><code>read 100 MB from ssd       <span class="r">0.18 s</span>
+compress 1 GB using gzip   <span class="r">341 MB</span>
+1500000 as napkin          <span class="r">1.5M</span></code></pre>
     </div>
   </div>
 </section>

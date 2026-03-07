@@ -6,4 +6,4 @@
 {{- $raw := replace $ghURL "github.com" "raw.githubusercontent.com" -}}
 {{- $rawURL := printf "%s/refs/heads/%s/%s" $raw $branch $path -}}
 {{- $cmd := printf "cm remote --http %s" $rawURL -}}
-<span class="repo-file"><a href="{{ $ghURL }}/{{ $type }}/{{ $branch }}/{{ $path }}"><code>{{ $text }}</code></a>{{ if ne $type "tree" }}<button class="repo-file-copy" data-cmd="{{ $cmd }}" title="Copy cm remote command"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M3.5 10.5h-1a1.5 1.5 0 0 1-1.5-1.5v-6a1.5 1.5 0 0 1 1.5-1.5h6a1.5 1.5 0 0 1 1.5 1.5v1"/></svg></button>{{ end }}</span>
+<span class="repo-file"><a href="{{ $ghURL }}/{{ $type }}/{{ $branch }}/{{ $path }}"><code>{{ $text }}</code></a>{{ if ne $type "tree" }}<button class="repo-file-copy" data-cmd="{{ $cmd }}" title="Copy cm remote command"><span class="repo-file-lark"></span></button>{{ end }}</span>

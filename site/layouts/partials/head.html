@@ -1,7 +1,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} — {{ .Site.Title }}{{ end }}</title>
-<meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+{{- $desc := .Description | default .Site.Params.description -}}
+<meta name="description" content="{{ $desc }}">
+<link rel="icon" href="{{ "favicon.svg" | relURL }}" type="image/svg+xml">
+
+{{/* Open Graph / social sharing */}}
+<meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} — {{ .Site.Title }}{{ end }}">
+<meta property="og:description" content="{{ $desc }}">
+<meta property="og:image" content="{{ "images/og.png" | absURL }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="{{ if .IsHome }}website{{ else }}article{{ end }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta name="twitter:card" content="summary_large_image">
 
 {{/* No-FOUC: read theme preference before render */}}
 <script>
@@ -25,3 +37,18 @@
 {{ $utils := resources.Get "css/utilities.css" }}
 {{ $styles := slice $vars $base $components $utils | resources.Concat "css/site.css" | fingerprint }}
 <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
+
+{{/* Fingerprinted logo SVGs — exposed as CSS custom properties for cache-busting */}}
+{{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
+{{- $larkColor := resources.Get "images/lark-color.svg" | fingerprint -}}
+{{- $logoColor := resources.Get "images/logo-color.svg" | fingerprint -}}
+{{- $logoFull := resources.Get "images/logo-full.svg" | fingerprint -}}
+<style>
+:root {
+  --img-lark: url("{{ $lark.RelPermalink }}");
+  --path-lark: "{{ $lark.RelPermalink }}";
+  --path-lark-color: "{{ $larkColor.RelPermalink }}";
+  --path-logo-color: "{{ $logoColor.RelPermalink }}";
+  --path-logo-full: "{{ $logoFull.RelPermalink }}";
+}
+</style>

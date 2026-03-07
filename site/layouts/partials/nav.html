@@ -1,6 +1,7 @@
 <header class="site-nav">
   <div class="container nav-inner">
-    <a href="{{ "/" | relURL }}" class="nav-logo">CalcMark</a>
+    {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
+    <a href="{{ "/" | relURL }}" class="nav-logo"><img src="{{ $lark.RelPermalink }}" alt="" class="nav-logo-icon" aria-hidden="true">CalcMark</a>
     <nav class="nav-links" aria-label="Main navigation">
       {{ range .Site.Menus.main }}
       <a class="nav-link{{ if or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }} nav-link--active{{ end }}"

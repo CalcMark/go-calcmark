@@ -33,6 +33,9 @@ menus:
     - name: Examples
       url: /docs/examples/
       weight: 20
+    - name: Larky
+      url: /larky/
+      weight: 25
     - name: GitHub
       url: https://github.com/CalcMark/go-calcmark
       weight: 30

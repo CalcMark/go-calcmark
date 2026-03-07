@@ -1,0 +1,10 @@
+{{- $src := .Get "src" -}}
+{{- $alt := .Get "alt" | default "" -}}
+{{- $class := .Get "class" | default "" -}}
+{{- $link := .Get "link" | default "" -}}
+{{- $r := resources.Get $src | fingerprint -}}
+{{- if eq $link "self" -}}
+<a href="{{ $r.RelPermalink }}"><img src="{{ $r.RelPermalink }}" alt="{{ $alt }}"{{ with $class }} class="{{ . }}"{{ end }}></a>
+{{- else -}}
+<img src="{{ $r.RelPermalink }}" alt="{{ $alt }}"{{ with $class }} class="{{ . }}"{{ end }}>
+{{- end -}}

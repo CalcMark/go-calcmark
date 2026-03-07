@@ -30,6 +30,24 @@
   text-decoration: none;
 }
 
+.nav-logo-icon {
+  height: 1em;
+  width: auto;
+  vertical-align: -0.1em;
+  margin-right: 0.35em;
+  /* Inherit text color via CSS filter — currentColor doesn't work on <img> */
+  filter: brightness(0);
+}
+
+[data-theme="dark"] .nav-logo-icon {
+  filter: brightness(0) invert(1);
+}
+
+.nav-logo:hover .nav-logo-icon {
+  /* Match --color-primary #7D56F4 via filter */
+  filter: brightness(0) saturate(100%) invert(36%) sepia(63%) saturate(5000%) hue-rotate(245deg) brightness(97%);
+}
+
 .nav-links {
   display: flex;
   align-items: center;
@@ -137,6 +155,26 @@
   text-align: center;
 }
 
+/* Hero lockup: Larky + cm logo */
+.hero-lockup {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.hero-lark {
+  height: 96px;
+  width: auto;
+}
+
+.hero-cm {
+  height: 48px;
+  width: auto;
+  margin-bottom: 2px;
+}
+
 .hero-headline {
   font-size: 2.75rem;
   font-weight: 700;
@@ -196,6 +234,31 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   margin-top: var(--space-3);
+}
+
+.feature-snippet {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.feature-snippet code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.feature-snippet .r {
+  color: var(--color-primary);
+}
+
+.feature-snippet .c {
+  color: var(--color-text-faint);
 }
 
 /* Buttons */
@@ -386,6 +449,19 @@ h6:hover .heading-anchor {
   color: var(--color-text-muted);
 }
 
+.footer-lark {
+  height: 1.1em;
+  width: auto;
+  vertical-align: -0.15em;
+  margin-right: 0.3em;
+  filter: brightness(0);
+  opacity: 0.4;
+}
+
+[data-theme="dark"] .footer-lark {
+  filter: brightness(0) invert(1);
+}
+
 /* CalcMark inline results (render-codeblock-calcmark) */
 .cm-codeblock {
   margin: var(--space-4) 0;
@@ -406,6 +482,19 @@ h6:hover .heading-anchor {
   letter-spacing: 0.05em;
   color: color-mix(in srgb, var(--color-primary) 50%, var(--color-text-faint));
   margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.cm-results-header::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  mask: var(--img-lark) no-repeat center / contain;
+  -webkit-mask: var(--img-lark) no-repeat center / contain;
 }
 
 .cm-results-table {
@@ -477,6 +566,79 @@ h6:hover .heading-anchor {
 .repo-file-copy.copied {
   color: var(--color-success);
   border-color: var(--color-success);
+}
+
+.repo-file-lark {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: var(--img-lark) no-repeat center / contain;
+  mask: var(--img-lark) no-repeat center / contain;
+}
+
+/* Tiny lark on top-level page headings */
+.page-lark {
+  height: 0.6em;
+  width: auto;
+  vertical-align: baseline;
+  margin-left: 0.4em;
+  filter: brightness(0);
+  opacity: 0.25;
+}
+
+[data-theme="dark"] .page-lark {
+  filter: brightness(0) invert(1);
+}
+
+/* Larky page */
+.larky-hero {
+  text-align: center;
+  margin: var(--space-8) 0;
+}
+
+.larky-hero-img {
+  height: 160px;
+  width: auto;
+}
+
+.larky-gallery {
+  display: flex;
+  gap: var(--space-6);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: var(--space-8) 0;
+}
+
+.larky-gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-bg-subtle);
+}
+
+.larky-gallery-item img {
+  height: 80px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.larky-gallery-item img.larky-themed {
+  filter: brightness(0);
+}
+
+[data-theme="dark"] .larky-gallery-item img.larky-themed {
+  filter: brightness(0) invert(1);
+}
+
+.larky-gallery-item span {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 /* Responsive */

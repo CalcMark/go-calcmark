@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 50" shape-rendering="crispEdges">
+  <!--
+    CalcMark Lark — the Calc-Mark Lark mascot.
+    Side profile facing right, 28×28 visual pixel grid at 2× fat-pixel scale.
+    Features: crest, round head, TWO eyes, beak, big wing fold, tail, legs.
+
+              ██                    crest
+            ██████                  top head
+          ██████████                head
+        ████████████                head wide
+       ██████████████               head widest
+       ██  ███  ██████████          two eyes + beak area
+       ████████████████             head + beak
+       ████████████████             head + beak
+        ████████████                lower head
+          ████████                  neck
+        ████████████                breast
+      ██████████████                upper body
+     ███    ███████████             wing + body
+   ████      ███████████            wing extends
+  ███         ██████████            wing tip + body
+  ██████████████████                body (wing merges)
+ ████████████████████               body + tail
+██████████████████                  tail extends
+██████    ████████                  tail + belly
+████       ███████                  tail tip + belly
+            █████                   lower belly
+            ██  ██                  legs
+            ██  ██                  legs
+           ████ ████                feet
+  -->
+
+  <g id="lark">
+    <!-- Crest -->
+    <rect x="28" y="2" width="4" height="2" fill="currentColor"/>
+    <rect x="24" y="4" width="12" height="2" fill="currentColor"/>
+
+    <!-- Head -->
+    <rect x="20" y="6" width="20" height="2" fill="currentColor"/>
+    <rect x="18" y="8" width="24" height="2" fill="currentColor"/>
+    <rect x="16" y="10" width="28" height="2" fill="currentColor"/>
+
+    <!-- Two eyes: gaps at SVG x=28 and x=34 -->
+    <rect x="16" y="12" width="12" height="2" fill="currentColor"/>
+    <rect x="30" y="12" width="4" height="2" fill="currentColor"/>
+    <rect x="36" y="12" width="8" height="2" fill="currentColor"/>
+
+    <!-- Head + beak -->
+    <rect x="16" y="14" width="32" height="2" fill="currentColor"/>
+    <rect x="16" y="16" width="32" height="2" fill="currentColor"/>
+
+    <!-- Lower head -->
+    <rect x="18" y="18" width="24" height="2" fill="currentColor"/>
+
+    <!-- Neck (clearly narrow) -->
+    <rect x="22" y="20" width="16" height="2" fill="currentColor"/>
+
+    <!-- Breast -->
+    <rect x="18" y="22" width="24" height="2" fill="currentColor"/>
+
+    <!-- Upper body -->
+    <rect x="14" y="24" width="28" height="2" fill="currentColor"/>
+
+    <!-- Wing fold (hollow extends toward body center) -->
+    <rect x="10" y="26" width="6" height="2" fill="currentColor"/>
+    <rect x="24" y="26" width="18" height="2" fill="currentColor"/>
+    <rect x="6" y="28" width="8" height="2" fill="currentColor"/>
+    <rect x="24" y="28" width="18" height="2" fill="currentColor"/>
+    <rect x="4" y="30" width="6" height="2" fill="currentColor"/>
+    <rect x="24" y="30" width="16" height="2" fill="currentColor"/>
+
+    <!-- Body (wing merges, tail less bulgy) -->
+    <rect x="4" y="32" width="36" height="2" fill="currentColor"/>
+    <rect x="2" y="34" width="36" height="2" fill="currentColor"/>
+    <rect x="0" y="36" width="36" height="2" fill="currentColor"/>
+
+    <!-- Tail feathers + belly -->
+    <rect x="0" y="38" width="12" height="2" fill="currentColor"/>
+    <rect x="18" y="38" width="16" height="2" fill="currentColor"/>
+    <rect x="0" y="40" width="8" height="2" fill="currentColor"/>
+    <rect x="20" y="40" width="14" height="2" fill="currentColor"/>
+
+    <!-- Lower belly -->
+    <rect x="22" y="42" width="10" height="2" fill="currentColor"/>
+
+    <!-- Legs -->
+    <rect x="24" y="44" width="4" height="2" fill="currentColor"/>
+    <rect x="30" y="44" width="4" height="2" fill="currentColor"/>
+    <rect x="24" y="46" width="4" height="2" fill="currentColor"/>
+    <rect x="30" y="46" width="4" height="2" fill="currentColor"/>
+
+    <!-- Feet -->
+    <rect x="22" y="48" width="8" height="2" fill="currentColor"/>
+    <rect x="30" y="48" width="8" height="2" fill="currentColor"/>
+  </g>
+</svg>

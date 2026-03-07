@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 22 12" shape-rendering="crispEdges">
+  <!--
+    Bold 8-bit "cm" — each stroke is 2px wide (fat pixel style).
+    Uses currentColor for CSS theming (light/dark mode).
+    One visual-pixel (2px) gap between c and m.
+    Each letter has an id for independent color styling.
+  -->
+
+  <!-- c -->
+  <g id="letter-c">
+    <rect x="2" y="0" width="6" height="2" fill="currentColor"/>
+    <rect x="0" y="2" width="2" height="6" fill="currentColor"/>
+    <rect x="2" y="8" width="6" height="2" fill="currentColor"/>
+  </g>
+
+  <!-- m (1 fat-pixel gap = 2px after c's right edge at x=8) -->
+  <g id="letter-m">
+    <rect x="10" y="0" width="2" height="10" fill="currentColor"/>
+    <rect x="18" y="0" width="2" height="10" fill="currentColor"/>
+    <rect x="12" y="2" width="2" height="2" fill="currentColor"/>
+    <rect x="16" y="2" width="2" height="2" fill="currentColor"/>
+    <rect x="14" y="4" width="2" height="6" fill="currentColor"/>
+  </g>
+</svg>
