@@ -7,6 +7,7 @@
   --color-primary: #7D56F4;
   --color-primary-hover: #6644d8;
   --color-accent: #874BFD;
+  --color-tertiary: #f97316;
 
   /* Text */
   --color-text: #1a1a1a;
@@ -75,6 +76,7 @@
   --color-primary: #a371f7;
   --color-primary-hover: #b78df9;
   --color-accent: #a371f7;
+  --color-tertiary: #fb923c;
 
   --color-text: #e5e5e5;
   --color-text-muted: #8b949e;

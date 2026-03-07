@@ -58,10 +58,10 @@ func runRemote() error {
 	hasHTTP := remoteHTTP != ""
 
 	if !hasGist && !hasHTTP {
-		return fmt.Errorf("specify --gist or --http")
+		return fmt.Errorf("specify --gist or --http (run 'cm remote --help' for details)")
 	}
 	if hasGist && hasHTTP {
-		return fmt.Errorf("specify only one of --gist or --http")
+		return fmt.Errorf("specify only one of --gist or --http, not both")
 	}
 
 	var content string
@@ -94,16 +94,16 @@ func fetchGist(identifier string) (string, error) {
 	gist := store.NewGistStore(store.RealExecutor{})
 
 	if err := gist.CheckAvailable(); err != nil {
-		return "", fmt.Errorf("gh CLI not available: %w", err)
+		return "", fmt.Errorf("gh CLI not found — install it from https://cli.github.com")
 	}
 
 	if err := gist.CheckAuth(); err != nil {
-		return "", fmt.Errorf("not authenticated (run 'gh auth login'): %w", err)
+		return "", fmt.Errorf("not authenticated with GitHub — run 'gh auth login' first")
 	}
 
 	result, err := gist.Open(identifier)
 	if err != nil {
-		return "", fmt.Errorf("gist open: %w", err)
+		return "", fmt.Errorf("could not open gist %q: %w", identifier, err)
 	}
 
 	return result.Content, nil
@@ -123,10 +123,10 @@ func fetchURL(rawURL string) (string, error) {
 		return "", fmt.Errorf("invalid URL: %w", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", fmt.Errorf("unsupported scheme %q (only http and https)", u.Scheme)
+		return "", fmt.Errorf("unsupported URL scheme %q — only http:// and https:// URLs are supported", u.Scheme)
 	}
 	if u.Host == "" {
-		return "", fmt.Errorf("URL has no host")
+		return "", fmt.Errorf("invalid URL: missing host (expected something like https://example.com/file.cm)")
 	}
 
 	client := &http.Client{
@@ -148,12 +148,13 @@ func fetchURL(rawURL string) (string, error) {
 
 	resp, err := client.Get(rawURL)
 	if err != nil {
-		return "", fmt.Errorf("fetch failed: %w", err)
+		return "", fmt.Errorf("could not connect to %s: %w", u.Host, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+		hint := httpHint(resp.StatusCode)
+		return "", fmt.Errorf("%s (HTTP %d from %s)", hint, resp.StatusCode, u.Host)
 	}
 
 	data, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxRemoteSize)))
@@ -161,16 +162,32 @@ func fetchURL(rawURL string) (string, error) {
 		return "", fmt.Errorf("read body: %w", err)
 	}
 	if len(data) >= maxRemoteSize {
-		return "", fmt.Errorf("response exceeds 1MB limit")
+		return "", fmt.Errorf("remote document is too large (max 1MB)")
 	}
 
 	if err := filecheck.ValidateContent(data); err != nil {
-		return "", fmt.Errorf("content validation failed: %w", err)
+		return "", fmt.Errorf("URL does not contain a valid text document: %w", err)
 	}
 
 	if len(data) == 0 {
-		return "", fmt.Errorf("remote document is empty")
+		return "", fmt.Errorf("remote document is empty — the server returned no content")
 	}
 
 	return string(data), nil
+}
+
+// httpHint returns a human-friendly explanation for common HTTP status codes.
+func httpHint(code int) string {
+	switch {
+	case code == 401 || code == 403:
+		return "access denied — the URL may require authentication"
+	case code == 404:
+		return "document not found — check the URL is correct"
+	case code == 429:
+		return "rate limited — try again in a moment"
+	case code >= 500:
+		return "remote server error — try again later"
+	default:
+		return "unexpected response"
+	}
 }

@@ -28,21 +28,27 @@ After downloading, extract and move `cm` to a directory in your PATH. On macOS, 
 
 ### Interactive Editor
 
-Open the CalcMark editor:
+Open a worked example directly — no files needed. Click {{< repo-file path="testdata/examples/household-budget.cm" show_file="false" >}} to copy the `cm remote` command to your clipboard. Paste it into your terminal to launch CalcMark with the [Household Budget]({{< ref "docs/examples/household-budget" >}}) example loaded in the editor. Press **Ctrl+H** to open the help menu and see all keyboard shortcuts. Press **Ctrl+Q** to exit.
+
+> You'll see the {{< repo-file path="testdata/examples/household-budget.cm" show_file="false" >}} icon throughout the docs and [Examples]({{< ref "docs/examples" >}}) — it always copies a `cm remote` command you can paste into your terminal.
+
+<img src="/images/tui-screenshot.png" alt="CalcMark TUI editor showing a budget calculation with live results" width="700">
+
+You can also start from scratch or open a local file:
 
 ```bash
 cm                    # New document
 cm budget.cm          # Open existing file
 ```
 
-<img src="/images/tui-screenshot.png" alt="CalcMark TUI editor showing a budget calculation with live results" width="700">
+Browse more examples in the [Examples]({{< ref "docs/examples" >}}) section.
 
 ### Evaluate a File
 
-Process a file and see results:
+Process a local file and see results:
 
 ```bash
-cm eval testdata/examples/system-sizing.cm
+cm eval budget.cm
 ```
 
 ### Pipe Expressions

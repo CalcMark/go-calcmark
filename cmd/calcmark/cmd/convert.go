@@ -38,7 +38,7 @@ Examples:
 			return nil
 		}
 		if len(args) == 0 {
-			return fmt.Errorf("requires a file argument (or use --show-template)")
+			return fmt.Errorf("missing file — usage: cm convert <file.cm> --to=<format>")
 		}
 		return runConvert(args[0])
 	},
@@ -56,7 +56,7 @@ func init() {
 func runConvert(filename string) error {
 	// --to is required for conversion
 	if convertFormat == "" {
-		return fmt.Errorf("required flag \"to\" not set")
+		return fmt.Errorf("missing --to flag — usage: cm convert <file.cm> --to=<format> (valid: html, md, json, text, cm)")
 	}
 
 	// Validate file path

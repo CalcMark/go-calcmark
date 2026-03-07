@@ -12,9 +12,11 @@ The CalcMark CLI (`cm`) provides commands for editing, evaluating, converting, a
 cm [file]            # Open editor (default command)
 cm eval [file.cm]    # Evaluate and print results
 cm convert <file.cm> # Convert to another format
+cm remote            # Open a remote document
 cm config            # Print or create configuration
 cm functions         # List all CalcMark functions
 cm constants         # List all unit constants
+cm help [command]     # Help for any command
 cm version           # Print version info
 cm completion [shell] # Generate shell completions
 ```
@@ -209,6 +211,47 @@ Each global has `.Name` and `.Value`. Each exchange rate has `.From`, `.To`, and
 
 ---
 
+## `cm remote` {#remote}
+
+Fetch a CalcMark document from a remote source and open it in the editor.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--gist` | GitHub Gist URL or ID (requires `gh` CLI) |
+| `--http` | Public HTTP(S) URL to fetch via GET |
+
+Exactly one of `--gist` or `--http` must be provided.
+
+### Examples
+
+```bash
+cm remote --gist abc123def                           # Open by gist ID
+cm remote --gist https://gist.github.com/user/abc123 # Open by gist URL
+cm remote --http https://example.com/budget.cm        # Open from any public URL
+```
+
+### Gist Mode (`--gist`)
+
+The `--gist` flag accepts any identifier that `gh gist view` supports: a gist ID, a full gist URL, or a URL to any user's public gist. For multi-file gists, the first `.cm` file is opened (or the first file if no `.cm` file exists).
+
+Requires the [GitHub CLI](https://cli.github.com) (`gh`) to be installed and authenticated (`gh auth login`).
+
+### HTTP Mode (`--http`)
+
+The `--http` flag fetches content from a public URL via HTTP GET. Only `http://` and `https://` URLs are accepted.
+
+**Safety limits:**
+
+- Maximum response size: 1 MB
+- Binary content is rejected
+- Empty responses are rejected
+- Redirect targets must stay on HTTP(S)
+- Connection timeout: 30 seconds
+
+---
+
 ## `cm config` {#config}
 
 Print the current effective configuration or create a starter config file.
@@ -251,6 +294,18 @@ Browse CalcMark's built-in functions and unit constants.
 ```bash
 cm functions          # Show all functions
 cm constants          # Show all unit constants
+```
+
+---
+
+## `cm help` {#help}
+
+Show help for any command. Equivalent to passing `--help` to a command.
+
+```bash
+cm help              # Show top-level help
+cm help eval         # Help for the eval command
+cm help convert      # Help for the convert command
 ```
 
 ---

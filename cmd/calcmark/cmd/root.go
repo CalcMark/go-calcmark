@@ -27,6 +27,8 @@ Examples:
   cm remote --http https://...    Open a public URL
 
 GitHub Gist support requires the gh CLI: https://cli.github.com`,
+	// Don't dump usage on every error — just show the error message.
+	SilenceUsage: true,
 	// Allow 0 or 1 file argument
 	Args: cobra.MaximumNArgs(1),
 	// When called without subcommand, open editor — unless stdin is piped,
@@ -53,7 +55,7 @@ GitHub Gist support requires the gh CLI: https://cli.github.com`,
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		// cobra already printed "Error: ..." to stderr; no need to repeat.
 		os.Exit(1)
 	}
 }

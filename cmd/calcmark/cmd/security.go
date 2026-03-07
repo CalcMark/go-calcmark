@@ -69,7 +69,13 @@ func validateFileConstraints(absPath string) error {
 	// Security: Verify file exists and is a regular file
 	info, err := os.Stat(absPath)
 	if err != nil {
-		return fmt.Errorf("stat file: %w", err)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file not found: %s", absPath)
+		}
+		if os.IsPermission(err) {
+			return fmt.Errorf("permission denied: %s", absPath)
+		}
+		return fmt.Errorf("cannot access file: %s", absPath)
 	}
 
 	if info.IsDir() {

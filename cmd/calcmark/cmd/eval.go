@@ -80,7 +80,7 @@ func runEval(args []string) error {
 		input = string(bytes)
 
 		if strings.TrimSpace(input) == "" {
-			return fmt.Errorf("no input provided")
+			return fmt.Errorf("no input — pipe a document or pass a filename (run 'cm eval --help' for details)")
 		}
 	}
 

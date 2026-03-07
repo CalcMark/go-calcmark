@@ -1,9 +1,14 @@
 {{- $path := .Get "path" -}}
 {{- $text := .Get "text" | default $path -}}
 {{- $type := .Get "type" | default "blob" -}}
+{{- $showFile := .Get "show_file" | default "true" -}}
 {{- $branch := site.Params.githubBranch | default "main" -}}
 {{- $ghURL := site.Params.githubURL -}}
 {{- $raw := replace $ghURL "github.com" "raw.githubusercontent.com" -}}
 {{- $rawURL := printf "%s/refs/heads/%s/%s" $raw $branch $path -}}
 {{- $cmd := printf "cm remote --http %s" $rawURL -}}
+{{- if eq $showFile "false" -}}
+<button class="repo-file-copy" data-cmd="{{ $cmd }}" title="Copy cm remote command"><span class="repo-file-lark"></span></button>
+{{- else -}}
 <span class="repo-file"><a href="{{ $ghURL }}/{{ $type }}/{{ $branch }}/{{ $path }}"><code>{{ $text }}</code></a>{{ if ne $type "tree" }}<button class="repo-file-copy" data-cmd="{{ $cmd }}" title="Copy cm remote command"><span class="repo-file-lark"></span></button>{{ end }}</span>
+{{- end -}}

@@ -553,14 +553,14 @@ h6:hover .heading-anchor {
   border-radius: var(--radius-sm);
   cursor: pointer;
   padding: 2px 4px;
-  color: var(--color-text-faint);
+  color: var(--color-primary);
   transition: color var(--transition-fast), border-color var(--transition-fast);
   vertical-align: middle;
 }
 
 .repo-file-copy:hover {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+  color: var(--color-tertiary);
+  border-color: var(--color-tertiary);
 }
 
 .repo-file-copy.copied {

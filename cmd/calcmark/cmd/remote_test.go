@@ -29,8 +29,8 @@ func TestFetchURL(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for ftp scheme")
 		}
-		if !strings.Contains(err.Error(), "unsupported scheme") {
-			t.Errorf("error = %q, want 'unsupported scheme'", err)
+		if !strings.Contains(err.Error(), "unsupported URL scheme") {
+			t.Errorf("error = %q, want 'unsupported URL scheme'", err)
 		}
 	})
 
@@ -104,8 +104,8 @@ func TestFetchURL(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for binary content")
 		}
-		if !strings.Contains(err.Error(), "content validation failed") {
-			t.Errorf("error = %q, want 'content validation failed'", err)
+		if !strings.Contains(err.Error(), "not contain a valid text document") {
+			t.Errorf("error = %q, want 'not contain a valid text document'", err)
 		}
 	})
 
