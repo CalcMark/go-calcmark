@@ -116,14 +116,14 @@ convert_to: si
 ---
 ```
 
-## Open Questions
+## Design Decisions
 
-1. **What units does `imperial` map to for each category?** For Mass, is the target `ounces` or `pounds`? CalcMark's auto-scaling display logic already handles this (small masses → oz, large → lb), so the answer is probably "convert to the imperial family and let auto-scaling pick the readable unit."
+1. **`imperial`/`si` map to unit families, not specific units.** `convert_to: imperial` converts to the imperial family (Mass → ounces/pounds, Volume → cups/gallons, etc.) and lets CalcMark's existing auto-scaling display logic pick the readable unit within that family. No explicit per-category target mapping is needed.
 
-2. **Interaction with explicit `in` conversions.** If a user writes `flour in ounces` and `convert_to: si` is set, does the explicit conversion win? Probably yes — explicit `in` should override the document-level directive.
+2. **Explicit `in` overrides `convert_to`.** If a user writes `flour in ounces`, the explicit conversion wins over any document-level directive. Explicit `in` is a stronger signal of intent.
 
-3. **Should `scale` create a visible variable?** Could be useful to reference: `batch_flour = flour * @scale`. Or is it purely implicit?
+3. **`scale` is purely implicit — no visible variable.** It's a display transform, not a variable in the namespace. If the user wants to reference the scale factor in formulas, they define their own variable (`scale = 4`). This avoids shadowing ambiguity between frontmatter directives and user-defined variables.
 
-4. **Compound categories.** Speed is `Length/Time`. If `unit_categories: [Length]` is set, does a speed value get its numerator scaled? Probably not — compound units should be treated as their own category, not decomposed.
+4. **Compound units are atomic categories.** Speed is `Length/Time`, but `unit_categories: [Length]` does NOT decompose Speed and scale its numerator. Compound units (Speed, Energy, Power) are their own categories. Include them explicitly if you want them affected.
 
-5. **What about arbitrary units?** `5 eggs` has no category in the canonical unit system. Should `scale` apply to arbitrary units by default? A recipe user would expect `5 eggs` to become `20 eggs` when `scale: 4`. Probably yes — arbitrary units should participate in scaling unless excluded.
+5. **Arbitrary units participate in `scale` by default.** `5 eggs` becomes `20 eggs` with `scale: 4`. Arbitrary units have no canonical category, so they're included unless the user provides a `unit_categories` filter that restricts to specific canonical categories. Plain numbers (no unit) also participate in scaling by default.
