@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path"
 	"time"
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/filecheck"
@@ -65,13 +64,13 @@ func runRemote() error {
 		return fmt.Errorf("specify only one of --gist or --http")
 	}
 
-	var content, filename string
+	var content string
 	var err error
 
 	if hasGist {
-		content, filename, err = fetchGist(remoteGist)
+		content, err = fetchGist(remoteGist)
 	} else {
-		content, filename, err = fetchURL(remoteHTTP)
+		content, err = fetchURL(remoteHTTP)
 	}
 	if err != nil {
 		return err
@@ -81,8 +80,6 @@ func runRemote() error {
 	if parseErr != nil {
 		return fmt.Errorf("parse error: %w", parseErr)
 	}
-
-	_ = filename // remote documents open as untitled
 	app := tui.NewEditorApp(doc, "")
 	app.SetFormatter(localeFormatter())
 	runTUIApp(app)
@@ -93,23 +90,23 @@ func runRemote() error {
 // The identifier can be anything gh gist view accepts: a gist ID, a full
 // gist URL, or any user's public gist URL. For multi-file gists, GistStore
 // selects the first .cm file or falls back to the first file.
-func fetchGist(identifier string) (content, filename string, err error) {
+func fetchGist(identifier string) (string, error) {
 	gist := store.NewGistStore(store.RealExecutor{})
 
 	if err := gist.CheckAvailable(); err != nil {
-		return "", "", fmt.Errorf("gh CLI not found (install: https://cli.github.com)")
+		return "", fmt.Errorf("gh CLI not available: %w", err)
 	}
 
 	if err := gist.CheckAuth(); err != nil {
-		return "", "", fmt.Errorf("not authenticated: run 'gh auth login' first")
+		return "", fmt.Errorf("not authenticated (run 'gh auth login'): %w", err)
 	}
 
 	result, err := gist.Open(identifier)
 	if err != nil {
-		return "", "", err
+		return "", fmt.Errorf("gist open: %w", err)
 	}
 
-	return result.Content, result.Filename, nil
+	return result.Content, nil
 }
 
 // maxRemoteSize is the maximum allowed content size for remote fetches (1MB).
@@ -120,16 +117,16 @@ const maxRemoteSize = 1*1024*1024 + 1
 // Security: validates scheme, enforces 1MB size limit on the body stream,
 // rejects binary content via filecheck.ValidateContent, and validates
 // redirect targets stay on HTTP(S).
-func fetchURL(rawURL string) (content, filename string, err error) {
+func fetchURL(rawURL string) (string, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return "", "", fmt.Errorf("invalid URL: %w", err)
+		return "", fmt.Errorf("invalid URL: %w", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", "", fmt.Errorf("unsupported scheme %q (only http and https)", u.Scheme)
+		return "", fmt.Errorf("unsupported scheme %q (only http and https)", u.Scheme)
 	}
 	if u.Host == "" {
-		return "", "", fmt.Errorf("URL has no host")
+		return "", fmt.Errorf("URL has no host")
 	}
 
 	client := &http.Client{
@@ -151,34 +148,29 @@ func fetchURL(rawURL string) (content, filename string, err error) {
 
 	resp, err := client.Get(rawURL)
 	if err != nil {
-		return "", "", fmt.Errorf("fetch failed: %w", err)
+		return "", fmt.Errorf("fetch failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
 	data, err := io.ReadAll(io.LimitReader(resp.Body, int64(maxRemoteSize)))
 	if err != nil {
-		return "", "", fmt.Errorf("read body: %w", err)
+		return "", fmt.Errorf("read body: %w", err)
 	}
 	if len(data) >= maxRemoteSize {
-		return "", "", fmt.Errorf("response exceeds 1MB limit")
+		return "", fmt.Errorf("response exceeds 1MB limit")
 	}
 
 	if err := filecheck.ValidateContent(data); err != nil {
-		return "", "", fmt.Errorf("content validation failed: %w", err)
+		return "", fmt.Errorf("content validation failed: %w", err)
 	}
 
 	if len(data) == 0 {
-		return "", "", fmt.Errorf("remote document is empty")
+		return "", fmt.Errorf("remote document is empty")
 	}
 
-	name := path.Base(u.Path)
-	if name == "" || name == "." || name == "/" {
-		name = "remote.cm"
-	}
-
-	return string(data), name, nil
+	return string(data), nil
 }
