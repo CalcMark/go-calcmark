@@ -846,9 +846,9 @@ func (m Model) insertFrontmatter() (tea.Model, tea.Cmd) {
 	beforeCol := m.cursorCol
 	beforeScroll := m.scrollOffset
 
-	// Build new content with default frontmatter prepended
-	fmBlock := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\n"
-	content := fmBlock + oldContent
+	// Build new content with default frontmatter prepended.
+	// DefaultFrontmatter is embedded from default_frontmatter.cm.
+	content := DefaultFrontmatter + oldContent
 
 	// Rebuild document via the spec layer (parsing stays in spec/document)
 	newDoc, err := document.NewDocument(content)

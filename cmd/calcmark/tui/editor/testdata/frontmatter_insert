@@ -17,8 +17,8 @@ key ctrl+f
 ----
 -- frontmatter:
 hasFrontmatter=true
-frontmatterLineCount=6
-totalLines=9
+frontmatterLineCount=8
+totalLines=11
 statusMsg="Frontmatter inserted"
 globalsCount=1
 
@@ -26,23 +26,25 @@ globalsCount=1
 run observe=debug
 ----
 -- debug:
-mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=9 totalVisual=9 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=11 totalVisual=11 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Verify frontmatter lines are visible in line structure
 run observe=lines
 ----
 -- lines:
-sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7 8:8]
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7 8:8 9:9 10:10]
 Visual lines:
   [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
   [1] srcIdx=1 lineNum=2 wrap=false pad=false content="exchange:"
   [2] srcIdx=2 lineNum=3 wrap=false pad=false content="  USD_EUR: 0.92" <CURSOR>
   [3] srcIdx=3 lineNum=4 wrap=false pad=false content="globals:"
-  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="  my_var: 42"
-  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="---"
-  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="x = 10"
-  [7] srcIdx=7 lineNum=8 wrap=false pad=false content="y = 20"
-  [8] srcIdx=8 lineNum=9 wrap=false pad=false content="z = x + y"
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content="  tax_rate: 0.085"
+  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="scale: 2"
+  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="convert_to: si"
+  [7] srcIdx=7 lineNum=8 wrap=false pad=false content="---"
+  [8] srcIdx=8 lineNum=9 wrap=false pad=false content="x = 10"
+  [9] srcIdx=9 lineNum=10 wrap=false pad=false content="y = 20"
+  [10] srcIdx=10 lineNum=11 wrap=false pad=false content="z = x + y"
 
 # Verify results include frontmatter padding
 run observe=results
@@ -52,11 +54,13 @@ Line 0 (---): isCalc=false value= error=""
 Line 1 (exchange:): isCalc=false value= error=""
 Line 2 (  USD_EUR: 0.92): isCalc=false value= error=""
 Line 3 (globals:): isCalc=false value= error=""
-Line 4 (  my_var: 42): isCalc=false value= error=""
-Line 5 (---): isCalc=false value= error=""
-Line 6 (x = 10): isCalc=true value=10 error=""
-Line 7 (y = 20): isCalc=true value=20 error=""
-Line 8 (z = x + y): isCalc=true value=30 error=""
+Line 4 (  tax_rate: 0.085): isCalc=false value= error=""
+Line 5 (scale: 2): isCalc=false value= error=""
+Line 6 (convert_to: si): isCalc=false value= error=""
+Line 7 (---): isCalc=false value= error=""
+Line 8 (x = 10): isCalc=true value=10 error=""
+Line 9 (y = 20): isCalc=true value=20 error=""
+Line 10 (z = x + y): isCalc=true value=30 error=""
 
 # Press Ctrl+F again - should show "already exists"
 run observe=frontmatter
@@ -64,8 +68,8 @@ key ctrl+f
 ----
 -- frontmatter:
 hasFrontmatter=true
-frontmatterLineCount=6
-totalLines=9
+frontmatterLineCount=8
+totalLines=11
 statusMsg="Frontmatter already exists"
 globalsCount=1
 
@@ -79,32 +83,34 @@ run observe=debug
 key down
 ----
 -- debug:
-mode=StateDefault cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=9 totalVisual=9 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=11 totalVisual=11 editBuf="globals:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Press Enter at col 0 on globals: — should insert empty line ABOVE globals:
 run observe=lines
 key enter
 ----
 -- lines:
-sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7 8:8 9:9]
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7 8:8 9:9 10:10 11:11]
 Visual lines:
   [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
   [1] srcIdx=1 lineNum=2 wrap=false pad=false content="exchange:"
   [2] srcIdx=2 lineNum=3 wrap=false pad=false content="  USD_EUR: 0.92"
   [3] srcIdx=3 lineNum=4 wrap=false pad=false content=""
   [4] srcIdx=4 lineNum=5 wrap=false pad=false content="globals:" <CURSOR>
-  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="  my_var: 42"
-  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="---"
-  [7] srcIdx=7 lineNum=8 wrap=false pad=false content="x = 10"
-  [8] srcIdx=8 lineNum=9 wrap=false pad=false content="y = 20"
-  [9] srcIdx=9 lineNum=10 wrap=false pad=false content="z = x + y"
+  [5] srcIdx=5 lineNum=6 wrap=false pad=false content="  tax_rate: 0.085"
+  [6] srcIdx=6 lineNum=7 wrap=false pad=false content="scale: 2"
+  [7] srcIdx=7 lineNum=8 wrap=false pad=false content="convert_to: si"
+  [8] srcIdx=8 lineNum=9 wrap=false pad=false content="---"
+  [9] srcIdx=9 lineNum=10 wrap=false pad=false content="x = 10"
+  [10] srcIdx=10 lineNum=11 wrap=false pad=false content="y = 20"
+  [11] srcIdx=11 lineNum=12 wrap=false pad=false content="z = x + y"
 
 # Verify frontmatter is intact with no duplication
 run observe=frontmatter
 ----
 -- frontmatter:
 hasFrontmatter=true
-frontmatterLineCount=7
-totalLines=10
+frontmatterLineCount=9
+totalLines=12
 statusMsg=""
 globalsCount=1

@@ -141,8 +141,8 @@ func TestUndoFrontmatterNoDuplication_InsertThenUndo(t *testing.T) {
 	if ed.doc.GetFrontmatter() == nil {
 		t.Fatal("Expected frontmatter to be present")
 	}
-	if ed.frontmatterLineCount() != 6 {
-		t.Fatalf("Expected 6 frontmatter lines, got %d", ed.frontmatterLineCount())
+	if ed.frontmatterLineCount() != 8 {
+		t.Fatalf("Expected 8 frontmatter lines, got %d", ed.frontmatterLineCount())
 	}
 
 	// Step 4: Press Ctrl+Z to undo the previous typing
@@ -394,8 +394,8 @@ func TestUndoFrontmatter_BackspaceDeleteFMLinesAndUndo(t *testing.T) {
 	// Step 1: Insert frontmatter via Ctrl+F
 	model = sendKey(t, model, "ctrl+f")
 	ed := model.(Model)
-	if ed.frontmatterLineCount() != 6 {
-		t.Fatalf("Expected 6 FM lines after Ctrl+F, got %d", ed.frontmatterLineCount())
+	if ed.frontmatterLineCount() != 8 {
+		t.Fatalf("Expected 8 FM lines after Ctrl+F, got %d", ed.frontmatterLineCount())
 	}
 	afterInsertLines := ed.GetLines()
 	t.Logf("After Ctrl+F: %q", afterInsertLines)

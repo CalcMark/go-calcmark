@@ -69,21 +69,21 @@ func TestFrontmatterDelimiterEdit_BackspaceOnClosingDelimiter(t *testing.T) {
 	if ed.doc.GetFrontmatter() == nil {
 		t.Fatal("Expected frontmatter to be present after Ctrl+F")
 	}
-	if initialFmCount != 6 {
-		t.Fatalf("Expected 6 frontmatter lines, got %d", initialFmCount)
+	if initialFmCount != 8 {
+		t.Fatalf("Expected 8 frontmatter lines, got %d", initialFmCount)
 	}
-	if initialTotal != 7 {
-		t.Fatalf("Expected 7 total lines, got %d", initialTotal)
+	if initialTotal != 9 {
+		t.Fatalf("Expected 9 total lines, got %d", initialTotal)
 	}
 
-	// Step 2: Navigate to closing --- line (line 5)
-	for range 3 {
+	// Step 2: Navigate to closing --- line (line 7)
+	for range 5 {
 		model = sendKey(t, model, "down")
 	}
 
 	ed = model.(Model)
-	if ed.cursorLine != 5 {
-		t.Fatalf("Expected cursor on line 5 (closing ---), got line %d", ed.cursorLine)
+	if ed.cursorLine != 7 {
+		t.Fatalf("Expected cursor on line 7 (closing ---), got line %d", ed.cursorLine)
 	}
 
 	// Step 3: Go to end of line
@@ -123,7 +123,7 @@ func TestFrontmatterDelimiterEdit_BackspaceOnClosingDelimiter(t *testing.T) {
 		t.Errorf("Lines: %v", lines)
 	}
 	assertLinesContain(t, lines,
-		[]string{"exchange:", "  USD_EUR: 0.92", "globals:", "  my_var: 42"},
+		[]string{"exchange:", "  USD_EUR: 0.92", "globals:", "  tax_rate: 0.085", "scale: 2", "convert_to: si"},
 		"after backspace on closing delimiter")
 }
 
@@ -156,8 +156,8 @@ func TestFrontmatterDelimiterEdit_BodyBlockRemovedThenDebounce(t *testing.T) {
 		t.Fatal("Expected frontmatter after Ctrl+F")
 	}
 
-	// Navigate to last line (empty body line, line 6)
-	for range 4 {
+	// Navigate to last line (empty body line, line 8)
+	for range 6 {
 		model = sendKey(t, model, "down")
 	}
 	ed = model.(Model)
@@ -189,7 +189,7 @@ func TestFrontmatterDelimiterEdit_BodyBlockRemovedThenDebounce(t *testing.T) {
 	}
 
 	assertLinesContain(t, lines,
-		[]string{"---", "exchange:", "  USD_EUR: 0.92", "globals:", "  my_var: 42"},
+		[]string{"---", "exchange:", "  USD_EUR: 0.92", "globals:", "  tax_rate: 0.085", "scale: 2", "convert_to: si"},
 		"after body block removal + debounce")
 }
 
@@ -211,8 +211,8 @@ func TestFrontmatterDelimiterEdit_DeleteClosingDelimiterEndOfDoc(t *testing.T) {
 	// Insert frontmatter
 	model = sendKey(t, model, "ctrl+f")
 
-	// Navigate to the closing --- line (line 5), go to end
-	for range 3 {
+	// Navigate to the closing --- line (line 7), go to end
+	for range 5 {
 		model = sendKey(t, model, "down")
 	}
 	model = sendKey(t, model, "end")
@@ -245,7 +245,7 @@ func TestFrontmatterDelimiterEdit_DeleteClosingDelimiterEndOfDoc(t *testing.T) {
 		}
 
 		assertLinesContain(t, lines,
-			[]string{"exchange:", "  USD_EUR: 0.92", "globals:", "  my_var: 42"},
+			[]string{"exchange:", "  USD_EUR: 0.92", "globals:", "  tax_rate: 0.085", "scale: 2", "convert_to: si"},
 			"after "+strings.Repeat("backspace+debounce", i+1))
 	}
 }

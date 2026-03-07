@@ -1,0 +1,8 @@
+---
+exchange:
+  USD_EUR: 0.92
+globals:
+  tax_rate: 0.085
+scale: 2
+convert_to: si
+---

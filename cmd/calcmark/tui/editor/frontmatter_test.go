@@ -239,6 +239,30 @@ x = my_var + 1
 	}
 }
 
+// TestDefaultFrontmatterIsValid verifies the embedded template parses as valid CalcMark.
+func TestDefaultFrontmatterIsValid(t *testing.T) {
+	doc, err := document.NewDocument(DefaultFrontmatter)
+	if err != nil {
+		t.Fatalf("DefaultFrontmatter failed to parse: %v", err)
+	}
+	fm := doc.GetFrontmatter()
+	if fm == nil {
+		t.Fatal("DefaultFrontmatter should produce a non-nil Frontmatter")
+	}
+	if _, ok := fm.Exchange["USD_EUR"]; !ok {
+		t.Error("missing USD_EUR exchange rate")
+	}
+	if _, ok := fm.Globals["tax_rate"]; !ok {
+		t.Error("missing tax_rate global")
+	}
+	if fm.Scale == nil {
+		t.Error("missing scale directive")
+	}
+	if fm.ConvertTo == nil {
+		t.Error("missing convert_to directive")
+	}
+}
+
 // TestInsertFrontmatter verifies the Ctrl+F insert frontmatter command.
 func TestInsertFrontmatter(t *testing.T) {
 	// Start with no frontmatter
@@ -289,8 +313,16 @@ y = 20
 	}
 
 	// Verify globals are also in template
-	if _, ok := fm.Globals["my_var"]; !ok {
-		t.Error("Frontmatter should contain my_var global")
+	if _, ok := fm.Globals["tax_rate"]; !ok {
+		t.Error("Frontmatter should contain tax_rate global")
+	}
+
+	// Verify scale and convert_to are in template
+	if fm.Scale == nil {
+		t.Error("Frontmatter should contain scale directive")
+	}
+	if fm.ConvertTo == nil {
+		t.Error("Frontmatter should contain convert_to directive")
 	}
 
 	// Verify status message
