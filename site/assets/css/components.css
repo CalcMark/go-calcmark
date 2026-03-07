@@ -448,6 +448,37 @@ h6:hover .heading-anchor {
   color: var(--color-warning);
 }
 
+/* Repo file links with copy button */
+.repo-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.repo-file-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--color-text-faint);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  vertical-align: middle;
+}
+
+.repo-file-copy:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.repo-file-copy.copied {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .docs-layout {
