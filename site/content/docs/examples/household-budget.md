@@ -233,7 +233,4 @@ This example showcases the following CalcMark features:
 
 ```bash
 cm testdata/examples/household-budget.cm
-
-# Or open directly from GitHub — no clone required:
-cm remote --http {{< repo-raw-url path="testdata/examples/household-budget.cm" >}}
 ```

@@ -226,7 +226,4 @@ This example showcases the following CalcMark features:
 
 ```bash
 cm testdata/examples/job-offer.cm
-
-# Or open directly from GitHub — no clone required:
-cm remote --http {{< repo-raw-url path="testdata/examples/job-offer.cm" >}}
 ```
