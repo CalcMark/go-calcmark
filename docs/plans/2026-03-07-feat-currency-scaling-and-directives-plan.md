@@ -146,20 +146,20 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 3: Semantic Validation
 
-- [ ] Add frontmatter awareness to `Checker` in `spec/semantic/checker.go`:
-  - Add `Frontmatter *document.Frontmatter` field to `Checker` struct
-  - Update `NewChecker()` to accept optional frontmatter
-  - Update callers of `NewChecker()` to pass frontmatter when available
-- [ ] Add `case *ast.DirectiveRef:` in `checkNode()`:
+- [x] Add frontmatter awareness to `Checker` in `spec/semantic/checker.go`:
+  - Add `FrontmatterInfo` interface to break import cycle (spec/semantic cannot import spec/document)
+  - Add `SetFrontmatter(FrontmatterInfo)` method to `Checker`
+  - Update callers in `impl/document/evaluator.go` to pass frontmatter when available
+- [x] Add `case *ast.DirectiveRef:` in `checkNode()`:
   - `@scale`: valid only if frontmatter has `scale:` config
   - `@globals.name`: valid only if frontmatter has `globals:` with that key
   - `@exchange`, `@convert_to`, etc.: error — `'@exchange' is not a supported directive; use @scale or @globals.name`
   - Unknown: error — `unknown directive '@foo'; valid directives are @scale and @globals.name`
-- [ ] Error messages should list available values:
+- [x] Error messages should list available values:
   - `@globals.nonexistent` → `undefined global 'nonexistent'; defined globals: budget, tax_rate`
   - `@scale` without scale → `@scale requires 'scale:' in frontmatter`
-- [ ] Add semantic checker tests for all error cases
-- [ ] Run `task test` — all tests pass
+- [x] Add semantic checker tests for all error cases
+- [x] Run `task test` — all tests pass
 
 **Success criteria**: Semantic checker catches invalid directive references with helpful error messages before the interpreter runs.
 

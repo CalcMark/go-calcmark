@@ -98,10 +98,21 @@ func abs(x int) int {
 	return x
 }
 
+// FrontmatterInfo provides the frontmatter context needed by the semantic
+// checker to validate @directive references. This interface breaks the
+// import cycle between spec/semantic and spec/document.
+type FrontmatterInfo interface {
+	HasScale() bool
+	HasGlobals() bool
+	HasGlobal(name string) bool
+	GlobalKeys() []string
+}
+
 // Checker performs semantic validation on AST nodes.
 type Checker struct {
 	env         *Environment
 	diagnostics []Diagnostic
+	frontmatter FrontmatterInfo // optional; enables @directive validation
 }
 
 // NewChecker creates a new semantic checker with an empty environment.
@@ -119,6 +130,12 @@ func NewCheckerWithEnv(env *Environment) *Checker {
 		env:         env,
 		diagnostics: make([]Diagnostic, 0),
 	}
+}
+
+// SetFrontmatter provides frontmatter context for @directive validation.
+// Without frontmatter, @directive references produce "missing frontmatter" errors.
+func (c *Checker) SetFrontmatter(fm FrontmatterInfo) {
+	c.frontmatter = fm
 }
 
 // Check validates a list of AST nodes and returns all diagnostics found.
@@ -170,6 +187,8 @@ func (c *Checker) checkNode(node ast.Node) {
 		c.checkNapkinConversion(n)
 	case *ast.PercentageOf:
 		c.checkPercentageOf(n)
+	case *ast.DirectiveRef:
+		c.checkDirectiveRef(n)
 	}
 }
 
@@ -425,6 +444,55 @@ func isBooleanKeyword(name string) bool {
 // GetEnvironment returns the current environment (for testing/debugging).
 func (c *Checker) GetEnvironment() *Environment {
 	return c.env
+}
+
+// checkDirectiveRef validates a @directive reference against frontmatter.
+func (c *Checker) checkDirectiveRef(d *ast.DirectiveRef) {
+	// Only @scale and @globals are valid directives
+	switch d.Directive {
+	case "scale":
+		if c.frontmatter == nil || !c.frontmatter.HasScale() {
+			c.diagnostics = append(c.diagnostics, Diagnostic{
+				Severity: Error,
+				Code:     DiagMissingFrontmatter,
+				Message:  "@scale requires 'scale:' in frontmatter",
+				Detailed: "Add a scale directive to the document frontmatter, e.g.:\n---\nscale: 3\n---",
+				Range:    d.Range,
+			})
+		}
+
+	case "globals":
+		if c.frontmatter == nil || !c.frontmatter.HasGlobals() {
+			c.diagnostics = append(c.diagnostics, Diagnostic{
+				Severity: Error,
+				Code:     DiagMissingFrontmatter,
+				Message:  "@globals requires 'globals:' in frontmatter",
+				Detailed: "Add globals to the document frontmatter, e.g.:\n---\nglobals:\n  tax_rate: 0.085\n---",
+				Range:    d.Range,
+			})
+			return
+		}
+		if d.Field != "" && !c.frontmatter.HasGlobal(d.Field) {
+			// List defined globals for discoverability
+			defined := c.frontmatter.GlobalKeys()
+			c.diagnostics = append(c.diagnostics, Diagnostic{
+				Severity: Error,
+				Code:     DiagUndefinedGlobal,
+				Message:  "undefined global '" + d.Field + "'; defined globals: " + strings.Join(defined, ", "),
+				Detailed: "Check the spelling of the global name, or add it to the frontmatter globals section.",
+				Range:    d.Range,
+			})
+		}
+
+	default:
+		c.diagnostics = append(c.diagnostics, Diagnostic{
+			Severity: Error,
+			Code:     DiagInvalidDirective,
+			Message:  "'" + "@" + d.Directive + "' is not a supported directive; use @scale or @globals.name",
+			Detailed: "CalcMark supports two directive references:\n  @scale — the numeric scale factor from frontmatter\n  @globals.name — a named global variable from frontmatter",
+			Range:    d.Range,
+		})
+	}
 }
 
 // checkDataSizeBaseMixingForCapacity checks if demand and capacity units mix binary and decimal bases.

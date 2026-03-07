@@ -67,4 +67,9 @@ const (
 
 	// Data size unit hints
 	DiagMixedBaseUnits = "mixed_base_units"
+
+	// Directive diagnostics
+	DiagInvalidDirective   = "invalid_directive"
+	DiagUndefinedGlobal    = "undefined_global"
+	DiagMissingFrontmatter = "missing_frontmatter"
 )

@@ -243,6 +243,16 @@ func (f *Frontmatter) ExchangeKeys() []string {
 	return keys
 }
 
+// HasScale returns true if a scale directive is defined in frontmatter.
+func (f *Frontmatter) HasScale() bool {
+	return f != nil && f.Scale != nil
+}
+
+// HasGlobals returns true if any globals are defined in frontmatter.
+func (f *Frontmatter) HasGlobals() bool {
+	return f != nil && len(f.Globals) > 0
+}
+
 // HasGlobal returns true if the global variable is defined in frontmatter.
 func (f *Frontmatter) HasGlobal(name string) bool {
 	if f == nil || f.Globals == nil {

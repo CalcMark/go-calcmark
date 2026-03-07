@@ -195,7 +195,7 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 
 	for _, node := range doc.GetBlocks() {
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			err := e.evaluateCalcBlockSelective(node.ID, cb, reactiveEnv, lastDefBlock)
+			err := e.evaluateCalcBlockSelective(node.ID, cb, reactiveEnv, lastDefBlock, doc)
 			if err != nil {
 				return err
 			}
@@ -247,7 +247,7 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 // evaluateCalcBlockSelective evaluates a CalcBlock, but only updates the environment
 // for variables where this block is the authoritative (last) definition.
 // This ensures reactive semantics: later assignments "win" over earlier ones.
-func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.CalcBlock, env *interpreter.Environment, lastDefBlock map[string]string) error {
+func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.CalcBlock, env *interpreter.Environment, lastDefBlock map[string]string, doc *document.Document) error {
 	// Clear previous errors and diagnostics
 	block.SetError(nil)
 	block.ClearDiagnostics()
@@ -290,6 +290,11 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 		if !slices.Contains(previouslyDefinedVars, varName) {
 			checker.GetEnvironment().Set(varName, value)
 		}
+	}
+
+	// Provide frontmatter context for @directive validation
+	if doc != nil {
+		checker.SetFrontmatter(doc.GetFrontmatter())
 	}
 
 	diagnostics := checker.Check(nodes)
@@ -399,6 +404,11 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 			continue
 		}
 		checker.GetEnvironment().Set(varName, value)
+	}
+
+	// Provide frontmatter context for @directive validation
+	if doc != nil {
+		checker.SetFrontmatter(doc.GetFrontmatter())
 	}
 
 	diagnostics := checker.Check(nodes)
