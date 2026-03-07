@@ -9,7 +9,7 @@ description: "Meet Larky, the CalcMark Lark."
 
 ## Larky is the CalcMark Lark
 
-Every good project needs a mascot. Ours is **Larky** — a chunky pixel lark with two eyes (yes, two — from a side profile, because why not), a proud little crest, and a distinctive wing fold.
+Every good project needs a mascot. Ours is **Larky** — a chunky pixel lark, a cheeky sideways glance, a proud little crest, and a distinctive wing fold.
 
 ### Why a lark?
 
