@@ -53,8 +53,9 @@ const (
 	RPAREN
 
 	// Punctuation
-	COMMA // ","
-	DOT   // "." - for qualified names
+	COMMA   // ","
+	DOT     // "." - for qualified names
+	AT_SIGN // "@" - for directive references (@scale, @globals.name)
 
 	// Reserved keywords for future control flow
 	IF
@@ -187,6 +188,8 @@ func (tt TokenType) String() string {
 		return "COMMA"
 	case DOT:
 		return "DOT"
+	case AT_SIGN:
+		return "AT_SIGN"
 	case IF:
 		return "IF"
 	case THEN:

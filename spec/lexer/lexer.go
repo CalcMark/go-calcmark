@@ -1016,6 +1016,79 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			continue
 		}
 
+		// @ — directive reference (@scale, @globals.name)
+		if char == '@' {
+			tokens = append(tokens, l.makeToken(AT_SIGN, "@", 1))
+			l.advance()
+
+			// Must be followed by an identifier
+			if !l.isIdentifierChar(l.currentChar(), true) {
+				return nil, &LexerError{
+					Message: "expected identifier after '@' (e.g., @scale, @globals.name)",
+					Line:    l.line,
+					Column:  l.column,
+				}
+			}
+
+			// Read the directive name identifier
+			dirToken := l.readIdentifier()
+			if dirToken.Type == ERROR {
+				return nil, &LexerError{
+					Message: dirToken.Value,
+					Line:    dirToken.Line,
+					Column:  dirToken.Column,
+				}
+			}
+			// Force it to IDENTIFIER regardless of keyword mapping
+			dirToken.Type = IDENTIFIER
+			tokens = append(tokens, dirToken)
+
+			// If the directive is "globals" and next char is '.', emit DOT + field identifier
+			if dirToken.Value == "globals" && l.currentChar() == '.' {
+				tokens = append(tokens, l.makeToken(DOT, ".", 1))
+				l.advance()
+
+				// Must be followed by a field identifier
+				if !l.isIdentifierChar(l.currentChar(), true) {
+					return nil, &LexerError{
+						Message: "expected field name after '@globals.' (e.g., @globals.tax_rate)",
+						Line:    l.line,
+						Column:  l.column,
+					}
+				}
+				fieldToken := l.readIdentifier()
+				if fieldToken.Type == ERROR {
+					return nil, &LexerError{
+						Message: fieldToken.Value,
+						Line:    fieldToken.Line,
+						Column:  fieldToken.Column,
+					}
+				}
+				fieldToken.Type = IDENTIFIER
+				tokens = append(tokens, fieldToken)
+
+				// Check for nested dot access (e.g., @globals.a.b) — emit tokens, parser will reject
+				for l.currentChar() == '.' {
+					tokens = append(tokens, l.makeToken(DOT, ".", 1))
+					l.advance()
+					if l.isIdentifierChar(l.currentChar(), true) {
+						nestedToken := l.readIdentifier()
+						if nestedToken.Type == ERROR {
+							return nil, &LexerError{
+								Message: nestedToken.Value,
+								Line:    nestedToken.Line,
+								Column:  nestedToken.Column,
+							}
+						}
+						nestedToken.Type = IDENTIFIER
+						tokens = append(tokens, nestedToken)
+					}
+				}
+			}
+
+			continue
+		}
+
 		// Octothorpe - not allowed mid-line in calculations
 		if char == '#' {
 			return nil, &LexerError{

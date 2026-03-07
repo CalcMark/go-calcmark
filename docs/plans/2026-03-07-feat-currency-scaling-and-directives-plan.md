@@ -96,21 +96,21 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 1: Lexer — @ Token and DOT-in-@-context
 
-- [ ] Add `AT_SIGN` token type in `spec/lexer/token.go`
-- [ ] Handle `@` in `Tokenize()` in `spec/lexer/lexer.go`:
+- [x] Add `AT_SIGN` token type in `spec/lexer/token.go`
+- [x] Handle `@` in `Tokenize()` in `spec/lexer/lexer.go`:
   - Emit `AT_SIGN` token
   - Read following identifier characters as a single `IDENTIFIER` token (e.g., `scale`, `globals`)
   - If next char after identifier is `.` AND the identifier is `globals`, emit `DOT` token then read next identifier
   - Otherwise, just emit `AT_SIGN` + `IDENTIFIER`
-- [ ] Ensure `.` in `3.14` is NOT affected — DOT only emitted in `@globals.` context
-- [ ] Add lexer tests:
+- [x] Ensure `.` in `3.14` is NOT affected — DOT only emitted in `@globals.` context
+- [x] Add lexer tests:
   - `@scale` → `[AT_SIGN, IDENTIFIER("scale")]`
   - `@globals.tax_rate` → `[AT_SIGN, IDENTIFIER("globals"), DOT, IDENTIFIER("tax_rate")]`
   - `@` alone → lexer error
   - `@123` → lexer error
   - `@globals.a.b` → `[AT_SIGN, IDENTIFIER("globals"), DOT, IDENTIFIER("a"), DOT, IDENTIFIER("b")]` (parser will reject the second dot)
   - `3.14` → still `NUMBER(3.14)` (decimal parsing unchanged)
-- [ ] Run `task test` — all tests pass
+- [x] Run `task test` — all tests pass
 
 **Success criteria**: Lexer correctly tokenizes `@scale` and `@globals.name` without breaking decimal number parsing.
 
