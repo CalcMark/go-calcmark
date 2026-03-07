@@ -5,12 +5,23 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
+
+// DirectiveResolver provides access to frontmatter values for @directive references.
+// This interface breaks the import cycle between impl/interpreter and spec/document.
+type DirectiveResolver interface {
+	// ScaleFactor returns the scale factor and true if scale is defined.
+	ScaleFactor() (decimal.Decimal, bool)
+	// ResolveGlobal returns the typed value of a global and true if it exists.
+	ResolveGlobal(name string) (types.Type, bool, error)
+}
 
 // Interpreter executes validated AST nodes and produces typed results.
 // This is a Go-specific implementation of CalcMark execution.
 type Interpreter struct {
-	env *Environment
+	env       *Environment
+	directive DirectiveResolver
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
@@ -25,6 +36,11 @@ func NewInterpreterWithEnv(env *Environment) *Interpreter {
 	return &Interpreter{
 		env: env,
 	}
+}
+
+// SetDirectiveResolver provides frontmatter context for resolving @directive references.
+func (interp *Interpreter) SetDirectiveResolver(dr DirectiveResolver) {
+	interp.directive = dr
 }
 
 // Eval executes a list of AST nodes and returns the results.
@@ -93,8 +109,39 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalPercentageOf(n)
 	case *ast.FunctionCall:
 		return interp.evalFunctionCall(n)
+	case *ast.DirectiveRef:
+		return interp.evalDirectiveRef(n)
 	default:
 		return nil, fmt.Errorf("unknown node type: %T", node)
+	}
+}
+
+// evalDirectiveRef resolves @scale and @globals.name to runtime values.
+func (interp *Interpreter) evalDirectiveRef(ref *ast.DirectiveRef) (types.Type, error) {
+	if interp.directive == nil {
+		return nil, fmt.Errorf("directive @%s used but no frontmatter defined", ref.Directive)
+	}
+
+	switch ref.Directive {
+	case "scale":
+		factor, ok := interp.directive.ScaleFactor()
+		if !ok {
+			return nil, fmt.Errorf("@scale requires 'scale:' in frontmatter")
+		}
+		return types.NewNumber(factor), nil
+
+	case "globals":
+		value, ok, err := interp.directive.ResolveGlobal(ref.Field)
+		if err != nil {
+			return nil, fmt.Errorf("@globals.%s: %w", ref.Field, err)
+		}
+		if !ok {
+			return nil, fmt.Errorf("undefined global '%s'", ref.Field)
+		}
+		return value, nil
+
+	default:
+		return nil, fmt.Errorf("unsupported directive '@%s'", ref.Directive)
 	}
 }
 

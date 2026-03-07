@@ -165,22 +165,22 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 4: Interpreter Resolution
 
-- [ ] Add `case *ast.DirectiveRef:` in `evalNode()` in `impl/interpreter/interpreter.go`
-- [ ] Add frontmatter access to `Interpreter`:
+- [x] Add `case *ast.DirectiveRef:` in `evalNode()` in `impl/interpreter/interpreter.go`
+- [x] Add frontmatter access to `Interpreter`:
   - Option A: Add `frontmatter *document.Frontmatter` field, set during construction
   - Option B: Pre-resolve directives into the environment with `@` prefix during `ApplyFrontmatter()`
   - **Preferred: Option A** — cleaner separation, no magic variable names
-- [ ] `evalDirectiveRef()` logic:
+- [x] `evalDirectiveRef()` logic:
   - `@scale`: return `types.NewNumber(frontmatter.Scale.Factor)` (or error if no scale)
   - `@globals.name`: look up in parsed globals map, return the typed value
-- [ ] Update `impl/document/evaluator.go` to pass frontmatter when constructing interpreter
-- [ ] Add interpreter tests:
+- [x] Update `impl/document/evaluator.go` to pass frontmatter when constructing interpreter
+- [x] Add interpreter tests:
   - `@scale` resolves to the numeric factor
   - `@scale` with map form resolves to factor
   - `@globals.tax_rate` resolves to the typed value
   - `@globals.budget` where budget is currency resolves correctly
   - Arithmetic with directives: `cost * @scale`, `income * (1 - @globals.tax_rate)`
-- [ ] Run `task test` — all tests pass
+- [x] Run `task test` — all tests pass
 
 **Success criteria**: `@scale` and `@globals.name` resolve to correct typed values in expressions.
 

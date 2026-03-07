@@ -12,7 +12,36 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/semantic"
 	"github.com/CalcMark/go-calcmark/spec/transform"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
+
+// frontmatterDirectiveResolver adapts *document.Frontmatter to the
+// interpreter.DirectiveResolver interface for @directive resolution.
+type frontmatterDirectiveResolver struct {
+	fm *document.Frontmatter
+}
+
+func (r *frontmatterDirectiveResolver) ScaleFactor() (decimal.Decimal, bool) {
+	if r.fm == nil || r.fm.Scale == nil {
+		return decimal.Zero, false
+	}
+	return r.fm.Scale.Factor, true
+}
+
+func (r *frontmatterDirectiveResolver) ResolveGlobal(name string) (types.Type, bool, error) {
+	if r.fm == nil || r.fm.Globals == nil {
+		return nil, false, nil
+	}
+	exprStr, ok := r.fm.Globals[name]
+	if !ok {
+		return nil, false, nil
+	}
+	parsed, err := document.ParseGlobals(map[string]string{name: exprStr})
+	if err != nil {
+		return nil, false, err
+	}
+	return parsed.Values[name], true, nil
+}
 
 // Evaluator evaluates CalcMark documents using the interpreter.
 // This lives in impl/ because it performs execution, not just validation.
@@ -323,6 +352,9 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	// We'll selectively copy back only authoritative assignments
 	evalEnv := env.Clone()
 	interp := interpreter.NewInterpreterWithEnv(evalEnv)
+	if doc != nil && doc.GetFrontmatter() != nil {
+		interp.SetDirectiveResolver(&frontmatterDirectiveResolver{fm: doc.GetFrontmatter()})
+	}
 	results, err := interp.Eval(nodes)
 	if err != nil {
 		block.SetError(err)
@@ -438,6 +470,9 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// 3. Interpret statements with shared environment
 	// Evaluate statements one by one to collect partial results even if a later statement fails
 	interp := interpreter.NewInterpreterWithEnv(e.env)
+	if doc != nil && doc.GetFrontmatter() != nil {
+		interp.SetDirectiveResolver(&frontmatterDirectiveResolver{fm: doc.GetFrontmatter()})
+	}
 	results := make([]types.Type, 0, len(nodes))
 	var evalErr error
 	var failingNodeIdx = -1
