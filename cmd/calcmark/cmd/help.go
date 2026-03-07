@@ -303,15 +303,24 @@ func printFrontmatter() {
 	fmt.Fprintln(w, "-----")
 	fmt.Fprintln(w, "  Multiply quantity results by a factor.")
 	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Simple form:")
 	fmt.Fprintln(w, "    scale: 2")
 	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Map form (filter by category):")
 	fmt.Fprintln(w, "    scale:")
 	fmt.Fprintln(w, "      factor: 4")
 	fmt.Fprintln(w, "      unit_categories: [Length, Mass]")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "  Sub-keys: factor (number, required), unit_categories (list, optional)")
-	fmt.Fprintf(w, "  Categories: %s\n", strings.Join(categories, ", "))
-	fmt.Fprintln(w, "  Default: all categories except Temperature")
+	fmt.Fprintln(w, "  Options:")
+	fmt.Fprintln(w, "    factor           Number (required). Multiplier for quantities.")
+	fmt.Fprintln(w, "    unit_categories  List (optional). Limit scaling to these categories.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Valid categories:")
+	for _, cat := range categories {
+		fmt.Fprintf(w, "    - %s\n", cat)
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Temperature is excluded by default.")
 	fmt.Fprintln(w)
 
 	// convert_to
@@ -319,15 +328,22 @@ func printFrontmatter() {
 	fmt.Fprintln(w, "----------")
 	fmt.Fprintln(w, "  Convert quantity results to a measurement system.")
 	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Simple form:")
 	fmt.Fprintln(w, "    convert_to: si")
 	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Map form (filter by category):")
 	fmt.Fprintln(w, "    convert_to:")
 	fmt.Fprintln(w, "      system: imperial")
 	fmt.Fprintln(w, "      unit_categories: [Length]")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "  Sub-keys: system (si or imperial, required), unit_categories (list, optional)")
-	fmt.Fprintf(w, "  Categories: %s\n", strings.Join(categories, ", "))
-	fmt.Fprintln(w, "  Systems: si, imperial")
+	fmt.Fprintln(w, "  Options:")
+	fmt.Fprintln(w, "    system           si or imperial (required).")
+	fmt.Fprintln(w, "    unit_categories  List (optional). Limit conversion to these categories.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Valid categories:")
+	for _, cat := range categories {
+		fmt.Fprintf(w, "    - %s\n", cat)
+	}
 	fmt.Fprintln(w)
 }
 

@@ -110,8 +110,8 @@ func TestHelpFrontmatterOutput(t *testing.T) {
 	if !strings.Contains(output, "system: imperial") {
 		t.Error("missing convert_to map form example")
 	}
-	if !strings.Contains(output, "si, imperial") {
-		t.Error("missing valid systems list")
+	if !strings.Contains(output, "si or imperial") {
+		t.Error("missing valid systems description")
 	}
 }
 
