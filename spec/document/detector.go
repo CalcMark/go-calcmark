@@ -311,6 +311,11 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 		return true
 	}
 
+	// Directive references (@scale, @globals.name)
+	if first.Type == lexer.AT_SIGN {
+		return true
+	}
+
 	// Date literals and keywords
 	if isDateToken(first.Type) {
 		return true

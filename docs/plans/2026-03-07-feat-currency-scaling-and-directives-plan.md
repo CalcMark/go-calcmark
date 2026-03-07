@@ -206,11 +206,11 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 6: Detector and Line Classification
 
-- [ ] Update `looksLikeCalculation()` in `spec/document/detector.go` to recognize `@` as a valid calculation token
-- [ ] Lines like `per_loaf = total_cost / @scale` must classify as CALCULATION, not MARKDOWN
-- [ ] Lines starting with `@` (e.g., standalone `@scale`) should also classify correctly
-- [ ] Add detector tests for `@`-containing lines
-- [ ] Run `task test` — all tests pass
+- [x] Update `looksLikeCalculation()` in `spec/document/detector.go` to recognize `@` as a valid calculation token
+- [x] Lines like `per_loaf = total_cost / @scale` must classify as CALCULATION, not MARKDOWN
+- [x] Lines starting with `@` (e.g., standalone `@scale`) should also classify correctly
+- [x] Add detector tests for `@`-containing lines
+- [x] Run `task test` — all tests pass
 
 **Success criteria**: Lines containing `@` directives are correctly classified as calculations.
 

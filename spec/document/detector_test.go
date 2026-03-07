@@ -622,6 +622,37 @@ func TestNLFunctionVariableDetection(t *testing.T) {
 	}
 }
 
+// TestDirectiveReferenceDetection verifies that lines containing @directive
+// references are classified as calculations.
+func TestDirectiveReferenceDetection(t *testing.T) {
+	detector := NewDetector()
+
+	calcTests := []struct {
+		name   string
+		source string
+	}{
+		{"assignment with @scale", "per_loaf = total_cost / @scale"},
+		{"standalone @scale", "@scale"},
+		{"@globals.name in expression", "tax = income * @globals.tax_rate"},
+		{"@scale in arithmetic", "cost = price * @scale"},
+		{"assignment with @globals", "result = @globals.budget"},
+	}
+	for _, tt := range calcTests {
+		t.Run("calc:"+tt.name, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(tt.source)
+			if err != nil {
+				t.Fatalf("DetectBlocks error: %v", err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block, got %d", len(blocks))
+			}
+			if blocks[0].Type() != BlockCalculation {
+				t.Errorf("Expected calculation, got %v for %q", blocks[0].Type(), tt.source)
+			}
+		})
+	}
+}
+
 // --- Phase 4e: Regression safety net ---
 // Parse all existing .cm files through DetectBlocks and record block type counts.
 // This prevents detector changes from silently reclassifying existing documents.
