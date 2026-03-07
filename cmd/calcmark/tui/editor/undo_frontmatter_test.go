@@ -161,7 +161,7 @@ func TestUndoFrontmatterNoDuplication_InsertThenUndo(t *testing.T) {
 // TestUndoFrontmatterNoDuplication_EditBodyThenUndo tests editing a body line
 // in a frontmatter document and undoing.
 func TestUndoFrontmatterNoDuplication_EditBodyThenUndo(t *testing.T) {
-	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	doc, err := document.NewDocument(content)
 	if err != nil {
 		t.Fatalf("NewDocument: %v", err)
@@ -173,7 +173,7 @@ func TestUndoFrontmatterNoDuplication_EditBodyThenUndo(t *testing.T) {
 
 	var model tea.Model = m
 
-	// Navigate to body line (line 6: "x = my_var + 1")
+	// Navigate to body line (line 6: "x = @globals.my_var + 1")
 	for range 6 {
 		model = sendKey(t, model, "down")
 	}
@@ -198,7 +198,7 @@ func TestUndoFrontmatterNoDuplication_EditBodyThenUndo(t *testing.T) {
 // TestUndoFrontmatterNoDuplication_EditFMLineThenUndo tests editing a frontmatter
 // line and undoing.
 func TestUndoFrontmatterNoDuplication_EditFMLineThenUndo(t *testing.T) {
-	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	doc, err := document.NewDocument(content)
 	if err != nil {
 		t.Fatalf("NewDocument: %v", err)

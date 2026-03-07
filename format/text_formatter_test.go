@@ -120,7 +120,7 @@ globals:
   tax_rate: 10%
 ---
 price = 100
-total = price * (1 + tax_rate)
+total = price * (1 + @globals.tax_rate)
 `
 	doc, err := document.NewDocument(source)
 	if err != nil {

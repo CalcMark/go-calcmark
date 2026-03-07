@@ -253,7 +253,7 @@ func TestCutPaste_SelectAllDeleteAndPasteBack(t *testing.T) {
 // --- Frontmatter: selection spanning FM boundary ----------------------------
 
 func TestCutPaste_SelectAcrossFrontmatterBoundary(t *testing.T) {
-	content := "---\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	m := newEditorWithContent(t, content)
 
 	fmCount := m.frontmatterLineCount()
@@ -265,7 +265,7 @@ func TestCutPaste_SelectAcrossFrontmatterBoundary(t *testing.T) {
 	selectRange(&m, 2, 2, 4, 5)
 
 	text := m.GetSelectedText()
-	expected := "my_var: 42\n---\nx = m"
+	expected := "my_var: 42\n---\nx = @"
 	if text != expected {
 		t.Fatalf("cross-boundary text: got %q, want %q", text, expected)
 	}
@@ -306,7 +306,7 @@ func TestCutPaste_CutEntireFrontmatter(t *testing.T) {
 // --- Frontmatter: paste into frontmatter ------------------------------------
 
 func TestCutPaste_PasteSingleLineIntoFrontmatter(t *testing.T) {
-	content := "---\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	m := newEditorWithContent(t, content)
 
 	// Position cursor at end of "  my_var: 42" (line 2)
@@ -889,7 +889,7 @@ func TestCutPaste_UndoCutInFrontmatter(t *testing.T) {
 }
 
 func TestCutPaste_RepeatedCutPasteInFrontmatter(t *testing.T) {
-	content := "---\nglobals:\n  rate: 0.5\n  tax: 10\n---\nx = rate + tax"
+	content := "---\nglobals:\n  rate: 0.5\n  tax: 10\n---\nx = @globals.rate + @globals.tax"
 	m := newEditorWithContent(t, content)
 
 	fmCount := m.frontmatterLineCount()
@@ -1021,7 +1021,7 @@ func TestCutPaste_GetSelectedTextInFrontmatter(t *testing.T) {
 }
 
 func TestCutPaste_GetSelectedTextFullDocument(t *testing.T) {
-	content := "---\nglobals:\n  my_var: 42\n---\nresult = my_var * 2"
+	content := "---\nglobals:\n  my_var: 42\n---\nresult = @globals.my_var * 2"
 	m := newEditorWithContent(t, content)
 
 	m.SelectAll()

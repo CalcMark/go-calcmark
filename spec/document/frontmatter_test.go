@@ -351,7 +351,7 @@ globals:
   tax_rate: 0.32
   price: $100
 ---
-x = price * tax_rate
+x = @globals.price * @globals.tax_rate
 `
 	fm, remaining, err := ParseFrontmatter(source)
 	if err != nil {
@@ -382,7 +382,7 @@ x = price * tax_rate
 	}
 
 	// Check remaining content
-	expectedRemaining := `x = price * tax_rate
+	expectedRemaining := `x = @globals.price * @globals.tax_rate
 `
 	if remaining != expectedRemaining {
 		t.Errorf("remaining content mismatch:\nexpected: %q\ngot: %q", expectedRemaining, remaining)
@@ -396,7 +396,7 @@ exchange:
 globals:
   base_price: 100 USD
 ---
-price_eur = base_price in EUR
+price_eur = @globals.base_price in EUR
 `
 	fm, _, err := ParseFrontmatter(source)
 	if err != nil {
@@ -820,7 +820,7 @@ func TestFrontmatter_RawSourceClearedOnModification(t *testing.T) {
 // TestFrontmatter_RawSourceRoundTrip verifies that parse→serialize→parse
 // produces identical frontmatter even with non-standard formatting.
 func TestFrontmatter_RawSourceRoundTrip(t *testing.T) {
-	source := "---\nglobals:\n  a: 1\n\n  b: 2\n---\nx = a + b\n"
+	source := "---\nglobals:\n  a: 1\n\n  b: 2\n---\nx = @globals.a + @globals.b\n"
 
 	// First parse
 	fm1, _, err := ParseFrontmatter(source)

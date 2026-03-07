@@ -25,7 +25,7 @@ import (
 // Scenario: Well-formed frontmatter → delete closing --- character by character
 // → debounce → preview must show no globals.
 func TestPreviewStale_MissingClosingDelimiter(t *testing.T) {
-	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	doc, err := document.NewDocument(content)
 	if err != nil {
 		t.Fatalf("NewDocument: %v", err)
@@ -84,7 +84,7 @@ func TestPreviewStale_MissingClosingDelimiter(t *testing.T) {
 //
 // This is the exact user-reported scenario: empty value shows stale "0.9200".
 func TestPreviewStale_EmptyYAMLValue(t *testing.T) {
-	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	doc, err := document.NewDocument(content)
 	if err != nil {
 		t.Fatalf("NewDocument: %v", err)
@@ -201,7 +201,7 @@ func TestPreviewStale_InvalidYAMLShowsNoGlobals(t *testing.T) {
 // Scenario: Break frontmatter by clearing the exchange rate value (making it
 // invalid), verify no globals shown, then type a valid rate back.
 func TestPreviewStale_FixFrontmatterRestoresGlobals(t *testing.T) {
-	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = my_var + 1"
+	content := "---\nexchange:\n  USD_EUR: 0.92\nglobals:\n  my_var: 42\n---\nx = @globals.my_var + 1"
 	doc, err := document.NewDocument(content)
 	if err != nil {
 		t.Fatalf("NewDocument: %v", err)

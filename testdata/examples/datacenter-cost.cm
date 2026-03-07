@@ -24,7 +24,7 @@ Construction costs for dedicated datacenters typically range from $625 to
 $1,135 per gross square foot. We use a midpoint estimate:
 
 cost_sqft = $875
-capex = sqft * cost_sqft
+capex = @globals.sqft * cost_sqft
 
 ## CapEx Breakdown by Component
 
@@ -46,8 +46,8 @@ Uptime Institute tiers define redundancy levels. Tier II (partial redundancy)
 costs roughly $2,300/sqft. Tier III (concurrently maintainable) costs roughly
 $7,700/sqft. Moving up tiers more than triples the price:
 
-tier_ii = $2300 * sqft
-tier_iii = $7700 * sqft
+tier_ii = $2300 * @globals.sqft
+tier_iii = $7700 * @globals.sqft
 tier_mult = 7700 / 2300
 
 ## Power Infrastructure

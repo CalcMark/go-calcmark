@@ -221,7 +221,7 @@ exchange:
   USD_GBP: 0.73
 ---
 income = 5000
-tax = income * tax_rate`
+tax = income * @globals.tax_rate`
 
 	doc, err := document.NewDocument(content)
 	if err != nil {

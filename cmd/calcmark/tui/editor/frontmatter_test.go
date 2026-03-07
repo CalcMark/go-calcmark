@@ -65,7 +65,7 @@ globals:
   tax_rate: 10%
 ---
 price = 100
-total = price * (1 + tax_rate)
+total = price * (1 + @globals.tax_rate)
 `
 	doc, err := document.NewDocument(content)
 	if err != nil {
@@ -192,7 +192,7 @@ func TestGetLineResultsFrontmatterPadding(t *testing.T) {
 globals:
   my_var: 42
 ---
-x = my_var + 1
+x = @globals.my_var + 1
 `
 	doc, err := document.NewDocument(content)
 	if err != nil {
@@ -223,19 +223,19 @@ x = my_var + 1
 		}
 	}
 
-	// After frontmatter, there should be a calc result for "x = my_var + 1"
+	// After frontmatter, there should be a calc result for "x = @globals.my_var + 1"
 	foundCalc := false
 	for i := fmCount; i < len(results); i++ {
-		if results[i].IsCalc && strings.Contains(results[i].Source, "x = my_var") {
+		if results[i].IsCalc && strings.Contains(results[i].Source, "x = @globals.my_var") {
 			foundCalc = true
 			if results[i].Value == "" {
-				t.Error("Expected calc result to have a value for 'x = my_var + 1'")
+				t.Error("Expected calc result to have a value for 'x = @globals.my_var + 1'")
 			}
 			break
 		}
 	}
 	if !foundCalc {
-		t.Error("No calc result found for 'x = my_var + 1' after frontmatter")
+		t.Error("No calc result found for 'x = @globals.my_var + 1' after frontmatter")
 	}
 }
 
@@ -413,7 +413,7 @@ globals:
   tax_rate: 10%
 ---
 price = 100
-total = price * (1 + tax_rate)
+total = price * (1 + @globals.tax_rate)
 `
 	doc, err := document.NewDocument(content)
 	if err != nil {
@@ -799,7 +799,7 @@ func TestEditorCatwalkFrontmatterEditing(t *testing.T) {
 globals:
   my_var: 42
 ---
-x = my_var + 1`
+x = @globals.my_var + 1`
 
 	doc, err := document.NewDocument(content)
 	if err != nil {
@@ -917,7 +917,7 @@ func TestEditorCatwalkFrontmatterGlobalsAlignment(t *testing.T) {
 globals:
   my_var: 42
 ---
-x = my_var + 1`
+x = @globals.my_var + 1`
 
 	doc, err := document.NewDocument(content)
 	if err != nil {
@@ -987,7 +987,7 @@ exchange:
   USD_EUR: 0.85
 ---
 price = 100
-tax = price * tax_rate`
+tax = price * @globals.tax_rate`
 
 	doc, err := document.NewDocument(content)
 	if err != nil {

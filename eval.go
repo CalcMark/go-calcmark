@@ -25,6 +25,8 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
 
 // Eval evaluates a CalcMark expression or document and returns the result.
@@ -63,18 +65,8 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 			env.SetExchangeRate(from, to, rate)
 		}
 
-		// Parse and set global variables in document order
-		if len(frontmatter.Globals) > 0 {
-			parsedGlobals, err := document.ParseGlobalsOrdered(frontmatter.Globals, frontmatter.GlobalKeys())
-			if err != nil {
-				return nil, fmt.Errorf("frontmatter error: %w", err)
-			}
-			for _, name := range frontmatter.GlobalKeys() {
-				if value, ok := parsedGlobals.Values[name]; ok {
-					env.Set(name, value)
-				}
-			}
-		}
+		// Globals are no longer injected as bare variables.
+		// Use @globals.name syntax in expressions to reference them.
 	}
 
 	// Use remaining content (after frontmatter)
@@ -101,6 +93,9 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 	}
 
 	checker := semantic.NewCheckerWithEnv(semEnv)
+	if frontmatter != nil {
+		checker.SetFrontmatter(frontmatter)
+	}
 	diagnostics := checker.Check(nodes)
 
 	// Update interpreter environment with new definitions from semantic check
@@ -131,6 +126,9 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 
 	// 4. Interpret the validated AST
 	interp := interpreter.NewInterpreterWithEnv(env)
+	if frontmatter != nil {
+		interp.SetDirectiveResolver(&evalDirectiveResolver{fm: frontmatter})
+	}
 	values, interpErr := interp.Eval(nodes)
 	if interpErr != nil {
 		return nil, fmt.Errorf("evaluation error: %w", interpErr)
@@ -151,6 +149,33 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 	}
 
 	return result, nil
+}
+
+// evalDirectiveResolver adapts *document.Frontmatter to interpreter.DirectiveResolver.
+type evalDirectiveResolver struct {
+	fm *document.Frontmatter
+}
+
+func (r *evalDirectiveResolver) ScaleFactor() (decimal.Decimal, bool) {
+	if r.fm == nil || r.fm.Scale == nil {
+		return decimal.Zero, false
+	}
+	return r.fm.Scale.Factor, true
+}
+
+func (r *evalDirectiveResolver) ResolveGlobal(name string) (types.Type, bool, error) {
+	if r.fm == nil || r.fm.Globals == nil {
+		return nil, false, nil
+	}
+	exprStr, ok := r.fm.Globals[name]
+	if !ok {
+		return nil, false, nil
+	}
+	parsed, err := document.ParseGlobals(map[string]string{name: exprStr})
+	if err != nil {
+		return nil, false, err
+	}
+	return parsed.Values[name], true, nil
 }
 
 // convertDiagnostics converts semantic diagnostics to public API format.

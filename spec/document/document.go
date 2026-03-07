@@ -439,16 +439,8 @@ func (d *Document) ApplyFrontmatter(env EnvironmentWriter) error {
 		env.SetExchangeRate(from, to, rate)
 	}
 
-	// Apply globals (parse literal values and inject as variables)
-	if len(d.frontmatter.Globals) > 0 {
-		parsed, err := ParseGlobals(d.frontmatter.Globals)
-		if err != nil {
-			return fmt.Errorf("apply frontmatter globals: %w", err)
-		}
-		for name, value := range parsed.Values {
-			env.Set(name, value)
-		}
-	}
+	// Globals are no longer injected as bare variables.
+	// Use @globals.name syntax in expressions to reference them.
 
 	return nil
 }

@@ -152,7 +152,7 @@ globals:
 ---
 # Calculation
 
-x = tax_rate * 100
+x = @globals.tax_rate * 100
 `
 	doc, err := document.NewDocument(source)
 	if err != nil {
@@ -186,7 +186,7 @@ x = tax_rate * 100
 	}
 
 	// Should contain the calculation
-	if !strings.Contains(output, "x = tax_rate * 100") {
+	if !strings.Contains(output, "x = @globals.tax_rate * 100") {
 		t.Errorf("Expected output to contain calculation, got: %s", output)
 	}
 

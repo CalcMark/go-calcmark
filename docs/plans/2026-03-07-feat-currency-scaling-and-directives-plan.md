@@ -186,20 +186,20 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 5: Breaking Change — Remove Plain Globals Injection
 
-- [ ] Remove `env.Set(name, value)` loop in `spec/document/document.go` `ApplyFrontmatter()` (line ~448)
-- [ ] Remove parallel injection in `impl/document/evaluator.go` `eval.go` if present
-- [ ] Update ALL files that use globals as bare variables:
-  - [ ] `testdata/examples/datacenter-cost.cm` — bare globals → `@globals.name`
-  - [ ] `testdata/eval/success/features/currency_conversion.cm` — `budget` → `@globals.budget`
-  - [ ] `testdata/spec/valid/features/exchange_rates.cm` — `budget` → `@globals.budget`
-  - [ ] `cmd/calcmark/tui/editor/default_frontmatter.cm` — verify usage
-  - [ ] Any other `.cm` files found by: `grep -r "globals:" testdata/ --include="*.cm" -l`
-- [ ] Update golden files for changed `.cm` files
+- [x] Remove `env.Set(name, value)` loop in `spec/document/document.go` `ApplyFrontmatter()` (line ~448)
+- [x] Remove parallel injection in `impl/document/evaluator.go` `eval.go` if present
+- [x] Update ALL files that use globals as bare variables:
+  - [x] `testdata/examples/datacenter-cost.cm` — bare globals → `@globals.name`
+  - [x] `testdata/eval/success/features/currency_conversion.cm` — `budget` → `@globals.budget`
+  - [x] `testdata/spec/valid/features/exchange_rates.cm` — `budget` → `@globals.budget`
+  - [x] `cmd/calcmark/tui/editor/default_frontmatter.cm` — verify usage
+  - [x] Any other `.cm` files found by: `grep -r "globals:" testdata/ --include="*.cm" -l`
+- [x] Update golden files for changed `.cm` files
 - [ ] Update site documentation:
   - [ ] `site/content/docs/examples/datacenter-cost.md` — update code blocks and prose
   - [ ] `site/content/docs/user-guide.md` — globals section, remove bare variable examples
   - [ ] `site/content/docs/language-reference.md` — add @directive section, update globals
-- [ ] Run `task test` — all tests pass
+- [x] Run `task test` — all tests pass
 - [ ] Run `task site:build` — site builds cleanly
 
 **Success criteria**: Bare globals produce undefined variable errors. Only `@globals.name` works.

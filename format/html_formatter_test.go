@@ -276,7 +276,7 @@ globals:
   tax_rate: 0.32
   base_price: 100
 ---
-price = base_price * (1 + tax_rate)
+price = @globals.base_price * (1 + @globals.tax_rate)
 `
 	doc, err := document.NewDocument(source)
 	if err != nil {

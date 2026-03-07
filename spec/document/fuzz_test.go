@@ -28,7 +28,7 @@ func FuzzNewDocument(f *testing.F) {
 
 		// Frontmatter
 		"---\nexchange:\n  USD_EUR: 0.85\n---\nprice = 100 USD\nresult = price in EUR\n",
-		"---\nglobals:\n  tax: 0.08\n---\ntotal = 100 * (1 + tax)\n",
+		"---\nglobals:\n  tax: 0.08\n---\ntotal = 100 * (1 + @globals.tax)\n",
 
 		// Malformed frontmatter (should error, not panic)
 		"---\n---\n",

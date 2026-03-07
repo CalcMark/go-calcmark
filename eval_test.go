@@ -508,7 +508,7 @@ func TestGlobalsInFrontmatter(t *testing.T) {
 globals:
   tax_rate: 0.32
 ---
-100 * tax_rate`,
+100 * @globals.tax_rate`,
 			want: "32",
 		},
 		{
@@ -517,7 +517,7 @@ globals:
 globals:
   base_price: $100
 ---
-base_price * 2`,
+@globals.base_price * 2`,
 			want: "$200.00",
 		},
 		{
@@ -526,7 +526,7 @@ base_price * 2`,
 globals:
   distance: 42 km
 ---
-distance * 2`,
+@globals.distance * 2`,
 			want: "84 km",
 		},
 		{
@@ -535,7 +535,7 @@ distance * 2`,
 globals:
   sprint_length: 2 weeks
 ---
-sprint_length * 3`,
+@globals.sprint_length * 3`,
 			want: "6 week", // Duration uses canonical singular unit
 		},
 		{
@@ -546,7 +546,7 @@ exchange:
 globals:
   base_price: $100
 ---
-base_price in EUR`,
+@globals.base_price in EUR`,
 			want: "€92.00",
 		},
 		{
@@ -556,7 +556,7 @@ globals:
   price: $50
   quantity: 3
 ---
-total = price * quantity
+total = @globals.price * @globals.quantity
 total`,
 			want: "$150.00",
 		},
@@ -566,7 +566,7 @@ total`,
 globals:
   bandwidth: 100 MB/s
 ---
-bandwidth over 10 seconds`,
+@globals.bandwidth over 10 seconds`,
 			want: "1000 MB",
 		},
 		{
@@ -575,7 +575,7 @@ bandwidth over 10 seconds`,
 globals:
   sum: 1 + 1
 ---
-sum`,
+@globals.sum`,
 			wantErr: true,
 		},
 		{

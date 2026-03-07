@@ -41,7 +41,7 @@ korean_amount = 5000 INR in KRW
 
 ## Using a global variable with conversion
 
-budget_gbp = budget in GBP
+budget_gbp = @globals.budget in GBP
 
 ## Chaining rates across currencies
 
