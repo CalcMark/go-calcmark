@@ -23,8 +23,10 @@ Examples:
   cm eval calc.cm                 Evaluate file and print result
   cm eval < input.cm              Evaluate from stdin
   cm convert doc.cm --to=html     Convert to HTML
+  cm remote --gist abc123         Open a GitHub Gist
+  cm remote --http https://...    Open a public URL
 
-GitHub Gist sharing requires the gh CLI: https://cli.github.com`,
+GitHub Gist support requires the gh CLI: https://cli.github.com`,
 	// Allow 0 or 1 file argument
 	Args: cobra.MaximumNArgs(1),
 	// When called without subcommand, open editor — unless stdin is piped,
