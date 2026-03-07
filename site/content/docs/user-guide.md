@@ -211,16 +211,17 @@ Open the command menu, select **Open From Gist**, then paste a Gist URL or ID. C
 
 CalcMark supports a wide range of units across categories:
 
+- **Area**: cm², m², km², ha, in², ft², yd², mi², acre
+- **DataSize**: byte, KB, MB, GB, TB, PB (and binary: KiB, MiB, GiB, TiB)
+- **Energy**: J, kJ, cal, kcal, kWh
 - **Length**: m, cm, mm, km, in, ft, yd, mi, nmi (nautical mile)
 - **Mass**: mg, g, kg, metric ton (t), oz, lb
-- **Volume**: mL, L, tsp, tbsp, cup, pt, qt, gal
-- **Time**: second, minute, hour, day, week, month, year
-- **Temperature**: C, F, K
-- **Energy**: J, kJ, cal, kcal, kWh
 - **Power**: W, kW, MW, hp
-- **Area**: cm2, m2, km2, ha, in2, ft2, yd2, mi2, acre
 - **Speed**: m/s, km/h, mph, knot
-- **Data**: byte, KB, MB, GB, TB (arbitrary units)
+- **Temperature**: C, F, K
+- **Volume**: mL, L, tsp, tbsp, cup, pt, qt, gal
+
+Time units (`second`, `minute`, `hour`, `day`, `week`, `month`, `year`) are used in durations and rates but are not a conversion category.
 
 Run `cm help constants` for the complete list with aliases and descriptions.
 
@@ -366,6 +367,8 @@ convert_to:
   unit_categories: [Length]
 ---
 ```
+
+Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`. These are derived from the unit definitions — run `cm help frontmatter` for the current list.
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough.
 

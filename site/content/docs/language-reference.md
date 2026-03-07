@@ -141,6 +141,8 @@ scale:
 - **Rates** are immune to scale
 - When `unit_categories` is specified, only quantities in those categories are scaled
 
+Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
+
 ### Convert To
 
 Convert quantity results to a target measurement system. Applied after scale.
@@ -168,6 +170,8 @@ convert_to:
 - Arbitrary units (e.g., `eggs`, `servers`) have no system mapping and are skipped
 - Currency, numbers, and other non-quantity types are unaffected
 - Rates have their amount converted, leaving the time denominator unchanged
+
+Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
 
 ### Transform Order
 
