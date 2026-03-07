@@ -23,7 +23,7 @@ This is the complete and authoritative specification for the CalcMark language.
 - [Natural Language Syntax](#natural-language-syntax)
 - [Napkin Math](#as-napkin)
 - [Precise Display](#as-precise)
-- [Rates](#rates)
+- [Rates](#rates) — [Rate Arithmetic Widening](#rate-arithmetic-widening)
 - [Date Arithmetic](#dates)
 - [Network Functions](#network)
 - [Storage Functions](#storage)
@@ -663,6 +663,38 @@ Can be chained after a unit conversion: `10 meters as feet as precise`
 ## Rates {#rates}
 
 Rates are defined using slash syntax (e.g., `100 MB/s`, `$50/hour`). See the [User Guide: Rates](/docs/user-guide/#rates) for rate accumulation with `over` and rate conversion.
+
+### Rate Arithmetic Widening
+
+When a rate appears on the **right side** of `*` or `/`, its time denominator is dropped and the rate's amount is used instead. This is called **widening** — the rate widens into its underlying quantity.
+
+When a rate appears on the **left side**, it stays a rate. This lets you scale rates naturally.
+
+**Operand order determines the result type:**
+
+| Expression | Left | Right | Result | Why |
+|---|---|---|---|---|
+| `rate * 3` | Rate | Number | **Rate** | Rate on left → stays rate (scaling) |
+| `3 * rate` | Number | Rate | **Quantity** | Rate on right → widened |
+| `rate / 2` | Rate | Number | **Rate** | Rate on left → stays rate |
+| `100 / rate` | Number | Rate | **Number** | Rate on right → widened |
+| `rate * qty` | Rate | Quantity | **Quantity** | Cross-type, extracts amount |
+| `qty * rate` | Quantity | Rate | **Quantity** | Rate on right → widened |
+| `rate / rate` | Rate | Rate | **Number** | Same-unit ratio (no widening) |
+
+```text
+posts_rate = 2 posts/week
+scaled = posts_rate * 3           -> 6 posts/week  (Rate — rate on left)
+total  = 3 * posts_rate           -> 6 posts       (Quantity — rate on right)
+half   = posts_rate / 2           -> 1 posts/week  (Rate — rate on left)
+```
+
+This rule is **asymmetric by design**. The operand on the left is the "subject" of the expression:
+
+- `read_rate * peak_multiplier` — you are scaling a rate, so the result is a rate.
+- `daily_users * posts_per_user_per_week` — you are scaling a count by a rate, so the result is a quantity.
+
+Rate widening only applies to binary `*` and `/`. It does not affect functions like `accumulate()`, `over`, or `per`.
 
 ---
 

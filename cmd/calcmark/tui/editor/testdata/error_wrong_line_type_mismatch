@@ -1,9 +1,9 @@
-# Number * Rate now produces a scaled Rate (e.g., 5 * 10 MB/s = 50 MB/s)
+# Number * Rate now widens: the rate's amount is extracted, time denominator dropped.
 # Given: b = 5, a = 10 MB/s, c = b * a
-# EXPECTED: c = 50 MB/s (number scales the rate)
+# EXPECTED: c = 50 MB (number * rate amount, rate on right → widened to quantity)
 run observe=results
 ----
 -- results:
 Line 0 (b = 5): value=5, error=""
 Line 1 (a = 10 MB/s): value=10 MB/s, error=""
-Line 2 (c = b * a): value=50 MB/s, error=""
+Line 2 (c = b * a): value=50 MB, error=""

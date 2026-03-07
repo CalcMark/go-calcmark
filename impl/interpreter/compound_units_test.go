@@ -561,57 +561,73 @@ result = posts_per_day * 100
 }
 
 // TestNumberTimesRate verifies Number * Rate → Rate (commutative).
+// TestNumberTimesRate verifies Number * Rate → widened result.
+// Rate arithmetic widening: when a rate is on the RIGHT side of *, the time
+// denominator is dropped. Unitless rates widen to Number, rated quantities
+// widen to Quantity. Rate on the LEFT (Rate * Number) preserves the rate type.
 func TestNumberTimesRate(t *testing.T) {
-	tests := []struct {
-		name          string
-		input         string
-		expectedValue string
-		expectedUnit  string
-	}{
-		{
-			name:          "integer * rate",
-			input:         "r = 100/second\nresult = 3 * r\n",
-			expectedValue: "300",
-			expectedUnit:  "/s",
-		},
-		{
-			name:          "fractional * rate",
-			input:         "r = 100 MB/s\nresult = 0.5 * r\n",
-			expectedValue: "50",
-			expectedUnit:  "MB/s",
-		},
-		{
-			name:          "zero * rate",
-			input:         "r = 100/second\nresult = 0 * r\n",
-			expectedValue: "0",
-			expectedUnit:  "/s",
-		},
-	}
+	t.Run("integer * unitless rate → number", func(t *testing.T) {
+		nodes, err := parser.Parse("r = 100/second\nresult = 3 * r\n")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		interp := NewInterpreter()
+		results, err := interp.Eval(nodes)
+		if err != nil {
+			t.Fatalf("Eval error: %v", err)
+		}
+		result := results[len(results)-1]
+		num, ok := result.(*types.Number)
+		if !ok {
+			t.Fatalf("Expected *types.Number, got %T (%v)", result, result)
+		}
+		if num.Value.String() != "300" {
+			t.Errorf("Expected 300, got %s", num.Value.String())
+		}
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			nodes, err := parser.Parse(tt.input)
-			if err != nil {
-				t.Fatalf("Parse error: %v", err)
-			}
-			interp := NewInterpreter()
-			results, err := interp.Eval(nodes)
-			if err != nil {
-				t.Fatalf("Eval error: %v", err)
-			}
-			result := results[len(results)-1]
-			rate, ok := result.(*types.Rate)
-			if !ok {
-				t.Fatalf("Expected *types.Rate, got %T (%v)", result, result)
-			}
-			if rate.Amount.Value.String() != tt.expectedValue {
-				t.Errorf("Expected amount %s, got %s", tt.expectedValue, rate.Amount.Value.String())
-			}
-			if rate.CompoundUnit() != tt.expectedUnit {
-				t.Errorf("Expected unit %s, got %s", tt.expectedUnit, rate.CompoundUnit())
-			}
-		})
-	}
+	t.Run("fractional * rate with unit → quantity", func(t *testing.T) {
+		nodes, err := parser.Parse("r = 100 MB/s\nresult = 0.5 * r\n")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		interp := NewInterpreter()
+		results, err := interp.Eval(nodes)
+		if err != nil {
+			t.Fatalf("Eval error: %v", err)
+		}
+		result := results[len(results)-1]
+		qty, ok := result.(*types.Quantity)
+		if !ok {
+			t.Fatalf("Expected *types.Quantity, got %T (%v)", result, result)
+		}
+		if qty.Value.String() != "50" {
+			t.Errorf("Expected 50, got %s", qty.Value.String())
+		}
+		if qty.Unit != "MB" {
+			t.Errorf("Expected unit MB, got %s", qty.Unit)
+		}
+	})
+
+	t.Run("zero * unitless rate → number", func(t *testing.T) {
+		nodes, err := parser.Parse("r = 100/second\nresult = 0 * r\n")
+		if err != nil {
+			t.Fatalf("Parse error: %v", err)
+		}
+		interp := NewInterpreter()
+		results, err := interp.Eval(nodes)
+		if err != nil {
+			t.Fatalf("Eval error: %v", err)
+		}
+		result := results[len(results)-1]
+		num, ok := result.(*types.Number)
+		if !ok {
+			t.Fatalf("Expected *types.Number, got %T (%v)", result, result)
+		}
+		if num.Value.String() != "0" {
+			t.Errorf("Expected 0, got %s", num.Value.String())
+		}
+	})
 }
 
 // TestRateTimesQuantity verifies Rate * Quantity → Quantity and Quantity * Rate → Quantity.

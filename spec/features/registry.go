@@ -557,6 +557,14 @@ func getKeywords() []Feature {
 			Example:     "100 MB/s over 1 day",
 		},
 		{
+			Name:        "rate widening",
+			Category:    CategoryKeyword,
+			Syntax:      "number * rate, quantity * rate",
+			Description: "When a rate appears on the right of * or /, its time denominator is dropped and the amount is used. Rate on the left stays a rate (scaling). This is asymmetric: operand order determines the result type.",
+			Aliases:     nil,
+			Example:     "3 * (2 posts/week) → 6 posts",
+		},
+		{
 			Name:        "as napkin",
 			Category:    CategoryKeyword,
 			Syntax:      "expression as napkin",

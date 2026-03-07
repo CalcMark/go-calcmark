@@ -779,6 +779,22 @@ convert_rate(1000 req/s, minute)    -> 60000 req/min
 convert_rate($120000/year, month)   -> $10000/month
 ```
 
+#### Rate Arithmetic Widening
+
+When you multiply or divide **by** a rate (rate on the right), CalcMark drops the time denominator and uses the rate's amount. This is called **widening** — the rate widens into a plain quantity.
+
+When the rate is on the **left** side, it stays a rate. This lets you scale rates naturally with `rate * number`.
+
+```text
+posts_rate = 2 posts/week
+scaled = posts_rate * 3           -> 6 posts/week  (rate * number → rate)
+total  = 3 * posts_rate           -> 6 posts       (number * rate → quantity)
+```
+
+The rule is simple: **left operand wins**. If you start with a rate, you get a rate. If you start with a number or quantity and multiply by a rate, you get a number or quantity.
+
+See the [Language Reference: Rate Arithmetic Widening](/docs/language-reference/#rate-arithmetic-widening) for the full type dispatch table.
+
 ### Date Arithmetic {#date-arithmetic}
 
 #### Date Literals

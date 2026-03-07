@@ -50,8 +50,26 @@ func (interp *Interpreter) evalUnaryOp(u *ast.UnaryOp) (types.Type, error) {
 // evalBinaryOperation performs binary arithmetic operations.
 // This is a pure function for easier testing.
 func evalBinaryOperation(left, right types.Type, operator string) (types.Type, error) {
+	// Rate arithmetic widening: when a Rate appears on the RIGHT side of
+	// * or /, extract the rate's Amount (a Quantity) and drop the time
+	// denominator. This makes "2 * (2 posts/week)" yield "4 posts".
+	//
+	// Rate on the LEFT is NOT widened — it preserves rate semantics:
+	//   Rate * Number → Rate  (scaling: "read_rate * 3" stays a rate)
+	//   Rate / Number → Rate  (scaling)
+	//   Rate * Quantity → Quantity (cross-type, already handled below)
+	//   Rate / Rate → Number  (ratio, already handled below)
+	if operator == "*" || operator == "/" {
+		if rightRate, ok := right.(*types.Rate); ok {
+			if _, leftIsRate := left.(*types.Rate); !leftIsRate {
+				return evalBinaryOperation(left, rightRate.Amount, operator)
+			}
+		}
+	}
+
 	// Normalize unitless quantities to numbers before type dispatch.
-	// Unitless quantities arise from accumulate/over on unitless rates.
+	// Unitless quantities arise from accumulate/over on unitless rates,
+	// or from rate widening on unitless rates (e.g., 100/second → Amount{100, ""}).
 	if q, ok := left.(*types.Quantity); ok && q.Unit == "" {
 		return evalBinaryOperation(types.NewNumber(q.Value), right, operator)
 	}
@@ -103,13 +121,7 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 			result := leftNum.Value.Mul(rightDur.Value)
 			return &types.Duration{Value: result, Unit: rightDur.Unit}, nil
 		}
-		// Number * Rate → Rate (commutative: mirrors Rate * Number)
-		if rightRate, ok := right.(*types.Rate); ok && operator == "*" {
-			return &types.Rate{
-				Amount:  &types.Quantity{Value: leftNum.Value.Mul(rightRate.Amount.Value), Unit: rightRate.Amount.Unit},
-				PerUnit: rightRate.PerUnit,
-			}, nil
-		}
+		// Note: Number * Rate is widened above (rate on right → extract amount).
 	}
 
 	// Currency operations
@@ -168,7 +180,7 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
-	// Rate operations
+	// Rate operations (rate on the left — preserves rate type)
 	if leftRate, ok := left.(*types.Rate); ok {
 		// Rate * Number → Rate (scale the rate)
 		// Rate / Number → Rate (divide the rate)
@@ -192,7 +204,6 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		// Rate / Rate → Number (if same per-units, dimensionless ratio)
 		if rightRate, ok := right.(*types.Rate); ok {
 			if operator == "/" && leftRate.PerUnit == rightRate.PerUnit {
-				// Same time units, divide amounts and return dimensionless number
 				result := leftRate.Amount.Value.Div(rightRate.Amount.Value)
 				return types.NewNumber(result), nil
 			}
@@ -209,11 +220,7 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		if rightQty, ok := right.(*types.Quantity); ok {
 			return evalQuantityOperation(leftQty, rightQty, operator)
 		}
-		// Quantity * Rate → Quantity (e.g., "10 KB * 100/second" = "1000 KB")
-		if rightRate, ok := right.(*types.Rate); ok && operator == "*" {
-			result := leftQty.Value.Mul(rightRate.Amount.Value)
-			return &types.Quantity{Value: result, Unit: leftQty.Unit}, nil
-		}
+		// Note: Quantity * Rate is handled by rate widening normalization above.
 		// Quantity op Number (e.g., "10 dogs * 2" = "20 dogs", "5 dogs + 3" = "8 dogs")
 		if rightNum, ok := right.(*types.Number); ok {
 			switch operator {
