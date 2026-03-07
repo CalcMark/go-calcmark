@@ -10,7 +10,7 @@ Explore complete CalcMark files that demonstrate real-world use cases. Run any e
 cm testdata/examples/<filename>.cm
 
 # Or open directly from GitHub — no clone required:
-cm remote --http https://raw.githubusercontent.com/CalcMark/go-calcmark/refs/heads/main/testdata/examples/<filename>.cm
+cm remote --http {{< repo-raw-url path="testdata/examples/<filename>.cm" >}}
 ```
 
 ## Real-World Use Cases

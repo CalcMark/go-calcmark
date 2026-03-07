@@ -235,5 +235,5 @@ This example showcases the following CalcMark features:
 cm testdata/examples/household-budget.cm
 
 # Or open directly from GitHub — no clone required:
-cm remote --http https://raw.githubusercontent.com/CalcMark/go-calcmark/refs/heads/main/testdata/examples/household-budget.cm
+cm remote --http {{< repo-raw-url path="testdata/examples/household-budget.cm" >}}
 ```
