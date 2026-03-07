@@ -370,7 +370,7 @@ convert_to:
 
 Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`. These are derived from the unit definitions — run `cm help frontmatter` for the current list.
 
-See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough.
+See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [Language Reference — Frontmatter](/docs/language-reference/#frontmatter) for the full specification.
 
 ### Built-in Functions {#built-in-functions}
 

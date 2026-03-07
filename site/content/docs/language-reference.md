@@ -203,7 +203,7 @@ When both `scale` and `convert_to` are present, transforms apply in this order:
 2. **Scale** quantity results
 3. **Convert** to target measurement system
 
-See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough.
+See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [User Guide — Frontmatter](/docs/user-guide/#frontmatter) for a gentler introduction.
 
 ## Line Classification
 
