@@ -659,28 +659,18 @@ func getFrontmatterFeatures() []Feature {
 			Example: "globals:\n  tax_rate: 0.32\n  base_price: $100",
 		},
 		{
-			Name:     "scale",
-			Category: CategoryFrontmatter,
-			Syntax:   "scale: <factor>",
-			Description: fmt.Sprintf("Multiply quantity results by a factor. "+
-				"Map form: scale: {factor: N, unit_categories: [...]}\n"+
-				"Sub-keys: factor (number, required), unit_categories (list, optional)\n"+
-				"Categories: %s\n"+
-				"Default: all categories except Temperature",
-				categories),
-			Example: "scale: 2",
+			Name:        "scale",
+			Category:    CategoryFrontmatter,
+			Syntax:      "scale: <factor>",
+			Description: fmt.Sprintf("Multiply quantity results by a factor. Accepts a number or a map with factor and unit_categories. Valid categories: %s. Temperature excluded by default.", categories),
+			Example:     "scale: 2",
 		},
 		{
-			Name:     "convert_to",
-			Category: CategoryFrontmatter,
-			Syntax:   "convert_to: <system>",
-			Description: fmt.Sprintf("Convert quantity results to a measurement system. "+
-				"Map form: convert_to: {system: si|imperial, unit_categories: [...]}\n"+
-				"Sub-keys: system (si or imperial, required), unit_categories (list, optional)\n"+
-				"Categories: %s\n"+
-				"Systems: si, imperial",
-				categories),
-			Example: "convert_to: si",
+			Name:        "convert_to",
+			Category:    CategoryFrontmatter,
+			Syntax:      "convert_to: <system>",
+			Description: fmt.Sprintf("Convert quantity results to a measurement system (si or imperial). Accepts a system name or a map with system and unit_categories. Valid categories: %s.", categories),
+			Example:     "convert_to: si",
 		},
 	}
 }
