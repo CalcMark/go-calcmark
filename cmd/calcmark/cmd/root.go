@@ -12,8 +12,10 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "cm [file]",
 	Short: "CalcMark - A reactive calculation and markdown language",
-	Long: `CalcMark is an interpreted language that blends CommonMark markdown
-and calculations in one document. Calculations are verifiable and reproducible.
+	Long: `  ♪
+ ('>    CalcMark — reactive calculations meet markdown.
+ /V\
+(| |)
 
 Examples:
   cm                              Open editor with new document

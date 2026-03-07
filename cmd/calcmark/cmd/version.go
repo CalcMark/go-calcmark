@@ -12,14 +12,23 @@ var (
 	BuildTime = "unknown"
 )
 
+const larky = `  ♪
+ ('>
+ /V\
+(| |)`
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("CalcMark %s\n", Version)
+		fmt.Printf("  ♪\n")
+		fmt.Printf(" ('>    CalcMark %s\n", Version)
 		if BuildTime != "unknown" {
-			fmt.Printf("  built: %s\n", BuildTime)
+			fmt.Printf(" /V\\      built: %s\n", BuildTime)
+		} else {
+			fmt.Printf(" /V\\\n")
 		}
+		fmt.Printf("(| |)\n")
 	},
 }
 
