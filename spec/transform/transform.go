@@ -32,8 +32,17 @@ func Apply(result types.Type, scale *document.ScaleConfig, convertTo *document.C
 		// Rates are immune to scale but can have their amount's unit converted
 		return applyConvertToRate(v, convertTo)
 
+	case *types.Currency:
+		// Currency is immune to scale by default. Only scaled when
+		// "Currency" is explicitly listed in unit_categories.
+		if scale != nil && categoryMatches("Currency", scale.UnitCategories) {
+			scaled := v.Value.Mul(scale.Factor)
+			return types.NewCurrency(scaled, v.Symbol)
+		}
+		return result
+
 	default:
-		// Currency, Duration, Number, Boolean, Date, Time — unchanged
+		// Duration, Number, Boolean, Date, Time — unchanged
 		return result
 	}
 }

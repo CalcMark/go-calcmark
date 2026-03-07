@@ -670,7 +670,7 @@ func getFrontmatterFeatures() []Feature {
 			Name:        "scale",
 			Category:    CategoryFrontmatter,
 			Syntax:      "scale: <factor>",
-			Description: fmt.Sprintf("Multiply quantity results by a factor. Accepts a number or a map with factor and unit_categories. Valid categories: %s. Temperature excluded by default.", categories),
+			Description: fmt.Sprintf("Multiply quantity results by a factor. Accepts a number or a map with factor and unit_categories. Currency scales only when Currency is listed in unit_categories. Valid categories: %s. Temperature excluded by default.", categories),
 			Example:     "scale: 2",
 		},
 		{

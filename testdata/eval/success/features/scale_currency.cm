@@ -1,0 +1,14 @@
+---
+scale:
+  factor: 3
+  unit_categories: [Mass, Volume, Currency]
+---
+# Currency scales when explicitly opted in
+
+flour = 280 grams
+water = 500 ml
+
+# Currency values scale with the recipe
+cost_flour = $0.50
+cost_sugar = $0.30
+total_cost = cost_flour + cost_sugar

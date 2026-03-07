@@ -99,6 +99,45 @@ func TestApply_CurrencyImmune(t *testing.T) {
 	}
 }
 
+func TestApply_CurrencyScaledWithCategory(t *testing.T) {
+	c := types.NewCurrency(decimal.NewFromFloat(0.50), "$")
+	scale := &document.ScaleConfig{
+		Factor:         decimal.NewFromInt(3),
+		UnitCategories: []string{"Currency"},
+	}
+
+	result := Apply(c, scale, nil)
+	cur, ok := result.(*types.Currency)
+	if !ok {
+		t.Fatalf("expected *types.Currency, got %T", result)
+	}
+	if !cur.Value.Equal(decimal.NewFromFloat(1.50)) {
+		t.Errorf("expected 1.50, got %s", cur.Value.String())
+	}
+	if cur.Symbol != "$" {
+		t.Errorf("expected symbol '$', got %q", cur.Symbol)
+	}
+}
+
+func TestApply_CurrencyNotScaledWithoutCategory(t *testing.T) {
+	// When unit_categories is set but does NOT include Currency,
+	// currency values must remain immune.
+	c := types.NewCurrency(decimal.NewFromFloat(0.50), "$")
+	scale := &document.ScaleConfig{
+		Factor:         decimal.NewFromInt(3),
+		UnitCategories: []string{"Mass", "Volume"},
+	}
+
+	result := Apply(c, scale, nil)
+	cur, ok := result.(*types.Currency)
+	if !ok {
+		t.Fatalf("expected *types.Currency, got %T", result)
+	}
+	if !cur.Value.Equal(decimal.NewFromFloat(0.50)) {
+		t.Errorf("expected 0.50 (immune), got %s", cur.Value.String())
+	}
+}
+
 func TestApply_DurationImmune(t *testing.T) {
 	d := &types.Duration{Value: decimal.NewFromInt(3), Unit: "days"}
 	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4)}
