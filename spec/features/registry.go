@@ -680,5 +680,19 @@ func getFrontmatterFeatures() []Feature {
 			Description: fmt.Sprintf("Convert quantity results to a measurement system (si or imperial). Accepts a system name or a map with system and unit_categories. Valid categories: %s.", categories),
 			Example:     "convert_to: si",
 		},
+		{
+			Name:        "@scale",
+			Category:    CategoryKeyword,
+			Syntax:      "@scale",
+			Description: "Reference the scale factor from frontmatter in expressions. Resolves to a number.",
+			Example:     "per_loaf = total_cost / @scale",
+		},
+		{
+			Name:        "@globals",
+			Category:    CategoryKeyword,
+			Syntax:      "@globals.name",
+			Description: "Reference a named global variable from frontmatter in expressions. Resolves to the typed value of the global.",
+			Example:     "tax = income * @globals.tax_rate",
+		},
 	}
 }

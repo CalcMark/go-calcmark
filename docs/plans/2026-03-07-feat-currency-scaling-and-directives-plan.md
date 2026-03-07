@@ -1,7 +1,7 @@
 ---
 title: "feat: Optional currency scaling and @directive references"
 type: feat
-status: active
+status: completed
 date: 2026-03-07
 ---
 
@@ -195,12 +195,12 @@ Smallest, self-contained change. No parser work. Can ship independently.
   - [x] `cmd/calcmark/tui/editor/default_frontmatter.cm` — verify usage
   - [x] Any other `.cm` files found by: `grep -r "globals:" testdata/ --include="*.cm" -l`
 - [x] Update golden files for changed `.cm` files
-- [ ] Update site documentation:
-  - [ ] `site/content/docs/examples/datacenter-cost.md` — update code blocks and prose
-  - [ ] `site/content/docs/user-guide.md` — globals section, remove bare variable examples
-  - [ ] `site/content/docs/language-reference.md` — add @directive section, update globals
+- [x] Update site documentation:
+  - [x] `site/content/docs/examples/datacenter-cost.md` — update code blocks and prose
+  - [x] `site/content/docs/user-guide.md` — globals section, remove bare variable examples
+  - [x] `site/content/docs/language-reference.md` — add @directive section, update globals
 - [x] Run `task test` — all tests pass
-- [ ] Run `task site:build` — site builds cleanly
+- [x] Run `task site:build` — site builds cleanly
 
 **Success criteria**: Bare globals produce undefined variable errors. Only `@globals.name` works.
 
@@ -216,22 +216,22 @@ Smallest, self-contained change. No parser work. Can ship independently.
 
 #### Phase 7: TUI and Documentation Polish
 
-- [ ] Update TUI globals panel (`cmd/calcmark/tui/components/globals.go`) — change `@global.` to `@globals.` (plural)
-- [ ] Consider adding `@scale` display to the globals panel
-- [ ] Update recipe-scaling example:
-  - [ ] `testdata/examples/recipe-scaling.cm` — add Currency to unit_categories, use `@scale` for per-loaf
-  - [ ] `site/content/docs/examples/recipe-scaling.md` — update documentation
-- [ ] Update `site/content/docs/language-reference.md`:
-  - [ ] Add @Directive References section with syntax, validation rules, type table
-  - [ ] Update Frontmatter section to document Currency in unit_categories
-- [ ] Update `site/content/docs/user-guide.md`:
-  - [ ] Add @Directive usage examples
-  - [ ] Update globals section
-- [ ] Update `spec/features/registry.go` — add @directive feature entries
-- [ ] Update `site/content/docs/agent-integration.md` — mention @directives in pipe interface
-- [ ] Update `AGENTS.md` if needed
-- [ ] Run `task site:build` — clean build
-- [ ] Run `task quality` — passes
+- [x] Update TUI globals panel (`cmd/calcmark/tui/components/globals.go`) — change `@global.` to `@globals.` (plural)
+- [x] Consider adding `@scale` display to the globals panel
+- [x] Update recipe-scaling example:
+  - [x] `testdata/examples/recipe-scaling.cm` — add Currency to unit_categories, use `@scale` for per-loaf
+  - [x] `site/content/docs/examples/recipe-scaling.md` — update documentation
+- [x] Update `site/content/docs/language-reference.md`:
+  - [x] Add @Directive References section with syntax, validation rules, type table
+  - [x] Update Frontmatter section to document Currency in unit_categories
+- [x] Update `site/content/docs/user-guide.md`:
+  - [x] Add @Directive usage examples
+  - [x] Update globals section
+- [x] Update `spec/features/registry.go` — add @directive feature entries
+- [x] Update `site/content/docs/agent-integration.md` — mention @directives in pipe interface (no changes needed)
+- [x] Update `AGENTS.md` if needed (no changes needed)
+- [x] Run `task site:build` — clean build
+- [x] Run `task quality` — passes (pre-existing larky warning unrelated)
 
 **Success criteria**: All documentation reflects the new features. Site builds cleanly.
 

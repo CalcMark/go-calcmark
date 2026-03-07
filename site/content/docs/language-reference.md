@@ -13,7 +13,7 @@ This is the complete and authoritative specification for the CalcMark language.
 - [Overview](#overview)
 - [Philosophy](#philosophy)
 - [Document Model](#document-model)
-- [Frontmatter](#frontmatter)
+- [Frontmatter](#frontmatter) — [@Directive References](#directive-references)
 - [Line Classification](#line-classification)
 - [Syntax & Grammar](#syntax--grammar)
 - [Type System](#type-system)
@@ -159,11 +159,37 @@ scale:
 
 - **Quantities** are multiplied by the factor
 - **Temperature** is excluded by default (doubling a recipe does not double the oven temperature)
-- **Currency**, **Number**, **Boolean**, **Date**, and **Duration** are unaffected
+- **Currency** scales only when `Currency` is listed in `unit_categories`. Simple `scale: 2` never scales currency.
+- **Number**, **Boolean**, **Date**, and **Duration** are unaffected
 - **Rates** are immune to scale
 - When `unit_categories` is specified, only quantities in those categories are scaled
 
-Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
+Valid categories: `Area`, `Currency`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
+
+### @Directive References {#directive-references}
+
+Use `@scale` and `@globals.name` to reference frontmatter values in expressions:
+
+```text
+per_unit = total_cost / @scale
+tax = income * @globals.tax_rate
+```
+
+**`@scale`** resolves to the numeric scale factor from frontmatter. Requires `scale:` to be defined.
+
+**`@globals.name`** resolves to the typed value of a named global. Requires `globals:` with that key.
+
+**Validation rules:**
+
+| Reference | Valid when | Error otherwise |
+|-----------|-----------|-----------------|
+| `@scale` | `scale:` defined in frontmatter | `@scale requires 'scale:' in frontmatter` |
+| `@globals.name` | `globals:` has `name` key | `undefined global 'name'; defined globals: ...` |
+| `@globals` (no field) | Never | Parser error: `@globals requires a field name` |
+| `@globals.a.b` | Never | Parser error: nested dots not supported |
+| `@exchange`, `@convert_to`, `@foo` | Never | `not a supported directive; use @scale or @globals.name` |
+
+`@scale` always resolves to a `Number`. `@globals.name` resolves to whatever type the global is (Number, Currency, Quantity, etc.).
 
 ### Convert To
 
@@ -193,7 +219,7 @@ convert_to:
 - Currency, numbers, and other non-quantity types are unaffected
 - Rates have their amount converted, leaving the time denominator unchanged
 
-Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
+Valid categories: `Area`, `Currency`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
 
 ### Transform Order
 

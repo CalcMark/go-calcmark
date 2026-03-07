@@ -296,6 +296,7 @@ func printFrontmatter() {
 	fmt.Fprintln(w, "      base_price: $100")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Values are CalcMark expressions evaluated before the document body.")
+	fmt.Fprintln(w, "  Reference in expressions with @globals.name (e.g., @globals.tax_rate).")
 	fmt.Fprintln(w)
 
 	// scale
@@ -321,6 +322,8 @@ func printFrontmatter() {
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Temperature is excluded by default.")
+	fmt.Fprintln(w, "  Currency scales only when Currency is listed in unit_categories.")
+	fmt.Fprintln(w, "  Reference the scale factor in expressions with @scale.")
 	fmt.Fprintln(w)
 
 	// convert_to

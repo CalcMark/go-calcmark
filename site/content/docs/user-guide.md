@@ -15,6 +15,7 @@ weight: 20
   - [Unit Conversion](#unit-conversion) -- `in` and `as` keywords
   - [Currency Conversion](#currency-conversion) -- Exchange rates in frontmatter
   - [Global Variables](#global-variables) -- Reusable values in frontmatter
+  - [@Directive References](#directive-references) -- `@scale` and `@globals.name` in expressions
   - [Scale and Convert](#scale-convert) -- Document-wide scaling and unit system conversion
   - [Built-in Functions](#built-in-functions) -- All 15 functions
   - [Function Reference](#function-reference) -- Detailed examples for every function
@@ -277,10 +278,12 @@ globals:
 ---
 ```
 
-```calcmark
-net_price = base_price * (1 - tax_rate)
-project_end = base_date + sprint_length * 6
-monthly_transfer = bandwidth over 30 days
+Reference globals in expressions with the `@globals.` prefix:
+
+```text
+net_price = @globals.base_price * (1 - @globals.tax_rate)
+project_end = @globals.base_date + @globals.sprint_length * 6
+monthly_transfer = @globals.bandwidth over 30 days
 ```
 
 Globals support all CalcMark literal types:
@@ -294,6 +297,19 @@ Globals support all CalcMark literal types:
 - **Booleans**: `true`, `false`
 
 Globals must be literal values. Expressions like `1 + 1` are not allowed.
+
+### @Directive References {#directive-references}
+
+Use `@scale` and `@globals.name` to reference frontmatter values in expressions:
+
+```text
+per_unit = total_cost / @scale
+tax = income * @globals.tax_rate
+```
+
+`@scale` resolves to the numeric scale factor from frontmatter. `@globals.name` resolves to the typed value of a named global. These are the only supported directives — `@exchange`, `@convert_to`, and other names produce errors.
+
+`@globals` without a field name (e.g., bare `@globals`) is a parser error. Use `@globals.name` to reference a specific global.
 
 ### Scale and Convert {#scale-convert}
 
@@ -316,7 +332,7 @@ oven = 350 fahrenheit   -> 350 fahrenheit (unchanged)
 price = $5.00           -> $5.00 (unchanged)
 ```
 
-`flour` displays as `3 cups` and `eggs` as `6 eggs`. Temperature and currency are unaffected — doubling a recipe does not double the oven temperature or the cost of an egg.
+`flour` displays as `3 cups` and `eggs` as `6 eggs`. Temperature and currency are unaffected by default — doubling a recipe does not double the oven temperature. To scale currency values, add `Currency` to `unit_categories` (see [Filtering by Category](#filtering-by-category) below).
 
 #### Converting
 
@@ -368,7 +384,7 @@ convert_to:
 ---
 ```
 
-Valid categories: `Area`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`. These are derived from the unit definitions — run `cm help frontmatter` for the current list.
+Valid categories: `Area`, `Currency`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`. These are derived from the unit definitions — run `cm help frontmatter` for the current list. `Currency` is special: it only scales when explicitly listed in `unit_categories`. Simple `scale: 2` never scales currency.
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [Language Reference — Frontmatter](/docs/language-reference/#frontmatter) for the full specification.
 

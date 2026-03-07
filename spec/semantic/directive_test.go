@@ -15,10 +15,10 @@ type mockFrontmatter struct {
 	globalKeys []string
 }
 
-func (m *mockFrontmatter) HasScale() bool          { return m.hasScale }
-func (m *mockFrontmatter) HasGlobals() bool         { return m.hasGlobals }
+func (m *mockFrontmatter) HasScale() bool             { return m.hasScale }
+func (m *mockFrontmatter) HasGlobals() bool           { return m.hasGlobals }
 func (m *mockFrontmatter) HasGlobal(name string) bool { return m.globals[name] }
-func (m *mockFrontmatter) GlobalKeys() []string     { return m.globalKeys }
+func (m *mockFrontmatter) GlobalKeys() []string       { return m.globalKeys }
 
 func TestCheckDirectiveRef_ScaleValid(t *testing.T) {
 	c := NewChecker()

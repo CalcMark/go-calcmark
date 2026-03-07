@@ -37,12 +37,12 @@ Construction costs for dedicated datacenters typically range from $625 to $1,135
 
 ```calcmark
 cost_sqft = $875
-capex = sqft * cost_sqft
+capex = @globals.sqft * cost_sqft
 ```
 
-`sqft` comes from the front matter `globals` block. Multiplying a number by a currency preserves the currency unit: `1000 * $875 = $875,000`.
+`@globals.sqft` references the `sqft` variable from the front matter `globals` block. The `@globals.` prefix makes it clear the value comes from frontmatter, not from a local definition. Multiplying a number by a currency preserves the currency unit: `1000 * $875 = $875,000`.
 
-**CalcMark features:** Global variable references; currency arithmetic.
+**CalcMark features:** `@globals.name` directive references; currency arithmetic.
 
 ---
 
@@ -72,8 +72,8 @@ The percentages (42.5 + 17.5 + 22.5 + 17.5 = 100%) mirror industry benchmarks: e
 Uptime Institute tiers define redundancy levels. Tier II (partial redundancy) and Tier III (concurrently maintainable) differ dramatically in cost:
 
 ```calcmark
-tier_ii = $2300 * sqft
-tier_iii = $7700 * sqft
+tier_ii = $2300 * @globals.sqft
+tier_iii = $7700 * @globals.sqft
 tier_mult = 7700 / 2300
 ```
 

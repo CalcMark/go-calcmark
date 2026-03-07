@@ -13,18 +13,20 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ## Frontmatter: Scale and Convert
 
-The `scale` directive multiplies every quantity by a factor. The `convert_to` directive converts results to a target measurement system (`si` or `imperial`). Together, they transform the entire document.
+The `scale` directive multiplies quantities by a factor. Adding `Currency` to `unit_categories` makes costs scale too. The `convert_to` directive converts results to a target measurement system (`si` or `imperial`). Together, they transform the entire document.
 
 ```yaml
 ---
-scale: 2
+scale:
+  factor: 2
+  unit_categories: [Mass, Volume, Currency]
 convert_to: si
 ---
 ```
 
-`scale: 2` doubles all quantities. `convert_to: si` converts imperial units (cups, ounces, fahrenheit) to metric (ml, grams, celsius). You write the recipe once in its original units — the frontmatter does the rest.
+`scale: {factor: 2, unit_categories: [Mass, Volume, Currency]}` doubles all quantities and currency values. `convert_to: si` converts imperial units (cups, ounces, fahrenheit) to metric (ml, grams, celsius). You write the recipe once in its original units — the frontmatter does the rest.
 
-**CalcMark features:** `scale` frontmatter directive; `convert_to` frontmatter directive.
+**CalcMark features:** `scale` frontmatter directive with `unit_categories`; `convert_to` frontmatter directive; `Currency` opt-in for scaling.
 
 ---
 
@@ -66,7 +68,7 @@ oven = 350 fahrenheit
 
 ## Cost per Loaf
 
-Currency values are immune to both `scale` and `convert_to`. Price out the ingredients at their original cost, then divide by the number of loaves.
+Because `Currency` is listed in `unit_categories`, costs scale with the batch. The `@scale` directive references the scale factor directly in expressions, so `per_loaf` stays correct when you change the batch size.
 
 ```calcmark
 cost_flour = $0.50
@@ -77,12 +79,12 @@ cost_bananas = $0.75
 cost_eggs = $0.60
 
 total_cost = cost_flour + cost_sugar + cost_butter + cost_milk + cost_bananas + cost_eggs
-per_loaf = total_cost / 2
+per_loaf = total_cost / @scale
 ```
 
-Total grocery cost is `$3.90` for two loaves, or `$1.95` per loaf. The `$` symbol propagates through addition and division. Currency is unaffected by frontmatter transforms — costs reflect what you actually pay, not a scaled quantity.
+Each ingredient cost is doubled by the scale factor. `total_cost` sums to `$7.80` (the doubled batch cost), and `per_loaf = total_cost / @scale` gives `$3.90` — the cost for one loaf. The `@scale` reference reads the factor from frontmatter, so changing `factor: 2` to `factor: 5` automatically updates both the scaled costs and the per-loaf calculation.
 
-**CalcMark features:** Currency literals (`$`); currency arithmetic; currency immune to `scale` and `convert_to`.
+**CalcMark features:** Currency literals (`$`); currency opt-in scaling via `unit_categories: [Currency]`; `@scale` directive reference.
 
 ---
 
@@ -93,7 +95,7 @@ Total grocery cost is `$3.90` for two loaves, or `$1.95` per loaf. The `$` symbo
 | Quantities (`cups`, `ounces`) | Multiplied by factor | Converted to target system |
 | Temperature (`fahrenheit`) | Excluded by default | Converted to celsius |
 | Arbitrary units (`bananas`, `eggs`) | Multiplied by factor | No conversion (no system mapping) |
-| Currency (`$`) | Unaffected | Unaffected |
+| Currency (`$`) | Multiplied if `Currency` in `unit_categories` | Unaffected |
 | Numbers (bare) | Unaffected | Unaffected |
 
 To change the batch size, edit `scale`. To switch between metric and imperial, change `convert_to` to `si` or `imperial`. The rest of the document adjusts automatically.
@@ -105,10 +107,11 @@ To change the batch size, edit `scale`. To switch between metric and imperial, c
 This example showcases the following CalcMark features:
 
 - **`scale` frontmatter** — doubles every quantity with one line of YAML
+- **`unit_categories` filtering** — `Currency` opt-in makes costs scale with the batch
+- **`@scale` directive** — reference the scale factor in expressions
 - **`convert_to` frontmatter** — converts imperial to metric across the document
 - **Temperature exclusion** — oven temperature converts but does not scale
 - **Arbitrary units** — `bananas` and `eggs` scale without conversion
-- **Currency immunity** — costs are unaffected by transforms
 - **Quantities with units** — `cups`, `ounces`, `teaspoons`, `fahrenheit`
 - **Currency arithmetic** — `$` preserved through addition and division
 

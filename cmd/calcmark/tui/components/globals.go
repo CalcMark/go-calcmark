@@ -100,7 +100,7 @@ func RenderGlobalsPanel(state GlobalsPanelState, width int, style GlobalsPanelSt
 			name = "@exchange." + name
 			line = style.Exchange.Render(name)
 		} else {
-			name = "@global." + name
+			name = "@globals." + name
 			line = style.VarName.Render(name)
 		}
 

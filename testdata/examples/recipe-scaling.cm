@@ -1,11 +1,14 @@
 ---
-scale: 2
+scale:
+  factor: 2
+  unit_categories: [Mass, Volume, Currency]
 convert_to: si
 ---
 # Banana Bread
 
 An American recipe in cups and ounces. The frontmatter doubles the
 batch and converts everything to metric — no manual math required.
+Currency costs scale automatically with the batch size.
 
 ## Ingredients (1 loaf)
 
@@ -31,4 +34,4 @@ cost_bananas = $0.75
 cost_eggs = $0.60
 
 total_cost = cost_flour + cost_sugar + cost_butter + cost_milk + cost_bananas + cost_eggs
-per_loaf = total_cost / 2
+per_loaf = total_cost / @scale
