@@ -152,7 +152,10 @@ tasks:
       - site/data/cm_results.json
 
   og-image:
-    desc: Generate OG image from lockup SVG
+    desc: Regenerate OG image from lockup SVG (requires librsvg)
+    preconditions:
+      - sh: command -v rsvg-convert
+        msg: "rsvg-convert not found — install with: brew install librsvg"
     cmds:
       - rsvg-convert site/assets/images/og.svg -w 1200 -h 630 -o site/static/images/og.png
     sources:
@@ -164,7 +167,6 @@ tasks:
     desc: Start Hugo dev server for the website
     deps:
       - generate-docs
-      - og-image
     cmds:
       - hugo server --source site --buildDrafts
 
@@ -172,7 +174,6 @@ tasks:
     desc: Build the website
     deps:
       - generate-docs
-      - og-image
     cmds:
       - hugo --source site --minify
       - echo 'Site built to site/public/'
