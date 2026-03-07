@@ -573,9 +573,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKey(msg)
 
 	case tea.PasteMsg:
-		// Bracketed paste: terminal intercepted Cmd+V (or middle-click) and
-		// sent the clipboard content as a paste event. Handle identically to
-		// Ctrl+V / Cmd+V key shortcut.
+		// Route paste to overlay input fields when active.
+		// Without this, pasted text goes to the document body behind the overlay.
+		switch m.mode {
+		case StateOpenFrom:
+			m.openFromInput += msg.Content
+			return m, nil
+		case StateShareTo:
+			if m.shareField == 1 { // description field active
+				m.shareDescription += msg.Content
+				return m, nil
+			}
+		}
+		// Default: bracketed paste into document editor.
 		return m.handleBracketedPaste(msg.Content)
 
 	case tea.WindowSizeMsg:
