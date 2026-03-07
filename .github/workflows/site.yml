@@ -9,6 +9,7 @@ on:
       - "impl/**"
       - "cmd/doceval/**"
       - "cmd/docgen/**"
+      - "Taskfile.yml"
       - ".github/workflows/site.yml"
   release:
     types: [published]
