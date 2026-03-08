@@ -1,7 +1,7 @@
 ---
 name: github-project
 description: Manage GitHub issues and project status for CalcMark work. Use when starting work, transitioning status, creating issues, or finishing features. Handles both local-only workflows (merge to main) and remote PR workflows.
-allowed-tools: Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(printf:*),Read,Glob,Grep
+allowed-tools: Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(printf:*),Bash(.claude/skills/github-project/scripts/*),Read,Glob,Grep
 ---
 
 # GitHub Project Management
@@ -127,81 +127,31 @@ gh project item-edit --id "$ITEM_ID" --field-id PVTSSF_lADODnnY_M4BJ1QYzg54SEs -
 
 ## Metrics on Completion
 
-When work is finished (status set to "In review" and handed to human), print a metrics summary for the completed issue. This data feeds lead time and cycle time tracking.
+When work is finished (status set to "In review" and handed to human), run the metrics scripts to print a completion summary.
 
-### Lead Time (issue created → now)
+**Definitions:**
 
-```bash
-# Get issue creation time and compute lead time
-ISSUE_JSON=$(gh issue view <NUMBER> --json createdAt,title,number,closedAt,state)
-CREATED=$(echo "$ISSUE_JSON" | jq -r '.createdAt')
-TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
-NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+- **Lead time** = issue created → included in a public release. Measures the full idea-to-delivery pipeline.
+- **Cycle time** = work started (issue → "In progress" / first commit) → included in a public release. Measures active development speed.
 
-# Calculate lead time in hours (macOS)
-CREATED_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$CREATED" +%s 2>/dev/null || date -d "$CREATED" +%s)
-NOW_EPOCH=$(date +%s)
-LEAD_HOURS=$(echo "scale=1; ($NOW_EPOCH - $CREATED_EPOCH) / 3600" | bc)
+Both metrics share the same end point: the work appears in a release that users can see. The difference is the start point — lead time starts when the idea is filed, cycle time starts when coding begins.
 
-echo "## Issue #<NUMBER>: $TITLE"
-echo "- Created: $CREATED"
-echo "- Lead time: ${LEAD_HOURS}h (issue open → work complete)"
-```
+### Scripts
 
-### Cycle Time (first commit on branch → last commit)
+All metric scripts live in `.claude/skills/github-project/scripts/`:
 
-```bash
-# Get cycle time from branch commits
-FIRST_COMMIT=$(git log main..<BRANCH> --reverse --format="%H %aI" | head -1)
-LAST_COMMIT=$(git log main..<BRANCH> --format="%H %aI" | head -1)
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `lead-time.sh` | Issue created → now (snapshot; true lead time measured at release) | `.claude/skills/github-project/scripts/lead-time.sh <ISSUE_NUMBER>` |
+| `cycle-time.sh` | First commit → last commit on branch (active work duration) | `.claude/skills/github-project/scripts/cycle-time.sh <BRANCH>` |
+| `pr-metrics.sh` | PR size (additions, deletions, files) | `.claude/skills/github-project/scripts/pr-metrics.sh <PR_NUMBER>` |
+| `issue-summary.sh` | Full completion summary | `.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> <BRANCH> [PR_NUMBER]` |
 
-FIRST_TIME=$(echo "$FIRST_COMMIT" | awk '{print $2}')
-LAST_TIME=$(echo "$LAST_COMMIT" | awk '{print $2}')
-
-FIRST_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%S%z" "$FIRST_TIME" +%s 2>/dev/null || date -d "$FIRST_TIME" +%s)
-LAST_EPOCH=$(date -jf "%Y-%m-%dT%H:%M:%S%z" "$LAST_TIME" +%s 2>/dev/null || date -d "$LAST_TIME" +%s)
-CYCLE_MINUTES=$(echo "scale=1; ($LAST_EPOCH - $FIRST_EPOCH) / 60" | bc)
-
-COMMIT_COUNT=$(git rev-list --count main..<BRANCH>)
-FILES_CHANGED=$(git diff --stat main..<BRANCH> | tail -1)
-
-echo "- Cycle time: ${CYCLE_MINUTES}m (first commit → last commit)"
-echo "- Commits: $COMMIT_COUNT"
-echo "- $FILES_CHANGED"
-```
-
-### PR Metrics (if remote workflow)
+Run the summary script when handing work to the human:
 
 ```bash
-PR_JSON=$(gh pr view <PR_NUMBER> --json createdAt,mergedAt,additions,deletions,changedFiles,commits)
-PR_CREATED=$(echo "$PR_JSON" | jq -r '.createdAt')
-ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions')
-DELETIONS=$(echo "$PR_JSON" | jq -r '.deletions')
-CHANGED_FILES=$(echo "$PR_JSON" | jq -r '.changedFiles')
-PR_COMMITS=$(echo "$PR_JSON" | jq -r '.commits | length')
-
-echo "- PR: +$ADDITIONS/-$DELETIONS across $CHANGED_FILES files ($PR_COMMITS commits)"
+.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> <BRANCH> [PR_NUMBER]
 ```
-
-### Full Summary Template
-
-Print this when handing work to the human:
-
-```
-────────────────────────────────────────
-Issue #NN: <title>
-────────────────────────────────────────
-Status:     In review → awaiting human verification
-Lead time:  X.Xh (created → now)
-Cycle time: X.Xm (first commit → last commit)
-Commits:    N
-Changed:    N files, +A/-D lines
-Branch:     <branch-name>
-PR:         #NN (if applicable)
-────────────────────────────────────────
-```
-
-This summary provides the raw data for velocity tracking. Over time, trends in lead time and cycle time reveal whether solution documents, tests, and architectural patterns are compounding — shorter times for similar-complexity issues means the system is working.
 
 ### Future: `gh velocity` Extension
 
