@@ -50,6 +50,30 @@ func TestUnitConversionClassification(t *testing.T) {
 	}
 }
 
+func TestAsKeywordClassification(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want LineType
+	}{
+		{name: "as valid unit", line: "x as meters", want: Calculation},
+		{name: "as currency code", line: "x as EUR", want: Calculation},
+		{name: "as unknown identifier", line: "x as xyz", want: Calculation},
+		{name: "as napkin", line: "x as napkin", want: Calculation},
+		{name: "as precise", line: "x as precise", want: Calculation},
+	}
+
+	ctx := interpreter.NewEnvironment()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := classifyLineTest(t, tt.line, ctx)
+			if got != tt.want {
+				t.Errorf("ClassifyLine(%q) = %v, want %v", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRateExpressionsClassification(t *testing.T) {
 	tests := []struct {
 		name string

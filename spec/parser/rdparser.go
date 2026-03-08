@@ -372,37 +372,38 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 				Range:      left.GetRange(),
 			}, nil
 		}
-		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
-		if p.check(lexer.IDENTIFIER) {
+		// Accept any identifier or currency code after "as" — validation happens
+		// in the evaluator where we have runtime type information. This ensures
+		// lines with "as <anything>" stay classified as calculations (not TEXT).
+		// Mirrors the "in" keyword pattern at parseMultiplicative which also
+		// accepts both IDENTIFIER and CURRENCY_CODE.
+		if p.check(lexer.IDENTIFIER) || p.check(lexer.CURRENCY_CODE) {
 			targetUnit := string(p.peek().Value)
-			// Resolve time unit abbreviations (e.g., "ms" → "millisecond")
+			p.advance() // always consume the target
+
+			// Resolve known time/unit abbreviations
 			normalizedTimeUnit := types.NormalizeTimeUnit(targetUnit)
-			_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
-			isDuration := types.IsValidDurationUnit(targetUnit) || types.IsValidDurationUnit(normalizedTimeUnit)
-			if isDuration || isQuantityUnit {
-				p.advance() // consume the target unit
-				// Use the raw form if already valid, normalize only for abbreviations
-				resolvedUnit := targetUnit
-				if !types.IsValidDurationUnit(targetUnit) && types.IsValidDurationUnit(normalizedTimeUnit) {
-					resolvedUnit = normalizedTimeUnit
-				}
-				node := &ast.UnitConversion{
-					Quantity:   left,
-					TargetUnit: resolvedUnit,
-					Range:      left.GetRange(),
-				}
-				// Allow chaining: "1 second as hour as precise" or "as napkin"
-				if p.match(lexer.AS) {
-					if p.match(lexer.PRECISE) {
-						return &ast.PreciseConversion{Expression: node, Range: left.GetRange()}, nil
-					}
-					if p.match(lexer.NAPKIN) {
-						return &ast.NapkinConversion{Expression: node, Range: left.GetRange()}, nil
-					}
-					return nil, p.error("expected 'napkin' or 'precise' after unit conversion 'as'")
-				}
-				return node, nil
+			resolvedUnit := targetUnit
+			if !types.IsValidDurationUnit(targetUnit) && types.IsValidDurationUnit(normalizedTimeUnit) {
+				resolvedUnit = normalizedTimeUnit
 			}
+
+			node := &ast.UnitConversion{
+				Quantity:   left,
+				TargetUnit: resolvedUnit,
+				Range:      left.GetRange(),
+			}
+			// Allow chaining: "1 second as hour as precise" or "as napkin"
+			if p.match(lexer.AS) {
+				if p.match(lexer.PRECISE) {
+					return &ast.PreciseConversion{Expression: node, Range: left.GetRange()}, nil
+				}
+				if p.match(lexer.NAPKIN) {
+					return &ast.NapkinConversion{Expression: node, Range: left.GetRange()}, nil
+				}
+				return nil, p.error("expected 'napkin' or 'precise' after unit conversion 'as'")
+			}
+			return node, nil
 		}
 		return nil, p.error("expected 'napkin', 'precise', or a valid unit after 'as'")
 	}

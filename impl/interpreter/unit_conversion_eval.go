@@ -2,9 +2,11 @@ package interpreter
 
 import (
 	"fmt"
+	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
 // evalUnitConversion evaluates explicit unit conversion: "10 meters in feet"
@@ -19,6 +21,13 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 
 	// Check if this is currency conversion
 	if currency, ok := result.(*types.Currency); ok {
+		// If the target is a known quantity unit (not a currency), give a clear error
+		_, isQuantityUnit := units.NormalizeUnitName(u.TargetUnit)
+		isDuration := types.IsValidDurationUnit(u.TargetUnit)
+		if isQuantityUnit || isDuration {
+			return nil, fmt.Errorf("cannot convert currency (%s) to unit '%s'; use a currency code like USD, EUR, GBP",
+				currency.Code, u.TargetUnit)
+		}
 		return interp.evalCurrencyConversion(currency, u.TargetUnit)
 	}
 
@@ -75,6 +84,11 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 func (interp *Interpreter) evalCurrencyConversion(currency *types.Currency, targetCode string) (types.Type, error) {
 	// Normalize the target currency code
 	normalizedTarget := types.NormalizeCurrencyCode(targetCode)
+
+	// Validate target looks like a currency code (3 uppercase letters)
+	if !looksLikeCurrencyCode(normalizedTarget) {
+		return nil, fmt.Errorf("'%s' is not a valid currency code; use ISO 4217 codes like USD, EUR, GBP", targetCode)
+	}
 
 	// Same currency - no conversion needed
 	if currency.Code == normalizedTarget {
@@ -140,4 +154,17 @@ func (interp *Interpreter) evalRateUnitConversion(result types.Type, targetUnit,
 	}
 
 	return types.NewRate(convertedAmount, normalizedTimeUnit), nil
+}
+
+// looksLikeCurrencyCode checks if a string looks like a currency code (3 uppercase letters).
+func looksLikeCurrencyCode(s string) bool {
+	if len(s) != 3 {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsUpper(r) || !unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
 }
