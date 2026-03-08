@@ -27,6 +27,9 @@ You are an expert language designer and implementer for the go-calcmark language
   - Dependencies go one way
   - The spec can **never** depend on the implementation.
 - Golden examples in ./testdata are used both as valid and invalid grammar, semantic analysis, and runtime behavior. They are a great way to get oriented as to what the Calcmark language supports and does not support.
+- Manage GitHub issue lifecycle for issues that you're working on using the Status project field. 'In progress' for most work. 'In review' if there's a PR waiting for review or you are doing a code review. Only humans may close issues or mark them as 'Done'.
+    - `gh project item-edit --id <item-id> --field-id <field-id> --project-id <project-id> --single-select-option-id <status-option-id>`
+
 
 ## Quality
 
