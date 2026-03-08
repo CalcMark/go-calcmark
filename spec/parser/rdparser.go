@@ -363,13 +363,13 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 		if p.match(lexer.NAPKIN) {
 			return &ast.NapkinConversion{
 				Expression: left,
-				Range:      &ast.Range{},
+				Range:      left.GetRange(),
 			}, nil
 		}
 		if p.match(lexer.PRECISE) {
 			return &ast.PreciseConversion{
 				Expression: left,
-				Range:      &ast.Range{},
+				Range:      left.GetRange(),
 			}, nil
 		}
 		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
@@ -389,15 +389,15 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 				node := &ast.UnitConversion{
 					Quantity:   left,
 					TargetUnit: resolvedUnit,
-					Range:      &ast.Range{},
+					Range:      left.GetRange(),
 				}
 				// Allow chaining: "1 second as hour as precise" or "as napkin"
 				if p.match(lexer.AS) {
 					if p.match(lexer.PRECISE) {
-						return &ast.PreciseConversion{Expression: node, Range: &ast.Range{}}, nil
+						return &ast.PreciseConversion{Expression: node, Range: left.GetRange()}, nil
 					}
 					if p.match(lexer.NAPKIN) {
-						return &ast.NapkinConversion{Expression: node, Range: &ast.Range{}}, nil
+						return &ast.NapkinConversion{Expression: node, Range: left.GetRange()}, nil
 					}
 					return nil, p.error("expected 'napkin' or 'precise' after unit conversion 'as'")
 				}
@@ -490,7 +490,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 				left,
 				&ast.Identifier{Name: string(timePeriod.Value)},
 			},
-			Range: &ast.Range{},
+			Range: left.GetRange(),
 		}, nil
 	}
 
@@ -512,7 +512,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 				Amount:     left,
 				PerUnit:    timeUnit,
 				SourceText: "",
-				Range:      &ast.Range{},
+				Range:      left.GetRange(),
 			}
 		}
 	}
@@ -530,7 +530,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		return &ast.FunctionCall{
 			Name:      "accumulate",
 			Arguments: []ast.Node{left, duration},
-			Range:     &ast.Range{},
+			Range:     left.GetRange(),
 		}, nil
 	}
 
@@ -552,13 +552,13 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			// Pass target unit as an identifier node
 			targetNode := &ast.Identifier{
 				Name:  targetUnit,
-				Range: &ast.Range{},
+				Range: left.GetRange(),
 			}
 
 			return &ast.FunctionCall{
 				Name:      "convert_rate",
 				Arguments: []ast.Node{left, targetNode},
-				Range:     &ast.Range{},
+				Range:     left.GetRange(),
 			}, nil
 		}
 	}
@@ -594,7 +594,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		}
 		unitNode := &ast.Identifier{
 			Name:  unitName,
-			Range: &ast.Range{},
+			Range: left.GetRange(),
 		}
 
 		// Check for optional "with N% buffer"
@@ -620,7 +620,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		return &ast.FunctionCall{
 			Name:      "capacity",
 			Arguments: args,
-			Range:     &ast.Range{},
+			Range:     left.GetRange(),
 		}, nil
 	}
 
@@ -680,7 +680,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			Quantity:       left,
 			TargetUnit:     targetUnitName,
 			TargetTimeUnit: targetTimeUnit,
-			Range:          &ast.Range{},
+			Range:          left.GetRange(),
 		}, nil
 	}
 
@@ -769,13 +769,13 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 		if p.match(lexer.NAPKIN) {
 			return &ast.NapkinConversion{
 				Expression: result,
-				Range:      &ast.Range{},
+				Range:      result.GetRange(),
 			}, nil
 		}
 		if p.match(lexer.PRECISE) {
 			return &ast.PreciseConversion{
 				Expression: result,
-				Range:      &ast.Range{},
+				Range:      result.GetRange(),
 			}, nil
 		}
 		// Check for "as <unit>" for unit/duration conversion: "1 day as seconds"
@@ -795,16 +795,16 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 				node := &ast.UnitConversion{
 					Quantity:   result,
 					TargetUnit: resolvedUnit,
-					Range:      &ast.Range{},
+					Range:      result.GetRange(),
 				}
 				// Allow chaining: "1 second as hour as precise" or "as napkin"
 				if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "as" {
 					p.advance() // consume "as"
 					if p.match(lexer.PRECISE) {
-						return &ast.PreciseConversion{Expression: node, Range: &ast.Range{}}, nil
+						return &ast.PreciseConversion{Expression: node, Range: result.GetRange()}, nil
 					}
 					if p.match(lexer.NAPKIN) {
-						return &ast.NapkinConversion{Expression: node, Range: &ast.Range{}}, nil
+						return &ast.NapkinConversion{Expression: node, Range: result.GetRange()}, nil
 					}
 					return nil, p.error("expected 'napkin' or 'precise' after unit conversion 'as'")
 				}
@@ -966,11 +966,15 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 
 		// Check if it's a currency (unit is a currency code or symbol)
 		unit := parts[1]
+		tokRange := &ast.Range{
+			Start: ast.Position{Line: tok.Line, Column: tok.Column},
+			End:   ast.Position{Line: tok.Line, Column: tok.Column + len(tok.Value)},
+		}
 		if isCurrency(unit) {
 			return &ast.CurrencyLiteral{
 				Value:  parts[0],
 				Symbol: unit,
-				Range:  &ast.Range{},
+				Range:  tokRange,
 			}, nil
 		}
 
@@ -978,7 +982,7 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return &ast.QuantityLiteral{
 			Value: parts[0],
 			Unit:  unit,
-			Range: &ast.Range{},
+			Range: tokRange,
 		}, nil
 	}
 
