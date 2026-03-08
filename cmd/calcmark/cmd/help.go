@@ -17,6 +17,7 @@ var (
 	helpShowFunctions   bool
 	helpShowConstants   bool
 	helpShowFrontmatter bool
+	helpShowAll         bool
 )
 
 var helpCmd = &cobra.Command{
@@ -29,8 +30,7 @@ Topics:
   constants    All unit constants grouped by quantity type
   frontmatter  All frontmatter directives with valid options and examples
 
-Flags can filter output: --functions, --constants, --frontmatter
-With no topic or flags, all sections are shown.`,
+Use a topic or flag to select what to show. Use --all to show everything.`,
 	// Accept arbitrary args so Cobra doesn't error on unknown subcommand names.
 	// This lets `cm help eval` still work via Cobra's default help routing.
 	Args:               cobra.ArbitraryArgs,
@@ -47,13 +47,14 @@ With no topic or flags, all sections are shown.`,
 			}
 		}
 
-		showFuncs := helpShowFunctions
-		showConsts := helpShowConstants
-		showFM := helpShowFrontmatter
+		showFuncs := helpShowFunctions || helpShowAll
+		showConsts := helpShowConstants || helpShowAll
+		showFM := helpShowFrontmatter || helpShowAll
 
-		// If no flags set, show all
+		// If no flags set, show usage
 		if !showFuncs && !showConsts && !showFM {
-			showFuncs, showConsts, showFM = true, true, true
+			cmd.Help()
+			return
 		}
 
 		if showFuncs {
@@ -105,6 +106,7 @@ func init() {
 	helpCmd.Flags().BoolVar(&helpShowFunctions, "functions", false, "Show functions only")
 	helpCmd.Flags().BoolVar(&helpShowConstants, "constants", false, "Show constants only")
 	helpCmd.Flags().BoolVar(&helpShowFrontmatter, "frontmatter", false, "Show frontmatter directives only")
+	helpCmd.Flags().BoolVar(&helpShowAll, "all", false, "Show all sections")
 
 	helpCmd.AddCommand(helpFunctionsCmd)
 	helpCmd.AddCommand(helpConstantsCmd)

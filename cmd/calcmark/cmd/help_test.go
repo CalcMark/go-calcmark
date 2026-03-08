@@ -115,24 +115,43 @@ func TestHelpFrontmatterOutput(t *testing.T) {
 	}
 }
 
-// TestHelpAllSections verifies that cm help with no flags shows all sections.
-func TestHelpAllSections(t *testing.T) {
+// TestHelpNoFlags verifies that bare cm help shows usage, not all sections.
+func TestHelpNoFlags(t *testing.T) {
 	output := captureStdout(t, func() {
-		// Reset flags to defaults
 		helpShowFunctions = false
 		helpShowConstants = false
 		helpShowFrontmatter = false
+		helpShowAll = false
 		helpCmd.Run(helpCmd, []string{})
 	})
 
+	if strings.Contains(output, "CalcMark Functions") {
+		t.Error("bare cm help should not dump functions")
+	}
+	if !strings.Contains(output, "Use a topic or flag") {
+		t.Error("bare cm help should show usage text")
+	}
+}
+
+// TestHelpAllFlag verifies that cm help --all shows all sections.
+func TestHelpAllFlag(t *testing.T) {
+	output := captureStdout(t, func() {
+		helpShowFunctions = false
+		helpShowConstants = false
+		helpShowFrontmatter = false
+		helpShowAll = true
+		helpCmd.Run(helpCmd, []string{})
+	})
+	helpShowAll = false
+
 	if !strings.Contains(output, "CalcMark Functions") {
-		t.Error("cm help missing Functions section")
+		t.Error("cm help --all missing Functions section")
 	}
 	if !strings.Contains(output, "CalcMark Unit Constants") {
-		t.Error("cm help missing Constants section")
+		t.Error("cm help --all missing Constants section")
 	}
 	if !strings.Contains(output, "CalcMark Frontmatter Directives") {
-		t.Error("cm help missing Frontmatter section")
+		t.Error("cm help --all missing Frontmatter section")
 	}
 }
 

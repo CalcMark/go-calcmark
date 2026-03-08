@@ -135,6 +135,7 @@ List all available functions, units, and frontmatter directives at runtime:
 cm help functions    # All functions with signatures and NL forms
 cm help constants    # All unit constants with aliases
 cm help frontmatter  # All frontmatter directives with valid options
+cm help --all        # Everything at once
 ```
 
 ## What CalcMark Can Do
