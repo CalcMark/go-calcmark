@@ -284,14 +284,16 @@ func TestSavePromptMode(t *testing.T) {
 	}
 }
 
-func TestCtrlETriggersExport(t *testing.T) {
+func TestCtrlEDoesNotTriggerExport(t *testing.T) {
 	m := New(nil)
 
+	// Ctrl+E was removed from Export to prevent Cmd+Right collision in legacy terminals.
+	// Export is now command-menu-only.
 	newModel, _ := m.Update(tea.KeyPressMsg{Code: 'e', Mod: tea.ModCtrl})
 	m = newModel.(Model)
 
-	if m.mode != StateExport {
-		t.Errorf("Expected StateExport after Ctrl+E, got %v", m.mode)
+	if m.mode == StateExport {
+		t.Errorf("Ctrl+E should NOT trigger Export (was removed to fix Cmd+Right collision), got %v", m.mode)
 	}
 }
 

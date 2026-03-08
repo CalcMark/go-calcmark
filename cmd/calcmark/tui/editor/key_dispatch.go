@@ -50,8 +50,6 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.executeCommandByName("New")
 		case 's':
 			return m.executeCommandByName("Save")
-		case 'e':
-			return m.executeCommandByName("Export")
 		case 'o':
 			return m.executeCommandByName("Open")
 		case 'f':

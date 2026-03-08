@@ -77,12 +77,12 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("Ctrl/Alt+→", "word right"),
 		),
 		LineStart: key.NewBinding(
-			key.WithKeys("ctrl+a", "home"),
-			key.WithHelp("Ctrl+A/Home", "line start"),
+			key.WithKeys("home"),
+			key.WithHelp("Home", "line start"),
 		),
 		LineEnd: key.NewBinding(
-			key.WithKeys("ctrl+e", "end"),
-			key.WithHelp("Ctrl+E/End", "line end"),
+			key.WithKeys("end"),
+			key.WithHelp("End", "line end"),
 		),
 		PageUp: key.NewBinding(
 			key.WithKeys("pgup"),
