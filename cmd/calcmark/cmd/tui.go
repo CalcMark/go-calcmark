@@ -29,9 +29,7 @@ func runEdit(filepath string) {
 	// Always use Editor app for edit command
 	app := tui.NewEditorApp(doc, filepath)
 	app.SetFormatter(localeFormatter())
-	if debugKeysFlag {
-		app.SetDebugKeys(true)
-	}
+	app.SetDebugKeys(debugKeysFlag)
 	runTUIApp(app)
 }
 
