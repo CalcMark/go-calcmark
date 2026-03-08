@@ -359,18 +359,6 @@ func (m Model) handleCtrlP() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleCtrlD() (tea.Model, tea.Cmd) {
-	m.loadCurrentLineIntoEditBuffer()
-	m.moveCursor(m.height/2, 0)
-	return m, nil
-}
-
-func (m Model) handleCtrlU() (tea.Model, tea.Cmd) {
-	m.loadCurrentLineIntoEditBuffer()
-	m.moveCursor(-m.height/2, 0)
-	return m, nil
-}
-
 // insertRune inserts a single character at the cursor position.
 func (m *Model) insertRune(r rune) {
 	m.loadCurrentLineIntoEditBuffer()

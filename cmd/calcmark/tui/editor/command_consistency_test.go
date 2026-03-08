@@ -48,8 +48,6 @@ func dispatchedCommandNames() map[string]bool {
 		"Word Right":         true,
 		"Doc Start":          true,
 		"Doc End":            true,
-		"Scroll Down":        true,
-		"Scroll Up":          true,
 		"Full Help":          true,
 		"Share To Gist":      true,
 		"Open From Gist":     true,

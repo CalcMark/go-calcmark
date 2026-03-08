@@ -66,6 +66,11 @@ func (a *App) SetFormatter(f display.Formatter) {
 	a.editor.SetFormatter(f)
 }
 
+// SetDebugKeys enables logging of raw key events to stderr.
+func (a *App) SetDebugKeys(enabled bool) {
+	a.editor.SetDebugKeys(enabled)
+}
+
 // Init implements tea.Model.
 func (a *App) Init() tea.Cmd {
 	// Initialize lipgloss color profile AFTER alternate screen is entered
