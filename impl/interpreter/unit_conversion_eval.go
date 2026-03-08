@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -156,13 +155,13 @@ func (interp *Interpreter) evalRateUnitConversion(result types.Type, targetUnit,
 	return types.NewRate(convertedAmount, normalizedTimeUnit), nil
 }
 
-// looksLikeCurrencyCode checks if a string looks like a currency code (3 uppercase letters).
+// looksLikeCurrencyCode checks if a string looks like a currency code (3 uppercase ASCII letters).
 func looksLikeCurrencyCode(s string) bool {
 	if len(s) != 3 {
 		return false
 	}
 	for _, r := range s {
-		if !unicode.IsUpper(r) || !unicode.IsLetter(r) {
+		if r < 'A' || r > 'Z' {
 			return false
 		}
 	}
