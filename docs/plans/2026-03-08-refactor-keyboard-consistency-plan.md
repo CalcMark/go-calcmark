@@ -68,13 +68,9 @@ Ctrl+F = Insert Frontmatter conflicts with the universal Find shortcut. CalcMark
 2. **Remap to Ctrl+Shift+F** — less discoverable but keeps a dedicated shortcut
 3. **Keep Ctrl+F** and accept the divergence
 
-**Recommendation**: Option 1. Frontmatter insertion is typically done once per document. Command menu discovery is sufficient.
+**Decision**: Option 3. Keep Ctrl+F for Insert Frontmatter — it's actively used and CalcMark doesn't have Find yet. Revisit when Find is implemented.
 
-- [ ] Remove Ctrl+F global handler for Insert Frontmatter
-- [ ] Keep Insert Frontmatter available in command menu
-- [ ] Reserve Ctrl+F for future Find feature
-- [ ] Update help overlay
-- [ ] Write catwalk test
+- [x] ~~Remove Ctrl+F~~ — Keeping; actively used shortcut, no conflict until Find is added
 
 ### Phase 4: Audit remaining shortcuts
 

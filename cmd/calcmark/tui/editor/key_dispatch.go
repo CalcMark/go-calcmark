@@ -52,6 +52,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.executeCommandByName("Save")
 		case 'o':
 			return m.executeCommandByName("Open")
+		case 't':
+			return m.executeCommandByName("Export")
 		case 'f':
 			return m.insertFrontmatter()
 		}
