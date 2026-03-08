@@ -1,7 +1,7 @@
 ---
 title: "fix: Keyboard navigation and selection state inconsistencies"
 type: fix
-status: active
+status: completed
 date: 2026-03-08
 issue: 38
 ---
@@ -54,13 +54,13 @@ Once we see the raw key events, fix the dispatch. Likely scenarios:
 
 #### `cmd/calcmark/tui/editor/key_dispatch.go`
 
-- [ ] Based on debug output, add the correct dispatch path for Cmd+Arrow in Ghostty
-- [ ] Ensure the global Ctrl+E handler (line 47) does NOT intercept Cmd+Right
-- [ ] Ensure Cmd+Left maps to `handleHomeKey()`
-- [ ] Ensure Cmd+Right maps to `handleEndKey()`
-- [ ] Ensure Cmd+Up maps to `handleCtrlHomeKey()`
-- [ ] Ensure Cmd+Down maps to `handleCtrlEndKey()`
-- [ ] Ensure Shift+Cmd+Arrow variants extend selection correctly
+- [x] Based on debug output, add the correct dispatch path for Cmd+Arrow in Ghostty
+- [x] Ensure the global Ctrl+E handler (line 47) does NOT intercept Cmd+Right
+- [x] Ensure Cmd+Left maps to `handleHomeKey()`
+- [x] Ensure Cmd+Right maps to `handleEndKey()`
+- [x] Cmd+Up/Down consumed by macOS — Alt+Up/Down fallback works
+- [x] Cmd+Up/Down consumed by macOS — Alt+Up/Down fallback works
+- [x] Ensure Shift+Cmd+Arrow variants extend selection correctly
 
 ### Phase 3: Add Alt+Up/Down handlers
 
