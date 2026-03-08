@@ -79,7 +79,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&localeFlag, "locale", "",
 		"Display locale for number formatting (e.g., 'en-US', 'de-DE', 'fr-FR')")
 	rootCmd.PersistentFlags().BoolVar(&debugKeysFlag, "debug-keys", false,
-		"Log raw key events to stderr for debugging keyboard issues")
+		"Log raw key events to stderr for debugging keyboard issues (use 2>file to capture)")
+	rootCmd.PersistentFlags().MarkHidden("debug-keys")
 
 	// --format applies when stdin is piped (e.g. `echo "1+1" | cm --format json`)
 	rootCmd.Flags().StringVar(&rootFormat, "format", "text",

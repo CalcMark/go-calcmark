@@ -6,9 +6,8 @@ import "charm.land/bubbles/v2/key"
 // Centralized here for consistency across all modes.
 type KeyMap struct {
 	// Global keys (work in all modes)
-	Quit      key.Binding
-	ForceQuit key.Binding
-	Help      key.Binding
+	Quit key.Binding
+	Help key.Binding
 
 	// Navigation keys
 	Up        key.Binding
@@ -48,10 +47,6 @@ func DefaultKeyMap() KeyMap {
 		Quit: key.NewBinding(
 			key.WithKeys("ctrl+c"),
 			key.WithHelp("Ctrl+C", "quit"),
-		),
-		ForceQuit: key.NewBinding(
-			key.WithKeys("ctrl+d"),
-			key.WithHelp("Ctrl+D", "force quit"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("f1", "ctrl+h"),
