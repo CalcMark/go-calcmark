@@ -38,11 +38,7 @@ func sendKey(t *testing.T, m tea.Model, keyName string) tea.Model {
 	case "ctrl+y":
 		msg = tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	case "ctrl+f":
-		// Ctrl+F no longer has a shortcut — route through command dispatch.
-		ed := m.(Model)
-		newModel, cmd := ed.executeCommandByName("Insert Frontmatter")
-		_ = cmd
-		return newModel
+		msg = tea.KeyPressMsg{Code: 'f', Mod: tea.ModCtrl}
 	case "cmd+a":
 		msg = tea.KeyPressMsg{Code: 'a', Mod: tea.ModSuper}
 	case "shift+up":

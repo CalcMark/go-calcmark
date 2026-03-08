@@ -422,18 +422,6 @@ func (d *driverV2) applyTextCommand(t *testing.T, cmd string, args ...string) te
 		// behavior — Bubble Tea v2 delivers bracketed paste as tea.PasteMsg.
 		d.addMsg(tea.PasteMsg{Content: s})
 
-	case "command":
-		// Execute a named command directly (e.g., "command Insert Frontmatter").
-		// Useful for commands that no longer have keyboard shortcuts.
-		name := strings.Join(args, " ")
-		// Flush any pending messages first so model state is current.
-		d.processTeaMsgs(false)
-		ed := d.m.(Model)
-		newModel, newCmd := ed.executeCommandByName(name)
-		d.m = newModel
-		d.addCmds(newCmd)
-		return nil
-
 	default:
 		t.Fatalf("%s: unknown command %q", d.pos, cmd)
 	}

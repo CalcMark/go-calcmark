@@ -34,7 +34,7 @@ var EditorCommands = []Command{
 	{Name: "Undo", Accelerator: "Ctrl+Z", Description: "Undo last change", Category: "edit"},
 	{Name: "Redo", Accelerator: "Ctrl+Y", Description: "Redo last change", Category: "edit"},
 	{Name: "Delete Line", Accelerator: "Ctrl+K", Description: "Delete current line", Category: "edit"},
-	{Name: "Insert Frontmatter", Accelerator: "", Description: "Add exchange, globals, scale, and convert_to", Category: "edit"},
+	{Name: "Insert Frontmatter", Accelerator: "Ctrl+F", Description: "Add exchange, globals, scale, and convert_to", Category: "edit"},
 
 	// View commands
 	{Name: "Toggle Preview", Accelerator: "Ctrl+P", Description: "Cycle preview mode", Category: "view"},

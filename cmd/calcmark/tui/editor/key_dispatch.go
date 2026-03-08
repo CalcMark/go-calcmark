@@ -52,8 +52,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.executeCommandByName("Save")
 		case 'o':
 			return m.executeCommandByName("Open")
-			// NOTE: Ctrl+F reserved for future Find feature.
-			// Insert Frontmatter is available via command menu (F1/Ctrl+H).
+		case 'f':
+			return m.insertFrontmatter()
 		}
 	}
 

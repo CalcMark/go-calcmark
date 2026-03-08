@@ -58,7 +58,7 @@ func helpCategories() []HelpCategory {
 				{Name: "Undo", Accelerator: "Ctrl+Z / ⌘Z", Kind: HelpActionable, CommandName: "Undo"},
 				{Name: "Redo", Accelerator: "Ctrl+Y / ⌘⇧Z", Kind: HelpActionable, CommandName: "Redo"},
 				{Name: "Delete Line", Accelerator: "Ctrl+K", Kind: HelpActionable, CommandName: "Delete Line"},
-				{Name: "Insert Frontmatter", Accelerator: "", Kind: HelpActionable, CommandName: "Insert Frontmatter"},
+				{Name: "Insert Frontmatter", Accelerator: "Ctrl+F", Kind: HelpActionable, CommandName: "Insert Frontmatter"},
 				{Name: "New Line", Accelerator: "Enter", Kind: HelpAdvisory},
 				{Name: "Backspace", Accelerator: "Bksp", Kind: HelpAdvisory},
 				{Name: "Delete Word", Accelerator: "Ctrl+Bksp", Kind: HelpAdvisory},
