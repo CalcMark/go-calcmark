@@ -324,6 +324,44 @@ exchange:
 			wantErr:        true,
 			wantErrContain: "USD_EUR", // must use underscore, not slash
 		},
+		// "as" keyword: currency-to-unit mismatch
+		{
+			name:           "as keyword: currency to unit cm",
+			input:          "a = $2\na as cm",
+			wantErr:        true,
+			wantErrContain: "cannot convert currency",
+		},
+		{
+			name:           "as keyword: currency to unit celsius",
+			input:          "a = $2\na as c",
+			wantErr:        true,
+			wantErrContain: "cannot convert currency",
+		},
+		// "as" keyword: invalid currency code
+		{
+			name:           "as keyword: invalid target xyz",
+			input:          "a = $2\na as xyz",
+			wantErr:        true,
+			wantErrContain: "not a valid currency code",
+		},
+		// "as" keyword: valid currency code without exchange rate
+		{
+			name:           "as keyword: EUR without exchange rate",
+			input:          "a = $2\na as EUR",
+			wantErr:        true,
+			wantErrContain: "no exchange rate defined for USD",
+		},
+		// "as" keyword: valid currency conversion with exchange rate
+		{
+			name: "as keyword: valid currency conversion",
+			input: `---
+exchange:
+  USD_EUR: 0.92
+---
+a = $100
+a as EUR`,
+			want: "€92.00",
+		},
 	}
 
 	for _, tt := range tests {
