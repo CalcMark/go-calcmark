@@ -5,7 +5,6 @@ package editor
 
 import (
 	"fmt"
-	"os"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -16,8 +15,8 @@ import (
 // 2. Mode-specific handlers (help, autocomplete, command menu, file picker, etc.)
 // 3. Default editing mode
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	if m.debugKeys {
-		fmt.Fprintf(os.Stderr, "[KEY] code=%d mod=%v text=%q str=%q\n",
+	if m.debugKeys && m.debugKeyFile != nil {
+		fmt.Fprintf(m.debugKeyFile, "[KEY] code=%d mod=%v text=%q str=%q\n",
 			msg.Code, msg.Mod, msg.Text, msg.String())
 	}
 
