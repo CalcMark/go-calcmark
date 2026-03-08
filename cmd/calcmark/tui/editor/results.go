@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/transform"
 )
 
 // LineResult represents a line's evaluation result.
@@ -21,6 +22,7 @@ type LineResult struct {
 	BlockID        string
 	WasChanged     bool
 	IsBlocked      bool     // True if this error is caused by an undefined variable from a prior error
+	IsScaled       bool     // True if this result was multiplied by the document's scale factor
 	ReferencedVars []string // Variable names referenced by this statement (AST-derived, sorted)
 }
 
@@ -49,6 +51,12 @@ func (m *Model) GetLineResults() []LineResult {
 			})
 			lineNum++
 		}
+	}
+
+	// Get scale config for IsScaled detection
+	var scale *document.ScaleConfig
+	if fm := m.doc.GetFrontmatter(); fm != nil {
+		scale = fm.Scale
 	}
 
 	// Track variables that failed to evaluate (for cascading error detection)
@@ -80,6 +88,7 @@ func (m *Model) GetLineResults() []LineResult {
 				errorLineIdx = findErrorLine(sourceLines, blockError.Error())
 			}
 
+			stmtIdx := 0 // Running counter of non-empty lines seen so far
 			for i, line := range sourceLines {
 				lr := LineResult{
 					LineNum:    lineNum,
@@ -90,20 +99,13 @@ func (m *Model) GetLineResults() []LineResult {
 				}
 
 				// Skip empty/whitespace-only lines (no result to show)
-				// Must use strings.TrimSpace to match countNonEmptyLinesBefore,
-				// otherwise statement index mapping drifts.
 				if strings.TrimSpace(line) == "" {
 					results = append(results, lr)
 					lineNum++
 					continue
 				}
 
-				// Map source line index to statement index
-				// This is approximate - assumes 1:1 mapping of non-empty lines to statements
-				stmtIdx := countNonEmptyLinesBefore(sourceLines, i)
-
-				// Check for diagnostic errors on this line (i+1 because diag.Line is 1-indexed)
-				blockLineNum := i + 1
+				blockLineNum := i + 1 // diag.Line is 1-indexed
 				if diag, hasError := diagByLine[blockLineNum]; hasError {
 					lr.Diagnostic = diag
 					lr.Error = diag.Code + ": " + diag.Message // Legacy string for backwards compat
@@ -126,6 +128,7 @@ func (m *Model) GetLineResults() []LineResult {
 					}
 
 					results = append(results, lr)
+					stmtIdx++
 					lineNum++
 					continue
 				}
@@ -160,6 +163,7 @@ func (m *Model) GetLineResults() []LineResult {
 						}
 
 						results = append(results, lr)
+						stmtIdx++
 						lineNum++
 						continue
 					}
@@ -168,6 +172,16 @@ func (m *Model) GetLineResults() []LineResult {
 				// Get result for this statement if available
 				if stmtIdx < len(stmtResults) && stmtResults[stmtIdx] != nil {
 					lr.Value = m.displayFormat(stmtResults[stmtIdx])
+
+					// Check if this result was affected by the scale transform.
+					// Uses cached ScaleExempt flags from the evaluator to avoid
+					// re-walking the AST on every render.
+					if scale != nil && transform.WouldScale(stmtResults[stmtIdx], scale) {
+						scaleExempt := b.ScaleExempt()
+						if stmtIdx >= len(scaleExempt) || !scaleExempt[stmtIdx] {
+							lr.IsScaled = true
+						}
+					}
 				}
 
 				// Get variable name if this statement defines one (assignment)
@@ -180,6 +194,7 @@ func (m *Model) GetLineResults() []LineResult {
 				}
 
 				results = append(results, lr)
+				stmtIdx++
 				lineNum++
 			}
 
@@ -197,17 +212,6 @@ func (m *Model) GetLineResults() []LineResult {
 	}
 
 	return results
-}
-
-// countNonEmptyLinesBefore counts non-empty lines before index i.
-func countNonEmptyLinesBefore(lines []string, i int) int {
-	count := 0
-	for j := range i {
-		if strings.TrimSpace(lines[j]) != "" {
-			count++
-		}
-	}
-	return count
 }
 
 // findErrorLine tries to determine which source line caused the error by

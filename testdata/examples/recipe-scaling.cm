@@ -1,7 +1,7 @@
 ---
 scale:
   factor: 2
-  unit_categories: [Mass, Volume, Currency]
+  unit_categories: [Mass, Volume, Currency, Custom]
 convert_to: si
 ---
 # Banana Bread

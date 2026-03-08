@@ -302,7 +302,7 @@ func printFrontmatter() {
 	// scale
 	fmt.Fprintln(w, "scale")
 	fmt.Fprintln(w, "-----")
-	fmt.Fprintln(w, "  Multiply quantity results by a factor.")
+	fmt.Fprintln(w, "  Multiply quantity results by a factor. Requires unit_categories.")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Simple form:")
 	fmt.Fprintln(w, "    scale: 2")
@@ -314,15 +314,17 @@ func printFrontmatter() {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Options:")
 	fmt.Fprintln(w, "    factor           Number (required). Multiplier for quantities.")
-	fmt.Fprintln(w, "    unit_categories  List (optional). Limit scaling to these categories.")
+	fmt.Fprintln(w, "    unit_categories  List. Categories to scale (required for scaling to occur).")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Valid categories:")
 	for _, cat := range categories {
 		fmt.Fprintf(w, "    - %s\n", cat)
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "  Temperature is excluded by default.")
-	fmt.Fprintln(w, "  Currency scales only when Currency is listed in unit_categories.")
+	fmt.Fprintln(w, "  Scaling is explicit: nothing scales without unit_categories.")
+	fmt.Fprintln(w, "  Use [All] to scale every category.")
+	fmt.Fprintln(w, "  Custom scales units not in the standard library (e.g., bananas, eggs).")
+	fmt.Fprintln(w, "  Each category only scales when explicitly listed in unit_categories.")
 	fmt.Fprintln(w, "  Reference the scale factor in expressions with @scale.")
 	fmt.Fprintln(w)
 

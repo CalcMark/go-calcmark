@@ -20,12 +20,12 @@ quote_a = 8500
 quote_b = 9200
 quote_c = 7800
 
-average_quote = avg(quote_a, quote_b, quote_c)
+average_quote = average of quote_a, quote_b, quote_c
 ```
 
-The average comes out to 8,500. You can also write `average of 8500, 9200, 7800` using the natural language form.
+The average comes out to 8,500. The `average of` syntax is the natural language form — you can also write `avg(quote_a, quote_b, quote_c)` using function-call syntax.
 
-**CalcMark features:** `avg()` function; variable references.
+**CalcMark features:** `average of` (NL form of `avg()`); variable references.
 
 ---
 
@@ -121,12 +121,12 @@ The weekly rate is $5,600/week. This is different from `$800/day over 1 week`, w
 Lumber arrives at 2 pallets per day over the 3-week build. The `accumulate` function totals a rate over a duration:
 
 ```calcmark
-total_deliveries = accumulate(2 pallets/day, 3 weeks)
+total_deliveries = 2 pallets/day over 3 weeks
 ```
 
-That's 42 pallets total. CalcMark handles the unit conversion (days to weeks) automatically. You can also write this as `2 pallets/day over 3 weeks` using the natural language `over` syntax.
+That's 42 pallets total. CalcMark handles the unit conversion (days to weeks) automatically. The `over` keyword is the natural language form — you can also write `accumulate(2 pallets/day, 3 weeks)` using function-call syntax.
 
-**CalcMark features:** `accumulate()` function; rate with arbitrary units (`pallets/day`); automatic time unit conversion.
+**CalcMark features:** rate accumulation with `over`; rate with custom units (`pallets/day`); automatic time unit conversion.
 
 ---
 
@@ -190,7 +190,7 @@ This example showcases the following CalcMark features:
 - **`as napkin`** — quick rounding for estimates
 - **Currency arithmetic** — `$` preserved through calculations
 - **Rate literals** — `$800/day`, `2 pallets/day`
-- **Arbitrary units** — `pallets` as a custom unit
+- **Custom units** — `pallets` as a custom unit
 
 ## Try It
 

@@ -12,11 +12,6 @@ var (
 	BuildTime = "unknown"
 )
 
-const larky = `  ♪
- ('>
- /V\
-(| |)`
-
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",

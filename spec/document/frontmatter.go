@@ -13,11 +13,11 @@ import (
 )
 
 // ScaleConfig configures the document-level scale transform.
-// When present, all eligible quantities are multiplied by Factor.
-// UnitCategories restricts scaling to specific categories (empty = all except Temperature).
+// When present, eligible quantities are multiplied by Factor.
+// UnitCategories lists the categories to scale (empty = nothing scales).
 type ScaleConfig struct {
 	Factor         decimal.Decimal
-	UnitCategories []string // empty = all (except Temperature)
+	UnitCategories []string // empty = nothing scales
 }
 
 // ConvertToConfig configures the document-level unit system conversion.
@@ -98,6 +98,7 @@ func init() {
 	for _, cat := range units.Categories() {
 		validUnitCategories[strings.ToLower(cat)] = cat
 	}
+	validUnitCategories["all"] = "All"
 }
 
 // validConvertToSystems lists the valid target systems for convert_to.
@@ -393,6 +394,7 @@ func parseUnitCategories(m map[string]any, directive string) ([]string, error) {
 	}
 
 	var categories []string
+	seen := make(map[string]bool)
 	for _, c := range catSlice {
 		name, ok := c.(string)
 		if !ok {
@@ -408,7 +410,10 @@ func parseUnitCategories(m map[string]any, directive string) ([]string, error) {
 			return nil, fmt.Errorf("invalid unit category %q in %s.unit_categories; valid categories: %s",
 				name, directive, strings.Join(validNames, ", "))
 		}
-		categories = append(categories, canonical)
+		if !seen[canonical] {
+			categories = append(categories, canonical)
+			seen[canonical] = true
+		}
 	}
 	return categories, nil
 }

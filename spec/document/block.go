@@ -63,6 +63,7 @@ type CalcBlock struct {
 	dependencies []string     // Variables referenced from other blocks
 	err          error        // Evaluation error (legacy, prefer diagnostics)
 	diagnostics  []Diagnostic // Structured errors with position info
+	scaleExempt  []bool       // Per-statement: true if statement references @scale
 	dirty        bool
 }
 
@@ -171,6 +172,18 @@ func (cb *CalcBlock) AddDiagnostic(diag Diagnostic) {
 // ClearDiagnostics removes all diagnostics from this block.
 func (cb *CalcBlock) ClearDiagnostics() {
 	cb.diagnostics = nil
+}
+
+// ScaleExempt returns the per-statement scale exemption flags.
+// A true value at index i means statement i references @scale and should
+// not be scaled (to prevent double-scaling).
+func (cb *CalcBlock) ScaleExempt() []bool {
+	return cb.scaleExempt
+}
+
+// SetScaleExempt sets the per-statement scale exemption flags.
+func (cb *CalcBlock) SetScaleExempt(exempt []bool) {
+	cb.scaleExempt = exempt
 }
 
 // TextBlock represents markdown text.

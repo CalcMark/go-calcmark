@@ -87,7 +87,7 @@ func TestCategoryForUnit(t *testing.T) {
 		{"meters", "Length"},
 		{"fahrenheit", "Temperature"},
 		{"km/h", "Speed"},
-		{"eggs", ""},
+		{"eggs", CategoryCustom},
 	}
 
 	for _, tt := range tests {

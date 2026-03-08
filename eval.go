@@ -21,12 +21,11 @@ package calcmark
 import (
 	"fmt"
 
+	impldoc "github.com/CalcMark/go-calcmark/impl/document"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/semantic"
-	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/shopspring/decimal"
 )
 
 // Eval evaluates a CalcMark expression or document and returns the result.
@@ -127,7 +126,7 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 	// 4. Interpret the validated AST
 	interp := interpreter.NewInterpreterWithEnv(env)
 	if frontmatter != nil {
-		interp.SetDirectiveResolver(&evalDirectiveResolver{fm: frontmatter})
+		interp.SetDirectiveResolver(impldoc.NewDirectiveResolver(frontmatter))
 	}
 	values, interpErr := interp.Eval(nodes)
 	if interpErr != nil {
@@ -149,33 +148,6 @@ func evaluate(input string, env *interpreter.Environment) (*Result, error) {
 	}
 
 	return result, nil
-}
-
-// evalDirectiveResolver adapts *document.Frontmatter to interpreter.DirectiveResolver.
-type evalDirectiveResolver struct {
-	fm *document.Frontmatter
-}
-
-func (r *evalDirectiveResolver) ScaleFactor() (decimal.Decimal, bool) {
-	if r.fm == nil || r.fm.Scale == nil {
-		return decimal.Zero, false
-	}
-	return r.fm.Scale.Factor, true
-}
-
-func (r *evalDirectiveResolver) ResolveGlobal(name string) (types.Type, bool, error) {
-	if r.fm == nil || r.fm.Globals == nil {
-		return nil, false, nil
-	}
-	exprStr, ok := r.fm.Globals[name]
-	if !ok {
-		return nil, false, nil
-	}
-	parsed, err := document.ParseGlobals(map[string]string{name: exprStr})
-	if err != nil {
-		return nil, false, err
-	}
-	return parsed.Values[name], true, nil
 }
 
 // convertDiagnostics converts semantic diagnostics to public API format.

@@ -13,20 +13,20 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ## Frontmatter: Scale and Convert
 
-The `scale` directive multiplies quantities by a factor. Adding `Currency` to `unit_categories` makes costs scale too. The `convert_to` directive converts results to a target measurement system (`si` or `imperial`). Together, they transform the entire document.
+The `scale` directive multiplies quantities by a factor. Adding `Currency` to `unit_categories` makes costs scale too. `Custom` scales units like `bananas` and `eggs` that aren't in the standard unit library. The `convert_to` directive converts results to a target measurement system (`si` or `imperial`). Together, they transform the entire document.
 
 ```yaml
 ---
 scale:
   factor: 2
-  unit_categories: [Mass, Volume, Currency]
+  unit_categories: [Mass, Volume, Currency, Custom]
 convert_to: si
 ---
 ```
 
-`scale: {factor: 2, unit_categories: [Mass, Volume, Currency]}` doubles all quantities and currency values. `convert_to: si` converts imperial units (cups, ounces, fahrenheit) to metric (ml, grams, celsius). You write the recipe once in its original units — the frontmatter does the rest.
+`scale: {factor: 2, unit_categories: [Mass, Volume, Currency, Custom]}` doubles all quantities, currency values, and custom units. `convert_to: si` converts imperial units (cups, ounces, fahrenheit) to metric (ml, grams, celsius). You write the recipe once in its original units — the frontmatter does the rest.
 
-**CalcMark features:** `scale` frontmatter directive with `unit_categories`; `convert_to` frontmatter directive; `Currency` opt-in for scaling.
+**CalcMark features:** `scale` frontmatter directive with `unit_categories`; `convert_to` frontmatter directive; `Currency` and `Custom` opt-in for scaling.
 
 ---
 
@@ -46,23 +46,23 @@ salt = 0.25 teaspoons
 vanilla = 1 teaspoons
 ```
 
-`flour` is written as `1.5 cups` but displays as `720 ml` — that's `1.5 × 2 = 3 cups`, converted to milliliters. `butter` goes from `4 ounces` to `227 g`. Arbitrary units like `bananas` and `eggs` are scaled (3 → 6, 2 → 4) but not converted, since they have no metric equivalent.
+`flour` is written as `1.5 cups` but displays as `720 ml` — that's `1.5 × 2 = 3 cups`, converted to milliliters. `butter` goes from `4 ounces` to `227 g`. Custom units like `bananas` and `eggs` are scaled (3 → 6, 2 → 4) because `Custom` is in `unit_categories`, but they aren't converted since they have no metric equivalent.
 
-**CalcMark features:** Quantities with units (`cups`, `ounces`, `teaspoons`); arbitrary units (`bananas`, `eggs`); automatic scaling; automatic unit conversion.
+**CalcMark features:** Quantities with units (`cups`, `ounces`, `teaspoons`); custom units (`bananas`, `eggs`); automatic scaling; automatic unit conversion.
 
 ---
 
 ## Oven Temperature
 
-Temperature is a special case — `convert_to` converts it, but `scale` does not. Doubling a recipe does not mean doubling the oven temperature.
+Temperature is not listed in `unit_categories`, so it converts but does not scale. Doubling a recipe does not mean doubling the oven temperature — you control this by choosing which categories to include.
 
 ```calcmark
 oven = 350 fahrenheit
 ```
 
-`350 fahrenheit` converts to `176.666667 celsius`. The scale factor is ignored for temperature by default, which is exactly what you want.
+`350 fahrenheit` converts to `176.666667 celsius`. The scale factor only applies to categories listed in `unit_categories`, so temperature is unaffected.
 
-**CalcMark features:** Temperature conversion (fahrenheit to celsius); temperature excluded from scale by default.
+**CalcMark features:** Temperature conversion (fahrenheit to celsius); category-based scaling control.
 
 ---
 
@@ -92,13 +92,13 @@ Each ingredient cost is doubled by the scale factor. `total_cost` sums to `$7.80
 
 | What | Scale | Convert |
 |------|-------|---------|
-| Quantities (`cups`, `ounces`) | Multiplied by factor | Converted to target system |
-| Temperature (`fahrenheit`) | Excluded by default | Converted to celsius |
-| Arbitrary units (`bananas`, `eggs`) | Multiplied by factor | No conversion (no system mapping) |
-| Currency (`$`) | Multiplied if `Currency` in `unit_categories` | Unaffected |
-| Numbers (bare) | Unaffected | Unaffected |
+| Quantities (`cups`, `ounces`) | Scaled when category is in `unit_categories` | Converted to target system |
+| Custom units (`bananas`, `eggs`) | Scaled when `Custom` is in `unit_categories` | No conversion (no system mapping) |
+| Currency (`$`) | Scaled when `Currency` is in `unit_categories` | Unaffected |
+| Temperature (`fahrenheit`) | Scaled when `Temperature` is in `unit_categories` | Converted to celsius |
+| Numbers (bare) | Scaled when `Number` is in `unit_categories` | Unaffected |
 
-To change the batch size, edit `scale`. To switch between metric and imperial, change `convert_to` to `si` or `imperial`. The rest of the document adjusts automatically.
+Every category is opt-in. To change the batch size, edit `scale`. To switch between metric and imperial, change `convert_to` to `si` or `imperial`. The rest of the document adjusts automatically.
 
 ---
 
@@ -107,11 +107,12 @@ To change the batch size, edit `scale`. To switch between metric and imperial, c
 This example showcases the following CalcMark features:
 
 - **`scale` frontmatter** — doubles every quantity with one line of YAML
-- **`unit_categories` filtering** — `Currency` opt-in makes costs scale with the batch
+- **`unit_categories` filtering** — opt-in scaling for `Mass`, `Volume`, `Currency`, `Custom`
+- **`Custom` category** — scales custom units like `bananas` and `eggs`
 - **`@scale` directive** — reference the scale factor in expressions
 - **`convert_to` frontmatter** — converts imperial to metric across the document
-- **Temperature exclusion** — oven temperature converts but does not scale
-- **Arbitrary units** — `bananas` and `eggs` scale without conversion
+- **Category-based control** — temperature converts but does not scale (not in `unit_categories`)
+- **Custom units** — `bananas` and `eggs` scale without conversion
 - **Quantities with units** — `cups`, `ounces`, `teaspoons`, `fahrenheit`
 - **Currency arithmetic** — `$` preserved through addition and division
 

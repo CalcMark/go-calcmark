@@ -15,8 +15,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// frontmatterDirectiveResolver adapts *document.Frontmatter to the
-// interpreter.DirectiveResolver interface for @directive resolution.
+// NewDirectiveResolver creates an interpreter.DirectiveResolver that adapts
+// *document.Frontmatter for @directive resolution. Used by both the document
+// evaluator and the top-level Eval API.
+func NewDirectiveResolver(fm *document.Frontmatter) interpreter.DirectiveResolver {
+	return &frontmatterDirectiveResolver{fm: fm}
+}
+
 type frontmatterDirectiveResolver struct {
 	fm *document.Frontmatter
 }
@@ -353,7 +358,7 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	evalEnv := env.Clone()
 	interp := interpreter.NewInterpreterWithEnv(evalEnv)
 	if doc != nil && doc.GetFrontmatter() != nil {
-		interp.SetDirectiveResolver(&frontmatterDirectiveResolver{fm: doc.GetFrontmatter()})
+		interp.SetDirectiveResolver(NewDirectiveResolver(doc.GetFrontmatter()))
 	}
 	results, err := interp.Eval(nodes)
 	if err != nil {
@@ -471,7 +476,7 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// Evaluate statements one by one to collect partial results even if a later statement fails
 	interp := interpreter.NewInterpreterWithEnv(e.env)
 	if doc != nil && doc.GetFrontmatter() != nil {
-		interp.SetDirectiveResolver(&frontmatterDirectiveResolver{fm: doc.GetFrontmatter()})
+		interp.SetDirectiveResolver(NewDirectiveResolver(doc.GetFrontmatter()))
 	}
 	results := make([]types.Type, 0, len(nodes))
 	var evalErr error
@@ -553,6 +558,8 @@ func applyTransforms(doc *document.Document, onlyIDs []string) {
 }
 
 // applyBlockTransform applies scale/convert_to to a single block's results.
+// Statements that explicitly reference @scale are exempt from scaling
+// to prevent double-scaling (e.g., "per_loaf = cost / @scale").
 func applyBlockTransform(node *document.BlockNode, fm *document.Frontmatter) {
 	cb, ok := node.Block.(*document.CalcBlock)
 	if !ok || cb.Error() != nil {
@@ -564,7 +571,28 @@ func applyBlockTransform(node *document.BlockNode, fm *document.Frontmatter) {
 		return
 	}
 
-	transformed := transform.ApplyToResults(results, fm.Scale, fm.ConvertTo)
+	statements := cb.Statements()
+
+	// Compute per-statement scale exemption (cached for TUI reuse).
+	exempt := make([]bool, len(results))
+	for i := range results {
+		if i < len(statements) {
+			exempt[i] = ast.ContainsScaleRef(statements[i])
+		}
+	}
+	cb.SetScaleExempt(exempt)
+
+	// Apply transforms per-result, skipping @scale-referencing statements.
+	transformed := make([]types.Type, len(results))
+	for i, r := range results {
+		if exempt[i] {
+			// Statement uses @scale explicitly — exempt from scale transform.
+			// Still apply convert_to (unit conversion is independent of scaling).
+			transformed[i] = transform.Apply(r, nil, fm.ConvertTo)
+		} else {
+			transformed[i] = transform.Apply(r, fm.Scale, fm.ConvertTo)
+		}
+	}
 	cb.SetResults(transformed)
 
 	if len(transformed) > 0 {

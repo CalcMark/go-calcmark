@@ -317,22 +317,26 @@ Use `scale` and `convert_to` in the frontmatter to transform results across an e
 
 #### Scaling
 
-Multiply all quantity results by a factor:
+Scaling is explicit — you specify which categories to scale in `unit_categories`. A bare `scale: 2` sets the factor (accessible via `@scale`) but scales nothing on its own.
 
 ```yaml
 ---
-scale: 2
+scale:
+  factor: 2
+  unit_categories: [Mass, Volume]
 ---
 ```
 
 ```text
-flour = 1.5 cups       -> 3 cups (doubled)
-eggs = 3 eggs           -> 6 eggs (doubled)
-oven = 350 fahrenheit   -> 350 fahrenheit (unchanged)
-price = $5.00           -> $5.00 (unchanged)
+flour = 1.5 cups       → 3 cups (doubled — Volume)
+eggs = 3 eggs           → 3 eggs (unchanged — custom unit, not in categories)
+oven = 350 fahrenheit   → 350 fahrenheit (unchanged — not in categories)
+price = $5.00           → $5.00 (unchanged — not in categories)
 ```
 
-`flour` displays as `3 cups` and `eggs` as `6 eggs`. Temperature and currency are unaffected by default — doubling a recipe does not double the oven temperature. To scale currency values, add `Currency` to `unit_categories` (see [Filtering by Category](#filtering-by-category) below).
+`flour` displays as `3 cups` because Volume is in the category list. `eggs` is unchanged because `eggs` is a custom unit — add `Custom` to `unit_categories` to scale it. Temperature and currency are unaffected unless you add `Temperature` or `Currency` to `unit_categories`.
+
+In the editor, scaled values show a `*` suffix in the results pane. The context footer shows `@scale = N` when you're on a scaled line.
 
 #### Converting
 
@@ -358,7 +362,9 @@ When both are present, scale applies first, then convert:
 
 ```yaml
 ---
-scale: 2
+scale:
+  factor: 2
+  unit_categories: [Mass]
 convert_to: si
 ---
 ```
@@ -367,7 +373,7 @@ convert_to: si
 butter = 4 ounces       -> 227 g (doubled, then converted)
 ```
 
-`butter` is first doubled to `8 ounces`, then converted to `227 g`.
+`butter` is first doubled to `8 ounces` (Mass is in `unit_categories`), then converted to `227 g`.
 
 #### Filtering by Category
 
@@ -384,7 +390,7 @@ convert_to:
 ---
 ```
 
-Valid categories: `Area`, `Currency`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`. These are derived from the unit definitions — run `cm help frontmatter` for the current list. `Currency` is special: it only scales when explicitly listed in `unit_categories`. Simple `scale: 2` never scales currency.
+Valid categories: `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`. `Custom` matches units not in the standard library (e.g., `bananas`, `eggs`). These are derived from the unit definitions — run `cm help frontmatter` for the current list. Use `unit_categories: [All]` to scale every category.
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [Language Reference — Frontmatter](/docs/language-reference/#frontmatter) for the full specification.
 

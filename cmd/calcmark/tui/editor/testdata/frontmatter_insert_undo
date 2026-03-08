@@ -17,8 +17,8 @@ key ctrl+f
 ----
 -- frontmatter:
 hasFrontmatter=true
-frontmatterLineCount=8
-totalLines=11
+frontmatterLineCount=10
+totalLines=13
 statusMsg="Frontmatter inserted"
 globalsCount=1
 
@@ -44,7 +44,7 @@ key ctrl+y
 ----
 -- frontmatter:
 hasFrontmatter=true
-frontmatterLineCount=8
-totalLines=11
+frontmatterLineCount=10
+totalLines=13
 statusMsg="Redo"
 globalsCount=1

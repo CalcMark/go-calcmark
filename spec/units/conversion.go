@@ -64,11 +64,11 @@ func Convert(value decimal.Decimal, fromUnit, toUnit string) (decimal.Decimal, e
 }
 
 // CategoryForUnit returns the canonical category name for a unit.
-// Returns "" for unknown/arbitrary units.
+// Returns CategoryCustom for units not in the standard library.
 func CategoryForUnit(unitName string) string {
 	info, ok := conversionRegistry[strings.ToLower(unitName)]
 	if !ok {
-		return ""
+		return CategoryCustom
 	}
 	return info.Category
 }

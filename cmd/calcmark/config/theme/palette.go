@@ -219,8 +219,8 @@ var (
 	// --- Source pane syntax highlighting (block-level) ---
 
 	SourceFrontmatter = ac(
-		"#9CA3AF",
-		"#8B95A3",
+		"#6B7280",
+		"#B0B8C4",
 	)
 
 	SourceMarkdown = ac(
@@ -426,5 +426,10 @@ var (
 	CalcBlockedFg = ac(
 		"#9CA3AF",
 		"#6B7280",
+	)
+
+	ScaleIndicator = ac(
+		"#D97706",
+		"#F59E0B",
 	)
 )

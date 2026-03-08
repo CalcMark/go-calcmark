@@ -395,19 +395,28 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 		changedMarker = m.styles.Changed.Background(pvBg).Bold(true).Render("* ")
 	}
 
+	// Scale indicator: subtle "*" suffix for values affected by the scale factor
+	scaleSuffix := ""
+	if r.IsScaled {
+		scaleStyle := lipgloss.NewStyle().
+			Foreground(theme.ScaleIndicator).
+			Background(pvBg)
+		scaleSuffix = scaleStyle.Render("*")
+	}
+
 	switch m.previewMode {
 	case PreviewFull:
 		// Full mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
-			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value)
+			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + scaleSuffix
 		}
 		// Anonymous calculation (no variable assignment) - show arrow without placeholder
-		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value)
+		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + scaleSuffix
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
 		arrow := "→ "
-		return changedMarker + valueStyle.Render(arrow+r.Value)
+		return changedMarker + valueStyle.Render(arrow+r.Value) + scaleSuffix
 	}
 
 	return ""

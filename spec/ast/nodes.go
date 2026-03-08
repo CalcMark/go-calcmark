@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -373,4 +374,44 @@ func (d *DirectiveRef) String() string {
 
 func (d *DirectiveRef) GetRange() *Range {
 	return d.Range
+}
+
+// ContainsScaleRef returns true if the AST node tree contains a
+// DirectiveRef with Directive=="scale". Used by the scale transform
+// to exempt statements that explicitly reference @scale.
+func ContainsScaleRef(node Node) bool {
+	if node == nil {
+		return false
+	}
+	switch n := node.(type) {
+	case *DirectiveRef:
+		return n.Directive == "scale"
+	case *Assignment:
+		return ContainsScaleRef(n.Value)
+	case *Expression:
+		return ContainsScaleRef(n.Expr)
+	case *BinaryOp:
+		return ContainsScaleRef(n.Left) || ContainsScaleRef(n.Right)
+	case *UnaryOp:
+		return ContainsScaleRef(n.Operand)
+	case *ComparisonOp:
+		return ContainsScaleRef(n.Left) || ContainsScaleRef(n.Right)
+	case *FunctionCall:
+		return slices.ContainsFunc(n.Arguments, ContainsScaleRef)
+	case *UnitConversion:
+		return ContainsScaleRef(n.Quantity)
+	case *NapkinConversion:
+		return ContainsScaleRef(n.Expression)
+	case *PreciseConversion:
+		return ContainsScaleRef(n.Expression)
+	case *PercentageOf:
+		return ContainsScaleRef(n.Percentage) || ContainsScaleRef(n.Value)
+	case *RateLiteral:
+		return ContainsScaleRef(n.Amount)
+	default:
+		// Leaf nodes: NumberLiteral, CurrencyLiteral, QuantityLiteral,
+		// DateLiteral, TimeLiteral, DurationLiteral,
+		// BooleanLiteral, Identifier, RelativeDateLiteral
+		return false
+	}
 }

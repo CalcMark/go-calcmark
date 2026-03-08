@@ -432,3 +432,82 @@ butter_oz = butter in ounces`
 		t.Errorf("butter_oz should stay in ounces (explicit in), got %q", ozVal)
 	}
 }
+
+// TestScaleNumber verifies that Number type scales when explicitly listed
+// in unit_categories, and that @scale exemption prevents double-scaling.
+func TestScaleNumber(t *testing.T) {
+	source := "---\nscale:\n  factor: 2\n  unit_categories: [Number]\n---\na = 10\nb = a * @scale\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	blocks := doc.GetBlocks()
+	var calcBlocks []*document.CalcBlock
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			calcBlocks = append(calcBlocks, cb)
+		}
+	}
+
+	if len(calcBlocks) == 0 {
+		t.Fatal("no calc blocks found")
+	}
+
+	// The block has two statements: a = 10 and b = a * @scale
+	cb := calcBlocks[0]
+	results := cb.Results()
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+
+	// "a = 10" → raw value 10, scaled by 2 → 20 (Number in unit_categories)
+	aVal := results[0].String()
+	if aVal != "20" {
+		t.Errorf("a: expected 20 (scaled Number), got %q", aVal)
+	}
+
+	// "b = a * @scale" → raw value 10 * 2 = 20, but @scale exempt → 20 (no double-scale)
+	bVal := results[1].String()
+	if bVal != "20" {
+		t.Errorf("b: expected 20 (@scale exempt, no double-scaling), got %q", bVal)
+	}
+}
+
+// TestScaleNumberDefaultImmune verifies that Number is immune to scale
+// when Number is NOT listed in unit_categories.
+func TestScaleNumberDefaultImmune(t *testing.T) {
+	source := "---\nscale: 3\n---\na = 10\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	blocks := doc.GetBlocks()
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			results := cb.Results()
+			if len(results) == 0 {
+				t.Fatal("no results")
+			}
+			aVal := results[0].String()
+			if aVal != "10" {
+				t.Errorf("a: expected 10 (Number immune by default), got %q", aVal)
+			}
+			return
+		}
+	}
+	t.Fatal("no calc block found")
+}

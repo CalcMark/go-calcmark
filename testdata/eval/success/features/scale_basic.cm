@@ -1,19 +1,21 @@
 ---
-scale: 4
+scale:
+  factor: 4
+  unit_categories: [Mass, Volume]
 ---
-# Scale all quantities by 4x
+# Scale Mass and Volume by 4x
 
 flour = 280 grams
 butter = 100 grams
 water = 500 ml
 
-# Arbitrary units scale too
+# Custom units — not scaled (Custom not in unit_categories)
 eggs = 3 eggs
 
-# Temperature excluded from scale by default
+# Temperature not in unit_categories — not scaled
 oven_temp = 220 celsius
 
-# Currency is immune to scale
+# Currency is not in unit_categories — not scaled
 price = $100
 
 # Duration is immune to scale

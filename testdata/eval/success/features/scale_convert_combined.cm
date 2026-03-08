@@ -1,5 +1,7 @@
 ---
-scale: 4
+scale:
+  factor: 4
+  unit_categories: [Mass, Volume]
 convert_to: imperial
 ---
 # Scale 4x then convert to imperial
@@ -8,7 +10,7 @@ flour = 280 grams
 butter = 100 grams
 water = 500 ml
 
-# Temperature converts but doesn't scale (default exclusion)
+# Temperature converts but doesn't scale (not in unit_categories)
 oven_temp = 220 celsius
 
 # Explicit unit choice overrides convert_to

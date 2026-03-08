@@ -11,6 +11,16 @@ import "slices"
 // that can opt in to scaling via unit_categories: [Currency].
 const CategoryCurrency = "Currency"
 
+// CategoryNumber is the category name for plain numeric values (no unit).
+// Like Currency, Number is not derived from StandardUnits and must be
+// explicitly listed in unit_categories to participate in scaling.
+const CategoryNumber = "Number"
+
+// CategoryCustom is the category name for custom units (e.g., "bananas", "eggs").
+// Custom units are not in StandardUnits and have no system mapping.
+// They must be explicitly listed in unit_categories to participate in scaling.
+const CategoryCustom = "Custom"
+
 func Categories() []string {
 	seen := make(map[string]bool)
 	for _, u := range StandardUnits {
@@ -18,6 +28,8 @@ func Categories() []string {
 	}
 	seen[CategoryDataSize] = true
 	seen[CategoryCurrency] = true
+	seen[CategoryNumber] = true
+	seen[CategoryCustom] = true
 
 	cats := make([]string, 0, len(seen))
 	for c := range seen {

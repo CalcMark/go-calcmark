@@ -1,0 +1,20 @@
+---
+scale:
+  factor: 2
+  unit_categories: [Number, Mass]
+---
+# Number scaling with explicit category opt-in
+
+plain_number = 10
+
+tax_rate = 0.085
+
+# Mass should also scale
+flour = 280 grams
+
+# Currency is NOT in unit_categories — should be immune
+price = $5.00
+
+# @scale exemption: explicit @scale reference skips scaling
+per_unit = plain_number / @scale
+# Expected: 5

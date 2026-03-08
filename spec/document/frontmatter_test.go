@@ -968,6 +968,37 @@ func TestParseFrontmatter_ScaleMap(t *testing.T) {
 	}
 }
 
+func TestParseFrontmatter_ScaleAllCategory(t *testing.T) {
+	source := "---\nscale:\n  factor: 3\n  unit_categories: [All]\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Scale == nil {
+		t.Fatal("expected Scale")
+	}
+	if len(fm.Scale.UnitCategories) != 1 || fm.Scale.UnitCategories[0] != "All" {
+		t.Errorf("expected [All], got %v", fm.Scale.UnitCategories)
+	}
+}
+
+func TestParseFrontmatter_ScaleCustomCategory(t *testing.T) {
+	source := "---\nscale:\n  factor: 2\n  unit_categories: [Mass, Custom]\n---\n"
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Scale == nil {
+		t.Fatal("expected Scale")
+	}
+	if len(fm.Scale.UnitCategories) != 2 {
+		t.Fatalf("expected 2 categories, got %d", len(fm.Scale.UnitCategories))
+	}
+	if fm.Scale.UnitCategories[0] != "Mass" || fm.Scale.UnitCategories[1] != "Custom" {
+		t.Errorf("expected [Mass, Custom], got %v", fm.Scale.UnitCategories)
+	}
+}
+
 func TestParseFrontmatter_ScaleValidation(t *testing.T) {
 	tests := []struct {
 		name   string

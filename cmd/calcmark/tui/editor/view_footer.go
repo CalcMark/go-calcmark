@@ -35,6 +35,16 @@ func (m Model) renderContextFooter(width int, results []LineResult) string {
 		// Get variable references if no error
 		if !state.HasError && state.IsCalcLine {
 			state.References = m.getLineReferences(m.cursorLine, results)
+
+			// When the current line is scaled, append @scale = N as a synthetic reference
+			if currentResult.IsScaled {
+				if fm := m.doc.GetFrontmatter(); fm != nil && fm.Scale != nil {
+					state.References = append(state.References, components.VarReference{
+						Name:  "@scale",
+						Value: fm.Scale.Factor.String(),
+					})
+				}
+			}
 		}
 	}
 

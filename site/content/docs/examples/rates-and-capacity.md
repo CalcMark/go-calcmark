@@ -30,7 +30,7 @@ r8 = 1000 req/min
 r9 = 50000 requests per minute
 r10 = 1500000 req/s
 
-# Arbitrary units
+# Custom units
 r11 = 20 apples/sec
 r12 = 100 widgets per minute
 r13 = 1000 cars/day

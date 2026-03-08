@@ -41,34 +41,54 @@ func Apply(result types.Type, scale *document.ScaleConfig, convertTo *document.C
 		}
 		return result
 
+	case *types.Number:
+		// Numbers are immune to scale by default. Only scaled when
+		// "Number" is explicitly listed in unit_categories.
+		if scale != nil && categoryMatches("Number", scale.UnitCategories) {
+			scaled := v.Value.Mul(scale.Factor)
+			return types.NewNumber(scaled)
+		}
+		return result
+
 	default:
-		// Duration, Number, Boolean, Date, Time — unchanged
+		// Duration, Boolean, Date, Time — unchanged
 		return result
 	}
 }
 
+// WouldScale reports whether Apply would scale this result given the scale config.
+// Used by the TUI to show a visual indicator on scaled values.
+// Scaling is always explicit: unit_categories must list the categories to scale.
+func WouldScale(result types.Type, scale *document.ScaleConfig) bool {
+	if result == nil || scale == nil || len(scale.UnitCategories) == 0 {
+		return false
+	}
+	switch v := result.(type) {
+	case *types.Quantity:
+		category := units.CategoryForUnit(v.Unit)
+		return categoryMatches(category, scale.UnitCategories)
+	case *types.Currency:
+		return categoryMatches("Currency", scale.UnitCategories)
+	case *types.Number:
+		return categoryMatches("Number", scale.UnitCategories)
+	default:
+		return false
+	}
+}
+
 // applyScaleQuantity multiplies a quantity's value by the scale factor.
-// Respects unit_categories filtering and the default Temperature exclusion.
+// Scaling is explicit: only scales when the quantity's category is listed
+// in unit_categories. No unit_categories means no scaling.
 func applyScaleQuantity(q *types.Quantity, scale *document.ScaleConfig) *types.Quantity {
-	if scale == nil {
+	if scale == nil || len(scale.UnitCategories) == 0 {
 		return q
 	}
 
 	category := units.CategoryForUnit(q.Unit)
-
-	if len(scale.UnitCategories) > 0 {
-		// Explicit categories: only scale if category matches
-		if !categoryMatches(category, scale.UnitCategories) {
-			return q
-		}
-	} else {
-		// Default: scale all except Temperature
-		if strings.EqualFold(category, "Temperature") {
-			return q
-		}
+	if !categoryMatches(category, scale.UnitCategories) {
+		return q
 	}
 
-	// Apply scale factor
 	q.Value = q.Value.Mul(scale.Factor)
 	return q
 }
@@ -86,8 +106,8 @@ func applyConvertToQuantity(q *types.Quantity, convertTo *document.ConvertToConf
 	}
 
 	category := units.CategoryForUnit(q.Unit)
-	if category == "" {
-		// Arbitrary unit (e.g., "eggs") — no system mapping
+	if category == units.CategoryCustom {
+		// Custom unit (e.g., "eggs") — no system mapping
 		return q
 	}
 
@@ -154,9 +174,10 @@ func cloneQuantity(q *types.Quantity) *types.Quantity {
 }
 
 // categoryMatches checks if a category is in the allowed list (case-insensitive).
+// The special keyword "All" matches every category.
 func categoryMatches(category string, allowed []string) bool {
 	for _, c := range allowed {
-		if strings.EqualFold(category, c) {
+		if strings.EqualFold(c, "All") || strings.EqualFold(category, c) {
 			return true
 		}
 	}

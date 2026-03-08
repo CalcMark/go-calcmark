@@ -11,7 +11,7 @@ quote_a = 8500
 quote_b = 9200
 quote_c = 7800
 
-average_quote = avg(quote_a, quote_b, quote_c)
+average_quote = average of quote_a, quote_b, quote_c
 
 ## Room Measurements
 
@@ -62,7 +62,7 @@ weekly_rate = convert_rate(daily_rate, week)
 
 Lumber arrives at 2 pallets per day over the 3-week build:
 
-total_deliveries = accumulate(2 pallets/day, 3 weeks)
+total_deliveries = 2 pallets/day over 3 weeks
 
 ## Project Budget
 

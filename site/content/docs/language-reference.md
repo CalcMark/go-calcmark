@@ -157,14 +157,15 @@ scale:
 
 **Rules:**
 
-- **Quantities** are multiplied by the factor
-- **Temperature** is excluded by default (doubling a recipe does not double the oven temperature)
-- **Currency** scales only when `Currency` is listed in `unit_categories`. Simple `scale: 2` never scales currency.
-- **Number**, **Boolean**, **Date**, and **Duration** are unaffected
-- **Rates** are immune to scale
-- When `unit_categories` is specified, only quantities in those categories are scaled
+- Scaling is **explicit**: you must specify `unit_categories` for any scaling to occur. A bare `scale: 2` sets the factor but scales nothing.
+- **Quantities** in listed categories are multiplied by the factor
+- **Currency** scales only when `Currency` is listed in `unit_categories`
+- **Number** (unitless values) scales only when `Number` is listed in `unit_categories`
+- **Boolean**, **Date**, **Duration**, and **Rate** are always immune to scale
+- The special keyword `All` matches every category: `unit_categories: [All]`
+- Expressions containing `@scale` are exempt from scaling to prevent double-scaling
 
-Valid categories: `Area`, `Currency`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
+Valid categories: `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`.
 
 ### @Directive References {#directive-references}
 
@@ -215,11 +216,11 @@ convert_to:
 
 - Quantities already in the target system are unchanged
 - Explicit `in` conversions override `convert_to` (the user chose the unit)
-- Arbitrary units (e.g., `eggs`, `servers`) have no system mapping and are skipped
+- Custom units (e.g., `eggs`, `servers`) have no system mapping and are not converted
 - Currency, numbers, and other non-quantity types are unaffected
 - Rates have their amount converted, leaving the time denominator unchanged
 
-Valid categories: `Area`, `Currency`, `DataSize`, `Energy`, `Length`, `Mass`, `Power`, `Speed`, `Temperature`, `Volume`.
+Valid categories: `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`.
 
 ### Transform Order
 
@@ -441,9 +442,9 @@ True, FALSE     Any case
 100 MB          Quantity: 100 in megabytes
 ```
 
-#### Arbitrary Units
+#### Custom Units
 
-Any identifier following a number becomes a unit. CalcMark does not require units to be predefined:
+Any identifier following a number becomes a unit. CalcMark does not require units to be predefined — these are called custom units:
 
 ```calcmark
 5 apples        Quantity: 5 apples
@@ -451,7 +452,7 @@ Any identifier following a number becomes a unit. CalcMark does not require unit
 10 servers      Quantity: 10 servers
 ```
 
-Arithmetic with matching arbitrary units preserves the unit. Mismatched arbitrary units produce an error:
+Arithmetic with matching custom units preserves the unit. Mismatched custom units produce an error:
 
 ```calcmark
 5 apples + 3 apples    -> 8 apples

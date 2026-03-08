@@ -18,9 +18,11 @@ func TestCategories_MatchesStandardUnits(t *testing.T) {
 		}
 	}
 
-	// CategoryDataSize must be included
-	if !slices.Contains(cats, CategoryDataSize) {
-		t.Errorf("CategoryDataSize (%q) not in Categories()", CategoryDataSize)
+	// Virtual categories must be included
+	for _, vc := range []string{CategoryDataSize, CategoryCurrency, CategoryNumber, CategoryCustom} {
+		if !slices.Contains(cats, vc) {
+			t.Errorf("virtual category %q not in Categories()", vc)
+		}
 	}
 
 	// Spot-check expected categories
