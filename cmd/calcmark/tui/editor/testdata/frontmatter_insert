@@ -13,7 +13,7 @@ statusMsg=""
 
 # Press Ctrl+F to insert frontmatter
 run observe=frontmatter
-key ctrl+f
+command Insert Frontmatter
 ----
 -- frontmatter:
 hasFrontmatter=true
@@ -68,7 +68,7 @@ Line 12 (z = x + y): isCalc=true value=30 error=""
 
 # Press Ctrl+F again - should show "already exists"
 run observe=frontmatter
-key ctrl+f
+command Insert Frontmatter
 ----
 -- frontmatter:
 hasFrontmatter=true

@@ -13,7 +13,7 @@ statusMsg=""
 
 # Press Ctrl+F to insert frontmatter
 run observe=frontmatter
-key ctrl+f
+command Insert Frontmatter
 ----
 -- frontmatter:
 hasFrontmatter=true
