@@ -26,6 +26,11 @@ func (m *Model) prepareNavigation(extendSelection bool) {
 }
 
 func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
+	if m.HasSelection() {
+		startLine, startCol, _, _ := m.GetSelectionRange()
+		m.collapseSelectionTo(startLine, startCol)
+		return m, nil
+	}
 	m.prepareNavigation(false)
 	if m.cursorLine > 0 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
@@ -34,6 +39,11 @@ func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
+	if m.HasSelection() {
+		_, _, endLine, endCol := m.GetSelectionRange()
+		m.collapseSelectionTo(endLine, endCol)
+		return m, nil
+	}
 	m.prepareNavigation(false)
 	if m.cursorLine < m.TotalLines()-1 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
@@ -42,6 +52,11 @@ func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
+	if m.HasSelection() {
+		startLine, startCol, _, _ := m.GetSelectionRange()
+		m.collapseSelectionTo(startLine, startCol)
+		return m, nil
+	}
 	m.prepareNavigation(false)
 	if m.cursorCol > 0 {
 		m.cursorCol--
@@ -53,6 +68,11 @@ func (m Model) handleLeftKey() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
+	if m.HasSelection() {
+		_, _, endLine, endCol := m.GetSelectionRange()
+		m.collapseSelectionTo(endLine, endCol)
+		return m, nil
+	}
 	m.prepareNavigation(false)
 	if m.cursorCol < runeLen(m.editBuf) {
 		m.cursorCol++

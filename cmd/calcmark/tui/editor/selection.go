@@ -40,6 +40,26 @@ func (m *Model) ClearSelection() {
 	m.selectionAnchorCol = -1
 }
 
+// collapseSelectionTo clears the active selection and moves the cursor to the
+// given position. Used by unmodified arrow keys to collapse selection to a
+// boundary without mutating document content.
+func (m *Model) collapseSelectionTo(line, col int) {
+	m.undoManager.ForceBoundary()
+
+	if line != m.cursorLine {
+		// Cross-line: flush dirty buffer before moving
+		if m.editBufLoaded {
+			m.saveCurrentLine(true)
+		}
+		m.editBufLoaded = false
+	}
+
+	m.cursorLine = line
+	m.cursorCol = col
+	m.ClearSelection()
+	m.adjustScrollForCursor()
+}
+
 // GetSelectionRange returns the normalized selection range where start <= end.
 // Returns (startLine, startCol, endLine, endCol).
 // Returns (-1, -1, -1, -1) if no selection.
