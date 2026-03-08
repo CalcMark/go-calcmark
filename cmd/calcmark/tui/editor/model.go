@@ -337,6 +337,10 @@ type Model struct {
 	// Save prompt context — tracks what action triggered the save prompt
 	// so the handler knows what to do after the user responds.
 	pendingSaveAction PendingAction
+
+	// Debug flags
+	debugKeys    bool     // When true, log raw key events to file
+	debugKeyFile *os.File // Log destination for debug key events
 }
 
 // ========================================
@@ -424,6 +428,17 @@ func NewWithFile(filepath string, doc *document.Document) Model {
 // If not called, the zero-value Formatter falls back to en-US defaults.
 func (m *Model) SetFormatter(f display.Formatter) {
 	m.formatter = f
+}
+
+// SetDebugKeys enables logging of raw key events to /tmp/cm-keys.log.
+func (m *Model) SetDebugKeys(enabled bool) {
+	m.debugKeys = enabled
+	if enabled && m.debugKeyFile == nil {
+		f, err := os.Create("/tmp/cm-keys.log")
+		if err == nil {
+			m.debugKeyFile = f
+		}
+	}
 }
 
 // displayFormat formats a value using the model's locale-aware formatter.

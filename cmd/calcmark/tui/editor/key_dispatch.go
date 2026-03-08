@@ -4,6 +4,8 @@ package editor
 // Routes key events to mode-specific handlers and global shortcuts.
 
 import (
+	"fmt"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 )
@@ -13,6 +15,11 @@ import (
 // 2. Mode-specific handlers (help, autocomplete, command menu, file picker, etc.)
 // 3. Default editing mode
 func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.debugKeys && m.debugKeyFile != nil {
+		fmt.Fprintf(m.debugKeyFile, "[KEY] code=%d mod=%v text=%q str=%q\n",
+			msg.Code, msg.Mod, msg.Text, msg.String())
+	}
+
 	// Clear status message on any key — but only in modes that don't use
 	// the status bar for prompts. Modal overlays manage their own state.
 	switch m.mode {
@@ -43,8 +50,6 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m.executeCommandByName("New")
 		case 's':
 			return m.executeCommandByName("Save")
-		case 'e':
-			return m.executeCommandByName("Export")
 		case 'o':
 			return m.executeCommandByName("Open")
 		case 'f':
@@ -146,6 +151,12 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// reliability across terminal protocols (Kitty, legacy, etc.).
 	// Legacy macOS terminals map Cmd→Ctrl, so Cmd+Shift+Z arrives as
 	// Ctrl+Shift+Z — handled here for consistent redo behavior.
+	//
+	// NOTE: Ctrl+A and Ctrl+E follow emacs/readline conventions (Home/End)
+	// rather than GUI conventions (SelectAll/Export). Legacy terminals
+	// send Cmd+Left as ctrl+a and Cmd+Right as ctrl+e, so these must
+	// map to navigation. SelectAll is available via Cmd+A (Super block)
+	// and the command menu.
 	if msg.Mod.Contains(tea.ModCtrl) && !msg.Mod.Contains(tea.ModSuper) {
 		hasShift := msg.Mod.Contains(tea.ModShift)
 		switch msg.Code {
@@ -161,8 +172,17 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		case 'v':
 			return m.handlePaste()
 		case 'a':
-			m.SelectAll()
-			return m, nil
+			// Emacs Home — also handles legacy Cmd+Left (sent as ctrl+a)
+			if hasShift {
+				return m.handleShiftHomeKey()
+			}
+			return m.handleHomeKey()
+		case 'e':
+			// Emacs End — also handles legacy Cmd+Right (sent as ctrl+e)
+			if hasShift {
+				return m.handleShiftEndKey()
+			}
+			return m.handleEndKey()
 		}
 	}
 
@@ -175,13 +195,15 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 		switch msg.Code {
 		case tea.KeyUp:
-			if !hasCtrl && !hasAlt {
-				return m.handleShiftUpKey()
+			if hasCtrl || hasAlt {
+				return m.handleShiftCtrlHomeKey() // Select to document start
 			}
+			return m.handleShiftUpKey()
 		case tea.KeyDown:
-			if !hasCtrl && !hasAlt {
-				return m.handleShiftDownKey()
+			if hasCtrl || hasAlt {
+				return m.handleShiftCtrlEndKey() // Select to document end
 			}
+			return m.handleShiftDownKey()
 		case tea.KeyLeft:
 			if hasCtrl || hasAlt {
 				return m.handleShiftCtrlLeftKey()
@@ -209,14 +231,19 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Handle Alt+Arrow for word navigation (Option+Arrow on macOS)
-	// This is an alternative to Ctrl+Arrow which is often captured by macOS
+	// Handle Alt+Arrow for word/document navigation (Option+Arrow on macOS).
+	// Alt+Left/Right = word navigation (alternative to Ctrl+Arrow).
+	// Alt+Up/Down = document start/end (fallback for Terminal.app where Cmd is consumed).
 	if msg.Mod.Contains(tea.ModAlt) {
 		switch msg.String() {
 		case "alt+left":
 			return m.handleCtrlLeftKey()
 		case "alt+right":
 			return m.handleCtrlRightKey()
+		case "alt+up":
+			return m.handleCtrlHomeKey()
+		case "alt+down":
+			return m.handleCtrlEndKey()
 		}
 		// On macOS terminals, Option+Arrow often sends ESC+b or ESC+f
 		// These appear as Alt+b and Alt+f (standard readline/emacs bindings)
@@ -269,10 +296,6 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleDeleteKey()
 	case "ctrl+p":
 		return m.handleCtrlP()
-	case "ctrl+d":
-		return m.handleCtrlD()
-	case "ctrl+u":
-		return m.handleCtrlU()
 	case "ctrl+k":
 		// Delete current line
 		return m.handleDeleteLine()

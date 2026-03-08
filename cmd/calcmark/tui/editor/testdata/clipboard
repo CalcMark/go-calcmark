@@ -1,6 +1,6 @@
 # Test Ctrl+X cut - document should be empty after cutting all text
 run observe=lines
-key ctrl+a
+key cmd+a
 key ctrl+x
 ----
 -- lines:
@@ -11,7 +11,7 @@ Visual lines:
 
 # Test Ctrl+C with selection copies (doesn't quit)
 run observe=debug
-key ctrl+a
+key cmd+a
 key ctrl+c
 ----
 -- debug:
@@ -26,7 +26,7 @@ mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scro
 
 # Test cut can be undone
 run observe=lines
-key ctrl+a
+key cmd+a
 key ctrl+x
 ----
 -- lines:
@@ -56,7 +56,7 @@ mode=StateDefault cursorLine=0 cursorCol=10 cursorVisual=0 cursorHighlight=0 scr
 
 # Test cut updates modified flag
 run observe=debug
-key ctrl+a
+key cmd+a
 key ctrl+x
 ----
 -- debug:

@@ -1,6 +1,6 @@
 # Test: Ctrl+A then Left collapses to document start (selection start)
 run observe=debug
-key ctrl+a
+key cmd+a
 key left
 ----
 -- debug:
@@ -8,7 +8,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test: Ctrl+A then Right collapses to document end (selection end)
 run observe=debug
-key ctrl+a
+key cmd+a
 key right
 ----
 -- debug:
@@ -16,7 +16,7 @@ mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scro
 
 # Test: Ctrl+A then Up collapses to document start (selection start)
 run observe=debug
-key ctrl+a
+key cmd+a
 key up
 ----
 -- debug:
@@ -24,7 +24,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test: Ctrl+A then Down collapses to document end (selection end)
 run observe=debug
-key ctrl+a
+key cmd+a
 key down
 ----
 -- debug:
@@ -93,7 +93,7 @@ mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=4 cursorHighlight=4 scro
 
 # Test: Document content unchanged after Ctrl+A then Left (no duplication)
 run observe=lines
-key ctrl+a
+key cmd+a
 key left
 ----
 -- lines:
@@ -107,7 +107,7 @@ Visual lines:
 
 # Test: Document content unchanged after Ctrl+A then Down (no duplication)
 run observe=lines
-key ctrl+a
+key cmd+a
 key down
 ----
 -- lines:

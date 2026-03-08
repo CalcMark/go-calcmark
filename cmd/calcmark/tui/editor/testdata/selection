@@ -1,13 +1,13 @@
 # Test Ctrl+A selects all text - verify selection state is set
 run observe=debug
-key ctrl+a
+key cmd+a
 ----
 -- debug:
 mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="" selectionAnchorLine=0 selectionAnchorCol=0 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Test right arrow clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key right
 ----
 -- debug:
@@ -15,7 +15,7 @@ mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scro
 
 # Test left arrow clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key left
 ----
 -- debug:
@@ -23,7 +23,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test up arrow clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key up
 ----
 -- debug:
@@ -31,7 +31,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test down arrow clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key down
 ----
 -- debug:
@@ -39,7 +39,7 @@ mode=StateDefault cursorLine=3 cursorCol=6 cursorVisual=3 cursorHighlight=3 scro
 
 # Test typing clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 type x
 ----
 -- debug:
@@ -47,7 +47,7 @@ mode=StateDefault cursorLine=0 cursorCol=1 cursorVisual=0 cursorHighlight=0 scro
 
 # Test backspace clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key backspace
 ----
 -- debug:
@@ -55,7 +55,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test delete clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key delete
 ----
 -- debug:
@@ -63,7 +63,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test Home key clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key home
 ----
 -- debug:
@@ -71,7 +71,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test End key clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key end
 ----
 -- debug:
@@ -79,7 +79,7 @@ mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scro
 
 # Test Page Up clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key pgup
 ----
 -- debug:
@@ -87,7 +87,7 @@ mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scro
 
 # Test Page Down clears selection
 run observe=debug
-key ctrl+a
+key cmd+a
 key pgdown
 ----
 -- debug:
@@ -96,7 +96,7 @@ mode=StateDefault cursorLine=0 cursorCol=8 cursorVisual=0 cursorHighlight=0 scro
 # Test Ctrl+A then view render does not panic (regression test for 7dbe80f)
 # This test exercises renderLineWithCursor which panicked on cursor > content length
 run observe=view
-key ctrl+a
+key cmd+a
 ----
 -- view:
 [48;2;33;29;25m[48;2;33;29;25m [1;38;2;255;255;255;48;2;33;29;25mSource[48;2;33;29;25m [48;2;33;29;25m                                       [m[38;2;55;65;81;48;2;33;29;25m│[m[48;2;26;23;20m[48;2;26;23;20m [1;38;2;255;255;255;48;2;26;23;20mResults[48;2;26;23;20m [48;2;26;23;20m                       [m␤

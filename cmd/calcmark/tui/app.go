@@ -28,6 +28,8 @@ type App struct {
 
 	// Display formatting (locale-aware), preserved across mode switches
 	formatter display.Formatter
+	// Debug flags, preserved across mode switches
+	debugKeys bool
 
 	width    int
 	height   int
@@ -64,6 +66,12 @@ func (a *App) SetFormatter(f display.Formatter) {
 	a.formatter = f
 	a.repl.SetFormatter(f)
 	a.editor.SetFormatter(f)
+}
+
+// SetDebugKeys enables logging of raw key events to stderr.
+func (a *App) SetDebugKeys(enabled bool) {
+	a.debugKeys = enabled
+	a.editor.SetDebugKeys(enabled)
 }
 
 // Init implements tea.Model.
@@ -128,6 +136,7 @@ func (a *App) switchMode(msg shared.SwitchModeMsg) (tea.Model, tea.Cmd) {
 			a.editor = editor.New(doc)
 		}
 		a.editor.SetFormatter(a.formatter)
+		a.editor.SetDebugKeys(a.debugKeys)
 		a.mode = shared.ModeEditor
 
 	case shared.ModeREPL:
