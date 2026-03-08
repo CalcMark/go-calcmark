@@ -108,7 +108,7 @@ mode=StateDefault cursorLine=2 cursorCol=8 cursorVisual=2 cursorHighlight=2 scro
 
 # Ctrl+A sets selection, then shift+right extends from existing anchor
 run observe=debug
-key ctrl+a
+key cmd+a
 key shift+right
 ----
 -- debug:

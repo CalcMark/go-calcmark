@@ -151,6 +151,12 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// reliability across terminal protocols (Kitty, legacy, etc.).
 	// Legacy macOS terminals map Cmd→Ctrl, so Cmd+Shift+Z arrives as
 	// Ctrl+Shift+Z — handled here for consistent redo behavior.
+	//
+	// NOTE: Ctrl+A and Ctrl+E follow emacs/readline conventions (Home/End)
+	// rather than GUI conventions (SelectAll/Export). Legacy terminals
+	// send Cmd+Left as ctrl+a and Cmd+Right as ctrl+e, so these must
+	// map to navigation. SelectAll is available via Cmd+A (Super block)
+	// and the command menu.
 	if msg.Mod.Contains(tea.ModCtrl) && !msg.Mod.Contains(tea.ModSuper) {
 		hasShift := msg.Mod.Contains(tea.ModShift)
 		switch msg.Code {
@@ -166,8 +172,17 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		case 'v':
 			return m.handlePaste()
 		case 'a':
-			m.SelectAll()
-			return m, nil
+			// Emacs Home — also handles legacy Cmd+Left (sent as ctrl+a)
+			if hasShift {
+				return m.handleShiftHomeKey()
+			}
+			return m.handleHomeKey()
+		case 'e':
+			// Emacs End — also handles legacy Cmd+Right (sent as ctrl+e)
+			if hasShift {
+				return m.handleShiftEndKey()
+			}
+			return m.handleEndKey()
 		}
 	}
 

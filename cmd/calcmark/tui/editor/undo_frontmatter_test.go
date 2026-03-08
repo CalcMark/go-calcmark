@@ -39,6 +39,8 @@ func sendKey(t *testing.T, m tea.Model, keyName string) tea.Model {
 		msg = tea.KeyPressMsg{Code: 'y', Mod: tea.ModCtrl}
 	case "ctrl+f":
 		msg = tea.KeyPressMsg{Code: 'f', Mod: tea.ModCtrl}
+	case "cmd+a":
+		msg = tea.KeyPressMsg{Code: 'a', Mod: tea.ModSuper}
 	case "shift+up":
 		msg = tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModShift}
 	case "shift+down":

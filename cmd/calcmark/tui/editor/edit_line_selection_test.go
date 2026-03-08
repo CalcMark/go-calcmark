@@ -255,7 +255,7 @@ func TestEditLineSelection_NonCursorLineInFullView(t *testing.T) {
 	var model tea.Model = m
 
 	// Select all: Ctrl+A
-	model = sendKey(t, model, "ctrl+a")
+	model = sendKey(t, model, "cmd+a")
 
 	ed := model.(Model)
 	if !ed.HasSelection() {

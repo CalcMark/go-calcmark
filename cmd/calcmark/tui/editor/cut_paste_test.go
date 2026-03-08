@@ -507,7 +507,7 @@ func TestCutPaste_SelectAllThenType(t *testing.T) {
 	var model tea.Model = m
 
 	// Ctrl+A then type replacement
-	model = sendKey(t, model, "ctrl+a")
+	model = sendKey(t, model, "cmd+a")
 	model = typeText(t, model, "z = 30")
 
 	// Verify editBuf has the typed text (immediate state)
@@ -538,7 +538,7 @@ func TestCutPaste_SelectAllWithFrontmatter(t *testing.T) {
 
 	var model tea.Model = m
 
-	model = sendKey(t, model, "ctrl+a")
+	model = sendKey(t, model, "cmd+a")
 	ed := model.(Model)
 	if !ed.HasSelection() {
 		t.Fatal("expected selection after ctrl+a")

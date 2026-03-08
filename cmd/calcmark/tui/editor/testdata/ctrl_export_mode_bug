@@ -15,18 +15,18 @@ run observe=debug
 key ctrl+e
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=16 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="hello world testhello world testhello world test linetest thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=68 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="hello world testhello world testhello world test linetest thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Navigation keys continue to work normally after Ctrl+E
 run observe=debug
 key ctrl+left
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=12 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="hello world testhello world testhello world test linetest thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=66 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="hello world testhello world testhello world test linetest thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
 
 # Regular left arrow also works
 run observe=debug
 key left
 ----
 -- debug:
-mode=StateDefault cursorLine=0 cursorCol=11 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="hello world testhello world testhello world test linetest thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+mode=StateDefault cursorLine=0 cursorCol=65 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=5 editBuf="hello world testhello world testhello world test linetest thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
