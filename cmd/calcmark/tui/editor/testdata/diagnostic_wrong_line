@@ -1,0 +1,8 @@
+# Test: Error diagnostic appears on correct line (issue #36)
+# Document: b = 12 apples (line 0), 10 / b (line 1)
+# The error "cannot divide..." must appear on line 1, NOT line 0.
+run observe=results
+----
+-- results:
+Line 0 (b = 12 apples): value=12 apples, error=""
+Line 1 (10 / b): value=, error="eval_error: cannot divide number (10) and quantity (12 apples)"

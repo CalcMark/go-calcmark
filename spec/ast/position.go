@@ -24,3 +24,20 @@ type Range struct {
 func (r Range) String() string {
 	return fmt.Sprintf("%s-%s", r.Start, r.End)
 }
+
+// SpanNodes returns a Range spanning from the start of left to the end of right.
+// Returns the best partial range if one side is nil; returns nil if both are nil.
+func SpanNodes(left, right Node) *Range {
+	lr := left.GetRange()
+	rr := right.GetRange()
+	if lr == nil && rr == nil {
+		return nil
+	}
+	if lr == nil {
+		return rr
+	}
+	if rr == nil {
+		return lr
+	}
+	return &Range{Start: lr.Start, End: rr.End}
+}

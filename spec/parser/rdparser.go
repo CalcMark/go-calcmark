@@ -275,6 +275,7 @@ func (p *RecursiveDescentParser) parseOr() (ast.Node, error) {
 			Operator: "or",
 			Left:     left,
 			Right:    right,
+			Range:    ast.SpanNodes(left, right),
 		}
 	}
 
@@ -299,6 +300,7 @@ func (p *RecursiveDescentParser) parseAnd() (ast.Node, error) {
 			Operator: "and",
 			Left:     left,
 			Right:    right,
+			Range:    ast.SpanNodes(left, right),
 		}
 	}
 
@@ -324,6 +326,7 @@ func (p *RecursiveDescentParser) parseComparison() (ast.Node, error) {
 			Operator: string(op.Value),
 			Left:     left,
 			Right:    right,
+			Range:    ast.SpanNodes(left, right),
 		}
 	}
 
@@ -349,6 +352,7 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 			Operator: string(op.Value),
 			Left:     left,
 			Right:    right,
+			Range:    ast.SpanNodes(left, right),
 		}
 	}
 
@@ -446,6 +450,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 			Operator: string(op.Value),
 			Left:     left,
 			Right:    right,
+			Range:    ast.SpanNodes(left, right),
 		}
 	}
 
@@ -701,6 +706,7 @@ func (p *RecursiveDescentParser) parseExponent() (ast.Node, error) {
 			Operator: string(op.Value),
 			Left:     left,
 			Right:    right,
+			Range:    ast.SpanNodes(left, right),
 		}, nil
 	}
 
@@ -726,6 +732,7 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 		return &ast.UnaryOp{
 			Operator: string(op.Value),
 			Operand:  operand,
+			Range:    operand.GetRange(),
 		}, nil
 	}
 
@@ -744,6 +751,7 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 		return &ast.UnaryOp{
 			Operator: "not",
 			Operand:  operand,
+			Range:    operand.GetRange(),
 		}, nil
 	}
 
@@ -1091,6 +1099,7 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 				Operator: "+",
 				Left:     baseDate,
 				Right:    durationNode,
+				Range:    ast.SpanNodes(baseDate, durationNode),
 			}, nil
 		}
 

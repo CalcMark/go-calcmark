@@ -93,6 +93,7 @@ z = 30`
 			"context_footer_self_ref",             // TestEditorCatwalkContextFooterSelfRef
 			"autocomplete_undo",                   // TestEditorCatwalkAutocompleteUndo
 			"autocomplete_nl",                     // TestEditorCatwalkAutocompleteNL
+			"diagnostic_wrong_line",               // TestEditorCatwalkDiagnosticLine
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {

@@ -514,7 +514,8 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 			}
 			// Use node's Range if available to get line number.
 			// All AST nodes implement GetRange() via the Node interface.
-			if r := node.GetRange(); r != nil {
+			// Guard against zero-valued ranges (some nodes use &ast.Range{}).
+			if r := node.GetRange(); r != nil && r.Start.Line > 0 {
 				diag.Line = r.Start.Line
 				diag.Column = r.Start.Column
 			}
