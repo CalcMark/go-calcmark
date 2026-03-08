@@ -82,6 +82,7 @@ func runRemote() error {
 	}
 	app := tui.NewEditorApp(doc, "")
 	app.SetFormatter(localeFormatter())
+	app.SetDebugKeys(debugKeysFlag)
 	runTUIApp(app)
 	return nil
 }
