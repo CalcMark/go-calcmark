@@ -486,7 +486,8 @@ func getGrowthFeatures() []Feature {
 			Syntax:      "compound(principal, rate, periods, modifier?)",
 			Description: "Calculate compound growth over time periods",
 			Aliases: []Alias{
-				{Name: "compound...by...over", Parseable: true, Example: "compound $1000 by 5% monthly over 10 years"},
+				{Name: "compound...by...over", Parseable: true, Example: "compound $1000 by 5% over 10 years"},
+				{Name: "compound...by...monthly...over", Parseable: true, Example: "compound $1000 by 5% monthly over 10 years"},
 			},
 			Example:   "compound(1000, 5%, 10 years, monthly) → 1647.01",
 			NLExample: "compound $1000 by 5% monthly over 10 years",
