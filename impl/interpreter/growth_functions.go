@@ -113,6 +113,23 @@ func validatePeriods(periods decimal.Decimal) error {
 	return nil
 }
 
+// frequencyAdverbs are the adverbial forms that indicate financial compounding.
+// Base period names (month, quarter, year) are Mode 2 semantic annotations.
+var frequencyAdverbs = map[string]bool{
+	"daily":     true,
+	"weekly":    true,
+	"monthly":   true,
+	"quarterly": true,
+	"yearly":    true,
+}
+
+// isFrequencyAdverb returns true for adverbial period forms (monthly, quarterly, etc.)
+// that indicate financial compounding, as opposed to base period names (month, quarter)
+// which are Mode 2 semantic annotations.
+func isFrequencyAdverb(name string) bool {
+	return frequencyAdverbs[strings.ToLower(name)]
+}
+
 // --- Eval function wrappers ---
 
 func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
@@ -202,7 +219,36 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 		return wrapResult(result, principalVal), nil
 	}
 
-	// Mode 2: explicit period (e.g., "month") — rate is per-period, periods = duration in that unit
+	// Bare frequency adverb (e.g., "monthly", "quarterly") — treat as
+	// compounding frequency, equivalent to "compounded:monthly".
+	// Distinguished from base period names (month, quarter) which are Mode 2 annotations.
+	if isFrequencyAdverb(modName) {
+		periodsPerYear, _ := types.PeriodToPeriodsPerYear(modName)
+		ppyDec := decimal.NewFromInt(int64(periodsPerYear))
+
+		totalYears := periodsNum
+		if periodUnit != "" && periodUnit != "year" && periodUnit != "years" {
+			dur, err := types.NewDuration(periodsNum, periodUnit)
+			if err != nil {
+				return nil, fmt.Errorf("compound: invalid duration unit %q: %w", periodUnit, err)
+			}
+			yearDur, err := dur.Convert("years")
+			if err != nil {
+				return nil, fmt.Errorf("compound: cannot convert %s to years: %w", periodUnit, err)
+			}
+			totalYears = yearDur.Value
+		}
+
+		totalPeriods := ppyDec.Mul(totalYears)
+		if err := validatePeriods(totalPeriods); err != nil {
+			return nil, err
+		}
+
+		result := compoundGrowthFinancial(principal, rate, ppyDec, totalYears)
+		return wrapResult(result, principalVal), nil
+	}
+
+	// Mode 2: explicit period (e.g., "year") — rate is per-period, periods = duration in that unit
 	// Treat as simple compound growth with the given number of periods
 	if err := validatePeriods(periodsNum); err != nil {
 		return nil, err
