@@ -1,7 +1,7 @@
 ---
 title: "feat: sum() function and avg() quantity/duration upgrade"
 type: feat
-status: active
+status: completed
 date: 2026-03-09
 brainstorm: docs/brainstorms/2026-03-09-sum-function-brainstorm.md
 related_issues:
@@ -250,23 +250,23 @@ func aggregateValues(args []types.Type) (sum decimal.Decimal, firstArg types.Typ
 
 ## Acceptance Criteria
 
-- [ ] `sum(1, 2, 3)` → `6`
-- [ ] `sum($100, $200, $300)` → `$600`
-- [ ] `sum(1 kg, 500 g)` → `1.5 kg`
-- [ ] `sum(1 g, 10 lbs)` → converts lbs to grams, auto-scales at display
-- [ ] `sum(1 hour, 30 minutes)` → `1.5 hours`
-- [ ] `sum of $574.2K, $650K, $368.64K, $475.2K` → `$2.07M`
-- [ ] NL and traditional syntax produce identical results
-- [ ] `avg(1 kg, 2 kg)` → `1.5 kg` (upgrade)
-- [ ] `sum(10%, 20%, 30%)` → `60%`
-- [ ] `avg(1 hour, 30 minutes)` → `45 minutes` or `0.75 hours` (upgrade)
-- [ ] `avg(10%, 20%, 30%)` → `20%` (upgrade)
-- [ ] `average of 1 kg, 500 g` → same result as `avg(1 kg, 500 g)`
-- [ ] sum(x) with 1 arg → clear error
-- [ ] Mixed types → clear error messages naming the function
-- [ ] `task quality` passes
-- [ ] All consistency tests pass (function_consistency_test.go)
-- [ ] AST Range set on all NL-parsed FunctionCall nodes
+- [x] `sum(1, 2, 3)` → `6`
+- [x] `sum($100, $200, $300)` → `$600`
+- [x] `sum(1 kg, 500 g)` → `1.5 kg`
+- [x] `sum(1 g, 10 lbs)` → converts lbs to grams, auto-scales at display
+- [x] `sum(1 hour, 30 minutes)` → `1.5 hours`
+- [x] `sum of $574.2K, $650K, $368.64K, $475.2K` → `$2.07M`
+- [x] NL and traditional syntax produce identical results
+- [x] `avg(1 kg, 2 kg)` → `1.5 kg` (upgrade)
+- [x] `sum(10%, 20%, 30%)` → `60%`
+- [x] `avg(1 hour, 30 minutes)` → `0.75 hours` (upgrade)
+- [x] `avg(10%, 20%, 30%)` → `20%` (upgrade)
+- [x] `average of 1 kg, 500 g` → same result as `avg(1 kg, 500 g)`
+- [x] sum(x) with 1 arg → clear error
+- [x] Mixed types → clear error messages naming the function
+- [x] `task quality` passes
+- [x] All consistency tests pass (function_consistency_test.go)
+- [x] AST Range set on all NL-parsed FunctionCall nodes
 
 ## Files Changed Summary
 

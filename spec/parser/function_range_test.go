@@ -23,10 +23,12 @@ func TestAllFunctionCallsHaveRange(t *testing.T) {
 	}{
 		// Math — functional
 		{"avg functional", "avg(1, 2, 3)"},
+		{"sum functional", "sum(1, 2, 3)"},
 		{"sqrt functional", "sqrt(16)"},
 
 		// Math — NL
 		{"average of NL", "average of 1, 2, 3"},
+		{"sum of NL", "sum of 1, 2, 3"},
 		{"square root of NL", "square root of 16"},
 
 		// Growth — functional
