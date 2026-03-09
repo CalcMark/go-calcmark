@@ -23,7 +23,7 @@ years_to_retire = 30
 retirement_fund = compound $50000 by 7% over 30
 ```
 
-`compound(principal, rate, periods)` applies the rate once per period. After 30 years at 7%, your $50K grows to ~$380.6K.
+Without a frequency modifier, `compound()` uses simple growth: `A = P × (1+r)^n`. The 7% rate is applied once per period for 30 periods, growing $50K to ~$380.6K.
 
 **CalcMark features:** `compound()` function for exponential growth; currency literals (`$50000`); percentage literals (`7%`).
 
@@ -31,13 +31,19 @@ retirement_fund = compound $50000 by 7% over 30
 
 ## Monthly Compounding
 
-Real-world investments often compound more frequently than once per year. The `monthly` modifier splits the annual rate into 12 smaller applications per year.
+Real-world investments compound more frequently than once per year. Adding `monthly` switches to the financial compounding formula:
+
+```text
+A = P × (1 + r/n)^(n × t)
+```
+
+where `r` = annual rate, `n` = 12 (monthly), `t` = years.
 
 ```calcmark
 retirement_monthly = compound($50000, 7%, 30 years, monthly)
 ```
 
-Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual compounding over the same 30 years. The `monthly` frequency adverb is a fourth argument that changes the compounding frequency. You can also use `quarterly`, `weekly`, `daily`, or `yearly`.
+Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual compounding over the same 30 years. The frequency adverb (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) is what triggers this formula. Without it, you get simple growth.
 
 **CalcMark features:** `monthly` frequency modifier; `30 years` unit annotation on the periods argument.
 

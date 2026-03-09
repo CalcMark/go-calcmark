@@ -707,18 +707,36 @@ compress 1 GB using gzip (NL form)
 
 #### Compound Growth
 
-Calculate compound growth over time. Supports simple compounding, per-period rates, and financial compounding frequencies:
+The 4th argument controls which formula `compound()` uses. This matters -- `monthly` and `month` give different answers:
+
+**Without a frequency modifier** -- simple compound growth:
+
+```text
+A = P × (1 + r)^n
+```
 
 ```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
-compound(500 customers, 20%, 12)                     -> 4458.05 customers
-compound($1000, 5%, 10 years, monthly)               -> $1647.01
-compound($1000, 5%, 10 years, quarterly)             -> $1643.62
-
-compound $1000 by 5% over 10 years                   (NL form)
-compound $1000 by 5% monthly over 10 years
-compound $1000 by 5% per month over 12 months
+compound $1000 by 5% over 10 years                   -> $1628.89
 ```
+
+The rate is applied once per period. 5% for 10 periods = `$1000 × 1.05^10`.
+
+**With a frequency adverb** (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) -- financial compounding:
+
+```text
+A = P × (1 + r/n)^(n × t)
+```
+
+where `r` is the annual rate, `n` is the compounding frequency, and `t` is time in years.
+
+```calcmark
+compound($1000, 5%, 10, monthly)                     -> $1647.01
+compound($1000, 5%, 10, quarterly)                    -> $1643.62
+compound $1000 by 5% monthly over 10 years            -> $1647.01
+```
+
+The 5% annual rate is split into 12 monthly applications (5%/12 per month), compounded 120 times over 10 years. More frequent compounding yields higher returns: monthly ($1,647) > quarterly ($1,643) > yearly ($1,629).
 
 **Arguments:**
 
@@ -727,7 +745,11 @@ compound $1000 by 5% per month over 12 months
 | 1 | principal | Starting amount (number, currency, or quantity) |
 | 2 | rate | Growth rate as percentage |
 | 3 | periods | Number of periods (number or duration) |
-| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly` (or `compounded monthly` etc.) |
+| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly`. Triggers financial compounding formula |
+
+{{< callout type="info" >}}
+**`month` vs `monthly`**: The noun form `month` is a label -- `compound($1000, 5%, 12, month)` means "5% per month, 12 times" and uses simple growth. The adverb `monthly` triggers financial compounding -- `compound($1000, 5%, 10, monthly)` means "5% annual rate, compounded 12x/year for 10 years."
+{{< /callout >}}
 
 #### Linear Growth
 

@@ -753,9 +753,16 @@ CalcMark provides `compound`, `grow`, and `depreciate` for modeling growth and d
 
 ### Compound Growth
 
+**Simple compound growth** -- `A = P(1+r)^n`:
+
 ```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
+```
+
+**Financial compounding** -- `A = P(1+r/n)^(nt)` -- triggered by a frequency adverb (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`):
+
+```calcmark
 compound($1000, 5%, 10 years, monthly)               -> $1647.01
 compound($1000, 5%, 10 years, quarterly)             -> $1643.62
 ```
@@ -768,7 +775,7 @@ compound $1000 by 5% monthly over 10 years
 compound $1000 by 5% per month over 12 months
 ```
 
-Bare frequency adverbs (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) trigger financial compounding: A = P(1+r/n)^(nt). The longer `compounded monthly` form also works.
+The frequency adverb is what switches the formula. Without it, the rate applies once per period. With `monthly`, the annual rate is split into 12 applications per year.
 
 ### Linear Growth
 
