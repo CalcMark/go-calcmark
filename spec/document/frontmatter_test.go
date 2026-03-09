@@ -420,41 +420,78 @@ price_eur = @globals.base_price in EUR
 	}
 }
 
-func TestParseFrontmatter_UnknownKey(t *testing.T) {
+func TestParseFrontmatter_UnknownKeysIgnored(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
-		errMsg string
 	}{
 		{
-			name: "unknown top-level key",
+			name: "unknown top-level key silently ignored",
 			source: `---
 base_date: Jan 15 2025
 ---`,
-			errMsg: "unknown frontmatter key 'base_date'; user variables must go under 'globals:'",
 		},
 		{
-			name: "mixed known and unknown",
+			name: "standard markdown frontmatter keys",
 			source: `---
+title: My Document
+date: 2026-03-09
+tags: [finance, planning]
+description: A sample document
+---`,
+		},
+		{
+			name: "mixed known and unknown keys",
+			source: `---
+title: Budget
 exchange:
   USD_EUR: 0.92
-my_var: 42
+tags: [budget]
+globals:
+  tax: "0.08"
 ---`,
-			errMsg: "unknown frontmatter key 'my_var'",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := ParseFrontmatter(tt.source)
-			if err == nil {
-				t.Error("expected error for unknown key")
+			fm, _, err := ParseFrontmatter(tt.source)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			if !contains(err.Error(), tt.errMsg) {
-				t.Errorf("expected error containing %q, got %q", tt.errMsg, err.Error())
+			if fm == nil {
+				t.Error("expected non-nil frontmatter")
 			}
 		})
+	}
+}
+
+func TestParseFrontmatter_UnknownKeysWithCalcMarkKeys(t *testing.T) {
+	source := `---
+title: Budget Report
+exchange:
+  USD_EUR: 0.92
+date: 2026-03-09
+globals:
+  tax: "0.08"
+description: Monthly budget
+---`
+
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// CalcMark keys should be parsed correctly
+	if len(fm.Exchange) != 1 {
+		t.Errorf("expected 1 exchange rate, got %d", len(fm.Exchange))
+	}
+	if len(fm.Globals) != 1 {
+		t.Errorf("expected 1 global, got %d", len(fm.Globals))
+	}
+	if fm.Globals["tax"] != "0.08" {
+		t.Errorf("expected global tax=0.08, got %q", fm.Globals["tax"])
 	}
 }
 

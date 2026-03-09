@@ -617,12 +617,14 @@ globals:
 			wantErr: true,
 		},
 		{
-			name: "unknown frontmatter key rejected",
+			name: "unknown frontmatter key silently ignored",
 			input: `---
-my_var: 42
+title: My Document
+globals:
+  x: "42"
 ---
-my_var`,
-			wantErr: true,
+@globals.x`,
+			want: "42",
 		},
 	}
 

@@ -79,15 +79,6 @@ type Frontmatter struct {
 	rawSource string
 }
 
-// reservedKeys lists all top-level frontmatter keys reserved for CalcMark grammar.
-// Unknown keys at the top level are rejected to ensure forward compatibility.
-var reservedKeys = map[string]bool{
-	"exchange":   true,
-	"globals":    true,
-	"scale":      true,
-	"convert_to": true,
-}
-
 // validUnitCategories maps lowercase category names to their canonical form.
 // Derived from units.Categories() at init time so it stays in sync with the
 // actual unit definitions and never drifts.
@@ -455,20 +446,7 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	// Extract YAML content (between the delimiters)
 	yamlContent := strings.Join(lines[1:closeIdx], "\n")
 
-	// First, parse into a generic map to check for unknown keys
-	var rawMap map[string]any
-	if err := yaml.Unmarshal([]byte(yamlContent), &rawMap); err != nil {
-		return nil, "", formatYAMLError(err)
-	}
-
-	// Validate that all top-level keys are reserved
-	for key := range rawMap {
-		if !reservedKeys[key] {
-			return nil, "", fmt.Errorf("unknown frontmatter key '%s'; user variables must go under 'globals:'", key)
-		}
-	}
-
-	// Now parse into typed struct
+	// Parse into typed struct (unknown keys are silently ignored by yaml.Unmarshal)
 	var raw frontmatterYAML
 	if err := yaml.Unmarshal([]byte(yamlContent), &raw); err != nil {
 		return nil, "", formatYAMLError(err)

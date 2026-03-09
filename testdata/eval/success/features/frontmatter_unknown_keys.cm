@@ -1,0 +1,17 @@
+---
+title: SaaS Services P&L
+date: 2026-03-09
+tags: [finance, saas, planning]
+description: Monthly cost analysis for SaaS services
+globals:
+  tax_rate: "0.08"
+exchange:
+  USD_EUR: 0.92
+---
+
+# SaaS Services
+
+base_cost = 500 USD
+tax = base_cost * @globals.tax_rate
+total = base_cost + tax
+euro_total = total in EUR
