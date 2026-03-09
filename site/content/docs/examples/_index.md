@@ -17,6 +17,7 @@ Explore complete CalcMark files that demonstrate real-world use cases. Each exam
 - [Datacenter Build Cost](datacenter-cost/) -- Full lifecycle cost analysis with growth, depreciation, and exchange rates
 - [Investment & Growth](investment-growth/) -- Compound growth, depreciation, and linear growth for financial modeling
 - [Home Renovation](home-renovation/) -- Averages, square roots, constants, booleans, and rate conversions
+- [Services P&L](services-pl/) -- Post-sales consulting P&L with percentage widening, globals, and scenario analysis
 
 ## Feature Reference
 
