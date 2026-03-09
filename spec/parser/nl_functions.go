@@ -41,11 +41,14 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 		}, nil
 	}
 
-	// For variadic NL functions (average of, sum of), parse comma-separated list
+	// For variadic NL functions (average of, sum of), parse comma-separated list.
+	// Use parseNLArg() — NOT parseExpression() — so that a trailing "as napkin"
+	// or "as precise" is left for parseUnary() to wrap around the entire function
+	// call, rather than being consumed as part of the last argument.
 	var args []ast.Node
 
 	// Parse first argument
-	arg, err := p.parseExpression()
+	arg, err := p.parseNLArg()
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +56,7 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 
 	// Parse remaining arguments
 	for p.match(lexer.COMMA) {
-		arg, err := p.parseExpression()
+		arg, err := p.parseNLArg()
 		if err != nil {
 			return nil, err
 		}
@@ -65,6 +68,31 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 		Arguments: args,
 		Range:     funcRange,
 	}, nil
+}
+
+// parseNLArg parses a single NL function argument: handles unary +/- and
+// primary expressions but stops before "as" so that "as napkin/precise"
+// applies to the entire function call, not just the last argument.
+func (p *RecursiveDescentParser) parseNLArg() (ast.Node, error) {
+	if p.match(lexer.PLUS, lexer.MINUS) {
+		if err := p.enterDepth(); err != nil {
+			return nil, err
+		}
+		defer p.exitDepth()
+
+		op := p.previous()
+		operand, err := p.parseNLArg()
+		if err != nil {
+			return nil, err
+		}
+		return &ast.UnaryOp{
+			Operator: string(op.Value),
+			Operand:  operand,
+			Range:    operand.GetRange(),
+		}, nil
+	}
+
+	return p.parsePrimary()
 }
 
 // parseNLReadFunction parses: read <quantity> from <identifier>

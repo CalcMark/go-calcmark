@@ -504,10 +504,10 @@ zstd_compressed = compress(500 MB, zstd)`
 		t.Logf("VIEW:\n%s", view)
 		t.Error("Preview should show computed result '341 MB' for gzip_compressed")
 	}
-	// zstd: compress(500 MB, zstd) = 500 * 0.285714 ≈ 142.857 MB
-	if !strings.Contains(view, "142.857") {
+	// zstd: compress(500 MB, zstd) = 500 * 0.285714 ≈ 143 MB (rounded for display)
+	if !strings.Contains(view, "143 MB") {
 		t.Logf("VIEW:\n%s", view)
-		t.Error("Preview should show computed result containing '142.857' for zstd_compressed")
+		t.Error("Preview should show computed result containing '143 MB' for zstd_compressed")
 	}
 }
 

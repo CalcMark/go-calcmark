@@ -88,7 +88,12 @@ func (f Formatter) FormatQuantity(q *types.Quantity) string {
 	if normUnit != q.Unit {
 		result = f.formatNormalizedQuantity(normValue, normUnit)
 	} else {
-		result = f.formatWithSuffix(q.Value, q.Unit)
+		// Round for human readability unless precise display requested
+		displayValue := q.Value
+		if !q.IsPrecise {
+			displayValue = roundForDisplay(displayValue)
+		}
+		result = f.formatWithSuffix(displayValue, q.Unit)
 	}
 
 	if q.IsNapkin {

@@ -73,6 +73,7 @@ func TestFormatQuantity(t *testing.T) {
 		{"large GB normalized", "23400000", "GB", "22.3 PB"},        // the original problem case!
 		{"1000 meters to km", "1000", "m", "1 km"},                  // meters → kilometers
 		{"5280 feet to miles", "5280", "feet", "1 mi"},              // feet → miles
+		{"fractional lb rounded", "1.1941138678655463", "lb", "1.19 lb"}, // unit conversion result: round to 2dp
 	}
 
 	for _, tt := range tests {

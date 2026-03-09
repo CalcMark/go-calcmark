@@ -90,3 +90,37 @@ func TestNapkinFormat(t *testing.T) {
 		})
 	}
 }
+
+// TestNapkinOnStandaloneNLFunction verifies that "as napkin" applies to the
+// entire NL function result, not just the last argument.
+func TestNapkinOnStandaloneNLFunction(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "sum of as napkin", input: "sum of 1 lb, 3 g, 3 oz as napkin\n"},
+		{name: "average of as napkin", input: "average of 10, 20, 30 as napkin\n"},
+		{name: "sum of as precise", input: "sum of $100, $200 as precise\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) unexpected error: %v", tt.input, err)
+			}
+			if len(nodes) == 0 {
+				t.Fatalf("Parse(%q) returned no nodes", tt.input)
+			}
+
+			// The top-level node should be a NapkinConversion or PreciseConversion
+			// wrapping a FunctionCall — NOT a bare FunctionCall.
+			switch nodes[0].(type) {
+			case *ast.NapkinConversion, *ast.PreciseConversion:
+				// correct
+			default:
+				t.Errorf("Parse(%q) expected NapkinConversion or PreciseConversion wrapping function, got %T", tt.input, nodes[0])
+			}
+		})
+	}
+}
