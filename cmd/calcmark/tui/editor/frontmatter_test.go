@@ -448,11 +448,28 @@ tax = base * @globals.tax_rate
 		t.Errorf("Expected 7 frontmatter lines, got %d", fmCount)
 	}
 
-	// Simulate editing: add another unknown key via redetectBlockTypes
-	// This exercises the live-editing path
+	// Simulate editing: redetectBlockTypes exercises the live-editing path
 	m.redetectBlockTypes()
 	if m.frontmatterErr != nil {
 		t.Fatalf("frontmatterErr after redetect: %v", m.frontmatterErr)
+	}
+
+	// CRITICAL: Verify unknown keys survive the save path.
+	// getDocumentContent() -> GetLines() -> Serialize() must preserve
+	// unknown keys via rawSource, not drop them during reconstruction.
+	savedContent := m.getDocumentContent()
+	if !strings.Contains(savedContent, "title: Monthly Budget") {
+		t.Errorf("Save path dropped unknown key 'title'; got:\n%s", savedContent)
+	}
+	if !strings.Contains(savedContent, "date: 2026-03-09") {
+		t.Errorf("Save path dropped unknown key 'date'; got:\n%s", savedContent)
+	}
+	if !strings.Contains(savedContent, "tags:") {
+		t.Errorf("Save path dropped unknown key 'tags'; got:\n%s", savedContent)
+	}
+	// CalcMark keys must also survive
+	if !strings.Contains(savedContent, "tax_rate") {
+		t.Errorf("Save path dropped CalcMark global 'tax_rate'; got:\n%s", savedContent)
 	}
 }
 
