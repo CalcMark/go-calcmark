@@ -416,7 +416,8 @@ func parseUnitCategories(m map[string]any, directive string) ([]string, error) {
 //   - Start at line 1 with exactly "---"
 //   - End with a line containing exactly "---"
 //   - Contain valid YAML between the delimiters
-//   - Only use reserved keys at top level (exchange, globals, scale, convert_to)
+//   - Unknown top-level keys are silently ignored; only CalcMark keys are processed
+//     (exchange, globals, scale, convert_to)
 //
 // If no frontmatter is present, returns (nil, source, nil).
 func ParseFrontmatter(source string) (*Frontmatter, string, error) {
