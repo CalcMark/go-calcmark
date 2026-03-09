@@ -160,6 +160,54 @@ func TestCompoundGrowthMode3(t *testing.T) {
 	}
 }
 
+// TestCompoundBareFrequencyModifier verifies that bare frequency identifiers
+// (e.g., "monthly") produce the same result as the "compounded monthly" form.
+// Regression test for #40: compound() was ignoring bare period modifiers.
+func TestCompoundBareFrequencyModifier(t *testing.T) {
+	tests := []struct {
+		name  string
+		bare  string
+		equiv string
+	}{
+		{
+			name:  "monthly",
+			bare:  "compound($1000, 5%, 10 years, monthly)",
+			equiv: "compound($1000, 5%, 10 years, compounded monthly)",
+		},
+		{
+			name:  "quarterly",
+			bare:  "compound($1000, 5%, 10 years, quarterly)",
+			equiv: "compound($1000, 5%, 10 years, compounded quarterly)",
+		},
+		{
+			name:  "yearly",
+			bare:  "compound($1000, 5%, 10 years, yearly)",
+			equiv: "compound($1000, 5%, 10 years, compounded yearly)",
+		},
+		{
+			name:  "weekly",
+			bare:  "compound($1000, 5%, 10 years, weekly)",
+			equiv: "compound($1000, 5%, 10 years, compounded weekly)",
+		},
+		{
+			name:  "daily",
+			bare:  "compound($1000, 5%, 10 years, daily)",
+			equiv: "compound($1000, 5%, 10 years, compounded daily)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := evalGrowthLine(t, tt.bare)
+			want := evalGrowthLine(t, tt.equiv)
+			if got != want {
+				t.Errorf("bare %q = %q, but %q = %q (should be identical)",
+					tt.bare, got, tt.equiv, want)
+			}
+		})
+	}
+}
+
 // TestCompoundGrowthMode3_Ordering verifies that more frequent compounding
 // produces higher returns (yearly < quarterly < monthly < weekly < daily).
 func TestCompoundGrowthMode3_Ordering(t *testing.T) {
