@@ -143,15 +143,38 @@ All metric scripts live in `.claude/skills/github-project/scripts/`:
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `lead-time.sh` | Issue created → now (snapshot; true lead time measured at release) | `.claude/skills/github-project/scripts/lead-time.sh <ISSUE_NUMBER>` |
-| `cycle-time.sh` | First commit → last commit on branch (active work duration) | `.claude/skills/github-project/scripts/cycle-time.sh <BRANCH>` |
+| `cycle-time.sh` | First commit → last commit for an issue (active work duration) | `.claude/skills/github-project/scripts/cycle-time.sh <ISSUE_NUMBER> [BRANCH]` |
 | `pr-metrics.sh` | PR size (additions, deletions, files) | `.claude/skills/github-project/scripts/pr-metrics.sh <PR_NUMBER>` |
-| `issue-summary.sh` | Full completion summary | `.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> <BRANCH> [PR_NUMBER]` |
+| `issue-summary.sh` | Full completion summary (auto-detects release) | `.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> [BRANCH] [PR_NUMBER]` |
+| `release-velocity.sh` | Post velocity Discussion for a release | `.claude/skills/github-project/scripts/release-velocity.sh <TAG>` |
+| `helpers.sh` | Shared functions (sourced by other scripts) | `source .claude/skills/github-project/scripts/helpers.sh` |
+
+`cycle-time.sh` finds commits associated with an issue through multiple signals:
+1. Commits mentioning `(#N)` in the message (conventional commit trailers)
+2. Commits linked to PRs that reference the issue
+3. Commits on an explicit branch (optional fallback)
+4. Commit SHAs mentioned in the issue body or comments
 
 Run the summary script when handing work to the human:
 
 ```bash
-.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> <BRANCH> [PR_NUMBER]
+.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> [BRANCH] [PR_NUMBER]
 ```
+
+### Release Velocity Discussion
+
+After every release, post a velocity report as a GitHub Discussion in the Announcements category:
+
+```bash
+.claude/skills/github-project/scripts/release-velocity.sh v1.6.5
+```
+
+This is called automatically at the end of the `/release` skill (Step 9). It:
+1. Finds all issues referenced in commits between the previous tag and this tag
+2. Calculates lead time (created → release) and cycle time (first → last commit) for each
+3. Posts a Discussion with a metrics table and link to release notes
+
+The `/release` skill MUST call this script after Step 8 (post-release summary).
 
 ### Future: `gh velocity` Extension
 
