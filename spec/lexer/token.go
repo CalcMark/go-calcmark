@@ -88,10 +88,12 @@ const (
 	// Reserved function names (cannot be used as variables)
 	FUNC_AVG  // "avg" - canonical name
 	FUNC_SQRT // "sqrt" - canonical name
+	FUNC_SUM  // "sum" - canonical name
 
 	// Multi-token function keywords (aliases)
 	FUNC_AVERAGE_OF     // "average of" → maps to "avg"
 	FUNC_SQUARE_ROOT_OF // "square root of" → maps to "sqrt"
+	FUNC_SUM_OF         // "sum of" → maps to "sum"
 
 	// Date keywords
 	DATE_TODAY     // "today"
@@ -240,10 +242,14 @@ func (tt TokenType) String() string {
 		return "FUNC_AVG"
 	case FUNC_SQRT:
 		return "FUNC_SQRT"
+	case FUNC_SUM:
+		return "FUNC_SUM"
 	case FUNC_AVERAGE_OF:
 		return "FUNC_AVERAGE_OF"
 	case FUNC_SQUARE_ROOT_OF:
 		return "FUNC_SQUARE_ROOT_OF"
+	case FUNC_SUM_OF:
+		return "FUNC_SUM_OF"
 	case DATE_TODAY:
 		return "DATE_TODAY"
 	case DATE_TOMORROW:

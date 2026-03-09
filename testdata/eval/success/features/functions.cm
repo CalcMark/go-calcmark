@@ -42,6 +42,40 @@ root = sqrt(16)
 calculated = average of 100, 200, 300
 side = square root of 25
 
+## Sum Function
+
+sum(1, 2, 3)
+sum(10, 20, 30, 40)
+sum($100, $200, $300)
+sum(1 kg, 500 g)
+sum(1 hour, 30 minutes)
+sum(10%, 20%, 30%)
+
+## Sum with Variables
+
+cost_a = $574200
+cost_b = $650000
+cost_c = $368640
+total_cost = sum(cost_a, cost_b, cost_c)
+
+## Sum Natural Language
+
+sum of 1, 2, 3
+sum of $100, $200, $300
+sum of 1 kg, 500 g
+
+## Sum with Expressions
+
+p = 100
+q = 200
+r = 300
+computed = sum(p * 2, q, r)
+
+## Nested Sum and Avg
+
+sum(avg(10, 20), avg(30, 40))
+avg(sum(1, 2), sum(3, 4))
+
 ## Mixed Syntax in Same Document
 
 Traditional syntax:
@@ -52,3 +86,12 @@ total2 = average of 1, 2, 3
 
 Both should produce same result:
 same = total1 == total2
+
+Traditional sum:
+total3 = sum(1, 2, 3)
+
+Natural language sum:
+total4 = sum of 1, 2, 3
+
+Both sum forms should produce same result:
+same_sum = total3 == total4

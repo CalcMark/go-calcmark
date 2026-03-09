@@ -300,6 +300,184 @@ func TestFunctionTypePreservation(t *testing.T) {
 	})
 }
 
+// TestSumTypePreservation verifies sum() returns correct types.
+func TestSumTypePreservation(t *testing.T) {
+	t.Run("sum returns Number for plain numbers", func(t *testing.T) {
+		result, err := evalExpr("sum(1, 2, 3)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		num, ok := result.(*types.Number)
+		if !ok {
+			t.Errorf("sum() should return *types.Number, got %T", result)
+		}
+		if !num.Value.Equal(decimal.NewFromInt(6)) {
+			t.Errorf("expected 6, got %v", num.Value)
+		}
+	})
+
+	t.Run("sum preserves currency", func(t *testing.T) {
+		result, err := evalExpr("sum($100, $200, $300)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		cur, ok := result.(*types.Currency)
+		if !ok {
+			t.Fatalf("sum($100,$200,$300) should return *types.Currency, got %T", result)
+		}
+		if !cur.Value.Equal(decimal.NewFromInt(600)) {
+			t.Errorf("expected 600, got %v", cur.Value)
+		}
+		if cur.Symbol != "$" {
+			t.Errorf("expected symbol $, got %s", cur.Symbol)
+		}
+	})
+
+	t.Run("sum preserves quantity with conversion", func(t *testing.T) {
+		result, err := evalExpr("sum(1 kg, 500 g)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		qty, ok := result.(*types.Quantity)
+		if !ok {
+			t.Fatalf("sum(1 kg, 500 g) should return *types.Quantity, got %T", result)
+		}
+		expected := decimal.NewFromFloat(1.5)
+		if !qty.Value.Equal(expected) {
+			t.Errorf("expected 1.5, got %v", qty.Value)
+		}
+		if qty.Unit != "kg" {
+			t.Errorf("expected unit kg, got %s", qty.Unit)
+		}
+	})
+
+	t.Run("sum preserves duration with conversion", func(t *testing.T) {
+		result, err := evalExpr("sum(1 hour, 30 minutes)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		dur, ok := result.(*types.Duration)
+		if !ok {
+			t.Fatalf("sum(1 hour, 30 minutes) should return *types.Duration, got %T", result)
+		}
+		expected := decimal.NewFromFloat(1.5)
+		if !dur.Value.Equal(expected) {
+			t.Errorf("expected 1.5, got %v", dur.Value)
+		}
+		if dur.Unit != "hour" {
+			t.Errorf("expected unit hour, got %s", dur.Unit)
+		}
+	})
+
+	t.Run("sum preserves percentage", func(t *testing.T) {
+		result, err := evalExpr("sum(10%, 20%, 30%)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		pct, ok := result.(*types.Percentage)
+		if !ok {
+			t.Fatalf("sum(10%%, 20%%, 30%%) should return *types.Percentage, got %T", result)
+		}
+		expected := decimal.NewFromFloat(0.6)
+		if !pct.Value.Equal(expected) {
+			t.Errorf("expected 0.6, got %v", pct.Value)
+		}
+	})
+
+	t.Run("sum rejects mixed types", func(t *testing.T) {
+		_, err := evalExpr("sum($100, 50)")
+		if err == nil {
+			t.Error("sum($100, 50) should error on mixed currency/number")
+		}
+	})
+
+	t.Run("sum rejects incompatible quantities", func(t *testing.T) {
+		_, err := evalExpr("sum(1 kg, 5 meters)")
+		if err == nil {
+			t.Error("sum(1 kg, 5 meters) should error on incompatible dimensions")
+		}
+	})
+}
+
+// TestAvgQuantityDuration verifies avg() handles Quantity and Duration.
+func TestAvgQuantityDuration(t *testing.T) {
+	t.Run("avg quantity with conversion", func(t *testing.T) {
+		result, err := evalExpr("avg(1 kg, 500 g)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		qty, ok := result.(*types.Quantity)
+		if !ok {
+			t.Fatalf("avg(1 kg, 500 g) should return *types.Quantity, got %T", result)
+		}
+		expected := decimal.NewFromFloat(0.75)
+		if !qty.Value.Equal(expected) {
+			t.Errorf("expected 0.75, got %v", qty.Value)
+		}
+		if qty.Unit != "kg" {
+			t.Errorf("expected unit kg, got %s", qty.Unit)
+		}
+	})
+
+	t.Run("avg duration", func(t *testing.T) {
+		result, err := evalExpr("avg(1 hour, 2 hours)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		dur, ok := result.(*types.Duration)
+		if !ok {
+			t.Fatalf("avg(1 hour, 2 hours) should return *types.Duration, got %T", result)
+		}
+		expected := decimal.NewFromFloat(1.5)
+		if !dur.Value.Equal(expected) {
+			t.Errorf("expected 1.5, got %v", dur.Value)
+		}
+	})
+
+	t.Run("avg percentage", func(t *testing.T) {
+		result, err := evalExpr("avg(10%, 20%, 30%)")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		pct, ok := result.(*types.Percentage)
+		if !ok {
+			t.Fatalf("avg(10%%, 20%%, 30%%) should return *types.Percentage, got %T", result)
+		}
+		expected := decimal.NewFromFloat(0.2)
+		if !pct.Value.Equal(expected) {
+			t.Errorf("expected 0.2, got %v", pct.Value)
+		}
+	})
+}
+
+// TestSumAvgNLParity verifies sum/sum of and avg/average of produce identical results.
+func TestSumAvgNLParity(t *testing.T) {
+	tests := []struct {
+		name        string
+		traditional string
+		nl          string
+	}{
+		{"sum numbers", "sum(1, 2, 3)", "sum of 1, 2, 3"},
+		{"sum currency", "sum($100, $200)", "sum of $100, $200"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r1, err := evalExpr(tt.traditional)
+			if err != nil {
+				t.Fatalf("traditional %q error: %v", tt.traditional, err)
+			}
+			r2, err := evalExpr(tt.nl)
+			if err != nil {
+				t.Fatalf("NL %q error: %v", tt.nl, err)
+			}
+			if r1.String() != r2.String() {
+				t.Errorf("%q = %s but %q = %s", tt.traditional, r1.String(), tt.nl, r2.String())
+			}
+		})
+	}
+}
+
 // TestOriginalNapkinBugRegression tests the exact scenario from the napkin
 // bug fixed in 09-01: accumulate(5mb/s, 1 day) as napkin should return
 // Quantity (~400 GB), not Number (430K).

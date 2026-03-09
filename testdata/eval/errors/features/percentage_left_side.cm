@@ -1,0 +1,10 @@
+# Percentage Left-Side Error
+
+Percentages must appear on the right side of + or -.
+Putting a percentage on the left is ambiguous — did you mean to add/subtract the value?
+
+## Left-side percentage with + (error)
+20% + 100
+
+## Left-side percentage with - (error)
+10% - 50

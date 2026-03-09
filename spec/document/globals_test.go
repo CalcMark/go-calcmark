@@ -17,7 +17,6 @@ func TestParseGlobals_Numbers(t *testing.T) {
 		{"decimal", "3.14", decimal.NewFromFloat(3.14)},
 		{"with suffix K", "1.5K", decimal.NewFromInt(1500)},
 		{"with suffix M", "10M", decimal.NewFromInt(10_000_000)},
-		{"percentage", "25%", decimal.NewFromFloat(0.25)},
 	}
 
 	for _, tt := range tests {
@@ -43,6 +42,29 @@ func TestParseGlobals_Numbers(t *testing.T) {
 			}
 		})
 	}
+
+	// Percentage globals produce *types.Percentage
+	t.Run("percentage", func(t *testing.T) {
+		globals := map[string]string{"x": "25%"}
+		parsed, err := ParseGlobals(globals)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		val, ok := parsed.Values["x"]
+		if !ok {
+			t.Fatal("expected 'x' in parsed values")
+		}
+
+		pct, ok := val.(*types.Percentage)
+		if !ok {
+			t.Fatalf("expected Percentage, got %T", val)
+		}
+
+		if !pct.Value.Equal(decimal.NewFromFloat(0.25)) {
+			t.Errorf("expected 0.25, got %v", pct.Value)
+		}
+	})
 }
 
 func TestParseGlobals_Quantities(t *testing.T) {

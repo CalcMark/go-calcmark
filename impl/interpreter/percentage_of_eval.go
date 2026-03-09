@@ -27,6 +27,8 @@ func (interp *Interpreter) evalPercentageOf(n *ast.PercentageOf) (types.Type, er
 	// Extract the percentage as a decimal (already converted from % form)
 	var percentDecimal decimal.Decimal
 	switch p := percentResult.(type) {
+	case *types.Percentage:
+		percentDecimal = p.Value
 	case *types.Number:
 		percentDecimal = p.Value
 	default:

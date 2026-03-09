@@ -17,6 +17,8 @@ func calculateDowntime(availability, timePeriod types.Type) (*types.Duration, er
 	var availabilityFraction decimal.Decimal
 
 	switch avail := availability.(type) {
+	case *types.Percentage:
+		availabilityFraction = avail.Value
 	case *types.Number:
 		availabilityFraction = avail.Value
 	default:

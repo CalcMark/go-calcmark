@@ -36,6 +36,25 @@ root = sqrt(16)
 calculated = average of 100, 200, 300
 side = square root of 25
 
+## Sum Function
+
+sum(1, 2, 3)
+sum(10, 20, 30, 40)
+sum($100, $200)
+sum(1 kg, 500 g)
+sum(1 hour, 30 minutes)
+
+## Sum Natural Language
+
+sum of 1, 2, 3
+sum of $100, $200, $300
+sum of 1 kg, 500 g
+
+## Sum in Assignments
+
+total = sum(1, 2, 3)
+result = sum of 10, 20, 30
+
 ## Mixed Syntax in Same Document
 
 Traditional syntax:

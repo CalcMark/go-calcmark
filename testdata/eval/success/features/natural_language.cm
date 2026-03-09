@@ -31,6 +31,14 @@ transfer 500 MB across global wifi
 transfer 100 MB across local ten_gig
 transfer 10 GB across continental hundred_gig
 
+## sum of
+sum of 1, 2, 3
+sum of 10, 20, 30, 40, 50
+sum of $100, $200
+sum of 1 kg, 500 g
+sum of 1 hour, 30 minutes
+sum of 10%, 20%
+
 ## NL functions with variable references
 data = 1 GB
 compress data using gzip

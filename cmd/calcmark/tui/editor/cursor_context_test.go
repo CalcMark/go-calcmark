@@ -51,7 +51,7 @@ func TestGetCursorContext(t *testing.T) {
 			wantFuncName:  "avg",
 			wantArgIndex:  2,
 			wantParamName: "values",
-			wantParamType: semantic.ArgTypeNumber,
+			wantParamType: semantic.ArgTypeAny,
 		},
 		{
 			name:          "nested function - inner",

@@ -62,7 +62,13 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"avg": {
 		Name: "avg",
 		Params: []ParamSpec{
-			{Name: "values", Type: ArgTypeNumber, Variadic: true, Examples: []string{"1, 2, 3", "10, 20", "x, y, z"}},
+			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"1, 2, 3", "10, 20", "$100, $200"}},
+		},
+	},
+	"sum": {
+		Name: "sum",
+		Params: []ParamSpec{
+			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"1, 2, 3", "$100, $200", "1 kg, 500 g"}},
 		},
 	},
 	"sqrt": {

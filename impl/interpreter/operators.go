@@ -67,6 +67,38 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
+	// Percentage arithmetic widening: when a Percentage appears on the RIGHT
+	// side of + or -, apply it proportionally to the left operand.
+	// "salary + 32%" means "salary * 1.32" (increase by 32%).
+	// "price - 20%" means "price * 0.80" (decrease by 20%).
+	//
+	// Percentage on the LEFT with a non-Percentage right operand is an error.
+	// Percentage + Percentage does decimal addition (32% + 10% = 42%).
+	if operator == "+" || operator == "-" {
+		if rightPct, ok := right.(*types.Percentage); ok {
+			if _, leftIsPct := left.(*types.Percentage); !leftIsPct {
+				return evalPercentageWidening(left, rightPct, operator)
+			}
+		}
+		if _, leftIsPct := left.(*types.Percentage); leftIsPct {
+			if _, rightIsPct := right.(*types.Percentage); !rightIsPct {
+				return nil, fmt.Errorf("cannot add percentage to %s; percentage must appear on the right (e.g., value %s %s)",
+					formatTypeForError(right), operator, left.(*types.Percentage).String())
+			}
+		}
+	}
+
+	// Percentage normalization for * and /: extract the decimal value.
+	// "100 * 20%" = "100 * 0.2" = 20. No widening on multiplication.
+	if operator == "*" || operator == "/" || operator == "%" || operator == "^" {
+		if pct, ok := left.(*types.Percentage); ok {
+			return evalBinaryOperation(types.NewNumber(pct.Value), right, operator)
+		}
+		if pct, ok := right.(*types.Percentage); ok {
+			return evalBinaryOperation(left, types.NewNumber(pct.Value), operator)
+		}
+	}
+
 	// Normalize unitless quantities to numbers before type dispatch.
 	// Unitless quantities arise from accumulate/over on unitless rates,
 	// or from rate widening on unitless rates (e.g., 100/second → Amount{100, ""}).
@@ -251,6 +283,18 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
+	// Percentage + Percentage → Percentage (decimal add/sub)
+	if leftPct, ok := left.(*types.Percentage); ok {
+		if rightPct, ok := right.(*types.Percentage); ok {
+			switch operator {
+			case "+":
+				return types.NewPercentage(leftPct.Value.Add(rightPct.Value)), nil
+			case "-":
+				return types.NewPercentage(leftPct.Value.Sub(rightPct.Value)), nil
+			}
+		}
+	}
+
 	// Provide helpful error messages for common mistakes
 	return nil, unsupportedOperationError(left, right, operator)
 }
@@ -284,6 +328,43 @@ func evalNumberOperation(left, right *types.Number, operator string) (types.Type
 	}
 
 	return types.NewNumber(result), nil
+}
+
+// evalPercentageWidening applies percentage widening to a left operand.
+// value + pct → value * (1 + pct), value - pct → value * (1 - pct).
+// The result preserves the left operand's type.
+func evalPercentageWidening(left types.Type, pct *types.Percentage, operator string) (types.Type, error) {
+	one := decimal.NewFromInt(1)
+	var multiplier decimal.Decimal
+	if operator == "+" {
+		multiplier = one.Add(pct.Value)
+	} else {
+		multiplier = one.Sub(pct.Value)
+	}
+
+	switch v := left.(type) {
+	case *types.Number:
+		return types.NewNumber(v.Value.Mul(multiplier)), nil
+	case *types.Currency:
+		return types.NewCurrency(v.Value.Mul(multiplier), v.Symbol), nil
+	case *types.Quantity:
+		return &types.Quantity{
+			Value:      v.Value.Mul(multiplier),
+			Unit:       v.Unit,
+			IsNapkin:   v.IsNapkin,
+			IsExplicit: v.IsExplicit,
+			IsPrecise:  v.IsPrecise,
+		}, nil
+	case *types.Duration:
+		return &types.Duration{Value: v.Value.Mul(multiplier), Unit: v.Unit}, nil
+	case *types.Rate:
+		return &types.Rate{
+			Amount:  &types.Quantity{Value: v.Amount.Value.Mul(multiplier), Unit: v.Amount.Unit},
+			PerUnit: v.PerUnit,
+		}, nil
+	default:
+		return nil, fmt.Errorf("cannot apply percentage to %s", formatTypeForError(left))
+	}
 }
 
 // evalDateDurationOperation handles date ± duration.
@@ -378,6 +459,17 @@ func evalUnaryOperation(operand types.Type, operator string) (types.Type, error)
 		}
 	}
 
+	if pct, ok := operand.(*types.Percentage); ok {
+		switch operator {
+		case "-":
+			return types.NewPercentage(pct.Value.Neg()), nil
+		case "+":
+			return pct, nil
+		default:
+			return nil, fmt.Errorf("unknown unary operator: %s", operator)
+		}
+	}
+
 	if cur, ok := operand.(*types.Currency); ok {
 		switch operator {
 		case "-":
@@ -416,6 +508,21 @@ func evalUnaryOperation(operand types.Type, operator string) (types.Type, error)
 
 // evalComparison performs comparison operations.
 func evalComparison(left, right types.Type, operator string) (types.Type, error) {
+	// Percentage comparisons
+	if leftPct, ok := left.(*types.Percentage); ok {
+		if rightPct, ok := right.(*types.Percentage); ok {
+			return compareNumbers(leftPct.Value, rightPct.Value, operator), nil
+		}
+		if rightNum, ok := right.(*types.Number); ok {
+			return compareNumbers(leftPct.Value, rightNum.Value, operator), nil
+		}
+	}
+	if leftNum, ok := left.(*types.Number); ok {
+		if rightPct, ok := right.(*types.Percentage); ok {
+			return compareNumbers(leftNum.Value, rightPct.Value, operator), nil
+		}
+	}
+
 	// Number comparisons
 	if leftNum, ok := left.(*types.Number); ok {
 		if rightNum, ok := right.(*types.Number); ok {
@@ -550,6 +657,8 @@ func formatTypeForError(t types.Type) string {
 		return fmt.Sprintf("date (%s)", v.String())
 	case *types.Boolean:
 		return fmt.Sprintf("boolean (%s)", v.String())
+	case *types.Percentage:
+		return fmt.Sprintf("percentage (%s)", v.String())
 	default:
 		return fmt.Sprintf("%T", t)
 	}

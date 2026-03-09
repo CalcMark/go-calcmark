@@ -8,7 +8,7 @@ import (
 )
 
 // parseNaturalLanguageFunction parses natural language function syntax.
-// NaturalLanguageFunction → "average of" ArgumentList | "square root of" Expression
+// NaturalLanguageFunction → ("average of" | "sum of") ArgumentList | "square root of" Expression
 func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error) {
 	funcToken := p.previous() // FUNC_AVERAGE_OF or FUNC_SQUARE_ROOT_OF
 
@@ -20,6 +20,8 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 		funcName = "avg"
 	case lexer.FUNC_SQUARE_ROOT_OF:
 		funcName = "sqrt"
+	case lexer.FUNC_SUM_OF:
+		funcName = "sum"
 	default:
 		return nil, p.error("unexpected natural language function")
 	}
@@ -39,7 +41,7 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 		}, nil
 	}
 
-	// For "average of", parse comma-separated list (no parentheses!)
+	// For variadic NL functions (average of, sum of), parse comma-separated list
 	var args []ast.Node
 
 	// Parse first argument

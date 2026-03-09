@@ -52,6 +52,7 @@ var ReservedKeywords = map[string]TokenType{
 	// Reserved function names (canonical)
 	"avg":  FUNC_AVG,
 	"sqrt": FUNC_SQRT,
+	"sum":  FUNC_SUM,
 }
 
 // ContextualKeywords are identifiers that should NOT be consumed as unit names
@@ -1152,6 +1153,28 @@ func combineMultiTokenFunctions(tokens []Token) []Token {
 						EndPos:       nextToken.EndPos,
 					})
 					i += 2 // Skip both tokens
+					continue
+				}
+			}
+		}
+
+		// Check for "sum of" (case insensitive)
+		// "sum" is a reserved keyword → FUNC_SUM token
+		if token.Type == FUNC_SUM {
+			if i+1 < len(tokens) {
+				nextToken := tokens[i+1]
+				if nextToken.Type == OF || (nextToken.Type == IDENTIFIER && strings.ToLower(nextToken.Value) == "of") {
+					originalText := token.Value + " " + nextToken.Value
+					result = append(result, Token{
+						Type:         FUNC_SUM_OF,
+						Value:        "sum of",
+						OriginalText: originalText,
+						Line:         token.Line,
+						Column:       token.Column,
+						StartPos:     token.StartPos,
+						EndPos:       nextToken.EndPos,
+					})
+					i += 2
 					continue
 				}
 			}
