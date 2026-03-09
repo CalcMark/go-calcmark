@@ -524,10 +524,10 @@ compress data using zstd            -> (variable reference)
 ```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
-compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
-compound($1000, 5%, 10 years, compounded quarterly)  -> $1643.62
+compound($1000, 5%, 10 years, monthly)               -> $1647.01
+compound($1000, 5%, 10 years, quarterly)             -> $1643.62
 compound $1000 by 5% over 10 years                   -> $1628.89  (NL form)
-compound $1000 by 12% compounded monthly over 10 years
+compound $1000 by 5% monthly over 10 years
 compound $1000 by 5% per month over 12 months
 ```
 
@@ -578,6 +578,7 @@ CalcMark supports natural language forms for many functions. These are equivalen
 | `compress X using Y` | `compress(X, Y)` | `compress 1 GB using gzip` |
 | `transfer X across Y Z` | `transfer_time(X, Y, Z)` | `transfer 1 GB across regional gigabit` |
 | `compound X by Y% over Z` | `compound(X, Y%, Z)` | `compound $1000 by 5% over 10 years` |
+| `compound X by Y% monthly over Z` | `compound(X, Y%, Z, monthly)` | `compound $1000 by 5% monthly over 10 years` |
 | `compound X by Y% per P over Z` | `compound(X, Y%, Z, P)` | `compound $1000 by 5% per month over 12 months` |
 | `compound X by Y% compounded F over Z` | `compound(X, Y%, Z, compounded F)` | `compound $1000 by 12% compounded monthly over 10 years` |
 | `grow X by Y over Z` | `grow(X, Y, Z)` | `grow 100 by 20 over 5 months` |
@@ -711,11 +712,11 @@ Calculate compound growth over time. Supports simple compounding, per-period rat
 ```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
-compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
-compound($1000, 5%, 10 years, compounded quarterly)  -> $1643.62
+compound($1000, 5%, 10 years, monthly)               -> $1647.01
+compound($1000, 5%, 10 years, quarterly)             -> $1643.62
 
 compound $1000 by 5% over 10 years                   (NL form)
-compound $1000 by 12% compounded monthly over 10 years
+compound $1000 by 5% monthly over 10 years
 compound $1000 by 5% per month over 12 months
 ```
 
@@ -726,7 +727,7 @@ compound $1000 by 5% per month over 12 months
 | 1 | principal | Starting amount (number, currency, or quantity) |
 | 2 | rate | Growth rate as percentage |
 | 3 | periods | Number of periods (number or duration) |
-| 4 | modifier | Optional: `compounded monthly/quarterly/daily/weekly/annually` or period identifier |
+| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly` (or `compounded monthly` etc.) |
 
 #### Linear Growth
 

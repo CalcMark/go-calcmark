@@ -459,7 +459,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 			if suggestions[i].InsertText == "compound" {
 				fnRow = &suggestions[i]
 			}
-			if suggestions[i].Category == "example" && suggestions[i].InsertText == "compound $1000 by 5% over 10 years" {
+			if suggestions[i].Category == "example" && suggestions[i].InsertText == "compound $1000 by 5% monthly over 10 years" {
 				nlRow = &suggestions[i]
 			}
 		}

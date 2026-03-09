@@ -31,15 +31,15 @@ retirement_fund = compound $50000 by 7% over 30
 
 ## Monthly Compounding
 
-Real-world investments often compound more frequently than once per year. The `compounded monthly` modifier splits the annual rate into 12 smaller applications per year.
+Real-world investments often compound more frequently than once per year. The `monthly` modifier splits the annual rate into 12 smaller applications per year.
 
 ```calcmark
-retirement_monthly = compound($50000, 7%, 30 years, compounded monthly)
+retirement_monthly = compound($50000, 7%, 30 years, monthly)
 ```
 
-Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual compounding over the same 30 years. The `compounded monthly` syntax is a fourth argument that changes the compounding frequency.
+Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual compounding over the same 30 years. The `monthly` frequency adverb is a fourth argument that changes the compounding frequency. You can also use `quarterly`, `weekly`, `daily`, or `yearly`.
 
-**CalcMark features:** `compounded monthly` frequency modifier; `30 years` unit annotation on the periods argument.
+**CalcMark features:** `monthly` frequency modifier; `30 years` unit annotation on the periods argument.
 
 ---
 
@@ -123,7 +123,7 @@ $15K in furniture at 15% per year is worth ~$4,809 after 7 years.
 This example showcases the following CalcMark features:
 
 - **`compound()`** -- exponential growth with percentage rates
-- **`compounded monthly`** -- compounding frequency modifier
+- **`monthly`** -- compounding frequency modifier (also `quarterly`, `weekly`, `daily`, `yearly`)
 - **`compound` NL form** -- `compound X by Y% over Z`
 - **`grow()`** -- linear (additive) growth with fixed increments
 - **`grow` NL form** -- `grow X by Y over Z`

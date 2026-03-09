@@ -63,12 +63,12 @@ transfer data across regional gigabit
 # Compound growth - functional
 compound($1000, 5%, 10)
 compound(500 customers, 20%, 12)
-compound($1000, 5%, 10 years, compounded monthly)
-compound($1000, 5%, 10 years, compounded quarterly)
+compound($1000, 5%, 10 years, monthly)
+compound($1000, 5%, 10 years, quarterly)
 
 # Compound growth - natural language
 compound $1000 by 5% over 10 years
-compound $1000 by 12% compounded monthly over 10 years
+compound $1000 by 5% monthly over 10 years
 compound $1000 by 5% per month over 12 months
 
 # Linear growth - functional

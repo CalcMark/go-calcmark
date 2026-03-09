@@ -608,14 +608,17 @@ in, as, of, per, over, at, from, with, napkin, precise
 These words have special meaning in specific syntactic positions but are not reserved as variable names:
 
 ```
-by, compounded, buffer, to
+by, compounded, buffer, to, monthly, quarterly, weekly, daily, yearly
 ```
 
 ```calcmark
-compound $1000 by 5% compounded monthly over 10   (by, compounded)
+compound $1000 by 5% monthly over 10 years         (by, monthly)
+compound $1000 by 5% compounded monthly over 10    (by, compounded)
 10000 req/s at 500 per server with 20% buffer      (buffer)
 depreciate $50000 by 15% over 5 to $5000           (to)
 ```
+
+Bare frequency adverbs (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) are shorthand for `compounded monthly`, `compounded quarterly`, etc.
 
 ---
 
@@ -655,6 +658,7 @@ CalcMark supports natural language forms for many functions. These are equivalen
 | `compress X using Y` | `compress(X, Y)` |
 | `transfer X across Y Z` | `transfer_time(X, Y, Z)` |
 | `compound X by Y% over Z` | `compound(X, Y%, Z)` |
+| `compound X by Y% monthly over Z` | `compound(X, Y%, Z, monthly)` |
 | `compound X by Y% per P over Z` | `compound(X, Y%, Z, P)` |
 | `compound X by Y% compounded F over Z` | `compound(X, Y%, Z, compounded F)` |
 | `grow X by Y over Z` | `grow(X, Y, Z)` |
@@ -752,16 +756,19 @@ CalcMark provides `compound`, `grow`, and `depreciate` for modeling growth and d
 ```calcmark
 compound($1000, 5%, 10)                              -> $1628.89
 compound(500 customers, 20%, 12)                     -> 4458.05 customers
-compound($1000, 5%, 10 years, compounded monthly)    -> $1647.01
+compound($1000, 5%, 10 years, monthly)               -> $1647.01
+compound($1000, 5%, 10 years, quarterly)             -> $1643.62
 ```
 
 **Natural language forms:**
 
 ```calcmark
 compound $1000 by 5% over 10 years
+compound $1000 by 5% monthly over 10 years
 compound $1000 by 5% per month over 12 months
-compound $1000 by 12% compounded monthly over 10 years
 ```
+
+Bare frequency adverbs (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) trigger financial compounding: A = P(1+r/n)^(nt). The longer `compounded monthly` form also works.
 
 ### Linear Growth
 
