@@ -709,10 +709,10 @@ compress 1 GB using gzip (NL form)
 
 The 4th argument controls which formula `compound()` uses. This matters -- `monthly` and `month` give different answers:
 
-**Without a frequency modifier** -- simple compound growth:
+**Without a frequency modifier** -- simple compound growth, once per year:
 
 ```text
-A = P × (1 + r)^n
+A = P × (1 + r)^t
 ```
 
 ```calcmark
@@ -720,15 +720,15 @@ compound($1000, 5%, 10)                              -> $1628.89
 compound $1000 by 5% over 10 years                   -> $1628.89
 ```
 
-The rate is applied once per period for `n` periods. The 3rd argument is a dimensionless count -- `10` means "10 times", not "10 years". Writing `10 years` is equivalent; the unit is ignored in simple mode.
+5% annual rate applied once per year for 10 years. A plain number like `10` means 10 years.
 
-**With a frequency adverb** (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) -- financial compounding:
+**With a frequency adverb** (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) -- financial compounding, multiple times per year:
 
 ```text
 A = P × (1 + r/n)^(n × t)
 ```
 
-where `r` is the annual rate, `n` is the compounding frequency per year, and `t` is time in years.
+where `r` is the annual rate, `n` is compounding frequency per year, and `t` is years.
 
 ```calcmark
 compound($1000, 5%, 10, monthly)                     -> $1647.01
@@ -744,12 +744,12 @@ The 5% annual rate is split into 12 monthly applications (5%/12 per month), comp
 | # | Name | Description |
 |---|------|-------------|
 | 1 | principal | Starting amount (number, currency, or quantity) |
-| 2 | rate | Growth rate (treated as annual rate when a frequency modifier is present) |
-| 3 | periods | Period count or duration. With a frequency modifier, a plain number is treated as years; a duration like `24 months` is converted to years |
-| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly`. Switches to the financial compounding formula |
+| 2 | rate | Annual growth rate as percentage |
+| 3 | duration | Time in years. A plain number like `10` means 10 years. Durations like `24 months` are converted to years |
+| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly`. Compounds multiple times per year instead of once |
 
 {{< callout type="info" >}}
-**`month` vs `monthly`**: The noun form `month` is a label -- `compound($1000, 5%, 12, month)` means "5% applied 12 times" (simple growth). The adverb `monthly` switches formula -- `compound($1000, 5%, 10, monthly)` means "5% annual rate, compounded 12x/year for 10 years." The 3rd argument becomes a duration in years, and the rate becomes an annual rate.
+**`month` vs `monthly`**: The noun `month` is a period label -- `compound($1000, 5%, 12, month)` means "5% per month, applied 12 times" (the rate is per-month, not annual). The adverb `monthly` means "5% annual rate, compounded 12 times per year" -- a different formula with a different result.
 {{< /callout >}}
 
 #### Linear Growth

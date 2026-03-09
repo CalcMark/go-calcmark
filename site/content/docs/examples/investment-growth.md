@@ -23,7 +23,7 @@ years_to_retire = 30
 retirement_fund = compound $50000 by 7% over 30
 ```
 
-Without a frequency modifier, `compound()` uses simple growth: `A = P × (1+r)^n`. The 7% rate is applied once per period for 30 periods, growing $50K to ~$380.6K.
+Without a frequency modifier, `compound()` compounds once per year: `A = P × (1+r)^t`. The 7% annual rate is applied once per year for 30 years, growing $50K to ~$380.6K.
 
 **CalcMark features:** `compound()` function for exponential growth; currency literals (`$50000`); percentage literals (`7%`).
 
