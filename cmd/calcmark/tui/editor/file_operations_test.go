@@ -83,8 +83,8 @@ func TestOpenFile(t *testing.T) {
 // invalid content show parse errors, not extension errors.
 func TestOpenFileWithParseErrorsShowsParseError(t *testing.T) {
 	tmpFile := filepath.Join(t.TempDir(), "bad.cm")
-	// YAML frontmatter with unknown key triggers parse error
-	content := "---\ntitle: bad\n---\nx = 1\n"
+	// YAML frontmatter with invalid exchange rate triggers parse error
+	content := "---\nexchange:\n  INVALID: 0.85\n---\nx = 1\n"
 	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
