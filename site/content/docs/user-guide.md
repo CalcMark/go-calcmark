@@ -720,7 +720,7 @@ compound($1000, 5%, 10)                              -> $1628.89
 compound $1000 by 5% over 10 years                   -> $1628.89
 ```
 
-The rate is applied once per period. 5% for 10 periods = `$1000 × 1.05^10`.
+The rate is applied once per period for `n` periods. The 3rd argument is a dimensionless count -- `10` means "10 times", not "10 years". Writing `10 years` is equivalent; the unit is ignored in simple mode.
 
 **With a frequency adverb** (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) -- financial compounding:
 
@@ -728,11 +728,12 @@ The rate is applied once per period. 5% for 10 periods = `$1000 × 1.05^10`.
 A = P × (1 + r/n)^(n × t)
 ```
 
-where `r` is the annual rate, `n` is the compounding frequency, and `t` is time in years.
+where `r` is the annual rate, `n` is the compounding frequency per year, and `t` is time in years.
 
 ```calcmark
 compound($1000, 5%, 10, monthly)                     -> $1647.01
 compound($1000, 5%, 10, quarterly)                    -> $1643.62
+compound($1000, 5%, 24 months, monthly)              -> $1103.43
 compound $1000 by 5% monthly over 10 years            -> $1647.01
 ```
 
@@ -743,12 +744,12 @@ The 5% annual rate is split into 12 monthly applications (5%/12 per month), comp
 | # | Name | Description |
 |---|------|-------------|
 | 1 | principal | Starting amount (number, currency, or quantity) |
-| 2 | rate | Growth rate as percentage |
-| 3 | periods | Number of periods (number or duration) |
-| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly`. Triggers financial compounding formula |
+| 2 | rate | Growth rate (treated as annual rate when a frequency modifier is present) |
+| 3 | periods | Period count or duration. With a frequency modifier, a plain number is treated as years; a duration like `24 months` is converted to years |
+| 4 | modifier | Optional: `monthly`, `quarterly`, `daily`, `weekly`, `yearly`. Switches to the financial compounding formula |
 
 {{< callout type="info" >}}
-**`month` vs `monthly`**: The noun form `month` is a label -- `compound($1000, 5%, 12, month)` means "5% per month, 12 times" and uses simple growth. The adverb `monthly` triggers financial compounding -- `compound($1000, 5%, 10, monthly)` means "5% annual rate, compounded 12x/year for 10 years."
+**`month` vs `monthly`**: The noun form `month` is a label -- `compound($1000, 5%, 12, month)` means "5% applied 12 times" (simple growth). The adverb `monthly` switches formula -- `compound($1000, 5%, 10, monthly)` means "5% annual rate, compounded 12x/year for 10 years." The 3rd argument becomes a duration in years, and the rate becomes an annual rate.
 {{< /callout >}}
 
 #### Linear Growth
