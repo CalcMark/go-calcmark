@@ -60,10 +60,12 @@ func runTUIApp(app *tui.App) {
 }
 
 // loadDocument loads and parses a file into a document.
+// Uses read-only path validation (allows absolute paths outside cwd) since
+// opening a file for editing doesn't require it to be within the working directory.
 // Only file-system and parse errors are fatal — evaluation errors are
 // diagnostic and handled by the editor's preview pane.
 func loadDocument(path string) (*document.Document, error) {
-	if err := validateFilePath(path); err != nil {
+	if err := validateReadFilePath(path); err != nil {
 		return nil, err
 	}
 

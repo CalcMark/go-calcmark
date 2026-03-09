@@ -39,17 +39,29 @@ func TestLoadDocumentWithEvalErrors(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
-		// Create a path that passes security checks (within cwd, .cm extension)
-		// but doesn't exist
-		path := filepath.Join(t.TempDir(), "nonexistent.cm")
-		// validateFilePath will fail because t.TempDir() is outside cwd,
-		// so we test with a file in cwd that doesn't exist
 		_, err := loadDocument("does_not_exist.cm")
 		if err == nil {
 			t.Fatal("expected error for nonexistent file")
 		}
-		// Suppress unused variable warning
-		_ = path
+	})
+
+	t.Run("absolute path outside cwd loads successfully", func(t *testing.T) {
+		// Regression: cm ~/Downloads/some.cm failed with
+		// "file must be within current directory" because loadDocument
+		// used validateFilePath (cwd-restricted) instead of validateReadFilePath.
+		tmpDir := t.TempDir()
+		path := filepath.Join(tmpDir, "outside-cwd.cm")
+		if err := os.WriteFile(path, []byte("x = 42\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		doc, err := loadDocument(path)
+		if err != nil {
+			t.Fatalf("loadDocument should accept files outside cwd, got: %v", err)
+		}
+		if doc == nil {
+			t.Fatal("expected non-nil document")
+		}
 	})
 
 	t.Run("parse error returns error", func(t *testing.T) {
@@ -67,23 +79,15 @@ func TestLoadDocumentWithEvalErrors(t *testing.T) {
 	})
 }
 
-// writeTempCM writes content to a temporary .cm file in the current working
-// directory (required by validateFilePath security checks) and returns its path.
+// writeTempCM writes content to a temporary .cm file and returns its path.
 // The file is cleaned up when the test finishes.
 func writeTempCM(t *testing.T, content string) string {
 	t.Helper()
 
-	// validateFilePath requires files within cwd, so create temp files there
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get cwd: %v", err)
-	}
-
-	f, err := os.CreateTemp(cwd, "test-*.cm")
+	f, err := os.CreateTemp(t.TempDir(), "test-*.cm")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	t.Cleanup(func() { os.Remove(f.Name()) })
 
 	if _, err := f.WriteString(content); err != nil {
 		f.Close()
