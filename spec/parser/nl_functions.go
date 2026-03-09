@@ -24,6 +24,8 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 		return nil, p.error("unexpected natural language function")
 	}
 
+	funcRange := tokenRange(funcToken)
+
 	// For "square root of", just parse one expression
 	if funcName == "sqrt" {
 		expr, err := p.parseExpression()
@@ -33,6 +35,7 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 		return &ast.FunctionCall{
 			Name:      funcName,
 			Arguments: []ast.Node{expr},
+			Range:     funcRange,
 		}, nil
 	}
 
@@ -58,12 +61,15 @@ func (p *RecursiveDescentParser) parseNaturalLanguageFunction() (ast.Node, error
 	return &ast.FunctionCall{
 		Name:      funcName,
 		Arguments: args,
+		Range:     funcRange,
 	}, nil
 }
 
 // parseNLReadFunction parses: read <quantity> from <identifier>
 // Precondition: "read" already consumed, next token is QUANTITY
 func (p *RecursiveDescentParser) parseNLReadFunction() (ast.Node, error) {
+	keyword := p.previous() // "read" token
+
 	// Parse size using parseExponent() — NOT parseExpression() — to avoid
 	// consuming FROM as part of a date expression or conversion context.
 	size, err := p.parseExponent()
@@ -80,12 +86,15 @@ func (p *RecursiveDescentParser) parseNLReadFunction() (ast.Node, error) {
 	return &ast.FunctionCall{
 		Name:      "read",
 		Arguments: []ast.Node{size, &ast.Identifier{Name: string(storageType.Value)}},
+		Range:     tokenRange(keyword),
 	}, nil
 }
 
 // parseNLCompressFunction parses: compress <quantity> using <identifier>
 // Precondition: "compress" already consumed, next token is QUANTITY
 func (p *RecursiveDescentParser) parseNLCompressFunction() (ast.Node, error) {
+	keyword := p.previous() // "compress" token
+
 	size, err := p.parseExponent()
 	if err != nil {
 		return nil, err
@@ -101,12 +110,15 @@ func (p *RecursiveDescentParser) parseNLCompressFunction() (ast.Node, error) {
 	return &ast.FunctionCall{
 		Name:      "compress",
 		Arguments: []ast.Node{size, &ast.Identifier{Name: string(algo.Value)}},
+		Range:     tokenRange(keyword),
 	}, nil
 }
 
 // parseNLTransferFunction parses: transfer <quantity> across <scope> <network>
 // Precondition: "transfer" already consumed, next token is QUANTITY
 func (p *RecursiveDescentParser) parseNLTransferFunction() (ast.Node, error) {
+	keyword := p.previous() // "transfer" token
+
 	size, err := p.parseExponent()
 	if err != nil {
 		return nil, err
@@ -130,5 +142,6 @@ func (p *RecursiveDescentParser) parseNLTransferFunction() (ast.Node, error) {
 			&ast.Identifier{Name: string(scope.Value)},
 			&ast.Identifier{Name: string(network.Value)},
 		},
+		Range: tokenRange(keyword),
 	}, nil
 }

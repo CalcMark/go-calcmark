@@ -10,6 +10,8 @@ import (
 // parseNLCompoundFunction parses: compound <principal> by <rate> [per <period> | compounded <freq>] over <duration>
 // Precondition: "compound" already consumed, next token is start of principal expression.
 func (p *RecursiveDescentParser) parseNLCompoundFunction() (ast.Node, error) {
+	keyword := p.previous() // "compound" token — for range tracking
+
 	// Parse principal
 	principal, err := p.parseExponent()
 	if err != nil {
@@ -73,12 +75,15 @@ func (p *RecursiveDescentParser) parseNLCompoundFunction() (ast.Node, error) {
 	return &ast.FunctionCall{
 		Name:      "compound",
 		Arguments: args,
+		Range:     tokenRange(keyword),
 	}, nil
 }
 
 // parseNLGrowFunction parses: grow <amount> by <increment> over <duration>
 // Precondition: "grow" already consumed, next token is start of amount expression.
 func (p *RecursiveDescentParser) parseNLGrowFunction() (ast.Node, error) {
+	keyword := p.previous() // "grow" token — for range tracking
+
 	// Parse starting amount
 	amount, err := p.parseExponent()
 	if err != nil {
@@ -110,12 +115,15 @@ func (p *RecursiveDescentParser) parseNLGrowFunction() (ast.Node, error) {
 	return &ast.FunctionCall{
 		Name:      "grow",
 		Arguments: []ast.Node{amount, increment, duration},
+		Range:     tokenRange(keyword),
 	}, nil
 }
 
 // parseNLDepreciateFunction parses: depreciate <value> by <rate> [compounded <freq>] over <duration> [to <salvage>]
 // Precondition: "depreciate" already consumed, next token is start of value expression.
 func (p *RecursiveDescentParser) parseNLDepreciateFunction() (ast.Node, error) {
+	keyword := p.previous() // "depreciate" token — for range tracking
+
 	// Parse value
 	value, err := p.parseExponent()
 	if err != nil {
@@ -175,6 +183,7 @@ func (p *RecursiveDescentParser) parseNLDepreciateFunction() (ast.Node, error) {
 	return &ast.FunctionCall{
 		Name:      "depreciate",
 		Arguments: args,
+		Range:     tokenRange(keyword),
 	}, nil
 }
 

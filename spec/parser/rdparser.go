@@ -83,6 +83,24 @@ func (p *RecursiveDescentParser) peekAhead(n int) lexer.Token {
 	return p.tokens[pos]
 }
 
+// tokenRange returns a Range covering a single token's position.
+func tokenRange(tok lexer.Token) *ast.Range {
+	return &ast.Range{
+		Start: ast.Position{Line: tok.Line, Column: tok.Column},
+		End:   ast.Position{Line: tok.Line, Column: tok.Column + len(tok.Value)},
+	}
+}
+
+// rangeOrFallback returns the node's range if it has a valid line number,
+// otherwise a range from the fallback token. Use this when creating
+// implicit/postfix FunctionCall nodes where the left operand may lack a range.
+func rangeOrFallback(node ast.Node, fallback lexer.Token) *ast.Range {
+	if r := node.GetRange(); r != nil && r.Start.Line > 0 {
+		return r
+	}
+	return tokenRange(fallback)
+}
+
 // previous returns the most recently consumed token.
 func (p *RecursiveDescentParser) previous() lexer.Token {
 	if p.current == 0 {
@@ -466,6 +484,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	// This prevents "99.9% downtime per month" from being parsed as a rate
 	// Must check: percentage/number + "downtime" + "per" + timeunit
 	if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "downtime" {
+		downtimeToken := p.peek()
 		p.advance() // Consume "downtime"
 
 		// Expect "per" keyword
@@ -491,7 +510,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 				left,
 				&ast.Identifier{Name: string(timePeriod.Value)},
 			},
-			Range: left.GetRange(),
+			Range: rangeOrFallback(left, downtimeToken),
 		}, nil
 	}
 
@@ -520,7 +539,10 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 
 	// Check for "over" keyword: "100 MB/s over 1 day"
 	// Natural syntax for accumulate(rate, time_period)
-	if p.match(lexer.OVER) {
+	if p.check(lexer.OVER) {
+		overToken := p.peek()
+		p.advance() // consume OVER
+
 		// Parse duration/time period
 		duration, err := p.parseExponent()
 		if err != nil {
@@ -531,7 +553,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		return &ast.FunctionCall{
 			Name:      "accumulate",
 			Arguments: []ast.Node{left, duration},
-			Range:     left.GetRange(),
+			Range:     rangeOrFallback(left, overToken),
 		}, nil
 	}
 

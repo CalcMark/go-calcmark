@@ -42,6 +42,88 @@ func TestLooksLikeFailedCalculation(t *testing.T) {
 	}
 }
 
+// TestEvalErrorDiagnosticLine verifies that eval errors carry the correct
+// block-relative line number. When line 2 of a calc block fails, the diagnostic
+// must have Line=2, not Line=1.
+// Regression test for misaligned diagnostics in the TUI results pane.
+func TestEvalErrorDiagnosticLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   string
+		wantLine int    // Expected 1-indexed block-relative line
+		wantCode string // Expected diagnostic code
+		wantMsg  string // Substring of diagnostic message
+	}{
+		{
+			name: "error on line 2 of calc block",
+			source: `compound $1000 by 5% over 10 years
+compound $1000 by 5% monthly over 10 ye
+`,
+			wantLine: 2,
+			wantCode: "eval_error",
+			wantMsg:  `invalid duration unit`,
+		},
+		{
+			name: "error on line 1 of calc block",
+			source: `compound $1000 by 5% monthly over 10 ye
+compound $1000 by 5% over 10 years
+`,
+			wantLine: 1,
+			wantCode: "eval_error",
+			wantMsg:  `invalid duration unit`,
+		},
+		{
+			name: "error on line 3 of calc block",
+			source: `a = 1 + 1
+b = a * 2
+c = undefined_var + 1
+`,
+			wantLine: 3,
+			wantCode: "undefined_variable",
+			wantMsg:  `undefined_var`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := document.NewDocument(tt.source)
+			if err != nil {
+				t.Fatalf("NewDocument error: %v", err)
+			}
+
+			eval := NewEvaluator()
+			_ = eval.Evaluate(doc) // errors expected
+
+			// Check diagnostics on the calc block
+			blocks := doc.GetBlocks()
+			if len(blocks) == 0 {
+				t.Fatal("expected at least one block")
+			}
+
+			cb, ok := blocks[0].Block.(*document.CalcBlock)
+			if !ok {
+				t.Fatal("expected first block to be CalcBlock")
+			}
+
+			diags := cb.Diagnostics()
+			if len(diags) == 0 {
+				t.Fatal("expected at least one diagnostic")
+			}
+
+			diag := diags[0]
+			if diag.Line != tt.wantLine {
+				t.Errorf("diagnostic.Line = %d, want %d", diag.Line, tt.wantLine)
+			}
+			if diag.Code != tt.wantCode {
+				t.Errorf("diagnostic.Code = %q, want %q", diag.Code, tt.wantCode)
+			}
+			if !strings.Contains(diag.Message, tt.wantMsg) {
+				t.Errorf("diagnostic.Message = %q, want substring %q", diag.Message, tt.wantMsg)
+			}
+		})
+	}
+}
+
 func TestEvaluatorDiagnostics(t *testing.T) {
 	tests := []struct {
 		name           string

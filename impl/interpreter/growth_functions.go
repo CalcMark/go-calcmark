@@ -20,18 +20,8 @@ var (
 // --- Core computation functions ---
 
 // compoundGrowth computes principal * (1 + rate)^periods.
-// Uses integer exponentiation when possible for O(log n) performance.
 func compoundGrowth(principal, rate, periods decimal.Decimal) decimal.Decimal {
-	base := decOne.Add(rate) // (1 + rate)
-	var factor decimal.Decimal
-
-	// Use integer exponentiation when periods is a whole number
-	if periods.Equal(periods.Truncate(0)) {
-		factor = base.Pow(periods)
-	} else {
-		factor = base.Pow(periods)
-	}
-
+	factor := decOne.Add(rate).Pow(periods)
 	return principal.Mul(factor).Round(20)
 }
 
@@ -187,45 +177,23 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 
 	modName := modifierIdent.Name
 
-	// Mode 3: "compounded:monthly" — financial compounding A = P(1+r/n)^(nt)
-	if freq, ok := strings.CutPrefix(modName, "compounded:"); ok {
+	// Resolve frequency: both "compounded:monthly" and bare "monthly" trigger
+	// financial compounding A = P(1+r/n)^(nt). The "compounded:" prefix is
+	// optional syntactic sugar.
+	freq := ""
+	if f, ok := strings.CutPrefix(modName, "compounded:"); ok {
+		freq = f
+	} else if isFrequencyAdverb(modName) {
+		freq = modName
+	}
+
+	if freq != "" {
 		periodsPerYear, ok := types.PeriodToPeriodsPerYear(freq)
 		if !ok {
 			return nil, fmt.Errorf("compound: unknown compounding frequency %q", freq)
 		}
 
-		// Duration must be in years for financial formula
-		totalYears := periodsNum
-		if periodUnit != "" && periodUnit != "year" && periodUnit != "years" {
-			// Convert duration to years
-			dur, err := types.NewDuration(periodsNum, periodUnit)
-			if err != nil {
-				return nil, fmt.Errorf("compound: invalid duration unit %q: %w", periodUnit, err)
-			}
-			yearDur, err := dur.Convert("years")
-			if err != nil {
-				return nil, fmt.Errorf("compound: cannot convert %s to years: %w", periodUnit, err)
-			}
-			totalYears = yearDur.Value
-		}
-
-		ppyDec := decimal.NewFromInt(int64(periodsPerYear))
-		totalPeriods := ppyDec.Mul(totalYears)
-		if err := validatePeriods(totalPeriods); err != nil {
-			return nil, err
-		}
-
-		result := compoundGrowthFinancial(principal, rate, ppyDec, totalYears)
-		return wrapResult(result, principalVal), nil
-	}
-
-	// Bare frequency adverb (e.g., "monthly", "quarterly") — treat as
-	// compounding frequency, equivalent to "compounded:monthly".
-	// Distinguished from base period names (month, quarter) which are Mode 2 annotations.
-	if isFrequencyAdverb(modName) {
-		periodsPerYear, _ := types.PeriodToPeriodsPerYear(modName)
-		ppyDec := decimal.NewFromInt(int64(periodsPerYear))
-
+		// 3rd arg is years by default; convert non-year durations
 		totalYears := periodsNum
 		if periodUnit != "" && periodUnit != "year" && periodUnit != "years" {
 			dur, err := types.NewDuration(periodsNum, periodUnit)
@@ -239,6 +207,7 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 			totalYears = yearDur.Value
 		}
 
+		ppyDec := decimal.NewFromInt(int64(periodsPerYear))
 		totalPeriods := ppyDec.Mul(totalYears)
 		if err := validatePeriods(totalPeriods); err != nil {
 			return nil, err

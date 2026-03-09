@@ -1,0 +1,8 @@
+# Test: Compound NL eval error appears on correct line
+# Line 1: valid compound expression (should show result)
+# Line 2: invalid unit "ye" (error must appear on line 1, not line 0)
+run observe=results
+----
+-- results:
+Line 0 (compound $1000 by 5% over 10 years): value=$1,628.89, error=""
+Line 1 (compound $1000 by 5% monthly over 10 ye): value=, error="eval_error: compound: invalid duration unit \"ye\": invalid duration unit: ye"

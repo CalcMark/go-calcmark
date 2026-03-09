@@ -94,6 +94,7 @@ z = 30`
 			"autocomplete_undo",                   // TestEditorCatwalkAutocompleteUndo
 			"autocomplete_nl",                     // TestEditorCatwalkAutocompleteNL
 			"diagnostic_wrong_line",               // TestEditorCatwalkDiagnosticLine
+			"diagnostic_wrong_line_compound",      // TestEditorCatwalkDiagnosticLine
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
