@@ -128,13 +128,6 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 	// Number operations
 	if leftNum, ok := left.(*types.Number); ok {
 		if rightNum, ok := right.(*types.Number); ok {
-			// Check if right is a percentage (value < 1.0 and originally had %)
-			// For now, we handle percentage operations specially
-			// 100 + 20% -> 100 + (100 * 0.20) = 120
-			// 100 - 20% -> 100 - (100 * 0.20) = 80
-
-			// Note: We can't distinguish if rightNum came from a % literal
-			// So we'll handle this in a special case if needed
 			return evalNumberOperation(leftNum, rightNum, operator)
 		}
 		// Number op Currency → Currency (e.g., "2 + $10" = "$12", "2 * $10" = "$20")
@@ -334,7 +327,7 @@ func evalNumberOperation(left, right *types.Number, operator string) (types.Type
 // value + pct → value * (1 + pct), value - pct → value * (1 - pct).
 // The result preserves the left operand's type.
 func evalPercentageWidening(left types.Type, pct *types.Percentage, operator string) (types.Type, error) {
-	one := decimal.NewFromInt(1)
+	one := decOne
 	var multiplier decimal.Decimal
 	if operator == "+" {
 		multiplier = one.Add(pct.Value)

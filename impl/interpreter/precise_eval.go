@@ -37,6 +37,10 @@ func (interp *Interpreter) evalPreciseConversion(n *ast.PreciseConversion) (type
 	case *types.Rate:
 		return v, nil
 
+	case *types.Percentage:
+		// Percentages pass through unchanged.
+		return v, nil
+
 	default:
 		return nil, fmt.Errorf("precise conversion requires a numeric value, got %T", value)
 	}

@@ -51,7 +51,7 @@ func Apply(result types.Type, scale *document.ScaleConfig, convertTo *document.C
 		return result
 
 	default:
-		// Duration, Boolean, Date, Time — unchanged
+		// Duration, Boolean, Date, Time, Percentage — unchanged
 		return result
 	}
 }

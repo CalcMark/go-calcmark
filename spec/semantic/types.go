@@ -126,12 +126,12 @@ func CheckTypeCompatibility(left, right TypeInfo, operator string, r *ast.Range)
 	if right.Kind == TypePercentage && (operator == "+" || operator == "-") {
 		return nil
 	}
-	// Percentage * Number or Number * Percentage is valid
-	if (left.Kind == TypePercentage && right.Kind == TypeNumber) ||
-		(left.Kind == TypeNumber && right.Kind == TypePercentage) {
-		if operator == "*" || operator == "/" {
-			return nil
-		}
+	// Percentage * or / any numeric-like type is valid.
+	// The runtime normalizes percentage to a plain number before dispatch,
+	// so Percentage * Currency, Percentage * Quantity, Percentage * Duration, etc. all work.
+	if (left.Kind == TypePercentage || right.Kind == TypePercentage) &&
+		(operator == "*" || operator == "/") {
+		return nil
 	}
 	// Percentage + Percentage is valid
 	if left.Kind == TypePercentage && right.Kind == TypePercentage {

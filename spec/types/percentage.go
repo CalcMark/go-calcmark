@@ -23,12 +23,6 @@ func NewPercentage(value decimal.Decimal) *Percentage {
 	return &Percentage{Value: value}
 }
 
-// NewPercentageFromWhole creates a Percentage from a whole number.
-// For 32%, pass 32.
-func NewPercentageFromWhole(whole decimal.Decimal) *Percentage {
-	return &Percentage{Value: whole.Div(hundred)}
-}
-
 // String returns the percentage in human-readable form (e.g., "32%").
 func (p *Percentage) String() string {
 	display := p.Value.Mul(hundred)
