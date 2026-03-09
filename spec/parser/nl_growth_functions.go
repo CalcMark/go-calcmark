@@ -46,6 +46,12 @@ func (p *RecursiveDescentParser) parseNLCompoundFunction() (ast.Node, error) {
 		}
 		freq := strings.ToLower(string(p.previous().Value))
 		modifier = &ast.Identifier{Name: "compounded:" + freq}
+	} else if p.checkFrequencyAdverb() {
+		// Bare frequency adverb — "compound $1000 by 5% monthly over 10 years"
+		// Equivalent to "compounded monthly".
+		freq := strings.ToLower(string(p.peek().Value))
+		p.advance()
+		modifier = &ast.Identifier{Name: "compounded:" + freq}
 	}
 
 	// Expect "over"
@@ -170,6 +176,24 @@ func (p *RecursiveDescentParser) parseNLDepreciateFunction() (ast.Node, error) {
 		Name:      "depreciate",
 		Arguments: args,
 	}, nil
+}
+
+// frequencyAdverbs are adverbial period forms that indicate financial compounding.
+var frequencyAdverbs = map[string]bool{
+	"daily":     true,
+	"weekly":    true,
+	"monthly":   true,
+	"quarterly": true,
+	"yearly":    true,
+}
+
+// checkFrequencyAdverb returns true if the current token is a frequency adverb
+// (monthly, quarterly, etc.) without consuming it.
+func (p *RecursiveDescentParser) checkFrequencyAdverb() bool {
+	if !p.check(lexer.IDENTIFIER) {
+		return false
+	}
+	return frequencyAdverbs[strings.ToLower(string(p.peek().Value))]
 }
 
 // matchIdentValue checks if the current token is an IDENTIFIER with the given value

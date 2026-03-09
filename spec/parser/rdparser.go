@@ -1352,6 +1352,8 @@ func isNaturalSyntaxKeyword(ident string) bool {
 		return true // Growth function NL triggers
 	case "by", "compounded":
 		return true // Contextual keywords used in growth NL syntax
+	case "daily", "weekly", "monthly", "quarterly", "yearly":
+		return true // Frequency adverbs used in compound() NL syntax
 	default:
 		return false
 	}

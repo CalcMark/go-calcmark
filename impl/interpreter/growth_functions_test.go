@@ -208,6 +208,40 @@ func TestCompoundBareFrequencyModifier(t *testing.T) {
 	}
 }
 
+// TestCompoundNLBareFrequencyModifier verifies that the NL syntax
+// "compound $1K by 5% monthly over 10 years" is equivalent to
+// "compound $1K by 5% compounded monthly over 10 years".
+// Regression test for #40: NL parser didn't recognize bare frequency adverbs.
+func TestCompoundNLBareFrequencyModifier(t *testing.T) {
+	tests := []struct {
+		name  string
+		bare  string
+		equiv string
+	}{
+		{
+			name:  "monthly",
+			bare:  "compound $1K by 5% monthly over 10 years",
+			equiv: "compound $1K by 5% compounded monthly over 10 years",
+		},
+		{
+			name:  "quarterly",
+			bare:  "compound $1K by 5% quarterly over 10 years",
+			equiv: "compound $1K by 5% compounded quarterly over 10 years",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := evalGrowthLine(t, tt.bare)
+			want := evalGrowthLine(t, tt.equiv)
+			if got != want {
+				t.Errorf("NL bare %q = %q, but %q = %q (should be identical)",
+					tt.bare, got, tt.equiv, want)
+			}
+		})
+	}
+}
+
 // TestCompoundGrowthMode3_Ordering verifies that more frequent compounding
 // produces higher returns (yearly < quarterly < monthly < weekly < daily).
 func TestCompoundGrowthMode3_Ordering(t *testing.T) {
