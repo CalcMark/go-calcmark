@@ -34,8 +34,15 @@ var BuiltinFunctions = []FunctionDef{
 	{
 		Name:        "avg",
 		Synonyms:    []string{"average", "mean"},
-		Description: "Calculate the average of numbers",
+		Description: "Calculate the average of values",
 		Signature:   "avg(value1, value2, ...)",
+		Category:    "Math",
+	},
+	{
+		Name:        "sum",
+		Synonyms:    []string{},
+		Description: "Calculate the sum of values",
+		Signature:   "sum(value1, value2, ...)",
 		Category:    "Math",
 	},
 	{
@@ -152,6 +159,7 @@ var BuiltinFunctions = []FunctionDef{
 // Used by init() to populate BuiltinFunctions.Eval fields.
 var functionEvalMap = map[string]func(interp *Interpreter, f *ast.FunctionCall) (types.Type, error){
 	"avg":           evalAvgFunc,
+	"sum":           evalSumFunc,
 	"sqrt":          evalSqrtFunc,
 	"accumulate":    evalAccumulateFunc,
 	"convert_rate":  evalConvertRateFunc,
@@ -199,6 +207,14 @@ func evalAvgFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
 		return nil, err
 	}
 	return evalAverage(args)
+}
+
+func evalSumFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
+	args, err := interp.evalAllArgs(f)
+	if err != nil {
+		return nil, err
+	}
+	return evalSum(args)
 }
 
 func evalSqrtFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
@@ -411,6 +427,8 @@ func evalCapacityFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 		// Extract buffer percentage as decimal
 		var bufferPercent decimal.Decimal
 		switch buf := bufferVal.(type) {
+		case *types.Percentage:
+			bufferPercent = buf.Value
 		case *types.Number:
 			bufferPercent = buf.Value
 		default:
@@ -471,35 +489,142 @@ func evalAccumulate(args []types.Type) (types.Type, error) {
 	return accumulateRate(rate, periodValue, periodUnit)
 }
 
-// evalAverage calculates the average of numbers.
+// evalAverage calculates the average of values.
+// Supports Number, Currency, Quantity, Duration, and Percentage.
 // Preserves currency type when all arguments share the same currency.
 func evalAverage(args []types.Type) (types.Type, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("avg() requires at least one argument")
 	}
 
-	// Extract numeric values
+	// Check if first arg is Quantity, Duration, or Percentage — use aggregateValues path
+	switch args[0].(type) {
+	case *types.Quantity, *types.Duration, *types.Percentage:
+		result, err := aggregateValues("avg", args)
+		if err != nil {
+			return nil, err
+		}
+		// Divide by count to get average
+		count := decimal.NewFromInt(int64(len(args)))
+		switch v := result.(type) {
+		case *types.Quantity:
+			return &types.Quantity{Value: v.Value.Div(count), Unit: v.Unit}, nil
+		case *types.Duration:
+			return &types.Duration{Value: v.Value.Div(count), Unit: v.Unit}, nil
+		case *types.Percentage:
+			return types.NewPercentage(v.Value.Div(count)), nil
+		default:
+			return nil, fmt.Errorf("avg(): unexpected aggregate result type %T", result)
+		}
+	}
+
+	// Number/Currency path (backwards compatible)
 	numbers, err := extractNumbers(args)
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate sum
 	sum := numbers[0]
 	for i := 1; i < len(numbers); i++ {
 		sum = sum.Add(numbers[i])
 	}
 
-	// Calculate average
 	count := len(numbers)
 	avg := sum.Div(decimal.NewFromInt(int64(count)))
 
-	// Preserve currency if all args are the same currency
 	if symbol, ok := uniformCurrency(args); ok {
 		return types.NewCurrency(avg, symbol), nil
 	}
 
 	return types.NewNumber(avg), nil
+}
+
+// evalSum calculates the sum of values.
+// Supports Number, Currency, Quantity, Duration, and Percentage.
+func evalSum(args []types.Type) (types.Type, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("sum() requires at least 2 arguments, got %d", len(args))
+	}
+
+	return aggregateValues("sum", args)
+}
+
+// aggregateValues sums typed values with automatic unit conversion.
+// The first argument determines the result type and target unit.
+// All arguments must be the same type family.
+func aggregateValues(funcName string, args []types.Type) (types.Type, error) {
+	first := args[0]
+
+	switch f := first.(type) {
+	case *types.Number:
+		sum := f.Value
+		for _, arg := range args[1:] {
+			n, ok := arg.(*types.Number)
+			if !ok {
+				return nil, fmt.Errorf("%s(): expected number, got %s", funcName, formatTypeForError(arg))
+			}
+			sum = sum.Add(n.Value)
+		}
+		return types.NewNumber(sum), nil
+
+	case *types.Currency:
+		sum := f.Value
+		for _, arg := range args[1:] {
+			c, ok := arg.(*types.Currency)
+			if !ok {
+				return nil, fmt.Errorf("%s(): expected currency, got %s", funcName, formatTypeForError(arg))
+			}
+			if c.Code != f.Code {
+				return nil, fmt.Errorf("%s(): cannot mix currencies %s and %s; convert explicitly first", funcName, f.Code, c.Code)
+			}
+			sum = sum.Add(c.Value)
+		}
+		return types.NewCurrency(sum, f.Symbol), nil
+
+	case *types.Quantity:
+		sum := f.Value
+		for _, arg := range args[1:] {
+			q, ok := arg.(*types.Quantity)
+			if !ok {
+				return nil, fmt.Errorf("%s(): expected quantity, got %s", funcName, formatTypeForError(arg))
+			}
+			converted, err := convertQuantity(q, f.Unit)
+			if err != nil {
+				return nil, fmt.Errorf("%s(): %w", funcName, err)
+			}
+			sum = sum.Add(converted.Value)
+		}
+		return &types.Quantity{Value: sum, Unit: f.Unit}, nil
+
+	case *types.Duration:
+		sum := f.Value
+		for _, arg := range args[1:] {
+			d, ok := arg.(*types.Duration)
+			if !ok {
+				return nil, fmt.Errorf("%s(): expected duration, got %s", funcName, formatTypeForError(arg))
+			}
+			converted, err := d.Convert(f.Unit)
+			if err != nil {
+				return nil, fmt.Errorf("%s(): %w", funcName, err)
+			}
+			sum = sum.Add(converted.Value)
+		}
+		return &types.Duration{Value: sum, Unit: f.Unit}, nil
+
+	case *types.Percentage:
+		sum := f.Value
+		for _, arg := range args[1:] {
+			p, ok := arg.(*types.Percentage)
+			if !ok {
+				return nil, fmt.Errorf("%s(): expected percentage, got %s", funcName, formatTypeForError(arg))
+			}
+			sum = sum.Add(p.Value)
+		}
+		return types.NewPercentage(sum), nil
+
+	default:
+		return nil, fmt.Errorf("%s(): unsupported type %s", funcName, formatTypeForError(first))
+	}
 }
 
 // evalSqrt calculates the square root.

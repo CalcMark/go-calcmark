@@ -580,6 +580,53 @@ func TestJSONFormatterLocaleNumericValue(t *testing.T) {
 	}
 }
 
+// TestJSONFormatterPercentageType verifies percentage results.
+func TestJSONFormatterPercentageType(t *testing.T) {
+	result := formatJSON(t, "rate = 20%\nhalf = 50%\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) != 2 {
+		t.Fatalf("Expected 2 results, got %d", len(block.Results))
+	}
+
+	// First result: 20%
+	r := block.Results[0]
+	if r.Type != "percentage" {
+		t.Errorf("Type = %q, want %q", r.Type, "percentage")
+	}
+	if r.Variable != "rate" {
+		t.Errorf("Variable = %q, want %q", r.Variable, "rate")
+	}
+	if r.NumericValue == nil {
+		t.Fatal("NumericValue should not be nil for percentage")
+	}
+	if *r.NumericValue != 0.2 {
+		t.Errorf("NumericValue = %v, want 0.2 (fractional form of 20%%)", *r.NumericValue)
+	}
+	if r.Value != "20%" {
+		t.Errorf("Value = %q, want %q", r.Value, "20%")
+	}
+	if r.Unit != "" {
+		t.Errorf("Unit = %q, want empty for percentage", r.Unit)
+	}
+
+	// Second result: 50%
+	r2 := block.Results[1]
+	if r2.Type != "percentage" {
+		t.Errorf("Type = %q, want %q", r2.Type, "percentage")
+	}
+	if r2.NumericValue == nil || *r2.NumericValue != 0.5 {
+		t.Errorf("NumericValue = %v, want 0.5 (fractional form of 50%%)", r2.NumericValue)
+	}
+	if r2.Value != "50%" {
+		t.Errorf("Value = %q, want %q", r2.Value, "50%")
+	}
+}
+
 // TestJSONFormatterNapkinEstimate verifies is_approximate for napkin quantities.
 // Uses a quantity input (kg) because the napkin operator preserves type:
 // plain numbers stay Number (no IsNapkin), quantities stay Quantity with IsNapkin=true.

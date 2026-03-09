@@ -6,7 +6,7 @@
 run observe=results
 ----
 -- results:
-Line 0 (tax = 10%): value=0.1, error=""
+Line 0 (tax = 10%): value=10%, error=""
 Line 1 (price = 100): value=100, error=""
 Line 2 (total = price * (1 + tax)): value=110, error=""
 Line 3 (): value=, error=""
@@ -53,7 +53,7 @@ mode=StateDefault cursorLine=1 cursorCol=8 cursorVisual=1 cursorHighlight=1 scro
 run observe=results
 ----
 -- results:
-Line 0 (tax =20%): value=0.2, error=""
+Line 0 (tax =20%): value=20%, error=""
 Line 1 (price = 100): value=100, error=""
 Line 2 (total = price * (1 + tax)): value=120, error=""
 Line 3 (): value=, error=""
@@ -87,7 +87,7 @@ mode=StateDefault cursorLine=2 cursorCol=11 cursorVisual=2 cursorHighlight=2 scr
 run observe=results
 ----
 -- results:
-Line 0 (tax =20%): value=0.2, error=""
+Line 0 (tax =20%): value=20%, error=""
 Line 1 (price = 200): value=200, error=""
 Line 2 (total = price * (1 + tax)): value=240, error=""
 Line 3 (): value=, error=""

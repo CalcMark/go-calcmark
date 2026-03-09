@@ -51,6 +51,8 @@ func extractDecimalValue(val types.Type) (decimal.Decimal, error) {
 		return v.Value, nil
 	case *types.Duration:
 		return v.Value, nil
+	case *types.Percentage:
+		return v.Value, nil
 	default:
 		return decZero, fmt.Errorf("cannot extract numeric value from %T", val)
 	}

@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -11,6 +12,15 @@ import (
 // Each method converts an AST literal node to a typed value.
 
 func (interp *Interpreter) evalNumberLiteral(n *ast.NumberLiteral) (types.Type, error) {
+	// Percentage literals produce a Percentage type, not a Number.
+	if strings.HasSuffix(n.Value, "%") {
+		value, err := expandNumberLiteral(n.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid percentage literal %q: %w", n.Value, err)
+		}
+		return types.NewPercentage(value), nil
+	}
+
 	value, err := expandNumberLiteral(n.Value)
 	if err != nil {
 		return nil, fmt.Errorf("invalid number literal %q: %w", n.Value, err)

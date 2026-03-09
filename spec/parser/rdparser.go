@@ -1056,13 +1056,13 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
-	// Function calls: avg(...), sqrt(...)
-	if p.match(lexer.FUNC_AVG, lexer.FUNC_SQRT) {
+	// Function calls: avg(...), sqrt(...), sum(...)
+	if p.match(lexer.FUNC_AVG, lexer.FUNC_SQRT, lexer.FUNC_SUM) {
 		return p.parseFunctionCall()
 	}
 
-	// Natural language functions: "average of", "square root of"
-	if p.match(lexer.FUNC_AVERAGE_OF, lexer.FUNC_SQUARE_ROOT_OF) {
+	// Natural language functions: "average of", "square root of", "sum of"
+	if p.match(lexer.FUNC_AVERAGE_OF, lexer.FUNC_SQUARE_ROOT_OF, lexer.FUNC_SUM_OF) {
 		return p.parseNaturalLanguageFunction()
 	}
 
@@ -1227,8 +1227,12 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 	// Empty argument list
 	if p.check(lexer.RPAREN) {
 		p.advance()
+		funcNameStr := string(funcName.Value)
+		if funcNameStr == "sum" {
+			return nil, p.error("sum() requires at least 2 arguments")
+		}
 		return &ast.FunctionCall{
-			Name:      string(funcName.Value),
+			Name:      funcNameStr,
 			Arguments: args,
 			Range: &ast.Range{
 				Start: ast.Position{Line: funcName.Line, Column: funcName.Column},
@@ -1263,6 +1267,9 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 	funcNameStr := string(funcName.Value)
 	if funcNameStr == "avg" && len(args) == 0 {
 		return nil, p.error("avg() requires at least 1 argument")
+	}
+	if funcNameStr == "sum" && len(args) < 2 {
+		return nil, p.error("sum() requires at least 2 arguments")
 	}
 	if funcNameStr == "sqrt" {
 		if len(args) == 0 {

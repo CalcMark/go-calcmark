@@ -118,6 +118,10 @@ func populateResult(jr *JSONResult, result types.Type) {
 		jr.DateValue = v.Time.Format("2006-01-02")
 	case *types.Time:
 		jr.Type = "time"
+	case *types.Percentage:
+		jr.Type = "percentage"
+		f := v.Value.InexactFloat64()
+		jr.NumericValue = &f
 	case *types.Boolean:
 		jr.Type = "boolean"
 	}

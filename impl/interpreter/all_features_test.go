@@ -30,7 +30,7 @@ func TestAllInterpreterFeatures(t *testing.T) {
 		{"multipliers", "arithmetic with k", "5k + 2k\n", "7000"},
 
 		// Percentages
-		{"percentages", "literal", "20%\n", "0.2"},
+		{"percentages", "literal", "20%\n", "20%"},
 		{"percentages", "multiplication", "100 * 20%\n", "20"},
 		{"percentages", "discount", "100 * (1 - 20%)\n", "80"},
 		{"percentages", "markup", "100 * (1 + 20%)\n", "120"},

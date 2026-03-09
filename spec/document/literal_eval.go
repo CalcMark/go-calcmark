@@ -53,6 +53,15 @@ func evalLiteral(node ast.Node) (types.Type, error) {
 }
 
 func evalNumberLiteral(n *ast.NumberLiteral) (types.Type, error) {
+	// Percentage literals produce a Percentage type.
+	if strings.HasSuffix(n.Value, "%") {
+		value, err := expandNumber(n.Value)
+		if err != nil {
+			return nil, err
+		}
+		return types.NewPercentage(value), nil
+	}
+
 	value, err := expandNumber(n.Value)
 	if err != nil {
 		return nil, err

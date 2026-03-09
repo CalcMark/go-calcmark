@@ -69,6 +69,10 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 			PerUnit: v.PerUnit,
 		}, nil
 
+	case *types.Percentage:
+		// Percentages are already small decimal values; pass through unchanged.
+		return v, nil
+
 	default:
 		return nil, fmt.Errorf("napkin conversion requires a numeric value, got %T", value)
 	}

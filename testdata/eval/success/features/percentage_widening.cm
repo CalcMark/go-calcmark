@@ -1,0 +1,56 @@
+# Percentage Widening
+# Demonstrates percentage type and widening on + and -
+
+## Percentage literals
+rate = 20%
+# Expected: 20%
+half = 50%
+# Expected: 50%
+
+## Percentage widening: value + pct = value * (1 + pct)
+widened_add = 100 + 20%
+# Expected: 120
+widened_sub = 100 - 20%
+# Expected: 80
+widened_1k = 1000 + 10%
+# Expected: 1100
+widened_quarter = 500 - 25%
+# Expected: 375
+
+## Currency widening
+cur_add = $1000 + 15%
+# Expected: $1150.00
+cur_sub = $200 - 10%
+# Expected: $180.00
+
+## Percentage with variables
+base = 100
+markup = 25%
+# Expected: 25%
+total = base + markup
+# Expected: 125
+
+## Percentage in compound expressions
+price = $80
+tax = 8%
+# Expected: 8%
+after_tax = price + tax
+# Expected: $86.40
+
+## Percentage normalizes to decimal on * and /
+mul_result = 100 * 20%
+# Expected: 20
+mul_result2 = 200 * 50%
+# Expected: 100
+
+## Percentage of (natural syntax)
+pct_of_1 = 10% of 200
+# Expected: 20
+pct_of_2 = 25% of 80
+# Expected: 20
+
+## Percentage arithmetic
+pct_add = 10% + 5%
+# Expected: 15%
+pct_sub = 50% - 20%
+# Expected: 30%

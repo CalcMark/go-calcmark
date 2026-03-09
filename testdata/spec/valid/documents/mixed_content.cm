@@ -22,7 +22,7 @@ The empty line above keeps this paragraph in the same block.
 
 x = 10
 y = 20
-sum = x + y
+total = x + y
 
 ## Edge Case: Single Empty Line
 
@@ -37,4 +37,4 @@ It's definitely a new block.
 
 ## Final Calculations
 
-result = sum * 2
+result = total * 2

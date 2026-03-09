@@ -160,6 +160,95 @@ func TestParseSquareRootOfFunction(t *testing.T) {
 	}
 }
 
+func TestParseSumFunction(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantArgs int
+	}{
+		{"sum with 2 args", "sum(1, 2)", 2},
+		{"sum with 3 args", "sum(1, 2, 3)", 3},
+		{"sum with 5 args", "sum(1, 2, 3, 4, 5)", 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v, want nil", tt.input, err)
+			}
+			if len(nodes) != 1 {
+				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
+			}
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
+			if !ok {
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
+			}
+			if funcCall.Name != "sum" {
+				t.Errorf("Parse(%q) function name = %q, want \"sum\"", tt.input, funcCall.Name)
+			}
+			if len(funcCall.Arguments) != tt.wantArgs {
+				t.Errorf("Parse(%q) got %d arguments, want %d", tt.input, len(funcCall.Arguments), tt.wantArgs)
+			}
+		})
+	}
+}
+
+func TestParseSumOfFunction(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantArgs int
+	}{
+		{"sum of 2 args", "sum of 1, 2", 2},
+		{"sum of 3 args", "sum of 1, 2, 3", 3},
+		{"sum of 5 args", "sum of 1, 2, 3, 4, 5", 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v, want nil", tt.input, err)
+			}
+			if len(nodes) != 1 {
+				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
+			}
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
+			if !ok {
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
+			}
+			// "sum of" should be normalized to "sum"
+			if funcCall.Name != "sum" {
+				t.Errorf("Parse(%q) function name = %q, want \"sum\"", tt.input, funcCall.Name)
+			}
+			if len(funcCall.Arguments) != tt.wantArgs {
+				t.Errorf("Parse(%q) got %d arguments, want %d", tt.input, len(funcCall.Arguments), tt.wantArgs)
+			}
+		})
+	}
+}
+
+func TestParseSumMinArgs(t *testing.T) {
+	// sum() requires at least 2 arguments
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"sum with 0 args", "sum()"},
+		{"sum with 1 arg", "sum(1)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.input)
+			if err == nil {
+				t.Errorf("Parse(%q) expected error for too few arguments, got nil", tt.input)
+			}
+		})
+	}
+}
+
 func TestParseFunctionInAssignment(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -171,6 +260,8 @@ func TestParseFunctionInAssignment(t *testing.T) {
 		{"average of in assignment", "mean = average of 10, 20, 30", "mean", "avg"},
 		{"sqrt in assignment", "root = sqrt(16)", "root", "sqrt"},
 		{"square root of in assignment", "val = square root of 25", "val", "sqrt"},
+		{"sum in assignment", "total = sum(1, 2, 3)", "total", "sum"},
+		{"sum of in assignment", "total = sum of 10, 20, 30", "total", "sum"},
 	}
 
 	for _, tt := range tests {

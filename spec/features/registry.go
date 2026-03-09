@@ -147,9 +147,19 @@ func getFunctions() []Feature {
 			Name:        "avg",
 			Category:    CategoryFunction,
 			Syntax:      "avg(a, b, c, ...)",
-			Description: "Calculate the average of numbers",
+			Description: "Calculate the average of values",
 			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "mean", Parseable: false}, {Name: "average of", Parseable: true, Example: "average of 1, 2, 3"}},
 			Example:     "avg(10, 20, 30) → 20",
+			NLExample:   "average of 1 kg, 2 kg, 3 kg",
+		},
+		{
+			Name:        "sum",
+			Category:    CategoryFunction,
+			Syntax:      "sum(a, b, c, ...)",
+			Description: "Calculate the sum of values",
+			Aliases:     []Alias{{Name: "sum of", Parseable: true, Example: "sum of $100, $200, $300"}, {Name: "total", Parseable: false}},
+			Example:     "sum($100, $200, $300) → $600",
+			NLExample:   "sum of total_a, total_b, total_c",
 		},
 		{
 			Name:        "sqrt",
@@ -642,7 +652,7 @@ func getOperators() []Feature {
 			Syntax:      "a % b or N%",
 			Description: "Modulo or percentage",
 			Aliases:     []Alias{{Name: "mod", Parseable: false}, {Name: "percent", Parseable: false}},
-			Example:     "10 % 3 → 1, 50% → 0.5",
+			Example:     "10 % 3 → 1, 50% → 50%, 100 + 20% → 120",
 		},
 	}
 }

@@ -24,6 +24,7 @@ const (
 	TypeTime
 	TypeDuration
 	TypeQuantity
+	TypePercentage
 )
 
 // CheckTypeCompatibility validates that an operation is type-compatible.
@@ -121,6 +122,22 @@ func CheckTypeCompatibility(left, right TypeInfo, operator string, r *ast.Range)
 		return nil // Same currency is okay
 	}
 
+	// Percentage widening: value +/- Percentage is valid
+	if right.Kind == TypePercentage && (operator == "+" || operator == "-") {
+		return nil
+	}
+	// Percentage * or / any numeric-like type is valid.
+	// The runtime normalizes percentage to a plain number before dispatch,
+	// so Percentage * Currency, Percentage * Quantity, Percentage * Duration, etc. all work.
+	if (left.Kind == TypePercentage || right.Kind == TypePercentage) &&
+		(operator == "*" || operator == "/") {
+		return nil
+	}
+	// Percentage + Percentage is valid
+	if left.Kind == TypePercentage && right.Kind == TypePercentage {
+		return nil
+	}
+
 	// Non-currency units → ERROR (not yet supported)
 	if left.Kind == TypeQuantity || right.Kind == TypeQuantity {
 		return &Diagnostic{
@@ -189,6 +206,8 @@ func kindToString(kind TypeKind) string {
 		return "duration"
 	case TypeQuantity:
 		return "quantity with unit"
+	case TypePercentage:
+		return "percentage"
 	default:
 		return "unknown type"
 	}

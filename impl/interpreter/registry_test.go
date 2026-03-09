@@ -83,8 +83,8 @@ func TestGetFunctionsByCategory(t *testing.T) {
 func TestRegistryFunctionCount(t *testing.T) {
 	functions := GetAllFunctions()
 
-	// We expect 15 primary functions (12 original + 3 growth: compound, grow, depreciate)
-	expectedCount := 15
+	// We expect 16 primary functions (12 original + 3 growth + 1 sum)
+	expectedCount := 16
 	if len(functions) != expectedCount {
 		t.Errorf("expected %d functions, got %d", expectedCount, len(functions))
 	}
@@ -134,7 +134,7 @@ func TestGetFunctionNames(t *testing.T) {
 	names := GetFunctionNames()
 
 	// Should include primary names
-	expectedPrimary := []string{"avg", "sqrt", "accumulate", "convert_rate", "downtime", "rtt", "throughput", "transfer_time", "read", "seek", "compress", "capacity"}
+	expectedPrimary := []string{"avg", "sum", "sqrt", "accumulate", "convert_rate", "downtime", "rtt", "throughput", "transfer_time", "read", "seek", "compress", "capacity"}
 	for _, name := range expectedPrimary {
 		if !slices.Contains(names, name) {
 			t.Errorf("expected primary name %q in GetFunctionNames result", name)
