@@ -405,6 +405,57 @@ x = my_var + 1
 	}
 }
 
+// TestFrontmatterUnknownKeysInTUI verifies that documents with standard
+// YAML frontmatter keys (title, date, tags) parse and display correctly
+// in the TUI editor without triggering frontmatter errors.
+func TestFrontmatterUnknownKeysInTUI(t *testing.T) {
+	content := `---
+title: Monthly Budget
+date: 2026-03-09
+tags: [finance, planning]
+globals:
+  tax_rate: "0.08"
+---
+base = 1000
+tax = base * @globals.tax_rate
+`
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document with unknown frontmatter keys: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// No frontmatter error
+	if m.frontmatterErr != nil {
+		t.Fatalf("Should have no frontmatter error, got: %v", m.frontmatterErr)
+	}
+
+	// Globals should be parsed correctly
+	fm := m.doc.GetFrontmatter()
+	if fm == nil {
+		t.Fatal("Expected non-nil frontmatter")
+	}
+	if fm.Globals["tax_rate"] != "0.08" {
+		t.Errorf("Expected global tax_rate=0.08, got %q", fm.Globals["tax_rate"])
+	}
+
+	// Frontmatter line count should include all lines (including unknown keys)
+	fmCount := m.frontmatterLineCount()
+	if fmCount != 7 { // ---, title, date, tags, globals, tax_rate, ---
+		t.Errorf("Expected 7 frontmatter lines, got %d", fmCount)
+	}
+
+	// Simulate editing: add another unknown key via redetectBlockTypes
+	// This exercises the live-editing path
+	m.redetectBlockTypes()
+	if m.frontmatterErr != nil {
+		t.Fatalf("frontmatterErr after redetect: %v", m.frontmatterErr)
+	}
+}
+
 // TestUpdateCurrentLineFrontmatterOffset verifies cursor-to-block mapping
 // correctly accounts for frontmatter lines.
 func TestUpdateCurrentLineFrontmatterOffset(t *testing.T) {
