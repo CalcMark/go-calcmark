@@ -1,7 +1,7 @@
 ---
 title: "Accept Arbitrary YAML Frontmatter Keys"
 type: feat
-status: active
+status: completed
 date: 2026-03-09
 ---
 
