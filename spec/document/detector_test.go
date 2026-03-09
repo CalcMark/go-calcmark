@@ -622,6 +622,34 @@ func TestNLFunctionVariableDetection(t *testing.T) {
 	}
 }
 
+// TestStandaloneSumOfDetection verifies that standalone sum/sum of calls
+// are classified as calculations, not prose.
+func TestStandaloneSumOfDetection(t *testing.T) {
+	detector := NewDetector()
+
+	calcTests := []string{
+		"sum of 1, 2, 3",
+		"sum of $100, $200",
+		"sum of 1 kg, 500 g",
+		"sum(1, 2, 3)",
+		"sum($100, $200)",
+	}
+	for _, input := range calcTests {
+		t.Run(input, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(input)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block, got %d", len(blocks))
+			}
+			if blocks[0].Type() != BlockCalculation {
+				t.Errorf("Expected calculation, got %v for %q", blocks[0].Type(), input)
+			}
+		})
+	}
+}
+
 // TestDirectiveReferenceDetection verifies that lines containing @directive
 // references are classified as calculations.
 func TestDirectiveReferenceDetection(t *testing.T) {

@@ -76,8 +76,10 @@ func containsFunctions(tokens []lexer.Token) bool {
 	functionTypes := map[lexer.TokenType]bool{
 		lexer.FUNC_AVG:            true,
 		lexer.FUNC_SQRT:           true,
+		lexer.FUNC_SUM:            true,
 		lexer.FUNC_AVERAGE_OF:     true,
 		lexer.FUNC_SQUARE_ROOT_OF: true,
+		lexer.FUNC_SUM_OF:         true,
 	}
 
 	for _, token := range tokens {

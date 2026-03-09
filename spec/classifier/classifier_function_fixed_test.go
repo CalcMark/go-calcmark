@@ -16,6 +16,9 @@ func TestFunctionCallClassification(t *testing.T) {
 		{name: "avg with numbers", line: "avg(1, 2, 3)", want: Calculation},
 		{name: "sqrt with number", line: "sqrt(16)", want: Calculation},
 		{name: "average of with numbers", line: "average of 1, 2, 3", want: Calculation},
+		{name: "sum with numbers", line: "sum(1, 2, 3)", want: Calculation},
+		{name: "sum of with numbers", line: "sum of 1, 2, 3", want: Calculation},
+		{name: "sum of with currency", line: "sum of $100, $200", want: Calculation},
 	}
 
 	ctx := interpreter.NewEnvironment()
