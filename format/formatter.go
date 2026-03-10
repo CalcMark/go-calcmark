@@ -26,6 +26,11 @@ type Options struct {
 	// DisplayFormatter is the locale-aware formatter for rendering values.
 	// When zero-value, formatters fall back to display.Format() (en-US default).
 	DisplayFormatter display.Formatter
+
+	// FrontmatterAsCodeFence renders CalcMark frontmatter as a ```yaml code
+	// fence instead of raw --- delimiters. Use when embedding CalcMark output
+	// inside a Hugo page that has its own YAML frontmatter.
+	FrontmatterAsCodeFence bool
 }
 
 // getFormatter returns the DisplayFormatter from Options, or the default en-US formatter.

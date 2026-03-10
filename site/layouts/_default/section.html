@@ -1,12 +1,14 @@
 {{ define "main" }}
 <div class="docs-layout container">
   {{ if eq .Section "docs" }}{{ partial "sidebar.html" . }}{{ end }}
+  {{- $visiblePages := where .Pages.ByWeight "Params._build.list" "!=" "never" -}}
+  {{- if $visiblePages -}}
   <div class="docs-content">
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
     <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
     {{ .Content }}
     <div class="page-grid">
-      {{ range .Pages.ByWeight }}
+      {{ range $visiblePages }}
       <a href="{{ .RelPermalink }}" class="page-card">
         <h3>{{ .Title }}</h3>
         {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
@@ -14,5 +16,19 @@
       {{ end }}
     </div>
   </div>
+  {{- else -}}
+  {{/* No visible children — render like a regular page */}}
+  <article class="docs-content">
+    {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
+    <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
+    {{ with .Params.summary }}<p class="text-muted">{{ . | markdownify }}</p>{{ end }}
+    {{ .Content }}
+    {{ if .GitInfo }}
+    <footer class="page-meta">
+      Last updated: <time datetime="{{ .GitInfo.AuthorDate.Format "2006-01-02" }}">{{ .GitInfo.AuthorDate.Format "January 2, 2006" }}</time>
+    </footer>
+    {{ end }}
+  </article>
+  {{- end -}}
 </div>
 {{ end }}

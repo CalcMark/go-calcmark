@@ -359,6 +359,88 @@ func TestMarkdownFormatterMultipleBlankLines(t *testing.T) {
 	}
 }
 
+// TestMarkdownFormatterFrontmatterAsCodeFence tests that FrontmatterAsCodeFence
+// renders CalcMark frontmatter as a ```yaml code fence instead of raw ---
+// delimiters, so it can be embedded inside a Hugo page without collisions.
+func TestMarkdownFormatterFrontmatterAsCodeFence(t *testing.T) {
+	source := `---
+globals:
+  tax_rate: 0.32
+---
+x = @globals.tax_rate * 100
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{FrontmatterAsCodeFence: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should NOT start with --- (raw frontmatter)
+	if strings.HasPrefix(output, "---\n") {
+		t.Errorf("Expected output to NOT start with raw frontmatter, got:\n%s", output)
+	}
+
+	// Should contain ```yaml code fence with the frontmatter content
+	if !strings.Contains(output, "```yaml\n") {
+		t.Errorf("Expected ```yaml code fence, got:\n%s", output)
+	}
+	if !strings.Contains(output, "tax_rate") {
+		t.Errorf("Expected frontmatter content preserved, got:\n%s", output)
+	}
+
+	// Should still contain the calculation result
+	if !strings.Contains(output, "→ 32") {
+		t.Errorf("Expected calculation result, got:\n%s", output)
+	}
+}
+
+// TestMarkdownFormatterFrontmatterAsCodeFenceNoFrontmatter tests that
+// FrontmatterAsCodeFence is a no-op when there's no frontmatter.
+func TestMarkdownFormatterFrontmatterAsCodeFenceNoFrontmatter(t *testing.T) {
+	source := "x = 10\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{FrontmatterAsCodeFence: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Should just have the calc block, no yaml fence
+	if strings.Contains(output, "```yaml") {
+		t.Errorf("Expected no yaml fence when no frontmatter, got:\n%s", output)
+	}
+	if !strings.Contains(output, "x = 10 → 10") {
+		t.Errorf("Expected calculation, got:\n%s", output)
+	}
+}
+
 // --- Phase 4: Realistic document integration tests (Markdown formatter) ---
 
 // renderMarkdownFromFile loads a .cm file and renders it through the Markdown formatter.

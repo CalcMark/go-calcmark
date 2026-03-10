@@ -3,6 +3,7 @@ title: "Services P&L"
 summary: "Post-sales consulting P&L model: headcount, utilization, engagement mix, scenarios, and board narratives."
 weight: 58
 calcmark_build: progressive
+calcmark_source: testdata/examples/services-pl.cm
 ---
 
 How does a professional services business actually make money? This walkthrough models the full P&L (Profit & Loss statement) of a post-sales consulting arm attached to a SaaS company — from headcount and cost structure, through revenue capacity and engagement mix, to gross margin and board-ready scenario analysis.

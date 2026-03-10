@@ -23,7 +23,20 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 	if fm := doc.GetFrontmatter(); fm != nil {
 		fmStr := fm.Serialize()
 		if fmStr != "" {
-			fmt.Fprint(w, fmStr)
+			if opts.FrontmatterAsCodeFence {
+				// Render as a visible code fence instead of raw --- delimiters.
+				// This avoids collisions when the output is embedded in a Hugo
+				// page that has its own YAML frontmatter.
+				inner := strings.TrimSpace(fmStr)
+				inner = strings.TrimPrefix(inner, "---")
+				inner = strings.TrimSuffix(inner, "---")
+				inner = strings.TrimSpace(inner)
+				if inner != "" {
+					fmt.Fprintf(w, "```yaml\n%s\n```\n\n", inner)
+				}
+			} else {
+				fmt.Fprint(w, fmStr)
+			}
 		}
 	}
 
