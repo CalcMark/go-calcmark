@@ -572,7 +572,7 @@ func TestEvaluateForwardReference(t *testing.T) {
 		}
 		interp := tb.InterpolatedSource()
 		for _, line := range interp {
-			if strings.Contains(line, "Result: 42") {
+			if strings.Contains(line, "**42**") {
 				return // Success — forward reference resolved
 			}
 		}

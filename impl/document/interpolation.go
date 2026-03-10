@@ -9,9 +9,10 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
-// interpolationPattern matches {{variable_name}} with optional whitespace.
-// Only word characters (letters, digits, underscore) are valid variable names.
-var interpolationPattern = regexp.MustCompile(`\{\{\s*(\w+)\s*\}\}`)
+// interpolationPattern matches {{variable_name}} with optional whitespace and
+// optional surrounding backticks. Backticks are consumed so interpolated values
+// render as plain inline text rather than <code> elements in HTML.
+var interpolationPattern = regexp.MustCompile("`?" + `\{\{\s*(\w+)\s*\}\}` + "`?")
 
 // interpolateTextBlocks resolves {{var}} tags in all TextBlocks against
 // the final environment. Called after evaluation completes.
@@ -68,6 +69,6 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 		if wrapHTML {
 			return "\x02" + formatted + "\x03"
 		}
-		return formatted
+		return "**" + formatted + "**"
 	})
 }
