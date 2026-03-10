@@ -24,24 +24,28 @@ func interpolateTextBlocks(doc *document.Document, env map[string]types.Type, df
 			continue
 		}
 		interpolated := make([]string, len(tb.Source()))
+		interpolatedHTML := make([]string, len(tb.Source()))
 		changed := false
 		for i, line := range tb.Source() {
-			resolved := interpolateLine(line, env, df, fm)
-			interpolated[i] = resolved
-			if resolved != line {
+			plain := interpolateLine(line, env, df, fm, false)
+			interpolated[i] = plain
+			interpolatedHTML[i] = interpolateLine(line, env, df, fm, true)
+			if plain != line {
 				changed = true
 			}
 		}
 		if changed {
 			tb.SetInterpolatedSource(interpolated)
+			tb.SetInterpolatedHTMLSource(interpolatedHTML)
 			tb.SetDirty(true) // Force HTML re-render
 		}
 	}
 }
 
 // interpolateLine replaces all {{var}} tags in a single line.
-// Unresolved tags are left as-is.
-func interpolateLine(line string, env map[string]types.Type, df display.Formatter, fm *document.Frontmatter) string {
+// Unresolved tags are left as-is. When wrapHTML is true, resolved values
+// are wrapped with STX/ETX sentinels for post-processing into <span> tags.
+func interpolateLine(line string, env map[string]types.Type, df display.Formatter, fm *document.Frontmatter, wrapHTML bool) string {
 	return interpolationPattern.ReplaceAllStringFunc(line, func(match string) string {
 		// Extract variable name from the match
 		submatch := interpolationPattern.FindStringSubmatch(match)
@@ -60,6 +64,10 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 			value = transform.Apply(value, fm.Scale, fm.ConvertTo)
 		}
 
-		return df.Format(value)
+		formatted := df.Format(value)
+		if wrapHTML {
+			return "\x02" + formatted + "\x03"
+		}
+		return formatted
 	})
 }

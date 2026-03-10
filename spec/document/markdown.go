@@ -3,6 +3,8 @@
 package document
 
 import (
+	"strings"
+
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
@@ -15,7 +17,14 @@ func (tb *TextBlock) Render() string {
 		return tb.html // Return cached HTML
 	}
 
-	tb.html = renderMarkdown(tb.InterpolatedSourceText())
+	rendered := renderMarkdown(tb.InterpolatedHTMLSourceText())
+
+	// Post-process sentinel markers into <span> tags for interpolated values.
+	// Sentinels (\x02 and \x03) survive markdown rendering as literal characters.
+	rendered = strings.ReplaceAll(rendered, "\x02", `<span class="cm-interpolated">`)
+	rendered = strings.ReplaceAll(rendered, "\x03", `</span>`)
+
+	tb.html = rendered
 	tb.dirty = false
 
 	return tb.html

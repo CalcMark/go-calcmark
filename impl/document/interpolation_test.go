@@ -2,6 +2,7 @@ package document
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/format/display"
@@ -16,7 +17,7 @@ func TestInterpolateLine(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("Result: {{x}}", env, df, nil)
+	got := interpolateLine("Result: {{x}}", env, df, nil, false)
 	want := "Result: 42"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -30,7 +31,7 @@ func TestInterpolateLineMultipleTags(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("{{a}} and {{b}}", env, df, nil)
+	got := interpolateLine("{{a}} and {{b}}", env, df, nil, false)
 	want := "10 and 20"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -41,7 +42,7 @@ func TestInterpolateLineMissingVar(t *testing.T) {
 	env := map[string]types.Type{}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("Value: {{unknown}}", env, df, nil)
+	got := interpolateLine("Value: {{unknown}}", env, df, nil, false)
 	want := "Value: {{unknown}}"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -55,7 +56,7 @@ func TestInterpolateLineNoTags(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	input := "Just plain text"
-	got := interpolateLine(input, env, df, nil)
+	got := interpolateLine(input, env, df, nil, false)
 	if got != input {
 		t.Errorf("interpolateLine() = %q, want %q", got, input)
 	}
@@ -78,7 +79,7 @@ func TestInterpolateLineDisplayFormatted(t *testing.T) {
 		{"Team: {{widgets}}", "Team: 14 people"},
 	}
 	for _, tt := range tests {
-		got := interpolateLine(tt.input, env, df, nil)
+		got := interpolateLine(tt.input, env, df, nil, false)
 		if got != tt.want {
 			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
 		}
@@ -92,7 +93,7 @@ func TestInterpolateLineAdjacentTags(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("{{a}}{{b}}", env, df, nil)
+	got := interpolateLine("{{a}}{{b}}", env, df, nil, false)
 	want := "12"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -105,7 +106,7 @@ func TestInterpolateLineInTable(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil)
+	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil, false)
 	want := "| Revenue | $4.2M |"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -118,7 +119,7 @@ func TestInterpolateLineInHeading(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("# Summary: {{total}}", env, df, nil)
+	got := interpolateLine("# Summary: {{total}}", env, df, nil, false)
 	want := "# Summary: 500"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -141,7 +142,7 @@ func TestInterpolateLineWhitespace(t *testing.T) {
 		{"{{x }}", "99"},
 	}
 	for _, tt := range tests {
-		got := interpolateLine(tt.input, env, df, nil)
+		got := interpolateLine(tt.input, env, df, nil, false)
 		if got != tt.want {
 			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
 		}
@@ -163,7 +164,7 @@ func TestInterpolateLinePartialBraces(t *testing.T) {
 		"{{a + b}}", // Expression (space prevents \w+ match)
 	}
 	for _, input := range tests {
-		got := interpolateLine(input, env, df, nil)
+		got := interpolateLine(input, env, df, nil, false)
 		if got != input {
 			t.Errorf("interpolateLine(%q) = %q, should be unchanged", input, got)
 		}
@@ -184,7 +185,7 @@ func TestInterpolateLineWithTransform(t *testing.T) {
 		},
 	}
 
-	got := interpolateLine("Total: {{cost}}", env, df, fm)
+	got := interpolateLine("Total: {{cost}}", env, df, fm, false)
 	// 500 * 1000 = 500,000 → formatted as $500K
 	want := "Total: $500K"
 	if got != want {
@@ -222,6 +223,63 @@ func TestInterpolateTextBlocks(t *testing.T) {
 			return
 		}
 		t.Errorf("InterpolatedSource() should contain 'Total: 42', got %v", got)
+		return
+	}
+	t.Error("expected a TextBlock in document")
+}
+
+func TestInterpolateLineHTML(t *testing.T) {
+	env := map[string]types.Type{
+		"rev": types.NewCurrency(decimal.NewFromFloat(4200000), "USD"),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("Revenue: {{rev}}", env, df, nil, true)
+	want := "Revenue: \x02$4.2M\x03"
+	if got != want {
+		t.Errorf("interpolateLine(wrapHTML=true) = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineHTMLMissingVar(t *testing.T) {
+	env := map[string]types.Type{}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("Value: {{unknown}}", env, df, nil, true)
+	want := "Value: {{unknown}}"
+	if got != want {
+		t.Errorf("interpolateLine(wrapHTML=true, missing) = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateTextBlocksHTMLSource(t *testing.T) {
+	doc, err := document.NewDocument("Total: {{x}}\n\n\nx = 42\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(42)),
+	}
+	df := display.DefaultFormatter()
+
+	interpolateTextBlocks(doc, env, df)
+
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		// Plain source should not have sentinels
+		plain := tb.InterpolatedSource()
+		if plain[0] != "Total: 42" {
+			t.Errorf("InterpolatedSource()[0] = %q, want %q", plain[0], "Total: 42")
+		}
+		// HTML source should have sentinels
+		html := tb.InterpolatedHTMLSourceText()
+		if !strings.Contains(html, "Total: \x0242\x03") {
+			t.Errorf("InterpolatedHTMLSourceText() = %q, should contain sentinel-wrapped value", html)
+		}
 		return
 	}
 	t.Error("expected a TextBlock in document")

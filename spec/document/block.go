@@ -189,10 +189,11 @@ func (cb *CalcBlock) SetScaleExempt(exempt []bool) {
 // TextBlock represents markdown text.
 // Like a Jupyter markdown cell.
 type TextBlock struct {
-	source             []string // Raw source lines (immutable after creation)
-	interpolatedSource []string // Post-interpolation lines (nil = no interpolation)
-	html               string   // Rendered HTML
-	dirty              bool
+	source                 []string // Raw source lines (immutable after creation)
+	interpolatedSource     []string // Post-interpolation lines (nil = no interpolation)
+	interpolatedHTMLSource []string // Sentinel-wrapped lines for HTML rendering (nil = use interpolatedSource)
+	html                   string   // Rendered HTML
+	dirty                  bool
 }
 
 // NewTextBlock creates a new text block.
@@ -251,9 +252,24 @@ func (tb *TextBlock) SetInterpolatedSource(lines []string) {
 // ClearInterpolatedSource resets interpolation (e.g., when source changes).
 func (tb *TextBlock) ClearInterpolatedSource() {
 	tb.interpolatedSource = nil
+	tb.interpolatedHTMLSource = nil
 }
 
 // InterpolatedSourceText returns interpolated source as a single string.
 func (tb *TextBlock) InterpolatedSourceText() string {
 	return strings.Join(tb.InterpolatedSource(), "\n")
+}
+
+// SetInterpolatedHTMLSource stores sentinel-wrapped lines for HTML rendering.
+func (tb *TextBlock) SetInterpolatedHTMLSource(lines []string) {
+	tb.interpolatedHTMLSource = lines
+}
+
+// InterpolatedHTMLSourceText returns the sentinel-wrapped source for HTML rendering.
+// Falls back to InterpolatedSourceText() when no HTML-specific source is set.
+func (tb *TextBlock) InterpolatedHTMLSourceText() string {
+	if tb.interpolatedHTMLSource != nil {
+		return strings.Join(tb.interpolatedHTMLSource, "\n")
+	}
+	return tb.InterpolatedSourceText()
 }
