@@ -15,7 +15,7 @@ func (tb *TextBlock) Render() string {
 		return tb.html // Return cached HTML
 	}
 
-	tb.html = renderMarkdown(tb.SourceText())
+	tb.html = renderMarkdown(tb.InterpolatedSourceText())
 	tb.dirty = false
 
 	return tb.html

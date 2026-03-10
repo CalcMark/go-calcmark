@@ -81,8 +81,9 @@ func runConvert(filename string) error {
 		return fmt.Errorf("parse error: %w", err)
 	}
 
-	// Evaluate
+	// Evaluate with display formatter for {{var}} interpolation
 	eval := implDoc.NewEvaluator()
+	eval.SetDisplayFormatter(localeFormatter())
 	if err := eval.Evaluate(doc); err != nil {
 		return fmt.Errorf("evaluation error: %w", err)
 	}

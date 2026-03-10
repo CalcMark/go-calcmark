@@ -166,8 +166,9 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			renderedHTML := block.Render()
 			if renderedHTML == "" {
 				// Fallback: escape each source line to prevent XSS, then join with <br>
-				escaped := make([]string, len(block.Source()))
-				for i, line := range block.Source() {
+				src := block.InterpolatedSource()
+				escaped := make([]string, len(src))
+				for i, line := range src {
 					escaped[i] = gohtml.EscapeString(line)
 				}
 				renderedHTML = strings.Join(escaped, "<br>")

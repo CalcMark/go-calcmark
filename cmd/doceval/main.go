@@ -374,7 +374,7 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 				lineResults = append(lineResults, lr)
 			}
 		case *document.TextBlock:
-			for _, line := range block.Source() {
+			for _, line := range block.InterpolatedSource() {
 				lineResults = append(lineResults, LineResult{
 					Source:  line,
 					IsBlank: strings.TrimSpace(line) == "",

@@ -33,9 +33,9 @@ func RenderTextBlockAligned(block *document.TextBlock, renderer *MarkdownRendere
 		return nil
 	}
 
-	// Render the entire block as a single markdown document
-	// This allows glamour to correctly handle multi-line constructs like ordered lists
-	blockText := strings.Join(source, "\n")
+	// Render interpolated source for display, but use raw source for alignment mapping
+	displaySource := block.InterpolatedSource()
+	blockText := strings.Join(displaySource, "\n")
 	renderedLines := renderer.RenderLine(blockText)
 
 	// Now we need to map rendered lines back to source lines
@@ -84,7 +84,7 @@ func RenderTextBlockSimple(block *document.TextBlock, renderer *MarkdownRenderer
 		return nil
 	}
 
-	source := block.Source()
+	source := block.InterpolatedSource()
 	if len(source) == 0 {
 		return nil
 	}

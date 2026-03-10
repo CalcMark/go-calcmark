@@ -46,12 +46,13 @@ type JSONConvertTo struct {
 
 // JSONBlock represents a single block in JSON output.
 type JSONBlock struct {
-	Type        string           `json:"type"`
-	Source      []string         `json:"source"`
-	Results     []JSONResult     `json:"results,omitempty"`
-	Error       string           `json:"error,omitempty"`
-	Diagnostics []JSONDiagnostic `json:"diagnostics,omitempty"`
-	HTML        string           `json:"html,omitempty"`
+	Type               string           `json:"type"`
+	Source             []string         `json:"source"`
+	InterpolatedSource []string         `json:"interpolated_source,omitempty"`
+	Results            []JSONResult     `json:"results,omitempty"`
+	Error              string           `json:"error,omitempty"`
+	Diagnostics        []JSONDiagnostic `json:"diagnostics,omitempty"`
+	HTML               string           `json:"html,omitempty"`
 }
 
 // JSONResult represents a single evaluated statement's result.
@@ -215,6 +216,23 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 
 		case *document.TextBlock:
 			jb.Type = "text"
+			// Include interpolated source when interpolation has been applied
+			if interp := block.InterpolatedSource(); len(interp) > 0 {
+				// Only set if different from raw source (interpolation applied)
+				raw := block.Source()
+				different := len(interp) != len(raw)
+				if !different {
+					for i := range interp {
+						if interp[i] != raw[i] {
+							different = true
+							break
+						}
+					}
+				}
+				if different {
+					jb.InterpolatedSource = interp
+				}
+			}
 			jb.HTML = block.Render()
 		}
 

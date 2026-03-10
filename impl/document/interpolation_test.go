@@ -1,0 +1,255 @@
+package document
+
+import (
+	"slices"
+	"testing"
+
+	"github.com/CalcMark/go-calcmark/format/display"
+	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
+)
+
+func TestInterpolateLine(t *testing.T) {
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(42)),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("Result: {{x}}", env, df, nil)
+	want := "Result: 42"
+	if got != want {
+		t.Errorf("interpolateLine() = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineMultipleTags(t *testing.T) {
+	env := map[string]types.Type{
+		"a": types.NewNumber(decimal.NewFromInt(10)),
+		"b": types.NewNumber(decimal.NewFromInt(20)),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("{{a}} and {{b}}", env, df, nil)
+	want := "10 and 20"
+	if got != want {
+		t.Errorf("interpolateLine() = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineMissingVar(t *testing.T) {
+	env := map[string]types.Type{}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("Value: {{unknown}}", env, df, nil)
+	want := "Value: {{unknown}}"
+	if got != want {
+		t.Errorf("interpolateLine() = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineNoTags(t *testing.T) {
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(1)),
+	}
+	df := display.DefaultFormatter()
+
+	input := "Just plain text"
+	got := interpolateLine(input, env, df, nil)
+	if got != input {
+		t.Errorf("interpolateLine() = %q, want %q", got, input)
+	}
+}
+
+func TestInterpolateLineDisplayFormatted(t *testing.T) {
+	env := map[string]types.Type{
+		"cost":    types.NewCurrency(decimal.NewFromFloat(1200000), "USD"),
+		"pct":     types.NewPercentage(decimal.NewFromFloat(0.28)),
+		"widgets": types.NewQuantity(decimal.NewFromInt(14), "people"),
+	}
+	df := display.DefaultFormatter()
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"Total: {{cost}}", "Total: $1.2M"},
+		{"Margin: {{pct}}", "Margin: 28%"},
+		{"Team: {{widgets}}", "Team: 14 people"},
+	}
+	for _, tt := range tests {
+		got := interpolateLine(tt.input, env, df, nil)
+		if got != tt.want {
+			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestInterpolateLineAdjacentTags(t *testing.T) {
+	env := map[string]types.Type{
+		"a": types.NewNumber(decimal.NewFromInt(1)),
+		"b": types.NewNumber(decimal.NewFromInt(2)),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("{{a}}{{b}}", env, df, nil)
+	want := "12"
+	if got != want {
+		t.Errorf("interpolateLine() = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineInTable(t *testing.T) {
+	env := map[string]types.Type{
+		"rev": types.NewCurrency(decimal.NewFromFloat(4200000), "USD"),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil)
+	want := "| Revenue | $4.2M |"
+	if got != want {
+		t.Errorf("interpolateLine() = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineInHeading(t *testing.T) {
+	env := map[string]types.Type{
+		"total": types.NewNumber(decimal.NewFromInt(500)),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("# Summary: {{total}}", env, df, nil)
+	want := "# Summary: 500"
+	if got != want {
+		t.Errorf("interpolateLine() = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineWhitespace(t *testing.T) {
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(99)),
+	}
+	df := display.DefaultFormatter()
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"{{ x }}", "99"},
+		{"{{  x  }}", "99"},
+		{"{{ x}}", "99"},
+		{"{{x }}", "99"},
+	}
+	for _, tt := range tests {
+		got := interpolateLine(tt.input, env, df, nil)
+		if got != tt.want {
+			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestInterpolateLinePartialBraces(t *testing.T) {
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(1)),
+	}
+	df := display.DefaultFormatter()
+
+	// These should NOT be matched
+	tests := []string{
+		"{x}",       // Single braces
+		"{{}}",      // Empty tag
+		"{{x",       // Unclosed
+		"x}}",       // No opening
+		"{{a + b}}", // Expression (space prevents \w+ match)
+	}
+	for _, input := range tests {
+		got := interpolateLine(input, env, df, nil)
+		if got != input {
+			t.Errorf("interpolateLine(%q) = %q, should be unchanged", input, got)
+		}
+	}
+}
+
+func TestInterpolateLineWithTransform(t *testing.T) {
+	// Scale requires unit_categories to be set — use Currency with explicit category
+	env := map[string]types.Type{
+		"cost": types.NewCurrency(decimal.NewFromInt(500), "USD"),
+	}
+	df := display.DefaultFormatter()
+
+	fm := &document.Frontmatter{
+		Scale: &document.ScaleConfig{
+			Factor:         decimal.NewFromInt(1000),
+			UnitCategories: []string{"Currency"},
+		},
+	}
+
+	got := interpolateLine("Total: {{cost}}", env, df, fm)
+	// 500 * 1000 = 500,000 → formatted as $500K
+	want := "Total: $500K"
+	if got != want {
+		t.Errorf("interpolateLine() with scale = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateTextBlocks(t *testing.T) {
+	// Build a document with a TextBlock containing {{var}} followed by a CalcBlock
+	doc, err := document.NewDocument("Total: {{x}}\n\n\nx = 42\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(42)),
+	}
+	df := display.DefaultFormatter()
+
+	interpolateTextBlocks(doc, env, df)
+
+	// Find the TextBlock
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		got := tb.InterpolatedSource()
+		if slices.Contains(got, "Total: 42") {
+			// Raw source unchanged
+			if slices.Contains(tb.Source(), "Total: {{x}}") {
+				return // Success
+			}
+			t.Error("Source() should still contain {{x}}")
+			return
+		}
+		t.Errorf("InterpolatedSource() should contain 'Total: 42', got %v", got)
+		return
+	}
+	t.Error("expected a TextBlock in document")
+}
+
+func TestInterpolateTextBlocksNoChange(t *testing.T) {
+	doc, err := document.NewDocument("No tags here\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env := map[string]types.Type{
+		"x": types.NewNumber(decimal.NewFromInt(1)),
+	}
+	df := display.DefaultFormatter()
+
+	interpolateTextBlocks(doc, env, df)
+
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		// Should fall back to Source since no changes
+		got := tb.InterpolatedSource()
+		if got[0] != "No tags here" {
+			t.Errorf("InterpolatedSource should fall back, got %v", got)
+		}
+		return
+	}
+}

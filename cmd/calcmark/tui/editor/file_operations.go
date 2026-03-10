@@ -191,6 +191,7 @@ func (m *Model) openFile(filename string) {
 
 	// Evaluate
 	eval := implDoc.NewEvaluator()
+	eval.SetDisplayFormatter(m.formatter)
 	if err := eval.Evaluate(doc); err != nil {
 		// Non-fatal - document loaded but has evaluation errors
 		m.statusMsg = fmt.Sprintf("Opened with errors: %v", err)
@@ -213,6 +214,7 @@ func (m *Model) newFile() {
 	}
 
 	eval := implDoc.NewEvaluator()
+	eval.SetDisplayFormatter(m.formatter)
 	if err := eval.Evaluate(doc); err != nil {
 		m.statusMsg = fmt.Sprintf("New file has errors: %v", err)
 		m.statusIsErr = true
@@ -243,6 +245,7 @@ func (m *Model) loadDocumentFromString(content, suggestedFilename string) {
 
 	// Evaluate
 	eval := implDoc.NewEvaluator()
+	eval.SetDisplayFormatter(m.formatter)
 	if err := eval.Evaluate(doc); err != nil {
 		m.statusMsg = fmt.Sprintf("Opened with errors: %v", err)
 		m.statusIsErr = true
