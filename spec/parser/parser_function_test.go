@@ -249,6 +249,58 @@ func TestParseSumMinArgs(t *testing.T) {
 	}
 }
 
+func TestParseNumberFunction(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"number with integer", "number(42)"},
+		{"number with quantity", "number(10 kg)"},
+		{"number with currency", "number($100)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v, want nil", tt.input, err)
+			}
+			if len(nodes) != 1 {
+				t.Fatalf("Parse(%q) returned %d nodes, want 1", tt.input, len(nodes))
+			}
+			funcCall, ok := nodes[0].(*ast.FunctionCall)
+			if !ok {
+				t.Fatalf("Parse(%q) returned %T, want *ast.FunctionCall", tt.input, nodes[0])
+			}
+			if funcCall.Name != "number" {
+				t.Errorf("Parse(%q) function name = %q, want \"number\"", tt.input, funcCall.Name)
+			}
+			if len(funcCall.Arguments) != 1 {
+				t.Errorf("Parse(%q) got %d arguments, want 1", tt.input, len(funcCall.Arguments))
+			}
+		})
+	}
+}
+
+func TestParseNumberFunctionErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"number with 0 args", "number()"},
+		{"number with 2 args", "number(1, 2)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(tt.input)
+			if err == nil {
+				t.Errorf("Parse(%q) expected error, got nil", tt.input)
+			}
+		})
+	}
+}
+
 func TestParseFunctionInAssignment(t *testing.T) {
 	tests := []struct {
 		name     string

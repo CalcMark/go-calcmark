@@ -1,0 +1,43 @@
+# number() Function
+
+Extract the numeric value from any type.
+
+## Number passthrough
+
+a = number(42)
+b = number(3.14)
+
+## From quantity
+
+weight = 10 kg
+weight_num = number(weight)
+inline_qty = number(5 MB)
+
+## From currency
+
+price = $199.99
+price_num = number(price)
+inline_cur = number($50)
+
+## From percentage
+
+rate = 25%
+rate_num = number(rate)
+
+## From duration
+
+dur = 3 hours
+dur_num = number(dur)
+
+## Quantity × Currency coercion
+
+people = 5 people
+cost_per = $100
+total_cost = people * cost_per
+reverse = cost_per * people
+
+## In expressions
+
+hc = 12 consultants
+salary = $145000
+total_labor = hc * salary

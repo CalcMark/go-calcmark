@@ -1056,8 +1056,8 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
-	// Function calls: avg(...), sqrt(...), sum(...)
-	if p.match(lexer.FUNC_AVG, lexer.FUNC_SQRT, lexer.FUNC_SUM) {
+	// Function calls: avg(...), sqrt(...), sum(...), number(...)
+	if p.match(lexer.FUNC_AVG, lexer.FUNC_SQRT, lexer.FUNC_SUM, lexer.FUNC_NUMBER) {
 		return p.parseFunctionCall()
 	}
 
@@ -1231,6 +1231,9 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		if funcNameStr == "sum" {
 			return nil, p.error("sum() requires at least 2 arguments")
 		}
+		if funcNameStr == "number" {
+			return nil, p.error("number() requires exactly 1 argument")
+		}
 		return &ast.FunctionCall{
 			Name:      funcNameStr,
 			Arguments: args,
@@ -1277,6 +1280,14 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		}
 		if len(args) > 1 {
 			return nil, p.error("sqrt() requires exactly one argument")
+		}
+	}
+	if funcNameStr == "number" {
+		if len(args) == 0 {
+			return nil, p.error("number() requires exactly 1 argument")
+		}
+		if len(args) > 1 {
+			return nil, p.error("number() requires exactly 1 argument")
 		}
 	}
 

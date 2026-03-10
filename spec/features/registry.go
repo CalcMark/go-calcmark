@@ -170,6 +170,14 @@ func getFunctions() []Feature {
 			Example:     "sqrt(16) → 4",
 		},
 		{
+			Name:        "number",
+			Category:    CategoryFunction,
+			Syntax:      "number(value)",
+			Description: "Extract the numeric value from any type",
+			Aliases:     nil,
+			Example:     "number(10 kg) → 10",
+		},
+		{
 			Name:        "accumulate",
 			Category:    CategoryFunction,
 			Syntax:      "accumulate(rate, time)",

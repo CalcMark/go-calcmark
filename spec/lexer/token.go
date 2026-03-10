@@ -86,9 +86,10 @@ const (
 	CONST
 
 	// Reserved function names (cannot be used as variables)
-	FUNC_AVG  // "avg" - canonical name
-	FUNC_SQRT // "sqrt" - canonical name
-	FUNC_SUM  // "sum" - canonical name
+	FUNC_AVG    // "avg" - canonical name
+	FUNC_SQRT   // "sqrt" - canonical name
+	FUNC_SUM    // "sum" - canonical name
+	FUNC_NUMBER // "number" - canonical name
 
 	// Multi-token function keywords (aliases)
 	FUNC_AVERAGE_OF     // "average of" → maps to "avg"

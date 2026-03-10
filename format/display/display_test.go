@@ -66,13 +66,13 @@ func TestFormatQuantity(t *testing.T) {
 		unit     string
 		expected string
 	}{
-		{"100K users", "100000", "users", "100K users"},             // arbitrary unit: uses K/M/B/T
-		{"1.5M bytes normalized", "1500000", "bytes", "1.43 MB"},    // known unit: uses unit normalization
-		{"small quantity", "42", "items", "42 items"},               // arbitrary unit: stays as-is
-		{"decimal quantity normalized", "3.14", "meters", "3.14 m"}, // known unit: uses canonical symbol
-		{"large GB normalized", "23400000", "GB", "22.3 PB"},        // the original problem case!
-		{"1000 meters to km", "1000", "m", "1 km"},                  // meters → kilometers
-		{"5280 feet to miles", "5280", "feet", "1 mi"},              // feet → miles
+		{"100K users", "100000", "users", "100K users"},                  // arbitrary unit: uses K/M/B/T
+		{"1.5M bytes normalized", "1500000", "bytes", "1.43 MB"},         // known unit: uses unit normalization
+		{"small quantity", "42", "items", "42 items"},                    // arbitrary unit: stays as-is
+		{"decimal quantity normalized", "3.14", "meters", "3.14 m"},      // known unit: uses canonical symbol
+		{"large GB normalized", "23400000", "GB", "22.3 PB"},             // the original problem case!
+		{"1000 meters to km", "1000", "m", "1 km"},                       // meters → kilometers
+		{"5280 feet to miles", "5280", "feet", "1 mi"},                   // feet → miles
 		{"fractional lb rounded", "1.1941138678655463", "lb", "1.19 lb"}, // unit conversion result: round to 2dp
 	}
 

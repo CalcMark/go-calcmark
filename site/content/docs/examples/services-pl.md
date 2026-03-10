@@ -5,7 +5,14 @@ weight: 58
 calcmark_build: progressive
 ---
 
-How does a professional services business actually make money? This walkthrough models the full P&L of a post-sales consulting arm attached to a SaaS company — from headcount and cost structure, through revenue capacity and engagement mix, to gross margin and board-ready scenario analysis.
+How does a professional services business actually make money? This walkthrough models the full P&L (Profit & Loss statement) of a post-sales consulting arm attached to a SaaS company — from headcount and cost structure, through revenue capacity and engagement mix, to gross margin and board-ready scenario analysis.
+
+A services P&L is fundamentally a people business wrapped in a software context. You sell time, expertise, and outcomes. Unlike the SaaS product, services revenue is not recurring by default, it does not scale without headcount, and gross margins are structurally lower. Four levers govern every line:
+
+1. **Capacity** — how many billable people, and how many hours can they sell?
+2. **Rates** — what do you charge per hour or per engagement?
+3. **Utilization** — what fraction of available capacity actually generates revenue?
+4. **Mix** — which engagement types fill the book, and do they carry different margins?
 
 The complete CalcMark file is available at {{< repo-file path="testdata/examples/services-pl.cm" >}}.
 
@@ -13,7 +20,7 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ## Globals and Assumptions
 
-Two values appear throughout the model — working days per year and hours per day. Rather than repeat them, the document declares them once in frontmatter as globals.
+Two values appear throughout the model — working days per year (250 = 52 weeks × 5 days − 10 holidays) and hours per day (standard US full-time). Rather than repeat them, the document declares them once in frontmatter as globals.
 
 ```yaml
 ---
@@ -31,50 +38,68 @@ Reference them anywhere with `@globals.working_days` and `@globals.hours_per_day
 
 ## Team Composition
 
-The team is tiered by seniority. CalcMark's `sum of` natural-language function totals headcount without parentheses.
+The team is tiered by seniority. The tier mix affects both cost structure and the types of work the team can credibly execute. This model uses a 12-person billable team — small enough to run as a single practice, large enough to staff a diverse engagement portfolio.
+
+Headcount is tracked in `people` — a custom unit that makes the staffing model self-documenting and flows naturally into cost calculations.
 
 ```calcmark
-senior_consultants = 3
-mid_consultants = 5
-junior_consultants = 4
-total_billable_hc = sum of senior_consultants, mid_consultants, junior_consultants
+seniors = 3 people
+mids = 5 people
+juniors = 4 people
+billable_hc = sum of seniors, mids, juniors
 ```
 
-Management overhead is 18% of billable headcount. Percentage literals make the rate self-documenting.
+Support roles (practice management, ops, enablement) are typically 15–20% of billable headcount in mid-market SaaS PS organizations (SPI Research, 2023 PS Maturity Benchmark). We use 18% — one practice lead plus a fractional ops role.
 
 ```calcmark
-mgmt_overhead_rate = 18%
-mgmt_hc = total_billable_hc * mgmt_overhead_rate
-total_team_hc = total_billable_hc + mgmt_hc
+mgmt_rate = 18%
+mgmt_hc = billable_hc * mgmt_rate
+team_hc = billable_hc + mgmt_hc
 ```
 
-`total_billable_hc` evaluates to `12`, `mgmt_hc` to `2.16`, and `total_team_hc` to `14.16`.
+`billable_hc` evaluates to `12 people`, `mgmt_hc` to `2.16 people`, and `team_hc` to `14.16 people`.
 
-**CalcMark features:** `sum of` NL function; percentage literals; percentage normalization on `*`.
+**CalcMark features:** `sum of` NL function; custom `people` unit; percentage normalization on `*`.
 
 ---
 
 ## Fully-Loaded Cost
 
-"Fully loaded" = base salary + burden (taxes, benefits, equity). Percentage widening makes this natural: `$145,000 + 32%` means "increase by 32%". Under the hood, CalcMark evaluates `$145,000 + 32%` as `$145,000 * (1 + 0.32)`.
+"Fully loaded" means base salary plus the full burden of employing someone: payroll taxes, health insurance, retirement contributions, equity grants, and recruiting amortization. A common rule of thumb in US SaaS companies is a 1.25–1.35x multiplier on base salary for individual contributors, rising to 1.3–1.4x for roles with richer equity packages (Carta Total Compensation Report, 2023).
+
+Percentage widening makes burden rates natural: `$145,000 + 32%` means "increase by 32%". Under the hood, CalcMark evaluates this as `$145,000 * (1 + 0.32)`.
+
+Senior consultants (8–12 years experience, can lead enterprise engagements): base salary benchmarked to the 75th percentile for "Solutions Architect" in US metro markets (Levels.fyi, Glassdoor mid-2023 range: $135K–$160K).
 
 ```calcmark
-senior_base_salary = $145000
-senior_burden_rate = 32%
-senior_fully_loaded = senior_base_salary + senior_burden_rate
-
-mid_base_salary = $100000
-mid_burden_rate = 30%
-mid_fully_loaded = mid_base_salary + mid_burden_rate
-
-junior_base_salary = $72000
-junior_burden_rate = 28%
-junior_fully_loaded = junior_base_salary + junior_burden_rate
-
-mgmt_avg_fully_loaded = $220000
+sr_base = $145000
+sr_burden = 32%
+sr_loaded = sr_base + sr_burden
 ```
 
-`senior_fully_loaded` = `$191.4K`, `mid_fully_loaded` = `$130K`, `junior_fully_loaded` = `$92.16K`.
+Mid-level consultants (4–7 years, can run standard implementations independently): benchmarked to median "Implementation Consultant" (Glassdoor range: $90K–$115K).
+
+```calcmark
+mid_base = $100000
+mid_burden = 30%
+mid_loaded = mid_base + mid_burden
+```
+
+Junior consultants (1–3 years, execution-focused, paired with seniors on complex work): benchmarked to entry-level "Technical Consultant" (Glassdoor range: $65K–$80K).
+
+```calcmark
+jr_base = $72000
+jr_burden = 28%
+jr_loaded = jr_base + jr_burden
+```
+
+Management fully-loaded cost includes higher equity grants and assumes a Director-level role — blended across a Practice Director ($180K base) and fractional VP allocation.
+
+```calcmark
+mgmt_loaded = $220000
+```
+
+`sr_loaded` = `$191.4K`, `mid_loaded` = `$130K`, `jr_loaded` = `$92.16K`.
 
 **CalcMark features:** Percentage widening on `+` (value + pct = value increased by pct); currency arithmetic.
 
@@ -82,155 +107,274 @@ mgmt_avg_fully_loaded = $220000
 
 ## Total Labor Cost
 
-```calcmark
-total_senior_cost = senior_consultants * senior_fully_loaded
-total_mid_cost = mid_consultants * mid_fully_loaded
-total_junior_cost = junior_consultants * junior_fully_loaded
-total_mgmt_cost = mgmt_hc * mgmt_avg_fully_loaded
+Multiplying a `people` quantity by a currency uses Quantity × Currency coercion: `3 people * $191,400` yields `$574,200`. The unit is stripped and the dollar value propagates.
 
-total_labor_cost = sum of total_senior_cost, total_mid_cost, total_junior_cost, total_mgmt_cost
+```calcmark
+sr_cost = seniors * sr_loaded
+mid_cost = mids * mid_loaded
+jr_cost = juniors * jr_loaded
+mgmt_cost = mgmt_hc * mgmt_loaded
 ```
 
-`total_labor_cost` evaluates to `$2.07M`. The `sum of` function reads like a natural rollup.
+```calcmark
+labor_cost = sum of sr_cost, mid_cost, jr_cost, mgmt_cost
+```
+
+`labor_cost` evaluates to `$2.07M`.
+
+**CalcMark features:** Quantity × Currency coercion; `sum of` NL function.
 
 ---
 
 ## Non-Labor Overhead
 
-T&E uses percentage widening on `-` to apply a billable recovery rate. Writing `gross - 40%` means "reduce by 40%".
+Beyond labor, services organizations carry travel, tooling, training, and allocated infrastructure costs. Each scales with headcount, not some fixed number.
+
+### Travel & Expenses
+
+Travel & Expenses (T&E) — flights, hotels, meals, and ground transport for on-site client engagements — are the largest variable non-labor cost. The average US business trip runs $1,293–$1,771 (GBTA, 2023). Implementation consultants doing on-site delivery average 8–10 trips/year; managers travel less frequently.
 
 ```calcmark
-te_billable_recovery_rate = 40%
-billable_te_per_person = $12000
-mgmt_te_per_person = $3500
+billable_trips = 8
+billable_trip_cost = $1500
+billable_te = billable_trips * billable_trip_cost
 
-travel_and_expenses_gross = (total_billable_hc * billable_te_per_person) + (mgmt_hc * mgmt_te_per_person)
-travel_and_expenses = travel_and_expenses_gross - te_billable_recovery_rate
+mgmt_trips = 2.5
+mgmt_trip_cost = $1400
+mgmt_te = mgmt_trips * mgmt_trip_cost
 ```
 
-The gross T&E is `$151.56K`; after 40% recovery, net T&E is `$90.94K`.
-
-**CalcMark features:** Percentage widening on `-` (value - pct = value reduced by pct).
+Not all T&E is a pure loss. Enterprise contracts typically allow the firm to bill a portion of travel directly to the customer as a reimbursable line item on the invoice. The recovery rate is the fraction billed back — 40% is typical when the engagement book is a mix of time-and-materials work (where travel is reimbursed) and fixed-price projects (where travel costs are absorbed by the firm). Percentage widening makes the deduction natural: `te_gross - te_recovery` means "reduce the gross amount by 40%".
 
 ```calcmark
-tooling_per_person = $3200
-tooling_and_software = total_team_hc * tooling_per_person
+te_recovery = 40%
+te_gross = (billable_hc * billable_te) + (mgmt_hc * mgmt_te)
+te_net = te_gross - te_recovery
+```
 
-training_per_person = $1800
-training_and_enablement = total_team_hc * training_per_person
+Gross T&E is `$151.56K`; after billing 40% back to customers, the net cost to the company is `$90.94K`.
 
-allocated_overhead_per_person = $3800
-allocated_overhead = total_team_hc * allocated_overhead_per_person
+**CalcMark features:** Percentage widening on `-` (value - pct = value reduced by pct); Quantity × Currency coercion.
 
-total_non_labor_overhead = sum of travel_and_expenses, tooling_and_software, training_and_enablement, allocated_overhead
-total_org_cost = total_labor_cost + total_non_labor_overhead
+### Tooling & Software
+
+A Professional Services Automation (PSA) tool handles resource management, time tracking, project billing, and utilization reporting — the operational backbone of any PS org. A mid-market PSA (Kantata/Mavenlink, Certinia) plus collaboration stack (Slack, Zoom, Google Workspace) runs $2,500–$4,000 per person per year (G2 pricing data, 2023).
+
+```calcmark
+tooling_pp = $3200
+tooling = team_hc * tooling_pp
+```
+
+### Training & Enablement
+
+Consultants require continuous certification and product enablement as the platform evolves. The Association for Talent Development (ATD) reports a cross-industry average of $1,220 per employee; PS teams with active product certification requirements typically spend $1,500–$2,000 per person.
+
+```calcmark
+training_pp = $1800
+training = team_hc * training_pp
+```
+
+### Allocated Overhead
+
+This captures the PS team's proportional share of company-wide General & Administrative (G&A) expenses — the corporate functions that support every team: HR, legal, finance, IT support, and office/occupancy costs. Rather than track these line by line, companies typically allocate a per-head charge proportional to headcount. For a SaaS company where PS operates as a cost center with its own P&L, $3,000–$5,000 per person is typical (based on SaaS company 10-K G&A disclosures scaled to headcount).
+
+```calcmark
+overhead_pp = $3800
+overhead = team_hc * overhead_pp
+```
+
+### Non-Labor Rollup
+
+```calcmark
+non_labor = sum of te_net, tooling, training, overhead
+org_cost = labor_cost + non_labor
 ```
 
 ---
 
 ## Revenue Capacity
 
-Available hours use the globals declared in frontmatter. Percentage widening naturally expresses deductions.
+### Available Billable Hours
+
+The starting point for revenue modeling is theoretical capacity: how many hours could the team bill if everything went perfectly? Available hours use the globals declared in frontmatter.
 
 ```calcmark
-gross_hours_per_person = @globals.working_days * @globals.hours_per_day
-non_billable_deduction = 12%
-net_available_hours_per_person = gross_hours_per_person - non_billable_deduction
-total_billable_capacity = total_billable_hc * net_available_hours_per_person
+gross_hrs = @globals.working_days * @globals.hours_per_day
 ```
 
-`gross_hours_per_person` = `2K`, `net_available_hours_per_person` = `1.76K` (2,000 reduced by 12%).
+Not all of those hours are billable. Non-billable time includes internal meetings, product training, pre-sales support, PTO, sick days, and company events. SPI Research (2023) reports 10–15% non-billable time for well-run PS organizations. We use 12%.
 
 ```calcmark
-target_utilization = 72%
-actual_billed_hours = total_billable_capacity * target_utilization
+non_billable = 12%
+net_hrs = gross_hrs - non_billable
+```
+
+`gross_hrs` = `2K`, `net_hrs` = `1.76K` (2,000 reduced by 12%).
+
+Where headcount carries the `people` unit, `number()` extracts the raw count for calculations where the unit shouldn't propagate — like computing total hours.
+
+```calcmark
+total_capacity = number(billable_hc) * net_hrs
+```
+
+**CalcMark features:** `number()` function; `@globals.*` references; percentage widening on `-`.
+
+### Utilization
+
+Utilization is the fraction of net available hours that are actually billed to clients. It is the single most important operational metric in a services business. Industry benchmarks (SPI Research, TSIA) vary by segment:
+
+- **Enterprise SaaS implementation**: 65–75% blended target
+- **Advisory/managed services**: 70–80% (more recurring work, smoother loading)
+- **Project-based boutique**: 55–70% (longer sales cycles, more bench time)
+
+A business running below 60% has a structural problem — either a demand shortfall, a utilization tracking problem, or a staffing mismatch. Above 80% sustained signals understaffing and burnout risk. 72% is a realistic plan target for a growth-stage SaaS PS team — above median but not heroic.
+
+```calcmark
+target_util = 72%
+billed_hours = total_capacity * target_util
 ```
 
 ---
 
 ## Billing Rates & T&M Revenue
 
-Rates and tier-specific utilization drive the T&M capacity cross-check.
+T&M (Time and Materials) is the simplest pricing model: the client pays an hourly rate for each consultant's time. Rates reflect market positioning — enterprise SaaS PS arms typically price at a premium to pure-play systems integrators because they own the product knowledge.
+
+Rates are benchmarked to US mid-market SaaS PS (TSIA rate card survey, 2023): seniors $200–$275/hr, mids $140–$190/hr, juniors $100–$135/hr.
 
 ```calcmark
-senior_bill_rate = $225
-mid_bill_rate = $165
-junior_bill_rate = $115
-
-senior_utilization = 68%
-mid_utilization = 74%
-junior_utilization = 78%
-
-senior_billed_hours = senior_consultants * net_available_hours_per_person * senior_utilization
-mid_billed_hours = mid_consultants * net_available_hours_per_person * mid_utilization
-junior_billed_hours = junior_consultants * net_available_hours_per_person * junior_utilization
-
-senior_tm_revenue = senior_billed_hours * senior_bill_rate
-mid_tm_revenue = mid_billed_hours * mid_bill_rate
-junior_tm_revenue = junior_billed_hours * junior_bill_rate
-
-total_tm_revenue = sum of senior_tm_revenue, mid_tm_revenue, junior_tm_revenue
+sr_rate = $225
+mid_rate = $165
+jr_rate = $115
 ```
+
+Tier-specific utilization varies: seniors carry more pre-sales and methodology work (reducing their billable fraction), while juniors are more purely execution-focused. These reflect observed ranges from TSIA benchmarks.
+
+```calcmark
+sr_util = 68%
+mid_util = 74%
+jr_util = 78%
+```
+
+Billable hours per tier multiply headcount (stripped to a raw number with `number()`) by net available hours and the tier's utilization rate.
+
+```calcmark
+sr_hours = number(seniors) * net_hrs * sr_util
+mid_hours = number(mids) * net_hrs * mid_util
+jr_hours = number(juniors) * net_hrs * jr_util
+```
+
+Revenue per tier is hours × rate.
+
+```calcmark
+sr_tm_rev = sr_hours * sr_rate
+mid_tm_rev = mid_hours * mid_rate
+jr_tm_rev = jr_hours * jr_rate
+
+total_tm_rev = sum of sr_tm_rev, mid_tm_rev, jr_tm_rev
+```
+
+**CalcMark features:** `number()` to extract headcount for hour calculations.
 
 ---
 
 ## Engagement Packaging
 
-Fixed-price packages and retainers. The retainer delivery cost uses `% of` — CalcMark's natural-language percentage calculation.
+### Why Mix Matters
+
+Not all revenue is created equal. A pure T&M model is transparent and flexible, but it creates lumpy revenue, scope creep disputes, and margin uncertainty. Fixed-price packages trade some upside for predictability. The strategic goal is a portfolio that balances recurring (retainer) revenue for a stable base, fixed-price packages that standardize delivery and protect margin, and T&M for complex work where scope is genuinely unknown.
+
+### Implementation Packages (Fixed-Price)
+
+Fixed-price packages should be sized so that an average delivery runs at roughly 80–85% of the price — leaving 15–20% margin before overhead allocation. Delivery costs below reflect internal labor plus direct costs based on typical hours-to-complete from historical project data.
+
+**Quick Start** (2–3 weeks, junior + mid pair): standard onboarding and configuration. Priced to compete with self-service but guarantee a successful go-live.
 
 ```calcmark
-quick_start_price = $18000
-quick_start_delivery_cost = $13500
-quick_start_margin = quick_start_price - quick_start_delivery_cost
-
-standard_implementation_price = $55000
-standard_implementation_delivery_cost = $42000
-standard_implementation_margin = standard_implementation_price - standard_implementation_delivery_cost
-
-enterprise_implementation_price = $130000
-enterprise_implementation_delivery_cost = $95000
-enterprise_implementation_margin = enterprise_implementation_price - enterprise_implementation_delivery_cost
-
-advisory_day_rate = $3200
-strategy_workshop_price = $22000
-strategy_workshop_delivery_cost = $14000
-
-retainer_monthly_price = $6500
-retainer_annual_value = retainer_monthly_price * 12
-retainer_annual_delivery_cost = 65% of retainer_annual_value
-retainer_annual_margin = retainer_annual_value - retainer_annual_delivery_cost
-
-training_cohort_price = $8500
-training_cohort_delivery_cost = $4200
-training_cohort_margin = training_cohort_price - training_cohort_delivery_cost
+qs_price = $18000
+qs_cost = $13500
+qs_margin = qs_price - qs_cost
 ```
 
-`retainer_annual_value` = `$78K`, delivery cost = `$50.7K`, margin = `$27.3K`.
+**Standard Implementation** (6–8 weeks, mid-led with senior oversight): full integration, data migration, and user training. The workhorse package.
+
+```calcmark
+std_price = $55000
+std_cost = $42000
+std_margin = std_price - std_cost
+```
+
+**Enterprise Implementation** (12–16 weeks, senior-led cross-functional team): complex multi-system integration, custom workflows, executive sponsorship.
+
+```calcmark
+ent_price = $130000
+ent_cost = $95000
+ent_margin = ent_price - ent_cost
+```
+
+### Advisory & Strategic Engagements
+
+Advisory day rate: senior consultant at $225/hr × 8 hours, rounded up for preparation and travel time. Strategy workshops are 2-day intensive sessions with pre-work and deliverables.
+
+```calcmark
+advisory_day_rate = $3200
+workshop_price = $22000
+workshop_cost = $14000
+```
+
+### Success Retainers (Monthly Recurring)
+
+Monthly retainer for ongoing optimization, quarterly business reviews, and priority support. Priced to be accretive after month 3 as delivery effort stabilizes. $6,500/month is competitive with outsourced Customer Success Manager rates. The retainer delivery cost uses `% of` — CalcMark's natural-language percentage syntax.
+
+```calcmark
+retainer_monthly = $6500
+retainer_annual = retainer_monthly * 12
+retainer_delivery = 65% of retainer_annual
+retainer_margin = retainer_annual - retainer_delivery
+```
+
+`retainer_annual` = `$78K`, delivery cost = `$50.7K`, margin = `$27.3K`.
 
 **CalcMark features:** `% of` natural-language syntax.
+
+### Training (Group, Fixed-Price Per Cohort)
+
+Group training: 1-day instructor-led session for up to 20 users. Delivery cost covers instructor time, materials, and environment setup.
+
+```calcmark
+cohort_price = $8500
+cohort_cost = $4200
+cohort_margin = cohort_price - cohort_cost
+```
 
 ---
 
 ## Annual Volume & Revenue Rollup
 
+These are planned engagement counts for the modeled year. The mix reflects a business with a strong implementation core and a growing retainer base. Volume assumptions are derived from pipeline coverage (3x for implementations, 2x for retainers) and historical close rates.
+
 ```calcmark
-quick_start_engagements = 22
-standard_engagements = 14
-enterprise_engagements = 5
-advisory_days_sold = 180
-strategy_workshops = 8
-retainers_active = 18
-training_cohorts = 24
+qs_count = 22
+std_count = 14
+ent_count = 5
+advisory_days = 180
+workshops = 8
+retainers = 18
+cohorts = 24
+```
 
-quick_start_revenue = quick_start_engagements * quick_start_price
-standard_revenue = standard_engagements * standard_implementation_price
-enterprise_revenue = enterprise_engagements * enterprise_implementation_price
-advisory_revenue = advisory_days_sold * advisory_day_rate
-workshop_revenue = strategy_workshops * strategy_workshop_price
-retainer_revenue = retainers_active * retainer_annual_value
-training_revenue = training_cohorts * training_cohort_price
+Revenue per engagement type multiplies volume by unit price.
 
-total_packaged_revenue = sum of quick_start_revenue, standard_revenue, enterprise_revenue, advisory_revenue, workshop_revenue, retainer_revenue, training_revenue
+```calcmark
+qs_rev = qs_count * qs_price
+std_rev = std_count * std_price
+ent_rev = ent_count * ent_price
+advisory_rev = advisory_days * advisory_day_rate
+workshop_rev = workshops * workshop_price
+retainer_rev = retainers * retainer_annual
+training_rev = cohorts * cohort_price
+
+packaged_rev = sum of qs_rev, std_rev, ent_rev, advisory_rev, workshop_rev, retainer_rev, training_rev
 ```
 
 Total packaged revenue evaluates to `$4.18M`.
@@ -239,24 +383,56 @@ Total packaged revenue evaluates to `$4.18M`.
 
 ## P&L Summary
 
+### Total Revenue
+
+For the P&L, we use the packaged/engagement-based revenue model rather than the T&M capacity model. The T&M figures from the previous section serve as a cross-check on capacity consumption.
+
 ```calcmark
-total_revenue = total_packaged_revenue
+total_rev = packaged_rev
+```
 
-delivery_labor_pct = 72%
-delivery_labor_cost = total_labor_cost * delivery_labor_pct
-delivery_te_cost = travel_and_expenses
-total_cor = delivery_labor_cost + delivery_te_cost
+### Cost of Revenue
 
-gross_profit = total_revenue - total_cor
-gross_margin = gross_profit / total_revenue
+Cost of Revenue (COR) — sometimes called Cost of Goods Sold (COGS) — includes the direct costs of delivering engagements: delivery labor and travel. It excludes management overhead and the "practice" costs that sit in operating expenses.
 
-practice_management_cost = total_mgmt_cost
-non_delivery_overhead = sum of tooling_and_software, training_and_enablement, allocated_overhead
+72% of total labor is allocated to delivery, matching the target utilization rate. The remainder covers bench time (consultants between engagements), pre-sales support (scoping calls, demos), and internal projects.
 
-total_opex = practice_management_cost + non_delivery_overhead
+```calcmark
+delivery_pct = 72%
+delivery_labor = labor_cost * delivery_pct
+delivery_te = te_net
+total_cor = delivery_labor + delivery_te
+```
 
+### Gross Profit & Gross Margin
+
+Gross profit is revenue minus cost of revenue — the money left to cover operating expenses and generate contribution. Gross margin expresses this as a percentage of revenue.
+
+```calcmark
+gross_profit = total_rev - total_cor
+gross_margin = gross_profit / total_rev
+```
+
+Industry benchmarks for SaaS-attached professional services: below 15% gross margin is struggling, 15–25% is typical, and 25–35% is strong. Pure-play consulting firms run 30–45%, but they carry lower base salaries and less product R&D overhead.
+
+### Operating Expenses
+
+Operating expenses (opex) sit below gross profit on the P&L. These are the costs of running the practice itself — management salaries and the per-person overhead (tooling, training, allocated G&A) calculated earlier.
+
+```calcmark
+practice_mgmt = mgmt_cost
+practice_overhead = sum of tooling, training, overhead
+
+total_opex = practice_mgmt + practice_overhead
+```
+
+### Contribution
+
+Contribution (also called operating income) is what the services business unit delivers to the company after covering all its own costs. Contribution margin is this figure as a percentage of revenue.
+
+```calcmark
 contribution = gross_profit - total_opex
-contribution_margin = contribution / total_revenue
+contribution_margin = contribution / total_rev
 ```
 
 Gross profit = `$2.6M` at 62% gross margin. After opex, contribution = `$2M` at 48% contribution margin.
@@ -265,101 +441,153 @@ Gross profit = `$2.6M` at 62% gross margin. After opex, contribution = `$2M` at 
 
 ## Key Performance Metrics
 
+These are the numbers you should know cold before any board meeting or quarterly business review.
+
+### Efficiency Metrics
+
+Revenue per head and cost per head measure how productively the team is deployed. The blended rate is the effective hourly rate implied by total revenue divided by total billed hours — useful for sanity-checking package pricing. Revenue per labor dollar measures how much top-line revenue each dollar of compensation generates; healthy services businesses target 2.5–4x (TSIA benchmark).
+
 ```calcmark
-revenue_per_billable_hc = total_revenue / total_billable_hc
-cost_per_billable_hc = total_labor_cost / total_billable_hc
-blended_bill_rate = total_revenue / (total_billable_hc * net_available_hours_per_person * target_utilization)
-revenue_per_dollar_of_labor = total_revenue / total_labor_cost
-
-estimated_hours_to_deliver = total_revenue / blended_bill_rate
-capacity_consumed = estimated_hours_to_deliver / total_billable_capacity
-bench_capacity = 1 - capacity_consumed
-
-recurring_revenue_ratio = retainer_revenue / total_revenue
-
-implementation_rev_pct = (quick_start_revenue + standard_revenue + enterprise_revenue) / total_revenue
-advisory_rev_pct = (advisory_revenue + workshop_revenue) / total_revenue
-training_rev_pct = training_revenue / total_revenue
+rev_per_hc = total_rev / number(billable_hc)
+cost_per_hc = labor_cost / number(billable_hc)
+blended_rate = total_rev / (number(billable_hc) * net_hrs * target_util)
+rev_per_labor_dollar = total_rev / labor_cost
 ```
+
+### Capacity Check
+
+This cross-validates that the planned engagement volume is feasible given team size and utilization assumptions. Bench capacity is the fraction of available hours not consumed by planned delivery — a bench below 10% leaves no slack for unexpected demand, attrition, or delivery problems; above 30% signals too much unproductive capacity.
+
+```calcmark
+est_delivery_hrs = total_rev / blended_rate
+capacity_consumed = est_delivery_hrs / total_capacity
+bench = 1 - capacity_consumed
+```
+
+### Revenue Mix
+
+Recurring (retainer) revenue as a percentage of total is a leading indicator of business stability and predictability — boards want to see this growing. The per-type breakdowns help spot mix shift when presenting a bridge between periods.
+
+```calcmark
+recurring_ratio = retainer_rev / total_rev
+
+impl_rev_pct = (qs_rev + std_rev + ent_rev) / total_rev
+advisory_rev_pct = (advisory_rev + workshop_rev) / total_rev
+training_rev_pct = training_rev / total_rev
+```
+
+**CalcMark features:** `number()` for unit-stripping in per-head calculations.
 
 ---
 
 ## Scenario A — Strong Year
 
-Utilization beats plan at 78%, retainer base grows to 24, enterprise engagements rise to 7. Incremental revenue drops through at 55% margin because the cost base is already in place.
+In a strong year, three things go right simultaneously: utilization beats plan (demand exceeds forecast), mix shifts toward higher-margin packages, and the retainer base grows (reducing revenue volatility).
+
+78% utilization is top-quartile performance per SPI benchmarks. 24 retainers represents 6 net-new wins (33% growth over the base of 18). 7 enterprise deals is 2 additional over plan from strong pipeline conversion.
 
 ```calcmark
-scenario_a_utilization = 78%
-scenario_a_retainers = 24
-scenario_a_enterprise_engagements = 7
+sa_util = 78%
+sa_retainers = 24
+sa_ent_count = 7
 
-scenario_a_billable_hours = total_billable_capacity * scenario_a_utilization
-scenario_a_retainer_rev = scenario_a_retainers * retainer_annual_value
-scenario_a_enterprise_rev = scenario_a_enterprise_engagements * enterprise_implementation_price
+sa_hours = total_capacity * sa_util
+sa_retainer_rev = sa_retainers * retainer_annual
+sa_ent_rev = sa_ent_count * ent_price
+```
 
-scenario_a_revenue_uplift = (scenario_a_retainers - retainers_active) * retainer_annual_value + (scenario_a_enterprise_engagements - enterprise_engagements) * enterprise_implementation_price
-scenario_a_total_revenue = total_revenue + scenario_a_revenue_uplift
+The incremental revenue from retainer and enterprise wins above plan.
 
-scenario_a_incremental_margin_rate = 55%
-scenario_a_incremental_margin = scenario_a_revenue_uplift * scenario_a_incremental_margin_rate
-scenario_a_gross_profit = gross_profit + scenario_a_incremental_margin
-scenario_a_gross_margin = scenario_a_gross_profit / scenario_a_total_revenue
+```calcmark
+sa_uplift = (sa_retainers - retainers) * retainer_annual + (sa_ent_count - ent_count) * ent_price
+sa_total_rev = total_rev + sa_uplift
+```
+
+The cost base does not grow proportionally — fixed and semi-fixed labor costs are already in place. Incremental margin on uplift revenue is modeled at 55% because delivery labor for the additional engagements is already on payroll (they were previously under-utilized).
+
+```calcmark
+sa_incr_margin_rate = 55%
+sa_incr_margin = sa_uplift * sa_incr_margin_rate
+sa_gross_profit = gross_profit + sa_incr_margin
+sa_gross_margin = sa_gross_profit / sa_total_rev
 ```
 
 ---
 
 ## Scenario B — Challenged Year
 
-Utilization misses at 61%, enterprise deals include 18% pricing concessions, retainer base contracts to 14. The discount uses percentage widening — `blended_bill_rate - 18%` reduces the rate by 18%.
+In a difficult year, problems compound. The most common failure modes are: utilization miss (sales fell short, pipeline was shallow or deals slipped — you're carrying bench you can't bill), rate pressure (enterprise deals bundled services at deep discounts to close the ARR), mix degradation (smaller/lower-margin engagements instead of enterprise), and delivery overruns (fixed-price engagements blew through estimates).
+
+61% utilization is bottom-quartile, indicating a demand or staffing problem. 18% pricing concession means enterprise deals were heavily discounted to close the software ARR. 14 retainers means 4 churned accounts (22% churn, well above the 10–15% norm). 3 enterprise deals is 2 fewer than plan from pipeline conversion miss.
 
 ```calcmark
-scenario_b_utilization = 61%
-scenario_b_discount_rate = 18%
-scenario_b_retainers = 14
-scenario_b_enterprise_engagements = 3
+sb_util = 61%
+sb_discount = 18%
+sb_retainers = 14
+sb_ent_count = 3
+```
 
-scenario_b_effective_bill_rate = blended_bill_rate - scenario_b_discount_rate
-scenario_b_billed_hours = total_billable_capacity * scenario_b_utilization
-scenario_b_tm_revenue = scenario_b_billed_hours * scenario_b_effective_bill_rate
+The discount uses percentage widening — `blended_rate - 18%` reduces the effective rate by 18%.
 
-scenario_b_retainer_rev = scenario_b_retainers * retainer_annual_value
-scenario_b_enterprise_rev = scenario_b_enterprise_engagements * enterprise_implementation_price
-scenario_b_impl_rev = quick_start_engagements * quick_start_price + standard_engagements * standard_implementation_price
-scenario_b_total_revenue = sum of scenario_b_retainer_rev, scenario_b_enterprise_rev, scenario_b_impl_rev, advisory_revenue, workshop_revenue, training_revenue
+```calcmark
+sb_eff_rate = blended_rate - sb_discount
+sb_hours = total_capacity * sb_util
+sb_tm_rev = sb_hours * sb_eff_rate
+```
 
-scenario_b_revenue_shortfall = total_revenue - scenario_b_total_revenue
+```calcmark
+sb_retainer_rev = sb_retainers * retainer_annual
+sb_ent_rev = sb_ent_count * ent_price
+sb_impl_rev = qs_count * qs_price + std_count * std_price
+sb_total_rev = sum of sb_retainer_rev, sb_ent_rev, sb_impl_rev, advisory_rev, workshop_rev, training_rev
 
-scenario_b_gross_profit = scenario_b_total_revenue - total_cor
-scenario_b_gross_margin = scenario_b_gross_profit / scenario_b_total_revenue
-scenario_b_contribution = scenario_b_gross_profit - total_opex
-scenario_b_contribution_margin = scenario_b_contribution / scenario_b_total_revenue
+sb_shortfall = total_rev - sb_total_rev
+```
+
+Labor costs don't shrink with utilization — salaries are paid whether people are on the bench or billing clients. This is the core dynamic that makes utilization misses so punishing in a services P&L.
+
+```calcmark
+sb_gross_profit = sb_total_rev - total_cor
+sb_gross_margin = sb_gross_profit / sb_total_rev
+sb_contribution = sb_gross_profit - total_opex
+sb_contribution_margin = sb_contribution / sb_total_rev
 ```
 
 ---
 
 ## Board Metrics Slate
 
-The four metrics every services dashboard needs, plus revenue per head as a proxy for team leverage.
+When presenting to a board, the most useful format is a bridge from prior period to current period that separates the "we sold more" story from the "we charged more" story from the "our mix changed" story. These four metrics should be on every services dashboard:
+
+- **Revenue vs. Plan** — the headline number
+- **Gross Margin %** — is the business unit economically sound?
+- **Utilization %** — are we running efficiently?
+- **Recurring Revenue %** — how much of next year's revenue is already visible?
 
 ```calcmark
-board_revenue_attainment = scenario_b_total_revenue / total_revenue
-board_gross_margin = scenario_b_gross_margin
-board_utilization = scenario_b_utilization
-board_recurring_pct = scenario_b_retainer_rev / scenario_b_total_revenue
-board_rev_per_head = scenario_b_total_revenue / total_billable_hc
-rev_to_comp_ratio = board_rev_per_head / senior_fully_loaded
+board_rev_attainment = sb_total_rev / total_rev
+board_gross_margin = sb_gross_margin
+board_util = sb_util
+board_recurring_pct = sb_retainer_rev / sb_total_rev
 ```
 
-Healthy services businesses target a revenue-to-compensation ratio of 2.5–4x.
+Revenue per head is a proxy for operational efficiency and team leverage. In healthy professional services businesses, revenue per billable head runs 2.5–4x fully-loaded compensation (TSIA benchmark). Below 2x signals rates are too low, utilization is too low, or the cost base is too high.
+
+```calcmark
+board_rev_per_head = sb_total_rev / number(billable_hc)
+rev_to_comp = board_rev_per_head / sr_loaded
+```
 
 ---
 
 ## CalcMark Features Used
 
 - **Frontmatter globals** — `working_days` and `hours_per_day` declared once, referenced everywhere via `@globals.*`
+- **Custom `people` unit** — Headcount tracked as a typed quantity (`3 people`, `12 people`) for self-documenting staffing models
+- **Quantity × Currency coercion** — `seniors * sr_loaded` multiplies `3 people` by `$191.4K` to yield `$574.2K`; the unit is stripped and the dollar value propagates
+- **`number()` function** — Extracts the raw numeric value from a `people` quantity for calculations where the unit shouldn't carry (hours, per-head ratios)
 - **Percentage widening** — `base + rate%` for burden loading, `gross - rate%` for recovery deductions, `rate - discount%` for pricing concessions
-- **`% of` syntax** — `65% of retainer_annual_value` for delivery cost allocation
+- **`% of` syntax** — `65% of retainer_annual` for delivery cost allocation
 - **`sum of` NL function** — Readable rollups for headcount, labor cost, revenue, and overhead
 - **Currency arithmetic** — Dollar signs propagate through every operation
 - **Percentage literals** — `18%`, `72%`, `40%` are self-documenting rate assumptions
-- **Rich prose** — Narrative context, industry benchmarks, and board presentation frameworks interleaved with live calculations

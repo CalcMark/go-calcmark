@@ -411,7 +411,7 @@ func isKeywordToken(t lexer.TokenType) bool {
 // Pure function.
 func isFunctionToken(t lexer.TokenType) bool {
 	switch t {
-	case lexer.FUNC_AVG, lexer.FUNC_SQRT, lexer.FUNC_SUM,
+	case lexer.FUNC_AVG, lexer.FUNC_SQRT, lexer.FUNC_SUM, lexer.FUNC_NUMBER,
 		lexer.FUNC_AVERAGE_OF, lexer.FUNC_SQUARE_ROOT_OF, lexer.FUNC_SUM_OF:
 		return true
 	}

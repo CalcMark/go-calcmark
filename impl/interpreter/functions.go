@@ -53,6 +53,13 @@ var BuiltinFunctions = []FunctionDef{
 		Category:    "Math",
 	},
 	{
+		Name:        "number",
+		Synonyms:    []string{},
+		Description: "Extract the numeric value from any type",
+		Signature:   "number(value)",
+		Category:    "Math",
+	},
+	{
 		Name:        "accumulate",
 		Synonyms:    []string{},
 		Description: "Accumulate a rate over time (e.g., requests/sec over 1 day)",
@@ -161,6 +168,7 @@ var functionEvalMap = map[string]func(interp *Interpreter, f *ast.FunctionCall) 
 	"avg":           evalAvgFunc,
 	"sum":           evalSumFunc,
 	"sqrt":          evalSqrtFunc,
+	"number":        evalNumberFunc,
 	"accumulate":    evalAccumulateFunc,
 	"convert_rate":  evalConvertRateFunc,
 	"downtime":      evalDowntimeFunc,
@@ -223,6 +231,44 @@ func evalSqrtFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) 
 		return nil, err
 	}
 	return evalSqrt(args)
+}
+
+func evalNumberFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
+	args, err := interp.evalAllArgs(f)
+	if err != nil {
+		return nil, err
+	}
+	return evalNumber(args)
+}
+
+// evalNumber extracts the numeric value from any type.
+// Returns a plain Number with the value stripped of units, currency, etc.
+func evalNumber(args []types.Type) (types.Type, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("number() requires exactly 1 argument, got %d", len(args))
+	}
+	return ExtractNumber(args[0])
+}
+
+// ExtractNumber extracts the decimal value from any CalcMark type as a plain Number.
+// Exported so that operator coercion (Quantity × Currency) can reuse the logic.
+func ExtractNumber(val types.Type) (*types.Number, error) {
+	switch v := val.(type) {
+	case *types.Number:
+		return v, nil
+	case *types.Quantity:
+		return types.NewNumber(v.Value), nil
+	case *types.Currency:
+		return types.NewNumber(v.Value), nil
+	case *types.Percentage:
+		return types.NewNumber(v.Value), nil
+	case *types.Duration:
+		return types.NewNumber(v.Value), nil
+	case *types.Rate:
+		return types.NewNumber(v.Amount.Value), nil
+	default:
+		return nil, fmt.Errorf("number() cannot extract numeric value from %T", val)
+	}
 }
 
 func evalAccumulateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {

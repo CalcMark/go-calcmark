@@ -50,9 +50,10 @@ var ReservedKeywords = map[string]TokenType{
 	"const":    CONST,
 
 	// Reserved function names (canonical)
-	"avg":  FUNC_AVG,
-	"sqrt": FUNC_SQRT,
-	"sum":  FUNC_SUM,
+	"avg":    FUNC_AVG,
+	"sqrt":   FUNC_SQRT,
+	"sum":    FUNC_SUM,
+	"number": FUNC_NUMBER,
 }
 
 // ContextualKeywords are identifiers that should NOT be consumed as unit names

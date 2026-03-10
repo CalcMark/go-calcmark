@@ -149,8 +149,20 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		// Note: Number * Rate is widened above (rate on right → extract amount).
 	}
 
+	// Number * Quantity → Quantity (e.g., "2 * 10 dogs" already handled above)
+	// Quantity * Currency → Currency (coerce quantity to number, then multiply)
+	if leftQty, ok := left.(*types.Quantity); ok {
+		if rightCur, ok := right.(*types.Currency); ok && operator == "*" {
+			return types.NewCurrency(leftQty.Value.Mul(rightCur.Value), rightCur.Symbol), nil
+		}
+	}
+
 	// Currency operations
 	if leftCur, ok := left.(*types.Currency); ok {
+		// Currency * Quantity → Currency (coerce quantity to number, then multiply)
+		if rightQty, ok := right.(*types.Quantity); ok && operator == "*" {
+			return types.NewCurrency(leftCur.Value.Mul(rightQty.Value), leftCur.Symbol), nil
+		}
 		// Currency op Number → Currency (e.g., "10 EUR + 2" = "12 EUR")
 		if rightNum, ok := right.(*types.Number); ok {
 			switch operator {

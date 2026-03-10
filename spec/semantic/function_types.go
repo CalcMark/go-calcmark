@@ -77,6 +77,12 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "value", Type: ArgTypeNumber, Examples: []string{"16", "2", "100"}},
 		},
 	},
+	"number": {
+		Name: "number",
+		Params: []ParamSpec{
+			{Name: "value", Type: ArgTypeAny, Examples: []string{"10 kg", "$100", "25%", "42"}},
+		},
+	},
 	"accumulate": {
 		Name: "accumulate",
 		Params: []ParamSpec{
