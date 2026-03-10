@@ -254,6 +254,7 @@ This example showcases the following CalcMark features:
 - **`depreciate()`** -- declining-balance depreciation with salvage floor
 - **`as napkin`** -- human-readable rounding for executive summaries
 - **Markdown prose** -- headings, paragraphs, and inline comments between calculations
+- **Template interpolation** -- `{{variable}}` to embed computed values in prose
 
 ## Try It
 

@@ -714,5 +714,13 @@ func getFrontmatterFeatures() []Feature {
 			Description: "Reference a named global variable from frontmatter in expressions. Resolves to the typed value of the global.",
 			Example:     "tax = income * @globals.tax_rate",
 		},
+		{
+			Name:        "{{variable}}",
+			Category:    CategoryKeyword,
+			Syntax:      "{{variable_name}}",
+			Description: "Embed a calculated value in prose. After evaluation, {{var}} tags in text blocks are replaced with display-formatted values. Supports forward references — a summary at the top can reference results computed below.",
+			Aliases:     []Alias{{Name: "template", Parseable: false}, {Name: "interpolation", Parseable: false}},
+			Example:     "Total: {{revenue}}",
+		},
 	}
 }

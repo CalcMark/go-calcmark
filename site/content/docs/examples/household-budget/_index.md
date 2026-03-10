@@ -227,6 +227,7 @@ This example showcases the following CalcMark features:
 - **Rate literals** -- `$300/month`, `$200/month`
 - **Rate conversion** -- `$300/month per day` to convert time units
 - **Markdown prose** -- headings, paragraphs, and bullet lists between calculations
+- **Template interpolation** -- `{{variable}}` to embed computed values in prose
 
 ## Try It
 

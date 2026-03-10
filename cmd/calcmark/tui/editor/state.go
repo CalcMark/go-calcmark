@@ -79,6 +79,7 @@ func (m *Model) transitionToReady() {
 	// INVARIANT: Evaluator must exist
 	if m.eval == nil {
 		m.eval = implDoc.NewEvaluator()
+		m.eval.SetDisplayFormatter(m.formatter)
 		if err := m.eval.Evaluate(m.doc); err != nil {
 			// Show a brief notice that the document has errors.
 			// The preview pane displays detailed error diagnostics —

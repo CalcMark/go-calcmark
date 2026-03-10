@@ -63,6 +63,10 @@ total_expenses = total_fixed + total_variable
 total_outflow = total_expenses + total_savings
 remaining = net_income - total_outflow
 
+After taxes, the household brings home {{net_income}} per month.
+Fixed and variable expenses total {{total_expenses}}, plus
+{{total_savings}} in savings, leaving **{{remaining}}** unallocated.
+
 ## Budget Health Check
 
 Calculate percentages of net income:
@@ -73,10 +77,8 @@ variable_pct = total_variable / net_income * 100
 
 ## The 50/30/20 Rule Check
 
-The 50/30/20 rule suggests:
-- 50% on needs (fixed + essential variable)
-- 30% on wants (discretionary)
-- 20% on savings
+With a savings rate of {{savings_rate}}, let's see how spending
+breaks down against the 50/30/20 guideline:
 
 needs = total_fixed + groceries + gas + utilities
 wants = dining_out + entertainment + personal_care + streaming
@@ -104,6 +106,10 @@ target_months = 6
 target_fund = monthly_expenses * target_months
 shortfall = target_fund - current_emergency
 months_to_goal = shortfall / emergency_fund_contribution
+
+The current {{current_emergency}} covers {{months_runway}} months of
+expenses. The target is {{target_fund}} (6 months). At {{emergency_fund_contribution}}/month,
+the gap closes in {{months_to_goal}} months.
 
 ## Daily Discretionary
 

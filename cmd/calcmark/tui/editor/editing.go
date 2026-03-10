@@ -629,6 +629,7 @@ func (m *Model) insertLine(at int) {
 // Errors are reported to the status bar rather than silently swallowed.
 func (m *Model) fullReEvaluate() {
 	m.eval = implDoc.NewEvaluator()
+	m.eval.SetDisplayFormatter(m.formatter)
 	if err := m.eval.Evaluate(m.doc); err != nil {
 		m.statusMsg = "Document has errors — see preview pane"
 		m.statusIsErr = true

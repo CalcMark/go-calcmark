@@ -511,3 +511,99 @@ func TestScaleNumberDefaultImmune(t *testing.T) {
 	}
 	t.Fatal("no calc block found")
 }
+
+// TestEvaluateInterpolatesTextBlocks tests that Evaluate() resolves {{var}} tags
+// in TextBlocks using the final environment.
+func TestEvaluateInterpolatesTextBlocks(t *testing.T) {
+	source := "## Summary\n\nTotal: {{total}}\n\n\ntotal = $250\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	// Find the TextBlock and verify interpolation
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		interp := tb.InterpolatedSource()
+		for _, line := range interp {
+			if strings.Contains(line, "$250") {
+				// Source should still have the raw tag
+				for _, raw := range tb.Source() {
+					if strings.Contains(raw, "{{total}}") {
+						return // Success
+					}
+				}
+				t.Error("Source() should still contain {{total}}")
+				return
+			}
+		}
+	}
+	t.Error("expected interpolated TextBlock with $250")
+}
+
+// TestEvaluateForwardReference tests that {{var}} tags in TextBlocks above
+// the CalcBlock that defines the variable still resolve.
+func TestEvaluateForwardReference(t *testing.T) {
+	source := "Result: {{x}}\n\n\nx = 42\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		interp := tb.InterpolatedSource()
+		for _, line := range interp {
+			if strings.Contains(line, "**42**") {
+				return // Success — forward reference resolved
+			}
+		}
+	}
+	t.Error("expected forward reference {{x}} to resolve to 42")
+}
+
+// TestEvaluateInterpolationPreservesSource tests that Source() is never mutated.
+func TestEvaluateInterpolationPreservesSource(t *testing.T) {
+	source := "Value: {{x}}\n\n\nx = 100\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Evaluate failed: %v", err)
+	}
+
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		for _, line := range tb.Source() {
+			if strings.Contains(line, "{{x}}") {
+				return // Source preserved
+			}
+		}
+	}
+	t.Error("Source() should still contain raw {{x}} tag")
+}

@@ -234,6 +234,7 @@ This example showcases the following CalcMark features:
 - **`over` keyword** -- `rate * count over duration` for cost accumulation
 - **Plain arithmetic** -- sprint velocity, person-weeks, headcount
 - **Markdown prose** -- headings, paragraphs, and inline comments between calculations
+- **Template interpolation** -- `{{variable}}` to embed computed values in prose
 
 ## Try It
 

@@ -1,0 +1,18 @@
+## Executive Summary
+
+| Metric | Value |
+|--------|-------|
+| Total Revenue | {{total_rev}} |
+| Gross Margin | {{gross_margin}} |
+| Headcount | {{team_hc}} |
+
+Undefined variables are preserved: {{undefined_var}}
+
+Multiple tags on one line: {{total_rev}} and {{team_hc}}
+
+Whitespace tolerant: {{ total_rev }}
+
+
+total_rev = $4.2M
+gross_margin = 28%
+team_hc = 14 people

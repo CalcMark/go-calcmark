@@ -19,6 +19,23 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ---
 
+## At a Glance
+
+The document opens with a summary table that uses template interpolation — `{{total_rev}}`, `{{gross_margin}}`, etc. — to embed key metrics inline. These values are computed hundreds of lines below, but CalcMark resolves forward references automatically after all calculations run. When any assumption changes, the summary updates with it.
+
+```text
+| Metric | Baseline | Challenged |
+|--------|----------|------------|
+| Revenue | {{total_rev}} | {{sb_total_rev}} |
+| Gross Margin | {{gross_margin}} | {{sb_gross_margin}} |
+| Team Size | {{team_hc}} | {{team_hc}} |
+| Utilization | {{target_util}} | {{sb_util}} |
+```
+
+**CalcMark features:** Template interpolation `{{var}}`; forward references.
+
+---
+
 ## Globals and Assumptions
 
 Two values appear throughout the model — working days per year (250 = 52 weeks × 5 days − 10 holidays) and hours per day (standard US full-time). Rather than repeat them, the document declares them once in frontmatter as globals.
@@ -592,3 +609,4 @@ rev_to_comp = board_rev_per_head / sr_loaded
 - **`sum of` NL function** — Readable rollups for headcount, labor cost, revenue, and overhead
 - **Currency arithmetic** — Dollar signs propagate through every operation
 - **Percentage literals** — `18%`, `72%`, `40%` are self-documenting rate assumptions
+- **Template interpolation** — `{{total_rev}}`, `{{gross_margin}}` in the "At a Glance" summary table; forward references resolve after all calculations run, so the summary at the top stays current when assumptions change

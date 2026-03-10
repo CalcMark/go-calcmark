@@ -127,3 +127,9 @@ comp_gap = annual_comp_a - (base_salary_b + annual_bonus_b)
 required_annual_stock = comp_gap
 required_total_stock = required_annual_stock * vest_years_b
 required_appreciation = required_total_stock / option_value_b
+
+## Bottom Line
+
+Offer A pays {{monthly_advantage_a}} more per month ({{annual_advantage_a}}/year).
+Over 4 years after tax, A nets {{four_year_net_a}} vs B's {{four_year_net_b}}.
+But if the startup stock appreciates {{required_appreciation}} or more, Offer B wins.

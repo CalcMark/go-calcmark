@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -51,8 +52,9 @@ func (r *frontmatterDirectiveResolver) ResolveGlobal(name string) (types.Type, b
 // Evaluator evaluates CalcMark documents using the interpreter.
 // This lives in impl/ because it performs execution, not just validation.
 type Evaluator struct {
-	env         *interpreter.Environment
-	diagnostics []BlockDiagnostic
+	env              *interpreter.Environment
+	diagnostics      []BlockDiagnostic
+	displayFormatter *display.Formatter
 }
 
 // NewEvaluator creates a new document evaluator.
@@ -60,6 +62,20 @@ func NewEvaluator() *Evaluator {
 	return &Evaluator{
 		env: interpreter.NewEnvironment(),
 	}
+}
+
+// SetDisplayFormatter sets the display formatter used for {{var}} interpolation
+// in TextBlocks. If not set, a default en-US formatter is used.
+func (e *Evaluator) SetDisplayFormatter(df display.Formatter) {
+	e.displayFormatter = &df
+}
+
+// getDisplayFormatter returns the configured display formatter or a default.
+func (e *Evaluator) getDisplayFormatter() display.Formatter {
+	if e.displayFormatter != nil {
+		return *e.displayFormatter
+	}
+	return display.DefaultFormatter()
 }
 
 // Evaluate evaluates all blocks in the document in dependency order.
@@ -95,6 +111,9 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 
 	// Apply scale/convert_to transforms to all block results
 	applyTransforms(doc, nil)
+
+	// Resolve {{var}} tags in TextBlocks against the final environment
+	interpolateTextBlocks(doc, e.env.GetAllVariables(), e.getDisplayFormatter())
 
 	return nil
 }
@@ -242,6 +261,9 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 	// Apply scale/convert_to transforms to all block results
 	applyTransforms(doc, nil)
 
+	// Resolve {{var}} tags in TextBlocks against the final environment
+	interpolateTextBlocks(doc, e.env.GetAllVariables(), e.getDisplayFormatter())
+
 	return nil
 }
 
@@ -274,6 +296,9 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 	// Only transform affected blocks — other blocks already hold
 	// transformed results from the previous full evaluation.
 	applyTransforms(doc, blockIDs)
+
+	// Re-run interpolation on all TextBlocks — variable values may have changed.
+	interpolateTextBlocks(doc, e.env.GetAllVariables(), e.getDisplayFormatter())
 
 	return nil
 }

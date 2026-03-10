@@ -91,6 +91,7 @@ func runEval(args []string) error {
 	}
 
 	eval := implDoc.NewEvaluator()
+	eval.SetDisplayFormatter(localeFormatter())
 	if err := eval.Evaluate(doc); err != nil {
 		return fmt.Errorf("evaluation error: %w", err)
 	}

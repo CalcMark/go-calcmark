@@ -19,6 +19,15 @@ capacity and utilization, to gross margin and contribution. Scenario sections at
 the end show how to present the story when things are going well — and when
 they're not.
 
+## At a Glance
+
+| Metric | Baseline | Challenged |
+|--------|----------|------------|
+| Revenue | {{total_rev}} | {{sb_total_rev}} |
+| Gross Margin | {{gross_margin}} | {{sb_gross_margin}} |
+| Team Size | {{team_hc}} | {{team_hc}} |
+| Utilization | {{target_util}} | {{sb_util}} |
+
 ---
 
 # Part 1: The Business Model in Plain Language

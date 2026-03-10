@@ -84,7 +84,7 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 			if isResultBlock(block) {
 				continue
 			}
-			for _, line := range block.Source() {
+			for _, line := range block.InterpolatedSource() {
 				fmt.Fprintln(w, line)
 			}
 			fmt.Fprintln(w)

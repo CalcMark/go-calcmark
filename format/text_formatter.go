@@ -87,7 +87,7 @@ func (f *TextFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			}
 
 		case *document.TextBlock:
-			for _, line := range block.Source() {
+			for _, line := range block.InterpolatedSource() {
 				fmt.Fprintln(w, line)
 			}
 		}

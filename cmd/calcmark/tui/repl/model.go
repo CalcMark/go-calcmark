@@ -348,6 +348,7 @@ func (m Model) handleCommand(cmd string) (Model, tea.Cmd) {
 		m.changedVars = make(map[string]bool)
 		m.doc, _ = document.NewDocument("")
 		m.eval = implDoc.NewEvaluator()
+		m.eval.SetDisplayFormatter(m.formatter)
 		_ = m.eval.Evaluate(m.doc)
 
 	case "pin":
@@ -460,6 +461,7 @@ func (m Model) evaluateExpression(expr string) Model {
 		}
 
 		m.eval = implDoc.NewEvaluator()
+		m.eval.SetDisplayFormatter(m.formatter)
 		if err := m.eval.Evaluate(doc); err != nil {
 			m.addErrorToHistory(expr, err)
 			return m
@@ -601,6 +603,7 @@ func (m Model) Document() *document.Document {
 func (m *Model) SetDocument(doc *document.Document) {
 	m.doc = doc
 	m.eval = implDoc.NewEvaluator()
+	m.eval.SetDisplayFormatter(m.formatter)
 	_ = m.eval.Evaluate(doc)
 	m.populateFromDocument()
 }

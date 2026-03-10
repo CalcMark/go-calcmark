@@ -244,6 +244,7 @@ This example showcases the following CalcMark features:
 - **`downtime()`** -- availability target to allowed downtime conversion; Duration arithmetic to spend the error budget
 - **Data size units** -- `KB`, `MB`, `GB`, `TB`, `ms`, `req/s`, `server`
 - **Markdown prose** -- headings, paragraphs, and inline commentary between calculations
+- **Template interpolation** -- `{{variable}}` to embed computed values in prose
 
 ## Try It
 
