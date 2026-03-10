@@ -234,37 +234,80 @@ See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete 
 
 ### Template Interpolation {#template-interpolation}
 
-Template variables embed calculated values into prose. After all calculations are evaluated, `{{variable_name}}` tags in text blocks are replaced with display-formatted results.
+Template variables embed calculated values into prose. After all calculations are evaluated, `{{variable_name}}` tags in text blocks are replaced with display-formatted results. Resolved values render **bold** in markdown and are wrapped in `<span class="cm-interpolated">` in HTML.
 
-```calcmark
+#### Forward References
+
+The primary use case is forward references — a summary at the top of a document that pulls in values computed below:
+
+```text
 ## Executive Summary
 
 | Metric | Value |
 |--------|-------|
 | Revenue | {{total_rev}} |
 | Gross Margin | {{gross_margin}} |
+| Team | {{team_hc}} |
 
 
 total_rev = $4.2M
 gross_margin = 28%
+team_hc = 14 people
 ```
 
-The summary table renders with `$4.2M` and `28%` — even though the calculations appear below the text. This is the primary use case: forward references in executive summaries, board narratives, and recap sections.
+The summary table renders with **$4.2M**, **28%**, and **14 people** — even though the calculations appear below the text.
 
-**Syntax:** `{{variable_name}}` — variable names use word characters (letters, digits, underscore). Whitespace inside braces is tolerated: `{{ total_rev }}` resolves the same as `{{total_rev}}`.
+#### Inline Formatting
 
-**Rules:**
+Combine `{{var}}` with markdown formatting for emphasis, headings, and lists:
+
+```text
+The grand total is {{total_cost}}.
+
+_Team: {{headcount}}_
+
+## Budget: {{annual_budget}}
+
+- Revenue: {{revenue}}
+- Costs: {{costs}}
+- Margin: {{margin}}
+```
+
+Backticks around tags are consumed — `` `{{var}}` `` renders as **value**, not `value`. This prevents interpolated values from appearing as inline code.
+
+#### Tables
+
+Interpolation works naturally in markdown tables. Use it for dashboard-style summaries:
+
+```text
+| Scenario | Revenue | Margin |
+|----------|---------|--------|
+| Baseline | {{base_rev}} | {{base_margin}} |
+| Optimistic | {{opt_rev}} | {{opt_margin}} |
+| Stressed | {{stress_rev}} | {{stress_margin}} |
+```
+
+#### Syntax
+
+`{{variable_name}}` — variable names use word characters (letters, digits, underscore). Whitespace inside braces is tolerated: `{{ total_rev }}` resolves the same as `{{total_rev}}`.
+
+#### Rules
 
 | Behavior | Detail |
 |----------|--------|
 | Resolved values | Display-formatted with locale, currency symbols, units, K/M/B suffixes |
+| Markdown rendering | Resolved values are **bold**; backticks around tags are stripped |
+| HTML rendering | Resolved values wrapped in `<span class="cm-interpolated">` |
 | Scale / convert_to | Applied before formatting — interpolated values match CalcBlock display |
 | Missing variables | `{{unknown}}` is left as-is in the output |
 | Scope | Text blocks only — `{{var}}` inside a CalcBlock is a syntax error, not interpolation |
 | Round-trip safety | Saving a `.cm` file preserves raw `{{var}}` tags (interpolation is render-time only) |
 | Empty / expression tags | `{{}}` and `{{a + b}}` are not matched |
+| Directives | `{{@scale}}` and `{{@globals.name}}` are not currently supported — use a variable alias |
 
 **JSON output:** The JSON formatter includes both `source` (raw text with `{{var}}` tags) and `interpolated_source` (resolved text) for programmatic consumers.
+
+See the [Services P&L](/docs/examples/services-pl/) example for a production use of interpolated summary tables, and the [Household Budget](/docs/examples/household-budget/) for inline results in prose.
 
 ## Line Classification
 

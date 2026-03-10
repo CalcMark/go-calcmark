@@ -35,3 +35,6 @@ cost_eggs = $0.60
 
 total_cost = cost_flour + cost_sugar + cost_butter + cost_milk + cost_bananas + cost_eggs
 per_loaf = total_cost / @scale
+
+Scaled batch costs {{total_cost}} total, or {{per_loaf}} per loaf.
+You'll need {{flour}} of flour and {{butter}} of butter.

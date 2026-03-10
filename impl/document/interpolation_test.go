@@ -181,11 +181,11 @@ func TestInterpolateLineBackticks(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"`{{x}}`", "**42**"},                  // Backticks stripped, bold wrapped
-		{"Value: `{{x}}`", "Value: **42**"},    // Inline backtick-wrapped
-		{"`{{ x }}`", "**42**"},                // Whitespace + backticks
-		{"{{x}}", "**42**"},                    // No backticks still works
-		{"`{{unknown}}`", "`{{unknown}}`"},     // Missing var: backticks preserved
+		{"`{{x}}`", "**42**"},               // Backticks stripped, bold wrapped
+		{"Value: `{{x}}`", "Value: **42**"}, // Inline backtick-wrapped
+		{"`{{ x }}`", "**42**"},             // Whitespace + backticks
+		{"{{x}}", "**42**"},                 // No backticks still works
+		{"`{{unknown}}`", "`{{unknown}}`"},  // Missing var: backticks preserved
 	}
 	for _, tt := range tests {
 		got := interpolateLine(tt.input, env, df, nil, false)

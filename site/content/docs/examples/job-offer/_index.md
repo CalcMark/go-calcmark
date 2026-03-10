@@ -220,6 +220,7 @@ This example showcases the following CalcMark features:
 - **Markdown prose** -- explanatory text between calculations
 - **Scenario modeling** -- year one, four year, and risk-adjusted views of the same data
 - **Break-even analysis** -- solving for the stock appreciation threshold
+- **Template interpolation** -- `{{variable}}` to embed computed values in prose
 
 ## Try It
 

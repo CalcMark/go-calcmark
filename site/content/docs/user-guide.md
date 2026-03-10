@@ -315,7 +315,7 @@ tax = income * @globals.tax_rate
 
 Use `{{variable_name}}` in prose to embed calculated values. Tags are resolved after all calculations run, so forward references work — put a summary at the top and calculations below:
 
-```calcmark
+```text
 ## Summary
 
 Total cost: {{total_cost}}
@@ -328,11 +328,35 @@ total_cost = headcount * rate
 per_person = total_cost / headcount
 ```
 
-The summary renders with `$1.8M` and `$150K` substituted in. If a variable is not defined, the `{{tag}}` is left as-is in the output.
+The summary renders with **$1.8M** and **$150K** substituted in. If a variable is not defined, the `{{tag}}` is left as-is in the output.
 
-Whitespace inside braces is tolerated: `{{ total_cost }}` works the same as `{{total_cost}}`. Interpolated values use the same display formatting as CalcBlock results — currency symbols, units, K/M/B suffixes, and any `scale:` or `convert_to:` transforms are applied.
+#### Inline Patterns
 
-See the [Language Reference: Template Interpolation](/docs/language-reference/#template-interpolation) for the complete specification, and the [Services P&L](/docs/examples/services-pl/) example for a real-world use.
+Interpolated values render **bold** in markdown output and are wrapped in `<span class="cm-interpolated">` in HTML. You can combine them with other markdown formatting:
+
+```text
+The grand total is {{total_cost}}.
+
+_Headcount: {{team_size}}_
+
+## Budget: {{annual_budget}}
+
+| Metric | Value |
+|--------|-------|
+| Revenue | {{revenue}} |
+| Margin | {{margin}} |
+```
+
+Backticks around `{{var}}` are automatically stripped — `` `{{cost}}` `` renders as **$1.8M**, not `$1.8M`. This prevents interpolated values from appearing as inline code in HTML.
+
+#### Tips
+
+- **Forward references are the killer feature.** Write your executive summary first, add calculations below, and the summary stays current when assumptions change.
+- **Whitespace is tolerated.** `{{ total_cost }}` works the same as `{{total_cost}}`.
+- **Undefined variables are safe.** `{{unknown}}` passes through unchanged — you won't get errors for tags that don't match a variable.
+- **Scale and convert_to apply.** Interpolated values match what CalcBlock results display, including any frontmatter transforms.
+
+See the [Language Reference: Template Interpolation](/docs/language-reference/#template-interpolation) for the complete specification, the [Services P&L](/docs/examples/services-pl/) for a production dashboard with interpolated summary tables, and the [Household Budget](/docs/examples/household-budget/) for inline results in prose.
 
 ### Scale and Convert {#scale-convert}
 

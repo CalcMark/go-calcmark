@@ -116,6 +116,7 @@ This example showcases the following CalcMark features:
 - **Custom units** — `bananas` and `eggs` scale without conversion
 - **Quantities with units** — `cups`, `ounces`, `teaspoons`, `fahrenheit`
 - **Currency arithmetic** — `$` preserved through addition and division
+- **Template interpolation** — `{{variable}}` to embed computed values in prose
 
 ## Try It
 

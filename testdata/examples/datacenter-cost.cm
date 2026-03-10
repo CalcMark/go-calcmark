@@ -150,3 +150,7 @@ capex as napkin
 opex as napkin
 build_tco as napkin
 colo_3yr as napkin
+
+Building costs {{build_tco}} over 3 years vs {{colo_3yr}} for colo.
+The build-vs-buy savings are {{savings}} — assuming you can tolerate
+the {{capex}} upfront capital outlay.

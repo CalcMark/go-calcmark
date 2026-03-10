@@ -143,3 +143,7 @@ storage_napkin = total_yearly_storage as napkin
 traffic_napkin = daily_reads as napkin
 servers_napkin = total_db_servers as napkin
 error_budget_napkin = remaining_error_budget as napkin
+
+For {{monthly_users}} MAU, plan for {{total_db_servers}} database servers,
+{{storage_napkin}} of storage per year, and {{error_budget_napkin}} of
+error budget after {{deploys_per_month}} monthly deploys.

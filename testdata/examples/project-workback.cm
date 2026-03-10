@@ -116,3 +116,8 @@ Time comparison:
 
 available_time = days_to_launch
 needed_time = total_planned + risk_buffer
+
+The team needs {{needed_time}} but has {{available_time}} until launch.
+Development kicks off {{adjusted_dev_start}} with a risk buffer of
+{{risk_buffer}}. Total cost across all phases: roughly
+{{dev_cost}} (dev) + {{qa_cost}} (QA) + {{devops_cost}} (devops).
