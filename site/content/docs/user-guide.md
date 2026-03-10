@@ -311,6 +311,29 @@ tax = income * @globals.tax_rate
 
 `@globals` without a field name (e.g., bare `@globals`) is a parser error. Use `@globals.name` to reference a specific global.
 
+### Template Variables {#template-variables}
+
+Use `{{variable_name}}` in prose to embed calculated values. Tags are resolved after all calculations run, so forward references work — put a summary at the top and calculations below:
+
+```calcmark
+## Summary
+
+Total cost: {{total_cost}}
+Per person: {{per_person}}
+
+
+headcount = 12
+rate = $150000
+total_cost = headcount * rate
+per_person = total_cost / headcount
+```
+
+The summary renders with `$1.8M` and `$150K` substituted in. If a variable is not defined, the `{{tag}}` is left as-is in the output.
+
+Whitespace inside braces is tolerated: `{{ total_cost }}` works the same as `{{total_cost}}`. Interpolated values use the same display formatting as CalcBlock results — currency symbols, units, K/M/B suffixes, and any `scale:` or `convert_to:` transforms are applied.
+
+See the [Language Reference: Template Interpolation](/docs/language-reference/#template-interpolation) for the complete specification, and the [Services P&L](/docs/examples/services-pl/) example for a real-world use.
+
 ### Scale and Convert {#scale-convert}
 
 Use `scale` and `convert_to` in the frontmatter to transform results across an entire document. This is useful for recipes, engineering estimates, and any document where you want to change units or multiply quantities globally.

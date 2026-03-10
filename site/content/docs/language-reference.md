@@ -13,7 +13,7 @@ This is the complete and authoritative specification for the CalcMark language.
 - [Overview](#overview)
 - [Philosophy](#philosophy)
 - [Document Model](#document-model)
-- [Frontmatter](#frontmatter) — [@Directive References](#directive-references)
+- [Frontmatter](#frontmatter) — [@Directive References](#directive-references) — [Template Interpolation](#template-interpolation)
 - [Line Classification](#line-classification)
 - [Syntax & Grammar](#syntax--grammar)
 - [Type System](#type-system)
@@ -231,6 +231,40 @@ When both `scale` and `convert_to` are present, transforms apply in this order:
 3. **Convert** to target measurement system
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [User Guide — Frontmatter](/docs/user-guide/#frontmatter) for a gentler introduction.
+
+### Template Interpolation {#template-interpolation}
+
+Template variables embed calculated values into prose. After all calculations are evaluated, `{{variable_name}}` tags in text blocks are replaced with display-formatted results.
+
+```calcmark
+## Executive Summary
+
+| Metric | Value |
+|--------|-------|
+| Revenue | {{total_rev}} |
+| Gross Margin | {{gross_margin}} |
+
+
+total_rev = $4.2M
+gross_margin = 28%
+```
+
+The summary table renders with `$4.2M` and `28%` — even though the calculations appear below the text. This is the primary use case: forward references in executive summaries, board narratives, and recap sections.
+
+**Syntax:** `{{variable_name}}` — variable names use word characters (letters, digits, underscore). Whitespace inside braces is tolerated: `{{ total_rev }}` resolves the same as `{{total_rev}}`.
+
+**Rules:**
+
+| Behavior | Detail |
+|----------|--------|
+| Resolved values | Display-formatted with locale, currency symbols, units, K/M/B suffixes |
+| Scale / convert_to | Applied before formatting — interpolated values match CalcBlock display |
+| Missing variables | `{{unknown}}` is left as-is in the output |
+| Scope | Text blocks only — `{{var}}` inside a CalcBlock is a syntax error, not interpolation |
+| Round-trip safety | Saving a `.cm` file preserves raw `{{var}}` tags (interpolation is render-time only) |
+| Empty / expression tags | `{{}}` and `{{a + b}}` are not matched |
+
+**JSON output:** The JSON formatter includes both `source` (raw text with `{{var}}` tags) and `interpolated_source` (resolved text) for programmatic consumers.
 
 ## Line Classification
 
