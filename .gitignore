@@ -44,6 +44,7 @@ Thumbs.db
 site/public/
 site/resources/
 site/data/
+site/content/docs/examples/*/full.md
 .hugo_build.lock
 
 # Test artifacts

@@ -128,9 +128,9 @@ func TestGenerateFullDoc(t *testing.T) {
 		t.Errorf("expected generated marker, got:\n%s", content)
 	}
 
-	// Should have _build.list: never
+	// Should have build.list: never
 	if !strings.Contains(content, "list: never") {
-		t.Errorf("expected _build.list: never, got:\n%s", content)
+		t.Errorf("expected build.list: never, got:\n%s", content)
 	}
 
 	// Should have the evaluated result

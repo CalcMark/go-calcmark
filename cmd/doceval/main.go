@@ -201,7 +201,7 @@ func generateFullDoc(parentMD, cmSource, parentTitle string) error {
 	}
 
 	var page bytes.Buffer
-	fmt.Fprintf(&page, "---\ntitle: %q\n%s\n_build:\n  list: never\n---\n\n", title, generatedMarker)
+	fmt.Fprintf(&page, "---\ntitle: %q\n%s\nbuild:\n  list: never\n---\n\n", title, generatedMarker)
 	page.Write(body.Bytes())
 
 	// Write to full.md in the same directory as the parent page.

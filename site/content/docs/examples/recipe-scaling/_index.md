@@ -3,6 +3,7 @@ title: "Recipe Scaling"
 summary: "Double a banana bread recipe and convert imperial to metric — with two lines of frontmatter."
 weight: 30
 calcmark_build: progressive
+calcmark_source: testdata/examples/recipe-scaling.cm
 ---
 
 You have an American banana bread recipe written in cups, ounces, and fahrenheit. You need to double the batch for a party, and your kitchen has metric measuring tools. Two lines of YAML frontmatter handle both transformations — every ingredient is scaled and converted automatically.

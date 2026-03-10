@@ -5,6 +5,7 @@
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
     <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
     {{ with .Params.summary }}<p class="text-muted">{{ . | markdownify }}</p>{{ end }}
+    {{ if .Params.build }}{{ if eq .Params.build.list "never" }}<p class="full-doc-link"><a href="../">← Back to walkthrough</a></p>{{ end }}{{ end }}
     {{ .Content }}
     {{ if .GitInfo }}
     <footer class="page-meta">

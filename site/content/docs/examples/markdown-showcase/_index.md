@@ -3,6 +3,7 @@ title: "Markdown Showcase"
 summary: "A complete markdown document with headings, lists, quotes, links, tables, and live calculations."
 weight: 5
 calcmark_build: progressive
+calcmark_source: testdata/examples/markdown-showcase.cm
 ---
 
 CalcMark documents are just markdown. This example shows how headings, bullet lists, blockquotes, links, tables, and inline formatting all coexist with live calculations. Nothing special is needed — write your thinking, add numbers, and results appear.

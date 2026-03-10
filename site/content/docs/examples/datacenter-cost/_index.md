@@ -3,6 +3,7 @@ title: "Datacenter Build Cost"
 summary: "Full lifecycle cost analysis: CapEx, OpEx, depreciation, growth, and build-vs-colo comparison."
 weight: 55
 calcmark_build: progressive
+calcmark_source: testdata/examples/datacenter-cost.cm
 ---
 
 Should you build a small dedicated datacenter or rent space in someone else's? This walkthrough models the full lifecycle cost using CalcMark, showcasing exchange rates, growth functions, depreciation, and napkin math along the way.

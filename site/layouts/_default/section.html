@@ -1,7 +1,7 @@
 {{ define "main" }}
 <div class="docs-layout container">
   {{ if eq .Section "docs" }}{{ partial "sidebar.html" . }}{{ end }}
-  {{- $visiblePages := where .Pages.ByWeight "Params._build.list" "!=" "never" -}}
+  {{- $visiblePages := where .Pages.ByWeight "Params.build.list" "!=" "never" -}}
   {{- if $visiblePages -}}
   <div class="docs-content">
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
@@ -22,6 +22,7 @@
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
     <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
     {{ with .Params.summary }}<p class="text-muted">{{ . | markdownify }}</p>{{ end }}
+    {{ with .Params.calcmark_source }}<p class="full-doc-link"><a href="full/">View full document →</a></p>{{ end }}
     {{ .Content }}
     {{ if .GitInfo }}
     <footer class="page-meta">
