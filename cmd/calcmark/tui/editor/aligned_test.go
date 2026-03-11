@@ -590,26 +590,254 @@ func TestComputeAlignedModel_RenderedTextBlocksMoreLines(t *testing.T) {
 
 	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
 
-	// 4 rendered lines distributed across 2 source lines (2+2)
-	// max(1,2)=2 per source line → 4 visual lines total
+	// Block-level alignment: 2 source lines, 4 rendered → numAligned = 4
 	if model.TotalVisualLines != 4 {
 		t.Errorf("TotalVisualLines = %d, want 4", model.TotalVisualLines)
 	}
 
+	// Preview lines top-down
 	if model.PreviewLines[0].Content != "| A   | B   |" {
 		t.Errorf("PreviewLines[0].Content = %q", model.PreviewLines[0].Content)
 	}
 	if model.PreviewLines[1].Content != "|-----|-----|" {
 		t.Errorf("PreviewLines[1].Content = %q", model.PreviewLines[1].Content)
 	}
+	if model.PreviewLines[2].Content != "| 1   | 2   |" {
+		t.Errorf("PreviewLines[2].Content = %q", model.PreviewLines[2].Content)
+	}
 
-	// Source pane should have padding for extra preview lines
-	if model.SourceLines[1].Kind != AlignedLinePadding {
-		t.Errorf("SourceLines[1].Kind = %v, want AlignedLinePadding", model.SourceLines[1].Kind)
+	// Source: line 0 (cursor), line 1 (normal), then padding for extra rendered lines
+	if model.SourceLines[0].Kind != AlignedLineCursor {
+		t.Errorf("SourceLines[0].Kind = %v, want AlignedLineCursor", model.SourceLines[0].Kind)
+	}
+	if model.SourceLines[1].Kind != AlignedLineNormal {
+		t.Errorf("SourceLines[1].Kind = %v, want AlignedLineNormal", model.SourceLines[1].Kind)
+	}
+	if model.SourceLines[2].Kind != AlignedLinePadding {
+		t.Errorf("SourceLines[2].Kind = %v, want AlignedLinePadding", model.SourceLines[2].Kind)
+	}
+
+	invMoreLines := model.Invariants()
+	if !invMoreLines.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}
+
+func TestComputeAlignedModel_BlockLevelFewerRendered(t *testing.T) {
+	// Block-level: 5 source lines, 2 rendered lines → preview padded.
+
+	input := AlignedModelInput{
+		Lines: []string{"line 1", "line 2", "line 3", "line 4", "line 5"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "line 1", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "line 2", BlockID: "text1", IsCalc: false},
+			{LineNum: 2, Source: "line 3", BlockID: "text1", IsCalc: false},
+			{LineNum: 3, Source: "line 4", BlockID: "text1", IsCalc: false},
+			{LineNum: 4, Source: "line 5", BlockID: "text1", IsCalc: false},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+		RenderedTextBlocks: map[string][]string{
+			"text1": {"Rendered paragraph 1", "Rendered paragraph 2"},
+		},
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// 5 source lines, 2 rendered → numAligned = 5
+	if model.TotalVisualLines != 5 {
+		t.Errorf("TotalVisualLines = %d, want 5", model.TotalVisualLines)
+	}
+
+	// Preview: 2 content lines + 3 padding
+	if model.PreviewLines[0].Content != "Rendered paragraph 1" {
+		t.Errorf("PreviewLines[0].Content = %q", model.PreviewLines[0].Content)
+	}
+	if model.PreviewLines[1].Content != "Rendered paragraph 2" {
+		t.Errorf("PreviewLines[1].Content = %q", model.PreviewLines[1].Content)
+	}
+	for i := 2; i < 5; i++ {
+		if model.PreviewLines[i].Kind != AlignedLinePadding {
+			t.Errorf("PreviewLines[%d].Kind = %v, want AlignedLinePadding", i, model.PreviewLines[i].Kind)
+		}
 	}
 
 	inv := model.Invariants()
 	if !inv.SourcePreviewMatch {
 		t.Error("Invariant SourcePreviewMatch failed")
+	}
+	if !inv.MappingComplete {
+		t.Error("Invariant MappingComplete failed")
+	}
+}
+
+func TestComputeAlignedModel_BlockLevelWithSourceWrapping(t *testing.T) {
+	// Block-level: source line wraps → wrapping counts toward source visual lines.
+
+	input := AlignedModelInput{
+		Lines: []string{"this is a long line that will wrap at width twenty", "short"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "this is a long line that will wrap at width twenty", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "short", BlockID: "text1", IsCalc: false},
+		},
+		SourceContentWidth: 20,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+		RenderedTextBlocks: map[string][]string{
+			"text1": {"Rendered A", "Rendered B"},
+		},
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// Line 0 wraps at width 20 → ~3 visual lines. Line 1 = 1. Total source visual ~4.
+	// 2 rendered lines. numAligned = max(~4, 2) = ~4.
+	if model.TotalVisualLines < 3 {
+		t.Errorf("TotalVisualLines = %d, expected >= 3 (wrapping)", model.TotalVisualLines)
+	}
+
+	if model.SourceLines[0].Kind != AlignedLineCursor {
+		t.Errorf("SourceLines[0].Kind = %v, want AlignedLineCursor", model.SourceLines[0].Kind)
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}
+
+func TestComputeAlignedModel_MixedBlocksCalcUnchanged(t *testing.T) {
+	// Mixed document: TextBlock (block-aligned) + CalcBlock (line-aligned).
+	// CalcBlock alignment must be identical whether RenderedTextBlocks is set or not.
+
+	baseInput := AlignedModelInput{
+		Lines: []string{"# Heading", "text", "x = 10", "y = 20"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "# Heading", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "text", BlockID: "text1", IsCalc: false},
+			{LineNum: 2, Source: "x = 10", BlockID: "calc1", IsCalc: true, VarName: "x", Value: "10"},
+			{LineNum: 3, Source: "y = 20", BlockID: "calc1", IsCalc: true, VarName: "y", Value: "20"},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         2,
+		PreviewMode:        PreviewRendered,
+	}
+
+	// Without RenderedTextBlocks
+	modelWithout := ComputeAlignedModel(baseInput, mockRenderCalcLine, mockRenderMarkdown)
+
+	// With RenderedTextBlocks
+	withRendered := baseInput
+	withRendered.RenderedTextBlocks = map[string][]string{
+		"text1": {"# Heading (rendered)", "text (rendered)"},
+	}
+	modelWith := ComputeAlignedModel(withRendered, mockRenderCalcLine, mockRenderMarkdown)
+
+	// CalcBlock preview lines should be identical in both models.
+	var calcWithout, calcWith []AlignedLine
+	for _, pl := range modelWithout.PreviewLines {
+		if pl.IsCalc {
+			calcWithout = append(calcWithout, pl)
+		}
+	}
+	for _, pl := range modelWith.PreviewLines {
+		if pl.IsCalc {
+			calcWith = append(calcWith, pl)
+		}
+	}
+
+	if len(calcWithout) != len(calcWith) {
+		t.Fatalf("CalcBlock line counts differ: %d vs %d", len(calcWithout), len(calcWith))
+	}
+	for i := range calcWithout {
+		if calcWithout[i].Content != calcWith[i].Content {
+			t.Errorf("CalcBlock line %d content differs: %q vs %q", i, calcWithout[i].Content, calcWith[i].Content)
+		}
+	}
+
+	invWith := modelWith.Invariants()
+	if !invWith.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed (with rendered)")
+	}
+	invWithout := modelWithout.Invariants()
+	if !invWithout.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed (without rendered)")
+	}
+}
+
+func TestComputeAlignedModel_BlockLevelEmptyRendered(t *testing.T) {
+	// Empty rendered content for a TextBlock with blank lines.
+
+	input := AlignedModelInput{
+		Lines: []string{"", ""},
+		Results: []LineResult{
+			{LineNum: 0, Source: "", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "", BlockID: "text1", IsCalc: false},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+		RenderedTextBlocks: map[string][]string{
+			"text1": {},
+		},
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// 2 source lines, 0 rendered → numAligned = 2
+	if model.TotalVisualLines != 2 {
+		t.Errorf("TotalVisualLines = %d, want 2", model.TotalVisualLines)
+	}
+
+	// Preview should be all padding
+	for i := range 2 {
+		if model.PreviewLines[i].Kind != AlignedLinePadding {
+			t.Errorf("PreviewLines[%d].Kind = %v, want AlignedLinePadding", i, model.PreviewLines[i].Kind)
+		}
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}
+
+func TestComputeAlignedModel_BlockLevelSingleLine(t *testing.T) {
+	// Single-line TextBlock with rendered content.
+
+	input := AlignedModelInput{
+		Lines: []string{"# Title"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "# Title", BlockID: "text1", IsCalc: false},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+		RenderedTextBlocks: map[string][]string{
+			"text1": {"Title (rendered)"},
+		},
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	if model.TotalVisualLines != 1 {
+		t.Errorf("TotalVisualLines = %d, want 1", model.TotalVisualLines)
+	}
+	if model.PreviewLines[0].Content != "Title (rendered)" {
+		t.Errorf("PreviewLines[0].Content = %q", model.PreviewLines[0].Content)
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+	if !inv.MappingComplete {
+		t.Error("Invariant MappingComplete failed")
 	}
 }

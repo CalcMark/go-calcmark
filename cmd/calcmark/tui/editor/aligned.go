@@ -135,13 +135,24 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 		}
 		blockResults := input.Results[blockStartIdx:blockEndIdx]
 
-		// Pre-render text block preview lines (headings, ordered lists, etc.)
+		// Block-level alignment for TextBlocks with pre-rendered content.
+		// The entire rendered output is aligned as an opaque unit against
+		// the source lines, avoiding the impossible line-level reverse-mapping.
+		if !isCalcBlock && input.RenderedTextBlocks != nil {
+			if rendered, ok := input.RenderedTextBlocks[currentBlockID]; ok {
+				alignBlockLevel(blockResults, rendered, input, currentBlockID,
+					&sourceLines, &previewLines, sourceToVisual, visualToSource)
+				blockStartIdx = blockEndIdx
+				continue
+			}
+		}
+
+		// Per-line alignment: CalcBlocks and TextBlocks without pre-rendered content.
 		var textBlockPreviewCache map[int][]string
 		if !isCalcBlock && renderMarkdown != nil {
 			textBlockPreviewCache = renderTextBlockPreview(blockResults, input, renderMarkdown)
 		}
 
-		// Process each source line in the block to create aligned visual lines.
 		for blockLineIdx, lineResult := range blockResults {
 			if lineResult.LineNum >= len(input.Lines) {
 				continue
@@ -151,16 +162,13 @@ func ComputeAlignedModel(input AlignedModelInput, renderCalcLine func(r LineResu
 			isCursorOnThisLine := lineResult.LineNum == input.CursorLine
 			wrappedSourceLines := geometry.WrapText(sourceText, input.SourceContentWidth)
 
-			// Determine preview content: calc result, cached markdown, or fallback.
 			wrappedPreviewLines := resolvePreviewLines(
 				lineResult, blockLineIdx, isCalcBlock,
 				textBlockPreviewCache, input, renderCalcLine, renderMarkdown,
 			)
 
-			// Align source and preview visual lines to the same count.
 			numAligned := max(len(wrappedSourceLines), len(wrappedPreviewLines))
 
-			// Record source→visual mapping for cursor tracking.
 			if _, ok := sourceToVisual[lineResult.LineNum]; !ok {
 				sourceToVisual[lineResult.LineNum] = len(sourceLines)
 			}
@@ -203,23 +211,12 @@ func effectiveSourceText(input AlignedModelInput, lr LineResult) string {
 // Multi-line constructs (ordered lists) are rendered as a unit to preserve
 // semantic numbering; other content is rendered per-line.
 //
-// When RenderedTextBlocks contains pre-rendered content for this block (from
-// the RenderedBlockCache in PreviewRendered mode), that content is distributed
-// across source lines using even distribution. Otherwise, falls back to the
-// existing per-line or ordered-list rendering.
+// Note: TextBlocks with pre-rendered content (RenderedTextBlocks) are handled
+// upstream by alignBlockLevel and never reach this function.
 //
 // Returns a map from block-line-index to rendered preview lines.
 func renderTextBlockPreview(blockResults []LineResult, input AlignedModelInput, renderMarkdown func(string, int) []string) map[int][]string {
 	cache := make(map[int][]string, len(blockResults))
-
-	// Use pre-rendered content from RenderedBlockCache when available.
-	if len(blockResults) > 0 && input.RenderedTextBlocks != nil {
-		blockID := blockResults[0].BlockID
-		if rendered, ok := input.RenderedTextBlocks[blockID]; ok {
-			distributeRenderedLines(rendered, len(blockResults), cache)
-			return cache
-		}
-	}
 
 	if containsOrderedList(blockResults) {
 		renderOrderedListBlock(blockResults, input, renderMarkdown, cache)
@@ -229,28 +226,124 @@ func renderTextBlockPreview(blockResults []LineResult, input AlignedModelInput, 
 	return cache
 }
 
-// distributeRenderedLines distributes pre-rendered lines evenly across source lines.
-// Same algorithm as renderOrderedListBlock but without re-rendering.
-func distributeRenderedLines(rendered []string, numSource int, cache map[int][]string) {
-	numRendered := len(rendered)
-	perSource := numRendered / numSource
-	remainder := numRendered % numSource
+// alignBlockLevel aligns a TextBlock with pre-rendered content at the block level.
+// Source lines (with wrapping) and rendered lines are treated as opaque units:
+//   - Compute total source visual lines (accounting for per-line wrapping)
+//   - numAligned = max(totalSourceVisual, renderedCount)
+//   - Shorter side is padded at the end
+//
+// This avoids the per-line distribution that would require reverse-mapping
+// glamour output back to individual source lines.
+func alignBlockLevel(
+	blockResults []LineResult, rendered []string, input AlignedModelInput,
+	blockID string,
+	sourceLines *[]AlignedLine, previewLines *[]AlignedLine,
+	sourceToVisual map[int]int, visualToSource map[int]int,
+) {
+	// Phase 1: Collect all source visual lines for the block.
+	type sourceEntry struct {
+		wrapped  []string
+		lineNum  int
+		isCursor bool
+	}
+	var entries []sourceEntry
+	totalSourceVisual := 0
+	for _, lr := range blockResults {
+		if lr.LineNum >= len(input.Lines) {
+			continue
+		}
+		text := effectiveSourceText(input, lr)
+		wrapped := geometry.WrapText(text, input.SourceContentWidth)
+		entries = append(entries, sourceEntry{
+			wrapped:  wrapped,
+			lineNum:  lr.LineNum,
+			isCursor: lr.LineNum == input.CursorLine,
+		})
+		totalSourceVisual += len(wrapped)
+	}
 
-	idx := 0
-	for i := range numSource {
-		count := perSource
-		if i < remainder {
-			count++
+	// Phase 2: Determine total aligned count.
+	numRendered := len(rendered)
+	numAligned := max(totalSourceVisual, numRendered)
+
+	// Phase 3: Emit source visual lines, then padding.
+	sourceVisualIdx := 0
+	for _, entry := range entries {
+		if _, ok := sourceToVisual[entry.lineNum]; !ok {
+			sourceToVisual[entry.lineNum] = len(*sourceLines)
 		}
-		var chunk []string
-		for j := 0; j < count && idx < numRendered; j++ {
-			chunk = append(chunk, rendered[idx])
-			idx++
+		for offset, content := range entry.wrapped {
+			visualToSource[len(*sourceLines)] = entry.lineNum
+			al := AlignedLine{
+				Content:       content,
+				SourceLineIdx: entry.lineNum,
+				BlockID:       blockID,
+				IsCalc:        false,
+			}
+			if offset == 0 {
+				al.LineNum = entry.lineNum + 1
+				if entry.isCursor {
+					al.Kind = AlignedLineCursor
+				} else {
+					al.Kind = AlignedLineNormal
+				}
+			} else {
+				if entry.isCursor {
+					al.Kind = AlignedLineCursorWrapped
+				} else {
+					al.Kind = AlignedLineWrapped
+				}
+			}
+			*sourceLines = append(*sourceLines, al)
+			sourceVisualIdx++
 		}
-		if len(chunk) == 0 {
-			chunk = []string{""}
+	}
+	// Pad source side if rendered has more lines.
+	lastLineNum := 0
+	if len(entries) > 0 {
+		lastLineNum = entries[len(entries)-1].lineNum
+	}
+	for i := sourceVisualIdx; i < numAligned; i++ {
+		visualToSource[len(*sourceLines)] = lastLineNum
+		*sourceLines = append(*sourceLines, AlignedLine{
+			SourceLineIdx: lastLineNum,
+			Kind:          AlignedLinePadding,
+			BlockID:       blockID,
+		})
+	}
+
+	// Phase 4: Emit preview visual lines, then padding.
+	// Use first source line for SourceLineIdx on rendered lines (block-level).
+	firstLineNum := 0
+	if len(entries) > 0 {
+		firstLineNum = entries[0].lineNum
+	}
+	for i := range numAligned {
+		if i < numRendered {
+			// Map rendered lines to source lines proportionally for SourceLineIdx.
+			srcIdx := firstLineNum
+			if len(entries) > 0 {
+				// Rough mapping: distribute rendered lines across source lines
+				entryIdx := i * len(entries) / numAligned
+				if entryIdx >= len(entries) {
+					entryIdx = len(entries) - 1
+				}
+				srcIdx = entries[entryIdx].lineNum
+			}
+			*previewLines = append(*previewLines, AlignedLine{
+				Content:       rendered[i],
+				SourceLineIdx: srcIdx,
+				LineNum:       srcIdx + 1,
+				Kind:          AlignedLineNormal,
+				BlockID:       blockID,
+			})
+		} else {
+			*previewLines = append(*previewLines, AlignedLine{
+				SourceLineIdx: lastLineNum,
+				Kind:          AlignedLinePadding,
+				BlockID:       blockID,
+			})
 		}
-		cache[i] = chunk
 	}
 }
 
