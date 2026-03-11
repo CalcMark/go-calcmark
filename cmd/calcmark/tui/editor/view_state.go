@@ -239,6 +239,10 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 		EditBufLine:        m.cursorLine,
 	}
 
+	if m.previewMode == PreviewRendered && m.renderCache != nil && m.doc != nil {
+		input.RenderedTextBlocks = m.renderTextBlocks(previewWidth)
+	}
+
 	aligned := ComputeAlignedModel(input, m.renderCalcLine, func(line string, width int) []string {
 		mdRenderer, _ := NewMarkdownRenderer(width)
 		if mdRenderer != nil {

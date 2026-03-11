@@ -490,3 +490,126 @@ func TestComputeAlignedModel_EditBufWrapsInSource(t *testing.T) {
 		t.Error("Invariant SourcePreviewMatch failed")
 	}
 }
+
+func TestComputeAlignedModel_RenderedTextBlocks(t *testing.T) {
+	// When RenderedTextBlocks is populated for a TextBlock, the pre-rendered
+	// content should be used in preview lines instead of per-line rendering.
+	// This tests Phase 3a wiring: RenderedBlockCache → AlignedModelInput → preview.
+
+	input := AlignedModelInput{
+		Lines: []string{"Hello **world**", "Another line", "x = 10"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "Hello **world**", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "Another line", BlockID: "text1", IsCalc: false},
+			{LineNum: 2, Source: "x = 10", BlockID: "calc1", IsCalc: true, VarName: "x", Value: "10"},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+		RenderedTextBlocks: map[string][]string{
+			"text1": {"Hello world (rendered)", "Another line (rendered)"},
+		},
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// Should have 3 visual lines (2 text + 1 calc), 1:1 aligned
+	if model.TotalVisualLines != 3 {
+		t.Errorf("TotalVisualLines = %d, want 3", model.TotalVisualLines)
+	}
+
+	// Preview lines for the TextBlock should use the pre-rendered content
+	if model.PreviewLines[0].Content != "Hello world (rendered)" {
+		t.Errorf("PreviewLines[0].Content = %q, want pre-rendered content", model.PreviewLines[0].Content)
+	}
+	if model.PreviewLines[1].Content != "Another line (rendered)" {
+		t.Errorf("PreviewLines[1].Content = %q, want pre-rendered content", model.PreviewLines[1].Content)
+	}
+
+	// CalcBlock should still use the calc renderer (not affected by RenderedTextBlocks)
+	if model.PreviewLines[2].Content != "x = 10" {
+		t.Errorf("PreviewLines[2].Content = %q, want calc result", model.PreviewLines[2].Content)
+	}
+
+	// Invariants must hold
+	inv2 := model.Invariants()
+	if !inv2.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+	if !inv2.MappingComplete {
+		t.Error("Invariant MappingComplete failed")
+	}
+}
+
+func TestComputeAlignedModel_RenderedTextBlocksFallback(t *testing.T) {
+	// When RenderedTextBlocks is nil, fall back to existing per-line rendering.
+
+	input := AlignedModelInput{
+		Lines: []string{"# Header", "plain text"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "# Header", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "plain text", BlockID: "text1", IsCalc: false},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	if model.TotalVisualLines != 2 {
+		t.Errorf("TotalVisualLines = %d, want 2", model.TotalVisualLines)
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}
+
+func TestComputeAlignedModel_RenderedTextBlocksMoreLines(t *testing.T) {
+	// When glamour produces MORE rendered lines than source lines (e.g., a
+	// table with borders), the distribution adds padding to source pane.
+
+	input := AlignedModelInput{
+		Lines: []string{"| A | B |", "| 1 | 2 |"},
+		Results: []LineResult{
+			{LineNum: 0, Source: "| A | B |", BlockID: "text1", IsCalc: false},
+			{LineNum: 1, Source: "| 1 | 2 |", BlockID: "text1", IsCalc: false},
+		},
+		SourceContentWidth: 40,
+		PreviewWidth:       40,
+		CursorLine:         0,
+		PreviewMode:        PreviewRendered,
+		RenderedTextBlocks: map[string][]string{
+			"text1": {"| A   | B   |", "|-----|-----|", "| 1   | 2   |", "|-----|-----|"},
+		},
+	}
+
+	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
+
+	// 4 rendered lines distributed across 2 source lines (2+2)
+	// max(1,2)=2 per source line → 4 visual lines total
+	if model.TotalVisualLines != 4 {
+		t.Errorf("TotalVisualLines = %d, want 4", model.TotalVisualLines)
+	}
+
+	if model.PreviewLines[0].Content != "| A   | B   |" {
+		t.Errorf("PreviewLines[0].Content = %q", model.PreviewLines[0].Content)
+	}
+	if model.PreviewLines[1].Content != "|-----|-----|" {
+		t.Errorf("PreviewLines[1].Content = %q", model.PreviewLines[1].Content)
+	}
+
+	// Source pane should have padding for extra preview lines
+	if model.SourceLines[1].Kind != AlignedLinePadding {
+		t.Errorf("SourceLines[1].Kind = %v, want AlignedLinePadding", model.SourceLines[1].Kind)
+	}
+
+	inv := model.Invariants()
+	if !inv.SourcePreviewMatch {
+		t.Error("Invariant SourcePreviewMatch failed")
+	}
+}

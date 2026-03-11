@@ -105,6 +105,12 @@ type AlignedModelInput struct {
 	// If non-empty, this overrides Lines[EditBufLine] for rendering preview.
 	EditBuf     string
 	EditBufLine int // Which line index EditBuf applies to
+
+	// RenderedTextBlocks contains pre-rendered glamour output for TextBlocks.
+	// Keyed by block ID. When present for a block, the rendered content is used
+	// for preview instead of the per-line rendering callbacks.
+	// Nil map or missing block ID falls back to existing behavior.
+	RenderedTextBlocks map[string][]string
 }
 
 // ComputeAlignedModel computes the visual line alignment from the given inputs.
@@ -197,9 +203,23 @@ func effectiveSourceText(input AlignedModelInput, lr LineResult) string {
 // Multi-line constructs (ordered lists) are rendered as a unit to preserve
 // semantic numbering; other content is rendered per-line.
 //
+// When RenderedTextBlocks contains pre-rendered content for this block (from
+// the RenderedBlockCache in PreviewRendered mode), that content is distributed
+// across source lines using even distribution. Otherwise, falls back to the
+// existing per-line or ordered-list rendering.
+//
 // Returns a map from block-line-index to rendered preview lines.
 func renderTextBlockPreview(blockResults []LineResult, input AlignedModelInput, renderMarkdown func(string, int) []string) map[int][]string {
 	cache := make(map[int][]string, len(blockResults))
+
+	// Use pre-rendered content from RenderedBlockCache when available.
+	if len(blockResults) > 0 && input.RenderedTextBlocks != nil {
+		blockID := blockResults[0].BlockID
+		if rendered, ok := input.RenderedTextBlocks[blockID]; ok {
+			distributeRenderedLines(rendered, len(blockResults), cache)
+			return cache
+		}
+	}
 
 	if containsOrderedList(blockResults) {
 		renderOrderedListBlock(blockResults, input, renderMarkdown, cache)
@@ -207,6 +227,31 @@ func renderTextBlockPreview(blockResults []LineResult, input AlignedModelInput, 
 		renderPerLinePreview(blockResults, input, renderMarkdown, cache)
 	}
 	return cache
+}
+
+// distributeRenderedLines distributes pre-rendered lines evenly across source lines.
+// Same algorithm as renderOrderedListBlock but without re-rendering.
+func distributeRenderedLines(rendered []string, numSource int, cache map[int][]string) {
+	numRendered := len(rendered)
+	perSource := numRendered / numSource
+	remainder := numRendered % numSource
+
+	idx := 0
+	for i := range numSource {
+		count := perSource
+		if i < remainder {
+			count++
+		}
+		var chunk []string
+		for j := 0; j < count && idx < numRendered; j++ {
+			chunk = append(chunk, rendered[idx])
+			idx++
+		}
+		if len(chunk) == 0 {
+			chunk = []string{""}
+		}
+		cache[i] = chunk
+	}
 }
 
 // containsOrderedList checks if any line in the block starts with an ordered

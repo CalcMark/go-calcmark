@@ -8,6 +8,7 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 // alignedPanes holds pre-computed line structures for both panes.
@@ -305,6 +306,13 @@ func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int, results [
 		input.EditBufLine = m.cursorLine
 	}
 
+	// In PreviewRendered mode, pre-render visible TextBlocks through the cache.
+	// The rendered content is passed as a parallel data structure alongside LineResults,
+	// keeping GetLineResults() completely untouched.
+	if m.previewMode == PreviewRendered && m.renderCache != nil && m.doc != nil {
+		input.RenderedTextBlocks = m.renderTextBlocks(previewWidth)
+	}
+
 	// Compute with render functions that match view.go behavior
 	return ComputeAlignedModel(input, m.renderCalcLine, func(line string, width int) []string {
 		mdRenderer, _ := NewMarkdownRenderer(width)
@@ -313,6 +321,40 @@ func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int, results [
 		}
 		return geometry.WrapText(line, width)
 	})
+}
+
+// renderTextBlocks builds a map of pre-rendered TextBlock content from the cache.
+// Iterates blocks in document order to compute line offsets (same approach as
+// GetLineResults). Only TextBlocks are rendered; CalcBlocks are skipped.
+func (m Model) renderTextBlocks(previewWidth int) map[string][]string {
+	rendered := make(map[string][]string)
+	lineNum := m.frontmatterLineCount()
+
+	for _, node := range m.doc.GetBlocks() {
+		switch tb := node.Block.(type) {
+		case *document.TextBlock:
+			interpolated := tb.InterpolatedSource()
+			blockStart := lineNum
+
+			// If the user is editing a line in this TextBlock, splice the editBuf.
+			if m.editBufLoaded {
+				blockEnd := blockStart + len(interpolated)
+				if m.cursorLine >= blockStart && m.cursorLine < blockEnd {
+					spliced := make([]string, len(interpolated))
+					copy(spliced, interpolated)
+					spliced[m.cursorLine-blockStart] = m.editBuf
+					interpolated = spliced
+				}
+			}
+
+			rendered[node.ID] = m.renderCache.Render(node.ID, interpolated, previewWidth)
+			lineNum += len(tb.Source())
+
+		case *document.CalcBlock:
+			lineNum += len(tb.Source())
+		}
+	}
+	return rendered
 }
 
 // sourceLine represents a line in the source pane (may be padding or wrapped).
