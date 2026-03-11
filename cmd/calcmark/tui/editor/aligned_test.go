@@ -571,7 +571,8 @@ func TestComputeAlignedModel_RenderedTextBlocksFallback(t *testing.T) {
 
 func TestComputeAlignedModel_RenderedTextBlocksMoreLines(t *testing.T) {
 	// When glamour produces MORE rendered lines than source lines (e.g., a
-	// table with borders), the distribution adds padding to source pane.
+	// table with borders), rendered lines are distributed per source line.
+	// 4 rendered / 2 source = 2 rendered per source line.
 
 	input := AlignedModelInput{
 		Lines: []string{"| A | B |", "| 1 | 2 |"},
@@ -590,12 +591,15 @@ func TestComputeAlignedModel_RenderedTextBlocksMoreLines(t *testing.T) {
 
 	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
 
-	// Block-level alignment: 2 source lines, 4 rendered → numAligned = 4
+	// Per-line distribution: 2 source lines, 4 rendered → 2 per source
+	// Source line 0: 1 source wrap + 1 padding = 2 visual lines
+	// Source line 1: 1 source wrap + 1 padding = 2 visual lines
+	// Total: 4 visual lines
 	if model.TotalVisualLines != 4 {
 		t.Errorf("TotalVisualLines = %d, want 4", model.TotalVisualLines)
 	}
 
-	// Preview lines top-down
+	// Preview lines: distributed across source lines
 	if model.PreviewLines[0].Content != "| A   | B   |" {
 		t.Errorf("PreviewLines[0].Content = %q", model.PreviewLines[0].Content)
 	}
@@ -606,15 +610,15 @@ func TestComputeAlignedModel_RenderedTextBlocksMoreLines(t *testing.T) {
 		t.Errorf("PreviewLines[2].Content = %q", model.PreviewLines[2].Content)
 	}
 
-	// Source: line 0 (cursor), line 1 (normal), then padding for extra rendered lines
+	// Source: line 0 (cursor) + padding, line 1 (normal) + padding
 	if model.SourceLines[0].Kind != AlignedLineCursor {
 		t.Errorf("SourceLines[0].Kind = %v, want AlignedLineCursor", model.SourceLines[0].Kind)
 	}
-	if model.SourceLines[1].Kind != AlignedLineNormal {
-		t.Errorf("SourceLines[1].Kind = %v, want AlignedLineNormal", model.SourceLines[1].Kind)
+	if model.SourceLines[1].Kind != AlignedLinePadding {
+		t.Errorf("SourceLines[1].Kind = %v, want AlignedLinePadding", model.SourceLines[1].Kind)
 	}
-	if model.SourceLines[2].Kind != AlignedLinePadding {
-		t.Errorf("SourceLines[2].Kind = %v, want AlignedLinePadding", model.SourceLines[2].Kind)
+	if model.SourceLines[2].Kind != AlignedLineNormal {
+		t.Errorf("SourceLines[2].Kind = %v, want AlignedLineNormal", model.SourceLines[2].Kind)
 	}
 
 	invMoreLines := model.Invariants()
@@ -624,7 +628,9 @@ func TestComputeAlignedModel_RenderedTextBlocksMoreLines(t *testing.T) {
 }
 
 func TestComputeAlignedModel_BlockLevelFewerRendered(t *testing.T) {
-	// Block-level: 5 source lines, 2 rendered lines → preview padded.
+	// Per-line distribution: 5 source lines, 2 rendered lines.
+	// 2/5 = 0 per source, remainder 2 → first 2 entries get 1 rendered line each.
+	// Lines 0-1 each get 1 rendered line; lines 2-4 get fallback empty content.
 
 	input := AlignedModelInput{
 		Lines: []string{"line 1", "line 2", "line 3", "line 4", "line 5"},
@@ -646,21 +652,22 @@ func TestComputeAlignedModel_BlockLevelFewerRendered(t *testing.T) {
 
 	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
 
-	// 5 source lines, 2 rendered → numAligned = 5
+	// 5 source lines, each gets 1 visual line → total 5
 	if model.TotalVisualLines != 5 {
 		t.Errorf("TotalVisualLines = %d, want 5", model.TotalVisualLines)
 	}
 
-	// Preview: 2 content lines + 3 padding
+	// Preview: first 2 source lines get the rendered content
 	if model.PreviewLines[0].Content != "Rendered paragraph 1" {
 		t.Errorf("PreviewLines[0].Content = %q", model.PreviewLines[0].Content)
 	}
 	if model.PreviewLines[1].Content != "Rendered paragraph 2" {
 		t.Errorf("PreviewLines[1].Content = %q", model.PreviewLines[1].Content)
 	}
+	// Remaining lines get empty fallback content (AlignedLineNormal, not Padding)
 	for i := 2; i < 5; i++ {
-		if model.PreviewLines[i].Kind != AlignedLinePadding {
-			t.Errorf("PreviewLines[%d].Kind = %v, want AlignedLinePadding", i, model.PreviewLines[i].Kind)
+		if model.PreviewLines[i].Content != "" {
+			t.Errorf("PreviewLines[%d].Content = %q, want empty", i, model.PreviewLines[i].Content)
 		}
 	}
 
@@ -771,6 +778,7 @@ func TestComputeAlignedModel_MixedBlocksCalcUnchanged(t *testing.T) {
 
 func TestComputeAlignedModel_BlockLevelEmptyRendered(t *testing.T) {
 	// Empty rendered content for a TextBlock with blank lines.
+	// Each source line gets fallback empty content (AlignedLineNormal).
 
 	input := AlignedModelInput{
 		Lines: []string{"", ""},
@@ -789,15 +797,15 @@ func TestComputeAlignedModel_BlockLevelEmptyRendered(t *testing.T) {
 
 	model := ComputeAlignedModel(input, mockRenderCalcLine, mockRenderMarkdown)
 
-	// 2 source lines, 0 rendered → numAligned = 2
+	// 2 source lines, 0 rendered → each gets fallback empty → total 2
 	if model.TotalVisualLines != 2 {
 		t.Errorf("TotalVisualLines = %d, want 2", model.TotalVisualLines)
 	}
 
-	// Preview should be all padding
+	// Preview lines get empty fallback content
 	for i := range 2 {
-		if model.PreviewLines[i].Kind != AlignedLinePadding {
-			t.Errorf("PreviewLines[%d].Kind = %v, want AlignedLinePadding", i, model.PreviewLines[i].Kind)
+		if model.PreviewLines[i].Content != "" {
+			t.Errorf("PreviewLines[%d].Content = %q, want empty", i, model.PreviewLines[i].Content)
 		}
 	}
 

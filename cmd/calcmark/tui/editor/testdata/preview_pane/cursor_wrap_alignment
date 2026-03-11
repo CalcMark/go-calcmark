@@ -23,7 +23,7 @@ run observe=alignment
 Source and Preview Alignment:
 Total visual lines: 5
 Source lines count: 5, Preview lines count: 5
-[0] SRC(ln=1 wrap=false): "# Household Budget"         | PRV(ln=0): "\x1b[38;2;245;243;240;48;2;26;23;20;1m\x1b[0m\x1b..."
+[0] SRC(ln=1 wrap=false): "# Household Budget"         | PRV(ln=0): "\x1b[38;2;168;201;64;48;2;26;23;20;1m\x1b[0m\x1b[..."
 [1] SRC(ln=2 wrap=false): ""                           | PRV(ln=1): ""
 [2] SRC(ln=3 wrap=false): "total_gross = salary_1 + salary_2" | PRV(ln=2): "\x1b[38;2;245;158;11;48;2;26;23;20m⚠ unde..."
 [3] SRC(ln=4 wrap=false): ""                           | PRV(ln=3): ""

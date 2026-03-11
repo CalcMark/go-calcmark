@@ -227,27 +227,27 @@ func renderTextBlockPreview(blockResults []LineResult, input AlignedModelInput, 
 }
 
 // alignBlockLevel aligns a TextBlock with pre-rendered content at the block level.
-// Source lines (with wrapping) and rendered lines are treated as opaque units:
-//   - Compute total source visual lines (accounting for per-line wrapping)
-//   - numAligned = max(totalSourceVisual, renderedCount)
-//   - Shorter side is padded at the end
+// Rendered lines are distributed proportionally across source lines so that each
+// source line maps to a roughly equal share of the rendered output. This keeps
+// the source and preview panes visually aligned within a block, not just at
+// block boundaries.
 //
-// This avoids the per-line distribution that would require reverse-mapping
-// glamour output back to individual source lines.
+// For each source line, the per-line alignment (max of source-wraps vs assigned
+// rendered lines) is used, with the shorter side padded. This is the same logic
+// used for CalcBlocks and per-line text rendering.
 func alignBlockLevel(
 	blockResults []LineResult, rendered []string, input AlignedModelInput,
 	blockID string,
 	sourceLines *[]AlignedLine, previewLines *[]AlignedLine,
 	sourceToVisual map[int]int, visualToSource map[int]int,
 ) {
-	// Phase 1: Collect all source visual lines for the block.
+	// Phase 1: Collect source entries with their wrapped visual lines.
 	type sourceEntry struct {
 		wrapped  []string
 		lineNum  int
 		isCursor bool
 	}
 	var entries []sourceEntry
-	totalSourceVisual := 0
 	for _, lr := range blockResults {
 		if lr.LineNum >= len(input.Lines) {
 			continue
@@ -259,90 +259,94 @@ func alignBlockLevel(
 			lineNum:  lr.LineNum,
 			isCursor: lr.LineNum == input.CursorLine,
 		})
-		totalSourceVisual += len(wrapped)
 	}
 
-	// Phase 2: Determine total aligned count.
-	numRendered := len(rendered)
-	numAligned := max(totalSourceVisual, numRendered)
+	if len(entries) == 0 {
+		return
+	}
 
-	// Phase 3: Emit source visual lines, then padding.
-	sourceVisualIdx := 0
-	for _, entry := range entries {
+	// Phase 2: Distribute rendered lines across source entries proportionally.
+	// Same algorithm as renderOrderedListBlock: each entry gets an equal share
+	// with remainder distributed to the first entries.
+	numSource := len(entries)
+	numRendered := len(rendered)
+	perSource := numRendered / numSource
+	remainder := numRendered % numSource
+
+	renderedIdx := 0
+	for entryIdx, entry := range entries {
+		// Determine how many rendered lines this source entry gets.
+		count := perSource
+		if entryIdx < remainder {
+			count++
+		}
+		var assignedRendered []string
+		for j := 0; j < count && renderedIdx < numRendered; j++ {
+			assignedRendered = append(assignedRendered, rendered[renderedIdx])
+			renderedIdx++
+		}
+		if len(assignedRendered) == 0 {
+			assignedRendered = []string{""}
+		}
+
+		// Phase 3: Per-line alignment for this source entry.
+		// max(source-wraps, assigned-rendered) with padding on the shorter side.
+		numAligned := max(len(entry.wrapped), len(assignedRendered))
+
 		if _, ok := sourceToVisual[entry.lineNum]; !ok {
 			sourceToVisual[entry.lineNum] = len(*sourceLines)
 		}
-		for offset, content := range entry.wrapped {
-			visualToSource[len(*sourceLines)] = entry.lineNum
-			al := AlignedLine{
-				Content:       content,
-				SourceLineIdx: entry.lineNum,
-				BlockID:       blockID,
-				IsCalc:        false,
-			}
-			if offset == 0 {
-				al.LineNum = entry.lineNum + 1
-				if entry.isCursor {
-					al.Kind = AlignedLineCursor
-				} else {
-					al.Kind = AlignedLineNormal
-				}
-			} else {
-				if entry.isCursor {
-					al.Kind = AlignedLineCursorWrapped
-				} else {
-					al.Kind = AlignedLineWrapped
-				}
-			}
-			*sourceLines = append(*sourceLines, al)
-			sourceVisualIdx++
-		}
-	}
-	// Pad source side if rendered has more lines.
-	lastLineNum := 0
-	if len(entries) > 0 {
-		lastLineNum = entries[len(entries)-1].lineNum
-	}
-	for i := sourceVisualIdx; i < numAligned; i++ {
-		visualToSource[len(*sourceLines)] = lastLineNum
-		*sourceLines = append(*sourceLines, AlignedLine{
-			SourceLineIdx: lastLineNum,
-			Kind:          AlignedLinePadding,
-			BlockID:       blockID,
-		})
-	}
 
-	// Phase 4: Emit preview visual lines, then padding.
-	// Use first source line for SourceLineIdx on rendered lines (block-level).
-	firstLineNum := 0
-	if len(entries) > 0 {
-		firstLineNum = entries[0].lineNum
-	}
-	for i := range numAligned {
-		if i < numRendered {
-			// Map rendered lines to source lines proportionally for SourceLineIdx.
-			srcIdx := firstLineNum
-			if len(entries) > 0 {
-				// Rough mapping: distribute rendered lines across source lines
-				entryIdx := i * len(entries) / numAligned
-				if entryIdx >= len(entries) {
-					entryIdx = len(entries) - 1
+		for offset := range numAligned {
+			visualToSource[len(*sourceLines)] = entry.lineNum
+
+			// Source side
+			if offset < len(entry.wrapped) {
+				al := AlignedLine{
+					Content:       entry.wrapped[offset],
+					SourceLineIdx: entry.lineNum,
+					BlockID:       blockID,
+					IsCalc:        false,
 				}
-				srcIdx = entries[entryIdx].lineNum
+				if offset == 0 {
+					al.LineNum = entry.lineNum + 1
+					if entry.isCursor {
+						al.Kind = AlignedLineCursor
+					} else {
+						al.Kind = AlignedLineNormal
+					}
+				} else {
+					if entry.isCursor {
+						al.Kind = AlignedLineCursorWrapped
+					} else {
+						al.Kind = AlignedLineWrapped
+					}
+				}
+				*sourceLines = append(*sourceLines, al)
+			} else {
+				*sourceLines = append(*sourceLines, AlignedLine{
+					SourceLineIdx: entry.lineNum,
+					Kind:          AlignedLinePadding,
+					BlockID:       blockID,
+				})
 			}
-			*previewLines = append(*previewLines, AlignedLine{
-				Content:       rendered[i],
-				SourceLineIdx: srcIdx,
-				LineNum:       srcIdx + 1,
-				Kind:          AlignedLineNormal,
-				BlockID:       blockID,
-			})
-		} else {
-			*previewLines = append(*previewLines, AlignedLine{
-				SourceLineIdx: lastLineNum,
-				Kind:          AlignedLinePadding,
-				BlockID:       blockID,
-			})
+
+			// Preview side
+			if offset < len(assignedRendered) {
+				*previewLines = append(*previewLines, AlignedLine{
+					Content:       assignedRendered[offset],
+					SourceLineIdx: entry.lineNum,
+					LineNum:       entry.lineNum + 1,
+					Kind:          AlignedLineNormal,
+					BlockID:       blockID,
+				})
+			} else {
+				*previewLines = append(*previewLines, AlignedLine{
+					SourceLineIdx: entry.lineNum,
+					Kind:          AlignedLinePadding,
+					BlockID:       blockID,
+				})
+			}
 		}
 	}
 }

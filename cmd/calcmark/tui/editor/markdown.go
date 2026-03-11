@@ -390,7 +390,6 @@ func createMinimalStyle() ansi.StyleConfig {
 			RowSeparator:    stringPtr("─"),
 		},
 		Text: ansi.StylePrimitive{
-			Color:           &textColor,
 			BackgroundColor: &pvBg,
 		},
 	}

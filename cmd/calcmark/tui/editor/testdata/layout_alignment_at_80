@@ -8,7 +8,7 @@ run observe=alignment
 Source and Preview Alignment:
 Total visual lines: 4
 Source lines count: 4, Preview lines count: 4
-[0] SRC(ln=1 wrap=false): "# Header"                               | PRV(ln=0): "\x1b[38;2;245;243;240;48;2;26;23;20;1m..."
+[0] SRC(ln=1 wrap=false): "# Header"                               | PRV(ln=0): "\x1b[38;2;168;201;64;48;2;26;23;20;1m\x1b..."
 [1] SRC(ln=2 wrap=false): "x = 10"                                 | PRV(ln=1): "\x1b[38;2;156;163;175;48;2;26;23;20mx\x1b..."
 [2] SRC(ln=3 wrap=false): "y = 20"                                 | PRV(ln=2): "\x1b[38;2;156;163;175;48;2;26;23;20my\x1b..."
 [3] SRC(ln=4 wrap=false): "z = 30"                                 | PRV(ln=3): "\x1b[38;2;156;163;175;48;2;26;23;20mz\x1b..."
