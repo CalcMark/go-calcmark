@@ -11,6 +11,26 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
+// resolveVisualLine looks up a source line in sourceToVisual.
+// If the exact line isn't mapped (common with block-level alignment),
+// it searches nearby lines (±distance) to find the nearest mapped entry.
+// Returns 0 only if nothing within ±50 lines is mapped.
+func resolveVisualLine(sourceToVisual map[int]int, sourceLine int) int {
+	if v, ok := sourceToVisual[sourceLine]; ok {
+		return v
+	}
+	// Search outward from the target line for the nearest mapped entry.
+	for delta := 1; delta <= 50; delta++ {
+		if v, ok := sourceToVisual[sourceLine-delta]; ok {
+			return v
+		}
+		if v, ok := sourceToVisual[sourceLine+delta]; ok {
+			return v
+		}
+	}
+	return 0
+}
+
 // renderSourcePaneAligned renders the source pane using pre-computed aligned lines.
 // This avoids recomputing alignment which could cause cycles.
 func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) string {
@@ -18,17 +38,10 @@ func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) 
 	visibleLines := height
 
 	// Convert cursor's source line to visual line index for proper scrolling
-	cursorVisualLine := 0
-	if visualIdx, ok := aligned.sourceToVisual[m.cursorLine]; ok {
-		cursorVisualLine = visualIdx
-	}
+	cursorVisualLine := resolveVisualLine(aligned.sourceToVisual, m.cursorLine)
 
 	// Convert m.scrollOffset from source-line space to visual-line space
-	// m.scrollOffset is stored as a source line index, but we need visual line index
-	visualScrollOffset := 0
-	if visualIdx, ok := aligned.sourceToVisual[m.scrollOffset]; ok {
-		visualScrollOffset = visualIdx
-	}
+	visualScrollOffset := resolveVisualLine(aligned.sourceToVisual, m.scrollOffset)
 
 	// Ensure cursor is visible by adjusting scroll based on visual position
 	if cursorVisualLine < visualScrollOffset {
@@ -189,17 +202,10 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 
 	// Convert cursor's source line to visual line index for proper scrolling
 	// Must use same scroll offset as source pane to keep them aligned
-	cursorVisualLine := 0
-	if visualIdx, ok := aligned.sourceToVisual[m.cursorLine]; ok {
-		cursorVisualLine = visualIdx
-	}
+	cursorVisualLine := resolveVisualLine(aligned.sourceToVisual, m.cursorLine)
 
 	// Convert m.scrollOffset from source-line space to visual-line space
-	// m.scrollOffset is stored as a source line index, but we need visual line index
-	visualScrollOffset := 0
-	if visualIdx, ok := aligned.sourceToVisual[m.scrollOffset]; ok {
-		visualScrollOffset = visualIdx
-	}
+	visualScrollOffset := resolveVisualLine(aligned.sourceToVisual, m.scrollOffset)
 
 	// Ensure cursor is visible by adjusting scroll based on visual position
 	if cursorVisualLine < visualScrollOffset {
@@ -210,7 +216,6 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	}
 
 	// Apply scroll offset and render visible lines
-	// Note: wrapping is already done in computeAlignedPanes to ensure proper alignment
 	start := visualScrollOffset
 	end := min(start+resultsHeight, len(previewLines))
 

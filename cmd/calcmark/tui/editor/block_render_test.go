@@ -507,3 +507,105 @@ func TestIntegration_OrderedListAfterCalc(t *testing.T) {
 		t.Error("Ordered list should contain item text")
 	}
 }
+
+// TestRenderBlock_PreservesBlankLines verifies blank lines between headings
+// and paragraphs are preserved when rendering through RenderBlock.
+func TestRenderBlock_PreservesBlankLines(t *testing.T) {
+	renderer, err := NewMarkdownRenderer(80)
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		input     string
+		wantLines int // expected output line count
+		wantBlank int // index of a blank line
+	}{
+		{
+			name:      "heading + blank + paragraph",
+			input:     "# Title\n\nSome text here",
+			wantLines: 3,
+			wantBlank: 1,
+		},
+		{
+			name:      "two paragraphs with blank",
+			input:     "First paragraph\n\nSecond paragraph",
+			wantLines: 3,
+			wantBlank: 1,
+		},
+		{
+			name:      "heading + blank + list",
+			input:     "## Items\n\n- First\n- Second",
+			wantLines: 4,
+			wantBlank: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := renderer.RenderBlock(tt.input)
+
+			t.Logf("Rendered %d lines:", len(result))
+			for i, line := range result {
+				plain := ansiEscapeRe.ReplaceAllString(line, "")
+				t.Logf("  [%d] plain=%q", i, plain)
+			}
+
+			if len(result) != tt.wantLines {
+				t.Errorf("Expected %d lines, got %d", tt.wantLines, len(result))
+			}
+
+			if tt.wantBlank < len(result) && result[tt.wantBlank] != "" {
+				t.Errorf("Expected blank line at index %d, got %q",
+					tt.wantBlank, result[tt.wantBlank])
+			}
+		})
+	}
+}
+
+// TestRenderBlock_LinkHidesURL verifies that link URLs are hidden in rendered output.
+func TestRenderBlock_LinkHidesURL(t *testing.T) {
+	renderer, err := NewMarkdownRenderer(80)
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+
+	result := renderer.RenderLine("[click here](https://example.com)")
+	fullOutput := ansiEscapeRe.ReplaceAllString(strings.Join(result, "\n"), "")
+
+	t.Logf("Rendered: %q", fullOutput)
+
+	if !strings.Contains(fullOutput, "click here") {
+		t.Error("Link text should be visible")
+	}
+	// URL should be hidden (rendered in background color, so stripping ANSI + trimming
+	// should not show the URL as visible text mixed with other content)
+	if strings.Contains(fullOutput, "example.com") {
+		t.Error("Link URL should be hidden (rendered in background color)")
+	}
+}
+
+// TestRenderBlock_TableSeparators verifies table rendering includes separators.
+func TestRenderBlock_TableSeparators(t *testing.T) {
+	renderer, err := NewMarkdownRenderer(80)
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+
+	input := "| Name | Value |\n|------|-------|\n| Foo  | 42    |"
+	result := renderer.RenderLine(input)
+	fullOutput := ansiEscapeRe.ReplaceAllString(strings.Join(result, "\n"), "")
+
+	t.Logf("Table rendered: %q", fullOutput)
+
+	if !strings.Contains(fullOutput, "Name") {
+		t.Error("Table should contain header text")
+	}
+	if !strings.Contains(fullOutput, "│") {
+		t.Error("Table should contain column separators (│)")
+	}
+	if !strings.Contains(fullOutput, "─") {
+		t.Error("Table should contain row separators (─)")
+	}
+}

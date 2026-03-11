@@ -82,10 +82,11 @@ func (c *RenderedBlockCache) Len() int {
 }
 
 // renderBlock renders a block of markdown text through glamour.
+// Uses RenderBlock to preserve blank lines between headings and paragraphs.
 // Falls back to raw lines on glamour failure.
 func (c *RenderedBlockCache) renderBlock(content string, width int) []string {
 	renderer := c.getRenderer(width)
-	lines := renderer.RenderLine(content)
+	lines := renderer.RenderBlock(content)
 	if len(lines) == 0 {
 		return []string{""}
 	}
