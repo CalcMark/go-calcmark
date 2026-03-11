@@ -304,8 +304,9 @@ type Model struct {
 	width       int
 	height      int
 	quitting    bool
-	previewMode PreviewMode          // Preview pane mode: Full, Minimal, Rendered, Hidden
-	renderCache *RenderedBlockCache // Memoized glamour output for TextBlocks in PreviewRendered mode
+	previewMode  PreviewMode          // Preview pane mode: Full, Minimal, Rendered, Hidden
+	renderCache  *RenderedBlockCache // Memoized glamour output for TextBlocks in PreviewRendered mode
+	visualScroll *visualScrollState  // Shared visual scroll offset for stable viewport
 
 	// Selection state
 	selectionAnchorLine int // Line of selection anchor, -1 if no selection
@@ -369,6 +370,7 @@ func New(doc *document.Document) Model {
 		height:              24,
 		previewMode:         PreviewFull,
 		renderCache:         NewRenderedBlockCache(128),
+		visualScroll:        &visualScrollState{},
 		styles:              config.GetStyles(),
 		keys:                shared.DefaultKeyMap(),
 		selectionAnchorLine: -1, // No selection initially

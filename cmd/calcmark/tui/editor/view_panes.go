@@ -11,6 +11,14 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
+// visualScrollState holds the persisted visual scroll offset between frames.
+// Shared via pointer so Bubble Tea's value-copied Model in View() can read/write
+// the same state as Update(). This is safe because Bubble Tea guarantees
+// single-goroutine execution for Update() and View().
+type visualScrollState struct {
+	offset int // last visual scroll offset used
+}
+
 // resolveVisualLine looks up a source line in sourceToVisual.
 // If the exact line isn't mapped (common with block-level alignment),
 // it searches nearby lines (±distance) to find the nearest mapped entry.
@@ -31,25 +39,39 @@ func resolveVisualLine(sourceToVisual map[int]int, sourceLine int) int {
 	return 0
 }
 
+// computeVisualScroll returns a stable visual scroll offset, only adjusting
+// when the cursor would be outside the viewport. The offset is persisted
+// between frames via m.visualScroll to prevent viewport jumps.
+func (m Model) computeVisualScroll(aligned alignedPanes, visibleLines int) int {
+	cursorVisualLine := resolveVisualLine(aligned.sourceToVisual, m.cursorLine)
+
+	// Use persisted offset as starting point.
+	offset := m.visualScroll.offset
+
+	// Clamp to valid range.
+	maxOffset := max(0, len(aligned.sourceLines)-visibleLines)
+	offset = min(offset, maxOffset)
+
+	// Only adjust if cursor is outside the current viewport.
+	if cursorVisualLine < offset {
+		offset = cursorVisualLine
+	}
+	if cursorVisualLine >= offset+visibleLines {
+		offset = cursorVisualLine - visibleLines + 1
+	}
+
+	// Persist for next frame.
+	m.visualScroll.offset = offset
+	return offset
+}
+
 // renderSourcePaneAligned renders the source pane using pre-computed aligned lines.
 // This avoids recomputing alignment which could cause cycles.
 func (m Model) renderSourcePaneAligned(width, height int, aligned alignedPanes) string {
 	sourceLines := aligned.sourceLines
 	visibleLines := height
 
-	// Convert cursor's source line to visual line index for proper scrolling
-	cursorVisualLine := resolveVisualLine(aligned.sourceToVisual, m.cursorLine)
-
-	// Convert m.scrollOffset from source-line space to visual-line space
-	visualScrollOffset := resolveVisualLine(aligned.sourceToVisual, m.scrollOffset)
-
-	// Ensure cursor is visible by adjusting scroll based on visual position
-	if cursorVisualLine < visualScrollOffset {
-		visualScrollOffset = cursorVisualLine
-	}
-	if cursorVisualLine >= visualScrollOffset+visibleLines {
-		visualScrollOffset = cursorVisualLine - visibleLines + 1
-	}
+	visualScrollOffset := m.computeVisualScroll(aligned, visibleLines)
 
 	// Calculate visible range
 	start := visualScrollOffset
@@ -200,20 +222,10 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	// Build complete lines to avoid bare newlines
 	var allLines []string
 
-	// Convert cursor's source line to visual line index for proper scrolling
-	// Must use same scroll offset as source pane to keep them aligned
-	cursorVisualLine := resolveVisualLine(aligned.sourceToVisual, m.cursorLine)
-
-	// Convert m.scrollOffset from source-line space to visual-line space
-	visualScrollOffset := resolveVisualLine(aligned.sourceToVisual, m.scrollOffset)
-
-	// Ensure cursor is visible by adjusting scroll based on visual position
-	if cursorVisualLine < visualScrollOffset {
-		visualScrollOffset = cursorVisualLine
-	}
-	if cursorVisualLine >= visualScrollOffset+resultsHeight {
-		visualScrollOffset = cursorVisualLine - resultsHeight + 1
-	}
+	// Use the same visual scroll offset as source pane to keep them aligned.
+	// computeVisualScroll was already called by renderSourcePaneAligned,
+	// so m.visualScroll.offset is up to date.
+	visualScrollOffset := m.computeVisualScroll(aligned, resultsHeight)
 
 	// Apply scroll offset and render visible lines
 	start := visualScrollOffset
