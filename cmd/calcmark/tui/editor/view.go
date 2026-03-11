@@ -139,13 +139,20 @@ func (m Model) View() tea.View {
 	// Render preview pane (if visible)
 	var previewPane string
 	if m.previewMode != PreviewHidden {
+		headerTitle := "Results"
+		switch m.previewMode {
+		case PreviewMinimal:
+			headerTitle = "Results (minimal)"
+		case PreviewRendered:
+			headerTitle = "Preview"
+		}
 		previewHeader := lipgloss.NewStyle().
 			Bold(true).
 			Foreground(theme.TextBright).
 			Background(m.previewPaneBg()).
 			Padding(0, 1).
 			Width(rightWidth).
-			Render("Results")
+			Render(headerTitle)
 		// Ensure header is exactly rightWidth
 		previewHeader = ensureFullWidth(previewHeader, rightWidth, m.previewPaneBg())
 
