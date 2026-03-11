@@ -1,11 +1,19 @@
 package editor
 
 import (
+	"fmt"
+	"image/color"
+	"regexp"
 	"strings"
 
+	"charm.land/lipgloss/v2/compat"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 )
+
+// ansiEscapeRe matches ANSI escape sequences (CSI sequences).
+var ansiEscapeRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 // MarkdownRenderer provides line-by-line markdown rendering with 1:1 line mapping.
 // This is essential for maintaining vertical alignment between source and preview panes.
@@ -52,8 +60,10 @@ func (m *MarkdownRenderer) RenderLine(line string) []string {
 	var output []string
 	for i, l := range lines {
 		cleaned := strings.TrimRight(l, " ")
-		// Skip leading empty line (glamour adds this for lists/blockquotes)
-		if i == 0 && cleaned == "" && len(lines) > 1 {
+		// Skip leading empty line (glamour adds this for lists/blockquotes).
+		// With styled output, "empty" lines contain ANSI codes for background color,
+		// so we strip escape sequences before checking.
+		if i == 0 && isVisuallyEmpty(cleaned) && len(lines) > 1 {
 			continue
 		}
 		output = append(output, cleaned)
@@ -69,6 +79,13 @@ func (m *MarkdownRenderer) RenderLine(line string) []string {
 	}
 
 	return output
+}
+
+// isVisuallyEmpty returns true if a string contains only whitespace after
+// stripping ANSI escape sequences. Glamour's styled output produces lines that
+// look empty but contain background-color escapes.
+func isVisuallyEmpty(s string) bool {
+	return strings.TrimSpace(ansiEscapeRe.ReplaceAllString(s, "")) == ""
 }
 
 // isHorizontalRule checks if a line is a markdown horizontal rule.
@@ -99,17 +116,33 @@ func isHorizontalRule(line string) bool {
 	return count >= 3
 }
 
-// createMinimalStyle creates a glamour style with zero margins/padding.
-// This ensures markdown renders without extra blank lines.
+// createMinimalStyle creates a glamour style with zero margins/padding that uses
+// the cm theme colors. This bridges glamour's color system to the Pearish theme,
+// ensuring rendered markdown is visible against the preview pane background.
 func createMinimalStyle() ansi.StyleConfig {
 	zero := uint(0)
+
+	// Resolve cm theme adaptive colors to hex strings for glamour.
+	textColor := resolveThemeColor(theme.Text)
+	textBright := resolveThemeColor(theme.TextBright)
+	textMuted := resolveThemeColor(theme.TextMuted)
+	primaryColor := resolveThemeColor(theme.Primary)
+	pvBg := resolveThemeColor(theme.PreviewPaneBg)
 
 	return ansi.StyleConfig{
 		Document: ansi.StyleBlock{
 			Margin: &zero,
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           &textColor,
+				BackgroundColor: &pvBg,
+			},
 		},
 		Paragraph: ansi.StyleBlock{
 			Margin: &zero,
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           &textColor,
+				BackgroundColor: &pvBg,
+			},
 		},
 		Heading: ansi.StyleBlock{
 			Margin: &zero,
@@ -117,40 +150,46 @@ func createMinimalStyle() ansi.StyleConfig {
 		H1: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Bold:  boolPtr(true),
-				Color: stringPtr("15"), // Bright white
+				Bold:            boolPtr(true),
+				Color:           &textBright,
+				BackgroundColor: &pvBg,
 			},
 		},
 		H2: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Bold:  boolPtr(true),
-				Color: stringPtr("15"),
+				Bold:            boolPtr(true),
+				Color:           &textBright,
+				BackgroundColor: &pvBg,
 			},
 		},
 		H3: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Bold:  boolPtr(true),
-				Color: stringPtr("252"),
+				Bold:            boolPtr(true),
+				Color:           &textColor,
+				BackgroundColor: &pvBg,
 			},
 		},
 		H4: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Color: stringPtr("252"),
+				Color:           &textColor,
+				BackgroundColor: &pvBg,
 			},
 		},
 		H5: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Color: stringPtr("252"),
+				Color:           &textColor,
+				BackgroundColor: &pvBg,
 			},
 		},
 		H6: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Color: stringPtr("240"),
+				Color:           &textMuted,
+				BackgroundColor: &pvBg,
 			},
 		},
 		List: ansi.StyleList{
@@ -161,31 +200,37 @@ func createMinimalStyle() ansi.StyleConfig {
 			LevelIndent: 2,
 		},
 		Item: ansi.StylePrimitive{
-			Prefix: "• ",
+			Prefix:          "• ",
+			Color:           &textColor,
+			BackgroundColor: &pvBg,
 		},
 		Enumeration: ansi.StylePrimitive{
-			BlockPrefix: ". ",
+			BlockPrefix:     ". ",
+			Color:           &textColor,
+			BackgroundColor: &pvBg,
 		},
 		BlockQuote: ansi.StyleBlock{
 			Margin: &zero,
 			Indent: &zero,
 			StylePrimitive: ansi.StylePrimitive{
-				Prefix: "│ ",
-				Color:  stringPtr("244"),
-				Italic: boolPtr(true),
+				Prefix:          "│ ",
+				Color:           &textMuted,
+				BackgroundColor: &pvBg,
+				Italic:          boolPtr(true),
 			},
 		},
 		HorizontalRule: ansi.StylePrimitive{
-			Format: "────────",
-			Color:  stringPtr("240"),
+			Format:          "────────",
+			Color:           &textMuted,
+			BackgroundColor: &pvBg,
 		},
 		Code: ansi.StyleBlock{
 			Margin: &zero,
 			StylePrimitive: ansi.StylePrimitive{
 				Prefix:          "`",
 				Suffix:          "`",
-				Color:           stringPtr("203"), // Coral/orange for code
-				BackgroundColor: stringPtr("236"),
+				Color:           &primaryColor,
+				BackgroundColor: &pvBg,
 			},
 		},
 		CodeBlock: ansi.StyleCodeBlock{
@@ -194,36 +239,62 @@ func createMinimalStyle() ansi.StyleConfig {
 			},
 		},
 		Emph: ansi.StylePrimitive{
-			Italic: boolPtr(true),
+			Italic:          boolPtr(true),
+			Color:           &textColor,
+			BackgroundColor: &pvBg,
 		},
 		Strong: ansi.StylePrimitive{
-			Bold: boolPtr(true),
+			Bold:            boolPtr(true),
+			Color:           &textBright,
+			BackgroundColor: &pvBg,
 		},
 		Strikethrough: ansi.StylePrimitive{
-			CrossedOut: boolPtr(true),
+			CrossedOut:      boolPtr(true),
+			Color:           &textMuted,
+			BackgroundColor: &pvBg,
 		},
 		Link: ansi.StylePrimitive{
-			Color:     stringPtr("39"), // Blue
-			Underline: boolPtr(true),
+			Color:           stringPtr("39"),
+			BackgroundColor: &pvBg,
+			Underline:       boolPtr(true),
 		},
 		LinkText: ansi.StylePrimitive{
-			Color:     stringPtr("39"),
-			Underline: boolPtr(true),
+			Color:           stringPtr("39"),
+			BackgroundColor: &pvBg,
+			Underline:       boolPtr(true),
 		},
 		Image: ansi.StylePrimitive{
-			Color:  stringPtr("245"),
-			Prefix: "🖼 ",
+			Color:           &textMuted,
+			BackgroundColor: &pvBg,
+			Prefix:          "🖼 ",
 		},
 		ImageText: ansi.StylePrimitive{
-			Color: stringPtr("245"),
+			Color:           &textMuted,
+			BackgroundColor: &pvBg,
 		},
 		Table: ansi.StyleTable{
 			StyleBlock: ansi.StyleBlock{
 				Margin: &zero,
 			},
 		},
-		Text: ansi.StylePrimitive{},
+		Text: ansi.StylePrimitive{
+			Color:           &textColor,
+			BackgroundColor: &pvBg,
+		},
 	}
+}
+
+// resolveThemeColor converts a cm theme AdaptiveColor to a hex string for glamour.
+// Resolves Light/Dark based on the current compat.HasDarkBackground setting.
+func resolveThemeColor(ac compat.AdaptiveColor) string {
+	var c color.Color
+	if compat.HasDarkBackground {
+		c = ac.Dark
+	} else {
+		c = ac.Light
+	}
+	r, g, b, _ := c.RGBA()
+	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
 }
 
 func boolPtr(v bool) *bool {

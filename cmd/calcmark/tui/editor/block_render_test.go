@@ -45,6 +45,7 @@ func TestRenderTextBlockSimple_OrderedList(t *testing.T) {
 
 	// Join all rendered lines to search for numbering
 	fullOutput := strings.Join(rendered, "\n")
+	fullOutput = ansiEscapeRe.ReplaceAllString(fullOutput, "")
 
 	// Check that the output contains proper numbering
 	// Glamour renders ordered lists with format "1. ", "2. ", "3. "
@@ -145,6 +146,7 @@ func TestRenderTextBlockSimple_MixedContent(t *testing.T) {
 	}
 
 	fullOutput := strings.Join(rendered, "\n")
+	fullOutput = ansiEscapeRe.ReplaceAllString(fullOutput, "")
 
 	// Should contain header, ordered list with numbering, and bullets
 	if !strings.Contains(fullOutput, "Header") {
@@ -278,6 +280,7 @@ func TestRenderTextBlockAligned_OrderedList(t *testing.T) {
 
 	fullOutput := strings.Join(allPreview, "\n")
 	t.Logf("Full preview output:\n%s", fullOutput)
+	fullOutput = ansiEscapeRe.ReplaceAllString(fullOutput, "")
 
 	// Verify proper numbering appears
 	if !strings.Contains(fullOutput, "1.") {
@@ -419,6 +422,7 @@ a = 2
 
 			// Check for proper ordered list numbering
 			fullOutput := strings.Join(rendered, "\n")
+			fullOutput = ansiEscapeRe.ReplaceAllString(fullOutput, "")
 
 			// First ordered list (lines 2-3 of block 0)
 			if i == 0 {
@@ -495,6 +499,7 @@ func TestIntegration_OrderedListAfterCalc(t *testing.T) {
 
 	// The ordered list should start with "1."
 	fullOutput := strings.Join(rendered, "\n")
+	fullOutput = ansiEscapeRe.ReplaceAllString(fullOutput, "")
 	if !strings.Contains(fullOutput, "1.") {
 		t.Error("Ordered list should contain '1.'")
 	}

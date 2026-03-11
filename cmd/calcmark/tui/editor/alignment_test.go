@@ -196,18 +196,21 @@ func TestAlignment_OrderedLists(t *testing.T) {
 		previewText = append(previewText, line.Content)
 	}
 
-	// Check that preview contains incrementing numbers
+	// Check that preview contains incrementing numbers.
+	// Strip ANSI escape codes before checking since styled output may separate
+	// digits from punctuation with escape sequences (e.g., "1" + ESC + ".").
 	hasOne := false
 	hasTwo := false
 	hasThree := false
 	for _, line := range previewText {
-		if strings.Contains(line, "1.") || strings.Contains(line, "1 ") {
+		plain := ansiEscapeRe.ReplaceAllString(line, "")
+		if strings.Contains(plain, "1.") || strings.Contains(plain, "1 ") {
 			hasOne = true
 		}
-		if strings.Contains(line, "2.") || strings.Contains(line, "2 ") {
+		if strings.Contains(plain, "2.") || strings.Contains(plain, "2 ") {
 			hasTwo = true
 		}
-		if strings.Contains(line, "3.") || strings.Contains(line, "3 ") {
+		if strings.Contains(plain, "3.") || strings.Contains(plain, "3 ") {
 			hasThree = true
 		}
 	}
