@@ -106,6 +106,9 @@ func (m *Model) resetForNewDocument(doc *document.Document, eval *implDoc.Evalua
 	m.newFileName = ""
 
 	m.undoManager.Clear()
+	if m.renderCache != nil {
+		m.renderCache.Clear()
+	}
 
 	m.pinnedVars = make(map[string]bool)
 	m.changedVars = make(map[string]bool)

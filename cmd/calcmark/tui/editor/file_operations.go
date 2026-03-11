@@ -258,12 +258,14 @@ func (m *Model) loadDocumentFromString(content, suggestedFilename string) {
 	m.resetForNewDocument(doc, eval, "", content)
 }
 
-// cyclePreviewMode cycles through preview modes: Full → Minimal → Hidden → Full
+// cyclePreviewMode cycles through preview modes: Full → Minimal → Rendered → Hidden → Full
 func (m *Model) cyclePreviewMode() {
 	switch m.previewMode {
 	case PreviewFull:
 		m.previewMode = PreviewMinimal
 	case PreviewMinimal:
+		m.previewMode = PreviewRendered
+	case PreviewRendered:
 		m.previewMode = PreviewHidden
 	case PreviewHidden:
 		m.previewMode = PreviewFull

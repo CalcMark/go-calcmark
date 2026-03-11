@@ -212,9 +212,10 @@ const (
 type PreviewMode int
 
 const (
-	PreviewFull    PreviewMode = iota // Show variable name + value
-	PreviewMinimal                    // Show just arrow + value (left-aligned, narrower)
-	PreviewHidden                     // No preview pane
+	PreviewFull     PreviewMode = iota // Show variable name + value
+	PreviewMinimal                     // Show just arrow + value (left-aligned, narrower)
+	PreviewRendered                    // Full markdown rendering for TextBlocks
+	PreviewHidden                      // No preview pane
 )
 
 // PaneWidthConfig defines the source/preview width ratios for each preview mode.
@@ -226,9 +227,10 @@ type PaneWidthConfig struct {
 
 // DefaultPaneWidths returns the default pane width configurations for each preview mode.
 var DefaultPaneWidths = map[PreviewMode]PaneWidthConfig{
-	PreviewFull:    {SourcePercent: 60, PreviewPercent: 40},
-	PreviewMinimal: {SourcePercent: 75, PreviewPercent: 25},
-	PreviewHidden:  {SourcePercent: 100, PreviewPercent: 0},
+	PreviewFull:     {SourcePercent: 60, PreviewPercent: 40},
+	PreviewMinimal:  {SourcePercent: 75, PreviewPercent: 25},
+	PreviewRendered: {SourcePercent: 50, PreviewPercent: 50},
+	PreviewHidden:   {SourcePercent: 100, PreviewPercent: 0},
 }
 
 // GetPaneWidths returns the source and preview pane widths for the given total width.
@@ -302,7 +304,8 @@ type Model struct {
 	width       int
 	height      int
 	quitting    bool
-	previewMode PreviewMode // Preview pane mode: Full, Minimal, Hidden
+	previewMode PreviewMode          // Preview pane mode: Full, Minimal, Rendered, Hidden
+	renderCache *RenderedBlockCache // Memoized glamour output for TextBlocks in PreviewRendered mode
 
 	// Selection state
 	selectionAnchorLine int // Line of selection anchor, -1 if no selection
@@ -365,6 +368,7 @@ func New(doc *document.Document) Model {
 		width:               80,
 		height:              24,
 		previewMode:         PreviewFull,
+		renderCache:         NewRenderedBlockCache(128),
 		styles:              config.GetStyles(),
 		keys:                shared.DefaultKeyMap(),
 		selectionAnchorLine: -1, // No selection initially

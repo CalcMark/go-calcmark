@@ -405,8 +405,8 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	}
 
 	switch m.previewMode {
-	case PreviewFull:
-		// Full mode: "varName → value" for assignments, "→ value" for anonymous calcs
+	case PreviewFull, PreviewRendered:
+		// Full/Rendered mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
 			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + scaleSuffix
 		}
