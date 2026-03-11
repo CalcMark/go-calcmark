@@ -111,8 +111,8 @@ func expandTilde(path string) string {
 const evalDebounceDelay = 100 * time.Millisecond
 
 // scrollMargin is the number of lines to keep between cursor and viewport edge.
-// This provides visual context around the cursor position.
-const scrollMargin = 3
+// Set to 0: viewport only scrolls when cursor reaches the actual edge.
+const scrollMargin = 0
 
 // ========================================
 // Types

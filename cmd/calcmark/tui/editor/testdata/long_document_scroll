@@ -13,8 +13,8 @@ run observe=scroll
 key pgdown
 ----
 -- scroll:
-cursorLine=12 scrollOffset=6 totalLines=55 visibleHeight=10
-cursorInView=true visibleRange=[6,16)
+cursorLine=12 scrollOffset=3 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[3,13)
 
 # Navigate further
 run observe=scroll
@@ -22,16 +22,16 @@ key pgdown
 key pgdown
 ----
 -- scroll:
-cursorLine=36 scrollOffset=30 totalLines=55 visibleHeight=10
-cursorInView=true visibleRange=[30,40)
+cursorLine=36 scrollOffset=27 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[27,37)
 
 # Navigate back up
 run observe=scroll
 key pgup
 ----
 -- scroll:
-cursorLine=24 scrollOffset=21 totalLines=55 visibleHeight=10
-cursorInView=true visibleRange=[21,31)
+cursorLine=24 scrollOffset=24 totalLines=55 visibleHeight=10
+cursorInView=true visibleRange=[24,34)
 
 # Navigate to end (simulate ctrl+end via multiple pgdown)
 run observe=scroll

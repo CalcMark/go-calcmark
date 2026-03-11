@@ -37,7 +37,7 @@ key down
 key down
 ----
 -- scroll:
-cursorLine=9 scrollOffset=3 totalLines=22 visibleHeight=10
+cursorLine=9 scrollOffset=0 totalLines=22 visibleHeight=10
 cursorInView=true hasTopMargin=true hasBottomMargin=true
 
 # Navigate to near bottom of document
@@ -52,7 +52,7 @@ key down
 key down
 ----
 -- scroll:
-cursorLine=17 scrollOffset=11 totalLines=22 visibleHeight=10
+cursorLine=17 scrollOffset=8 totalLines=22 visibleHeight=10
 cursorInView=true hasTopMargin=true hasBottomMargin=true
 
 # Navigate to last line
@@ -92,7 +92,7 @@ key up
 key up
 ----
 -- scroll:
-cursorLine=6 scrollOffset=3 totalLines=22 visibleHeight=10
+cursorLine=6 scrollOffset=6 totalLines=22 visibleHeight=10
 cursorInView=true hasTopMargin=true hasBottomMargin=true
 
 # Navigate to top - scroll should go to 0
@@ -113,7 +113,7 @@ run observe=scroll
 key pgdown
 ----
 -- scroll:
-cursorLine=12 scrollOffset=6 totalLines=22 visibleHeight=10
+cursorLine=12 scrollOffset=3 totalLines=22 visibleHeight=10
 cursorInView=true hasTopMargin=true hasBottomMargin=true
 
 # Test Page Up
