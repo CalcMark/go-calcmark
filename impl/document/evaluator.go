@@ -311,6 +311,12 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	block.SetError(nil)
 	block.ClearDiagnostics()
 
+	// Compute line offset for document-absolute line numbers in diagnostics
+	var lineOff int
+	if doc != nil {
+		lineOff = blockLineOffset(doc, blockID)
+	}
+
 	// 1. Parse source to AST
 	source := strings.Join(block.Source(), "\n")
 	if !strings.HasSuffix(source, "\n") {
@@ -328,6 +334,7 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 				Message:  pe.Message,
 				Line:     pe.Line,
 				Column:   pe.Column,
+				DocLine:  pe.Line + lineOff,
 			})
 		}
 		return err
@@ -354,6 +361,7 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	// Provide frontmatter context for @directive validation
 	if doc != nil {
 		checker.SetFrontmatter(doc.GetFrontmatter())
+		checker.SetLineOffset(lineOff)
 	}
 
 	diagnostics := checker.Check(nodes)
@@ -364,15 +372,21 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 				Severity: "error",
 				Code:     diag.Code,
 				Message:  diag.Message,
+				Detailed: diag.Detailed,
 			}
 			if diag.Range != nil {
 				blockDiag.Line = diag.Range.Start.Line
 				blockDiag.Column = diag.Range.Start.Column
+				blockDiag.DocLine = diag.Range.Start.Line + lineOff
 			}
 			block.AddDiagnostic(blockDiag)
 
 			// Also set legacy error for backwards compatibility
-			err := fmt.Errorf("%s: %s", diag.Code, diag.Message)
+			if blockDiag.DocLine > 0 {
+				err = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
+			} else {
+				err = fmt.Errorf("%s: %s", diag.Code, diag.Message)
+			}
 			block.SetError(err)
 			return err
 		}
@@ -424,6 +438,12 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	block.SetError(nil)
 	block.ClearDiagnostics()
 
+	// Compute line offset for document-absolute line numbers in diagnostics
+	var lineOff int
+	if doc != nil {
+		lineOff = blockLineOffset(doc, blockID)
+	}
+
 	// 1. Parse source to AST
 	source := strings.Join(block.Source(), "\n")
 	if !strings.HasSuffix(source, "\n") {
@@ -441,6 +461,7 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 				Message:  pe.Message,
 				Line:     pe.Line,
 				Column:   pe.Column,
+				DocLine:  pe.Line + lineOff,
 			})
 		}
 		return err
@@ -471,6 +492,7 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// Provide frontmatter context for @directive validation
 	if doc != nil {
 		checker.SetFrontmatter(doc.GetFrontmatter())
+		checker.SetLineOffset(lineOff)
 	}
 
 	diagnostics := checker.Check(nodes)
@@ -483,15 +505,21 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 				Severity: "error",
 				Code:     diag.Code,
 				Message:  diag.Message,
+				Detailed: diag.Detailed,
 			}
 			if diag.Range != nil {
 				blockDiag.Line = diag.Range.Start.Line
 				blockDiag.Column = diag.Range.Start.Column
+				blockDiag.DocLine = diag.Range.Start.Line + lineOff
 			}
 			block.AddDiagnostic(blockDiag)
 
 			// Also set legacy error for backwards compatibility
-			err := fmt.Errorf("%s: %s", diag.Code, diag.Message)
+			if blockDiag.DocLine > 0 {
+				err = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
+			} else {
+				err = fmt.Errorf("%s: %s", diag.Code, diag.Message)
+			}
 			block.SetError(err)
 			return err
 		}
@@ -527,8 +555,6 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 
 	// If there was an error, create diagnostic and return
 	if evalErr != nil {
-		block.SetError(evalErr)
-
 		// Create diagnostic with line number for the failing node
 		if failingNodeIdx >= 0 && failingNodeIdx < len(nodes) {
 			node := nodes[failingNodeIdx]
@@ -543,10 +569,17 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 			if r := node.GetRange(); r != nil && r.Start.Line > 0 {
 				diag.Line = r.Start.Line
 				diag.Column = r.Start.Column
+				diag.DocLine = r.Start.Line + lineOff
 			}
 			block.AddDiagnostic(diag)
+
+			// Include document-absolute line number in returned error
+			if diag.DocLine > 0 {
+				evalErr = fmt.Errorf("line %d: %w", diag.DocLine, evalErr)
+			}
 		}
 
+		block.SetError(evalErr)
 		return evalErr
 	}
 
@@ -554,6 +587,28 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	block.SetDirty(false)
 
 	return nil
+}
+
+// blockLineOffset computes the document-absolute line offset for a block.
+// This counts frontmatter lines + all source lines of preceding blocks so that
+// the semantic checker can produce document-absolute line numbers in diagnostics.
+func blockLineOffset(doc *document.Document, targetID string) int {
+	offset := 0
+
+	// Count frontmatter lines (including both --- delimiters)
+	if fm := doc.GetFrontmatter(); fm != nil {
+		offset = fm.LineCount()
+	}
+
+	// Count source lines of all blocks preceding the target
+	for _, node := range doc.GetBlocks() {
+		if node.ID == targetID {
+			break
+		}
+		offset += len(node.Block.Source())
+	}
+
+	return offset
 }
 
 // applyTransforms applies scale/convert_to frontmatter transforms to block results.
@@ -608,6 +663,12 @@ func applyBlockTransform(node *document.BlockNode, fm *document.Frontmatter) {
 	}
 	cb.SetScaleExempt(exempt)
 
+	// Snapshot pre-transform units for conversion detection.
+	preUnits := make([]string, len(results))
+	for i, r := range results {
+		preUnits[i] = unitOf(r)
+	}
+
 	// Apply transforms per-result, skipping @scale-referencing statements.
 	transformed := make([]types.Type, len(results))
 	for i, r := range results {
@@ -619,9 +680,33 @@ func applyBlockTransform(node *document.BlockNode, fm *document.Frontmatter) {
 			transformed[i] = transform.Apply(r, fm.Scale, fm.ConvertTo)
 		}
 	}
+
+	// Detect which results had their unit changed by convert_to.
+	convertApplied := make([]bool, len(results))
+	for i, t := range transformed {
+		postUnit := unitOf(t)
+		if preUnits[i] != "" && postUnit != "" && preUnits[i] != postUnit {
+			convertApplied[i] = true
+		}
+	}
+	cb.SetConvertApplied(convertApplied)
+
 	cb.SetResults(transformed)
 
 	if len(transformed) > 0 {
 		cb.SetLastValue(transformed[len(transformed)-1])
 	}
+}
+
+// unitOf returns the unit string for a result, or "" for non-unit types.
+func unitOf(v types.Type) string {
+	switch t := v.(type) {
+	case *types.Quantity:
+		return t.Unit
+	case *types.Rate:
+		if t.Amount != nil {
+			return t.Amount.Unit
+		}
+	}
+	return ""
 }

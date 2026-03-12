@@ -63,8 +63,9 @@ type CalcBlock struct {
 	dependencies []string     // Variables referenced from other blocks
 	err          error        // Evaluation error (legacy, prefer diagnostics)
 	diagnostics  []Diagnostic // Structured errors with position info
-	scaleExempt  []bool       // Per-statement: true if statement references @scale
-	dirty        bool
+	scaleExempt    []bool // Per-statement: true if statement references @scale
+	convertApplied []bool // Per-statement: true if convert_to actually changed the unit
+	dirty          bool
 }
 
 // NewCalcBlock creates a new calculation block.
@@ -184,6 +185,18 @@ func (cb *CalcBlock) ScaleExempt() []bool {
 // SetScaleExempt sets the per-statement scale exemption flags.
 func (cb *CalcBlock) SetScaleExempt(exempt []bool) {
 	cb.scaleExempt = exempt
+}
+
+// ConvertApplied returns the per-statement conversion flags.
+// A true value at index i means convert_to actually changed the unit
+// for statement i (detected by comparing units before and after Apply).
+func (cb *CalcBlock) ConvertApplied() []bool {
+	return cb.convertApplied
+}
+
+// SetConvertApplied sets the per-statement conversion flags.
+func (cb *CalcBlock) SetConvertApplied(applied []bool) {
+	cb.convertApplied = applied
 }
 
 // TextBlock represents markdown text.

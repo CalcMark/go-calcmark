@@ -439,4 +439,9 @@ var (
 		"#D97706",
 		"#F59E0B",
 	)
+
+	ConvertIndicator = ac(
+		"#0891B2", // teal-600: distinct from amber scale, readable on light bg
+		"#22D3EE", // teal-300: bright on dark bg, clear next to amber
+	)
 )

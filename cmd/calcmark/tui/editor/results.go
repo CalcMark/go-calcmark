@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/semantic"
 	"github.com/CalcMark/go-calcmark/spec/transform"
 )
 
@@ -23,6 +24,7 @@ type LineResult struct {
 	WasChanged     bool
 	IsBlocked      bool     // True if this error is caused by an undefined variable from a prior error
 	IsScaled       bool     // True if this result was multiplied by the document's scale factor
+	IsConverted    bool     // True if convert_to changed this result's unit
 	ReferencedVars []string // Variable names referenced by this statement (AST-derived, sorted)
 }
 
@@ -55,7 +57,7 @@ func (m *Model) GetLineResults() []LineResult {
 			if m.frontmatterErr != nil && i == fmCount-1 {
 				lr.Error = m.frontmatterErr.Error()
 				lr.Diagnostic = &document.Diagnostic{
-					Code:    "frontmatter_validation",
+					Code:    semantic.DiagFrontmatterValidation,
 					Message: m.frontmatterErr.Error(),
 				}
 			}
@@ -192,6 +194,15 @@ func (m *Model) GetLineResults() []LineResult {
 						if stmtIdx >= len(scaleExempt) || !scaleExempt[stmtIdx] {
 							lr.IsScaled = true
 						}
+					}
+
+					// Check if convert_to changed this result's unit.
+					// Uses cached flags computed by the evaluator (compares
+					// pre/post-transform units) since WouldConvert cannot
+					// work on post-transform results.
+					convertApplied := b.ConvertApplied()
+					if stmtIdx < len(convertApplied) && convertApplied[stmtIdx] {
+						lr.IsConverted = true
 					}
 				}
 

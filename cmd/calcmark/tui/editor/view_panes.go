@@ -720,28 +720,36 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 		changedMarker = m.styles.Changed.Background(pvBg).Bold(true).Render("* ")
 	}
 
-	// Scale indicator: subtle "*" suffix for values affected by the scale factor
-	scaleSuffix := ""
+	// Transform indicators: symbols showing which transforms affected this result.
+	// × (U+00D7 MULTIPLICATION SIGN) for scale, • (U+2022 BULLET) for convert_to.
+	// Both can appear together as ×• when both transforms applied.
+	transformSuffix := ""
 	if r.IsScaled {
 		scaleStyle := lipgloss.NewStyle().
 			Foreground(theme.ScaleIndicator).
 			Background(pvBg)
-		scaleSuffix = scaleStyle.Render("*")
+		transformSuffix += scaleStyle.Render("\u00D7") // ×
+	}
+	if r.IsConverted {
+		convertStyle := lipgloss.NewStyle().
+			Foreground(theme.ConvertIndicator).
+			Background(pvBg)
+		transformSuffix += convertStyle.Render("\u2022") // •
 	}
 
 	switch m.previewMode {
 	case PreviewFull, PreviewRendered, PreviewReading:
 		// Full/Rendered mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
-			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + scaleSuffix
+			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + transformSuffix
 		}
 		// Anonymous calculation (no variable assignment) - show arrow without placeholder
-		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + scaleSuffix
+		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + transformSuffix
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
 		arrow := "→ "
-		return changedMarker + valueStyle.Render(arrow+r.Value) + scaleSuffix
+		return changedMarker + valueStyle.Render(arrow+r.Value) + transformSuffix
 	}
 
 	return ""

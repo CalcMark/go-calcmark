@@ -537,3 +537,86 @@ func TestApply_AlreadyInTargetSystem(t *testing.T) {
 		t.Errorf("expected value 10 unchanged, got %s", qty.Value.String())
 	}
 }
+
+// --- WouldConvert tests ---
+
+func TestWouldConvert_QuantityToSI(t *testing.T) {
+	q := &types.Quantity{Value: decimal.NewFromInt(2), Unit: "cups"}
+	convertTo := &document.ConvertToConfig{System: "si", UnitCategories: []string{"Volume"}}
+	if !WouldConvert(q, convertTo) {
+		t.Error("expected cups to be converted to SI")
+	}
+}
+
+func TestWouldConvert_ExplicitQuantity(t *testing.T) {
+	q := &types.Quantity{Value: decimal.NewFromInt(280), Unit: "grams", IsExplicit: true}
+	convertTo := &document.ConvertToConfig{System: "imperial"}
+	if WouldConvert(q, convertTo) {
+		t.Error("expected explicit quantity to skip conversion")
+	}
+}
+
+func TestWouldConvert_CustomUnit(t *testing.T) {
+	q := &types.Quantity{Value: decimal.NewFromInt(3), Unit: "buns"}
+	convertTo := &document.ConvertToConfig{System: "si"}
+	if WouldConvert(q, convertTo) {
+		t.Error("expected custom unit to skip conversion")
+	}
+}
+
+func TestWouldConvert_AlreadyInTarget(t *testing.T) {
+	q := &types.Quantity{Value: decimal.NewFromInt(500), Unit: "ml"}
+	convertTo := &document.ConvertToConfig{System: "si"}
+	if WouldConvert(q, convertTo) {
+		t.Error("expected ml (already SI) to skip conversion")
+	}
+}
+
+func TestWouldConvert_CategoryMismatch(t *testing.T) {
+	q := &types.Quantity{Value: decimal.NewFromInt(280), Unit: "grams"}
+	convertTo := &document.ConvertToConfig{System: "imperial", UnitCategories: []string{"Volume"}}
+	if WouldConvert(q, convertTo) {
+		t.Error("expected grams (Mass) not to convert when only Volume in categories")
+	}
+}
+
+func TestWouldConvert_NilConfig(t *testing.T) {
+	q := &types.Quantity{Value: decimal.NewFromInt(280), Unit: "grams"}
+	if WouldConvert(q, nil) {
+		t.Error("expected false with nil convertTo")
+	}
+}
+
+func TestWouldConvert_NilResult(t *testing.T) {
+	convertTo := &document.ConvertToConfig{System: "si"}
+	if WouldConvert(nil, convertTo) {
+		t.Error("expected false with nil result")
+	}
+}
+
+func TestWouldConvert_Rate(t *testing.T) {
+	r := &types.Rate{
+		Amount:  &types.Quantity{Value: decimal.NewFromInt(100), Unit: "km/h"},
+		PerUnit: "hour",
+	}
+	convertTo := &document.ConvertToConfig{System: "imperial"}
+	if !WouldConvert(r, convertTo) {
+		t.Error("expected rate with convertible amount to return true")
+	}
+}
+
+func TestWouldConvert_Boolean(t *testing.T) {
+	b := types.NewBoolean(false)
+	convertTo := &document.ConvertToConfig{System: "si"}
+	if WouldConvert(b, convertTo) {
+		t.Error("expected boolean to skip conversion")
+	}
+}
+
+func TestWouldConvert_Number(t *testing.T) {
+	n := types.NewNumber(decimal.NewFromInt(42))
+	convertTo := &document.ConvertToConfig{System: "si"}
+	if WouldConvert(n, convertTo) {
+		t.Error("expected number to skip conversion")
+	}
+}

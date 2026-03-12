@@ -195,6 +195,56 @@ func isInTargetSystem(unitSystem, targetSystem string) bool {
 	return false
 }
 
+// WouldConvert reports whether Apply would convert this result's unit given
+// the convert_to config. Must be called on PRE-transform results (before Apply),
+// because Apply changes the unit, making post-transform detection unreliable.
+//
+// Used by the evaluator to cache per-statement conversion flags.
+func WouldConvert(result types.Type, convertTo *document.ConvertToConfig) bool {
+	if result == nil || convertTo == nil {
+		return false
+	}
+	switch v := result.(type) {
+	case *types.Quantity:
+		return wouldConvertQuantity(v, convertTo)
+	case *types.Rate:
+		if v.Amount == nil {
+			return false
+		}
+		return wouldConvertQuantity(v.Amount, convertTo)
+	default:
+		return false
+	}
+}
+
+// wouldConvertQuantity checks whether a quantity would actually be converted.
+// Mirrors the bail-out checks in applyConvertToQuantity.
+func wouldConvertQuantity(q *types.Quantity, convertTo *document.ConvertToConfig) bool {
+	if q.IsExplicit {
+		return false
+	}
+	category := units.CategoryForUnit(q.Unit)
+	if category == units.CategoryCustom {
+		return false
+	}
+	if len(convertTo.UnitCategories) > 0 {
+		if !categoryMatches(category, convertTo.UnitCategories) {
+			return false
+		}
+	}
+	currentSystem := units.GetSystemForUnit(q.Unit)
+	if isInTargetSystem(currentSystem, convertTo.System) {
+		return false
+	}
+	targetUnit := units.GetDefaultTargetUnit(q.Unit, convertTo.System)
+	if targetUnit == "" {
+		return false
+	}
+	// Confirm conversion would actually succeed
+	_, err := units.Convert(q.Value, q.Unit, targetUnit)
+	return err == nil
+}
+
 // ApplyToResults applies transforms to a slice of results, returning new values.
 // This is a convenience for formatters that process result lists.
 func ApplyToResults(results []types.Type, scale *document.ScaleConfig, convertTo *document.ConvertToConfig) []types.Type {
