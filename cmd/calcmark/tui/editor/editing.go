@@ -487,6 +487,12 @@ func (m *Model) redetectBlockTypes() {
 	// Replace document
 	m.doc = newDoc
 
+	// Clear stale changed-block IDs: the old document's block IDs are invalid
+	// in the new document. Without this, a subsequent reEvaluate() call would
+	// pass stale IDs to EvaluateAffectedBlocks → GetBlocksInDependencyOrder
+	// returns empty → applyTransforms treats empty as "all blocks" → double-scaling.
+	m.changedBlockIDs = make(map[string]bool)
+
 	// Re-evaluate the new document
 	m.fullReEvaluate()
 
@@ -604,7 +610,12 @@ func (m *Model) insertLine(at int) {
 	content := strings.Join(newLines, "\n") + "\n"
 	newDoc, err := document.NewDocument(content)
 	if err != nil {
-		// Document creation failed — leave existing document unchanged.
+		// Document creation failed (e.g., "---" on line 1 looks like unclosed
+		// frontmatter). Fall back to inserting the line directly into the
+		// existing block source so the editor still functions — the user
+		// pressed Enter and expects a new line to appear.
+		m.frontmatterErr = err
+		m.insertLineIntoBlock(at)
 		return
 	}
 
@@ -622,6 +633,66 @@ func (m *Model) insertLine(at int) {
 
 	// Auto-pin any new variables
 	m.autoPinVariables()
+}
+
+// insertLineIntoBlock inserts an empty line at position `at` by modifying the
+// existing block source directly. Used as a fallback when NewDocument fails
+// (e.g., typing "---" creates an apparent unclosed frontmatter).
+func (m *Model) insertLineIntoBlock(at int) {
+	fmCount := m.frontmatterLineCount()
+	targetLine := at - fmCount
+
+	// If target is in frontmatter region, we can't insert there via blocks.
+	// Just move cursor — the user will continue editing.
+	if targetLine < 0 {
+		m.cursorLine = at
+		m.cursorCol = 0
+		m.modified = true
+		m.adjustScrollForCursor()
+		return
+	}
+
+	// Find the block and line index within it
+	lineIdx := 0
+	for _, node := range m.doc.GetBlocks() {
+		var blockLines []string
+		switch b := node.Block.(type) {
+		case *document.CalcBlock:
+			blockLines = b.Source()
+		case *document.TextBlock:
+			blockLines = b.Source()
+		}
+
+		if lineIdx+len(blockLines) > targetLine || lineIdx+len(blockLines) == targetLine {
+			// Insert empty line within or at the end of this block
+			insertAt := targetLine - lineIdx
+			newSource := make([]string, 0, len(blockLines)+1)
+			newSource = append(newSource, blockLines[:insertAt]...)
+			newSource = append(newSource, "")
+			newSource = append(newSource, blockLines[insertAt:]...)
+
+			if _, err := m.doc.ReplaceBlockSource(node.ID, newSource); err != nil {
+				// Last resort: just move cursor
+				break
+			}
+
+			m.cursorLine = at
+			m.cursorCol = 0
+			m.modified = true
+			m.adjustScrollForCursor()
+			return
+		}
+		lineIdx += len(blockLines)
+	}
+
+	// If we get here, just move cursor to the last valid position
+	m.cursorLine = at
+	if m.cursorLine >= m.TotalLines() {
+		m.cursorLine = m.TotalLines() - 1
+	}
+	m.cursorCol = 0
+	m.modified = true
+	m.adjustScrollForCursor()
 }
 
 // fullReEvaluate creates a fresh evaluator and evaluates the entire document.

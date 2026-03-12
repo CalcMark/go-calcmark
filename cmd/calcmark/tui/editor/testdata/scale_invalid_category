@@ -1,0 +1,53 @@
+# Test: Invalid unit_categories should show frontmatter error on closing --- line
+# Bug: Mistyping 'Custom' to 'Custo' should show frontmatter error on frontmatter, not on yield
+# Expected: frontmatter error on the closing --- line
+
+# Initial state - cursor at start, valid document
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=8 totalVisual=8 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check initial results - should be 4 buns (2 * scale factor 2)
+run observe=results
+----
+-- results:
+Line 7 (yield = 2 buns): value=4 buns, error=""
+
+# Navigate to line 4 (  - Custom) to edit it
+run observe=debug
+key down
+key down
+key down
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=4 cursorCol=0 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=8 totalVisual=8 editBuf="  - Custom" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Delete the last two characters ('om') to make 'Cust'
+run observe=debug
+key end
+key backspace
+key backspace
+----
+-- debug:
+mode=StateDefault cursorLine=4 cursorCol=8 cursorVisual=4 cursorHighlight=4 scrollOffset=0 totalSource=8 totalVisual=8 editBuf="  - Cust" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Move cursor down to trigger save+eval
+run observe=debug
+key down
+key down
+key down
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=7 cursorCol=0 cursorVisual=7 cursorHighlight=7 scrollOffset=0 totalSource=8 totalVisual=8 editBuf="yield = 2 buns" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check results - frontmatter error should appear on the closing --- line (line 5),
+# NOT on the yield line. Body results should be stale-but-valid.
+run observe=results
+----
+-- results:
+Line 5 (---): value=, error="frontmatter: frontmatter: invalid unit category \"Cust\" in scale.unit_categories; valid categories: All, Area, Currency, Custom, DataSize, Energy, Length, Mass, Number, Power, Speed, Temperature, Volume"
+Line 7 (yield = 2 buns): value=4 buns, error=""
+frontmatterErr: frontmatter: frontmatter: invalid unit category "Cust" in scale.unit_categories; valid categories: All, Area, Currency, Custom, DataSize, Energy, Length, Mass, Number, Power, Speed, Temperature, Volume

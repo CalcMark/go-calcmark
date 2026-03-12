@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"fmt"
 	"image/color"
 	"strings"
 
@@ -32,6 +33,44 @@ func ensureFullWidth(line string, width int, bg color.Color) string {
 	padding := width - currentWidth
 	// Use centralized StyledPadding utility
 	return line + components.StyledPadding(padding, bg)
+}
+
+// colorToANSIBgParams returns the "48;2;R;G;B" parameter substring for a color.
+// This matches both standalone sequences (\x1b[48;2;R;G;Bm) and combined sequences
+// where bg params are embedded (\x1b[38;2;...;48;2;R;G;Bm).
+func colorToANSIBgParams(c color.Color) string {
+	r, g, b, _ := c.RGBA()
+	return fmt.Sprintf("48;2;%d;%d;%d", r>>8, g>>8, b>>8)
+}
+
+// maintainBackground ensures a background color persists through ANSI resets in glamour output.
+// Glamour emits \x1b[0m (full reset) between styled spans, which clears the background back
+// to terminal default. This replaces each reset with reset+re-apply-bg, preventing bleed-through
+// in table cells, styled spans, and other glamour-rendered content.
+func maintainBackground(line string, bg color.Color) string {
+	bgSeq := "\x1b[" + colorToANSIBgParams(bg) + "m"
+	// Prepend bg, and after every reset re-apply it.
+	result := bgSeq + strings.ReplaceAll(line, "\x1b[0m", "\x1b[0m"+bgSeq)
+	return result
+}
+
+// replaceBackground swaps all occurrences of oldBg with newBg in glamour-rendered ANSI output,
+// and also maintains newBg through resets. This is needed for cursor line highlighting where
+// glamour has baked the preview pane background into every styled span.
+//
+// Glamour combines fg+bg into single SGR sequences like \x1b[38;2;R;G;B;48;2;R;G;Bm.
+// We replace the "48;2;R;G;B" parameter substring within any SGR sequence, handling both
+// standalone and combined forms.
+func replaceBackground(line string, oldBg, newBg color.Color) string {
+	oldParams := colorToANSIBgParams(oldBg)
+	newParams := colorToANSIBgParams(newBg)
+	newSeq := "\x1b[" + newParams + "m"
+	// Replace old bg params with new bg params inside any SGR sequence.
+	// This handles both standalone \x1b[48;2;R;G;Bm and combined \x1b[38;...;48;2;R;G;Bm.
+	result := strings.ReplaceAll(line, oldParams, newParams)
+	// Also maintain new bg through resets.
+	result = newSeq + strings.ReplaceAll(result, "\x1b[0m", "\x1b[0m"+newSeq)
+	return result
 }
 
 // ensureLinesAreFullWidth ensures every line in a multi-line string is exactly the target width.
@@ -163,6 +202,36 @@ func trackANSIState(state *[]rune, esc []rune) {
 	} else {
 		*state = append(*state, esc...)
 	}
+}
+
+// truncateStyledLine truncates a string containing ANSI escape codes to
+// maxWidth visual columns. ANSI sequences are preserved (not counted) so
+// colors remain correct up to the truncation point.
+func truncateStyledLine(s string, maxWidth int) string {
+	runes := []rune(s)
+	var result []rune
+	visWidth := 0
+	i := 0
+	for i < len(runes) && visWidth < maxWidth {
+		if runes[i] == '\x1b' {
+			// Copy the entire escape sequence without counting width.
+			result = append(result, runes[i])
+			i++
+			for i < len(runes) {
+				result = append(result, runes[i])
+				if runes[i] == 'm' {
+					i++
+					break
+				}
+				i++
+			}
+		} else {
+			result = append(result, runes[i])
+			visWidth++
+			i++
+		}
+	}
+	return string(result)
 }
 
 // stripANSI removes ANSI escape codes from a string, returning plain text.

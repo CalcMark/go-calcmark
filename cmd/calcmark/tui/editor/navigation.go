@@ -33,7 +33,16 @@ func (m Model) handleUpKey() (tea.Model, tea.Cmd) {
 	}
 	m.prepareNavigation(false)
 	if m.cursorLine > 0 {
-		m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+		// In Reading mode, jump to the previous visible source line.
+		// A multi-line paragraph renders as one visual block; skip past it in one press.
+		if m.previewMode == PreviewReading && len(m.readingNav.visibleLines) > 0 {
+			prev := m.readingNav.prevVisible(m.cursorLine)
+			if prev < m.cursorLine {
+				m.saveCurrentLineAndMoveTo(prev)
+			}
+		} else {
+			m.saveCurrentLineAndMoveTo(m.cursorLine - 1)
+		}
 	}
 	return m, nil
 }
@@ -46,7 +55,15 @@ func (m Model) handleDownKey() (tea.Model, tea.Cmd) {
 	}
 	m.prepareNavigation(false)
 	if m.cursorLine < m.TotalLines()-1 {
-		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+		// In Reading mode, jump to the next visible source line.
+		if m.previewMode == PreviewReading && len(m.readingNav.visibleLines) > 0 {
+			next := m.readingNav.nextVisible(m.cursorLine)
+			if next > m.cursorLine {
+				m.saveCurrentLineAndMoveTo(next)
+			}
+		} else {
+			m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
+		}
 	}
 	return m, nil
 }
@@ -79,6 +96,64 @@ func (m Model) handleRightKey() (tea.Model, tea.Cmd) {
 	} else if m.cursorLine < m.TotalLines()-1 {
 		m.saveCurrentLineAndMoveTo(m.cursorLine + 1)
 		m.cursorCol = 0
+	}
+	return m, nil
+}
+
+// ========================================
+// Mouse scrolling
+// ========================================
+
+// mouseScrollLines is the number of lines to scroll per mouse wheel tick.
+const mouseScrollLines = 3
+
+func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
+	var delta int
+	switch msg.Button {
+	case tea.MouseWheelUp:
+		delta = -mouseScrollLines
+	case tea.MouseWheelDown:
+		delta = mouseScrollLines
+	default:
+		return m, nil
+	}
+
+	m.prepareNavigation(false)
+	total := m.TotalLines()
+	if total == 0 {
+		return m, nil
+	}
+
+	// In Reading mode, jump by visible lines instead of source lines.
+	if m.previewMode == PreviewReading && len(m.readingNav.visibleLines) > 0 {
+		target := m.cursorLine
+		steps := delta
+		if steps < 0 {
+			steps = -steps
+		}
+		for i := 0; i < steps; i++ {
+			if delta > 0 {
+				next := m.readingNav.nextVisible(target)
+				if next > target {
+					target = next
+				}
+			} else {
+				prev := m.readingNav.prevVisible(target)
+				if prev < target {
+					target = prev
+				}
+			}
+		}
+		if target != m.cursorLine {
+			m.saveCurrentLineAndMoveTo(target)
+		}
+		return m, nil
+	}
+
+	targetLine := m.cursorLine + delta
+	targetLine = max(0, min(targetLine, total-1))
+	if targetLine != m.cursorLine {
+		m.saveCurrentLineAndMoveTo(targetLine)
 	}
 	return m, nil
 }
@@ -368,6 +443,11 @@ func (m *Model) moveCursor(dLine, dCol int) {
 	}
 	if m.cursorLine >= total {
 		m.cursorLine = total - 1
+	}
+
+	// In Reading mode, snap to nearest visible line after page jump.
+	if m.previewMode == PreviewReading && len(m.readingNav.visibleLines) > 0 {
+		m.cursorLine = m.readingNav.nearestVisible(m.cursorLine)
 	}
 
 	// Move column

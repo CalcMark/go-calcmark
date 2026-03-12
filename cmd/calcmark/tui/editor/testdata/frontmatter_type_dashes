@@ -1,0 +1,82 @@
+# Test: Typing --- on first line of empty document should not eat the line
+# Bug: Opening cm with no file and typing --- eats the line
+# Expected: The --- line should remain visible and editable
+
+# Initial state - empty document, cursor at line 0
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type --- (frontmatter opening delimiter)
+run observe=debug
+type ---
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=3 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=1 totalVisual=1 editBuf="---" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# The --- should be in editBuf. Check lines too.
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---" <CURSOR>
+
+# Press Enter to commit the line and move to next
+run observe=debug
+key enter
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=0 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=2 totalVisual=2 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# After Enter, the --- should still be visible on line 0
+# and cursor should be on line 1
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="" <CURSOR>
+
+# Type more frontmatter content
+run observe=debug
+type scale:
+----
+-- debug:
+mode=StateDefault cursorLine=1 cursorCol=6 cursorVisual=1 cursorHighlight=1 scrollOffset=0 totalSource=2 totalVisual=2 editBuf="scale:" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Enter again
+run observe=debug
+key enter
+----
+-- debug:
+mode=StateDefault cursorLine=2 cursorCol=0 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=3 totalVisual=3 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Type closing delimiter
+run observe=debug
+type ---
+----
+-- debug:
+mode=StateDefault cursorLine=2 cursorCol=3 cursorVisual=2 cursorHighlight=2 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="---" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Press Enter to close frontmatter
+run observe=debug
+key enter
+----
+-- debug:
+mode=StateDefault cursorLine=3 cursorCol=0 cursorVisual=3 cursorHighlight=3 scrollOffset=0 totalSource=5 totalVisual=5 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# After closing, frontmatter should be parsed.
+# Check that all lines are present.
+run observe=lines
+----
+-- lines:
+sourceToVisual: map[0:0 1:1 2:2 3:3 4:4]
+Visual lines:
+  [0] srcIdx=0 lineNum=1 wrap=false pad=false content="---"
+  [1] srcIdx=1 lineNum=2 wrap=false pad=false content="scale:"
+  [2] srcIdx=2 lineNum=3 wrap=false pad=false content="---"
+  [3] srcIdx=3 lineNum=4 wrap=false pad=false content="" <CURSOR>
+  [4] srcIdx=4 lineNum=5 wrap=false pad=false content=""

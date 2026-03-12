@@ -239,7 +239,7 @@ func (m *Model) GetAlignedModel(sourceWidth, previewWidth int) *AlignedModel {
 		EditBufLine:        m.cursorLine,
 	}
 
-	if m.previewMode == PreviewRendered && m.renderCache != nil && m.doc != nil {
+	if (m.previewMode == PreviewRendered || m.previewMode == PreviewReading) && m.renderCache != nil && m.doc != nil {
 		input.RenderedTextBlocks = m.renderTextBlocks(previewWidth)
 	}
 

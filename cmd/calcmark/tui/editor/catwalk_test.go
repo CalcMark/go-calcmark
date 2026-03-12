@@ -95,6 +95,10 @@ z = 30`
 			"autocomplete_nl",                     // TestEditorCatwalkAutocompleteNL
 			"diagnostic_wrong_line",               // TestEditorCatwalkDiagnosticLine
 			"diagnostic_wrong_line_compound",      // TestEditorCatwalkDiagnosticLine
+			"frontmatter_type_dashes",            // TestEditorCatwalkFrontmatterTypeDashes
+			"scale_double_bug",                   // TestEditorCatwalkScaleDoubleBug
+			"scale_invalid_category",             // TestEditorCatwalkScaleInvalidCategory
+			"scale_invalid_view",                 // TestEditorCatwalkScaleInvalidView
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1800,6 +1804,175 @@ z = 30`
 		RunModelV2(t, path, m,
 			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkFrontmatterTypeDashes tests typing --- on line 1 of an empty doc.
+// Bug: typing --- at the top of an empty document eats the line.
+func TestEditorCatwalkFrontmatterTypeDashes(t *testing.T) {
+	// Empty document (like opening cm with no file)
+	doc, err := document.NewDocument("\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "frontmatter_type_dashes") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkScaleDoubleBug tests that scale factor is not applied twice
+// when cursor moves from frontmatter to body.
+func TestEditorCatwalkScaleDoubleBug(t *testing.T) {
+	content := "---\nscale:\n  factor: 2\n  unit_categories: [Custom]\nglobals:\n  loaves: 2 loaves\n---\n\nyield = 4 buns\n\na = yield\n"
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "scale_double_bug") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
+				ed := m.(Model)
+				results := ed.GetLineResults()
+				var sb strings.Builder
+				for i, r := range results {
+					if r.Value != "" {
+						fmt.Fprintf(&sb, "Line %d (%s): value=%s, error=%q\n", i, r.Source, r.Value, r.Error)
+					}
+				}
+				_, err := out.Write([]byte(sb.String()))
+				return err
+			}),
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+func TestEditorCatwalkScaleInvalidCategory(t *testing.T) {
+	content := "---\nscale:\n  factor: 2\n  unit_categories:\n  - Custom\n---\n\nyield = 2 buns\n"
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "scale_invalid_category") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
+				ed := m.(Model)
+				results := ed.GetLineResults()
+				var sb strings.Builder
+				for i, r := range results {
+					if r.Value != "" || r.Error != "" {
+						fmt.Fprintf(&sb, "Line %d (%s): value=%s, error=%q\n", i, r.Source, r.Value, r.Error)
+					}
+				}
+				if ed.frontmatterErr != nil {
+					fmt.Fprintf(&sb, "frontmatterErr: %s\n", ed.frontmatterErr.Error())
+				}
+				_, err := out.Write([]byte(sb.String()))
+				return err
+			}),
+			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).DebugLines()))
+				return err
+			}),
+		)
+	})
+}
+
+func TestEditorCatwalkScaleInvalidView(t *testing.T) {
+	content := "---\nscale:\n  factor: 2\n  unit_categories:\n  - Custom\n---\n\nyield = 2 buns\n"
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "scale_invalid_view") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("debug", func(out io.Writer, m tea.Model) error {
+				_, err := out.Write([]byte(m.(Model).Debug()))
+				return err
+			}),
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
+				ed := m.(Model)
+				results := ed.GetLineResults()
+				var sb strings.Builder
+				for i, r := range results {
+					if r.Value != "" || r.Error != "" {
+						fmt.Fprintf(&sb, "Line %d (%s): value=%s, error=%q\n", i, r.Source, r.Value, r.Error)
+					}
+				}
+				if ed.frontmatterErr != nil {
+					fmt.Fprintf(&sb, "frontmatterErr: %s\n", ed.frontmatterErr.Error())
+				}
+				_, err := out.Write([]byte(sb.String()))
 				return err
 			}),
 			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {

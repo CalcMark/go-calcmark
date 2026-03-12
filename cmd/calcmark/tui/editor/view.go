@@ -96,10 +96,21 @@ func (m Model) View() tea.View {
 	// Calculate pane widths based on preview mode using centralized configuration
 	leftWidth, rightWidth := m.GetPaneWidths(totalWidth)
 
-	// Account for divider between panes (1 character)
-	// The divider is visually part of the separation, so we subtract it from left pane
+	// Account for divider between panes (1 character) — only when both panes are visible
 	const dividerWidth = 1
-	leftContentWidth := leftWidth - dividerWidth // Content area width (excludes divider)
+	showSource := m.ShowSource()
+	showPreview := m.previewMode != PreviewHidden
+	hasDivider := showSource && showPreview
+	leftContentWidth := leftWidth
+	if hasDivider {
+		leftContentWidth = leftWidth - dividerWidth // Content area width (excludes divider)
+	}
+
+	// In Reading mode, reserve a small left margin for visual breathing room.
+	// The margin is added as a gutter prefix during rendering in renderPreviewPaneAligned.
+	if m.previewMode == PreviewReading {
+		rightWidth -= readingMarginWidth
+	}
 
 	// Pane content height (minus header row)
 	paneContentHeight := max(contentHeight-1, 3)
@@ -108,43 +119,40 @@ func (m Model) View() tea.View {
 	results := m.GetLineResults()
 
 	// CRITICAL: Compute aligned line structure ONCE to avoid cycles.
-	// Use leftContentWidth (not leftWidth) because divider takes 1 char from left pane
 	// Both widths are fixed, and we compute wrapping/padding based on them.
 	// This prevents: preview reflows → padding changes → width changes → reflow...
 	aligned := m.computeAlignedPanes(leftContentWidth, rightWidth, results)
 
-	// Render source pane with header
-	sourceHeader := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(theme.TextBright).
-		Background(m.sourcePaneBg()).
-		Padding(0, 1).
-		Width(leftContentWidth).
-		Render("Source")
-	// Ensure header is exactly leftContentWidth
-	sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, m.sourcePaneBg())
+	// Render source pane with header (if visible)
+	var sourcePane string
+	if showSource {
+		sourceHeader := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(theme.TextBright).
+			Background(m.sourcePaneBg()).
+			Padding(0, 1).
+			Width(leftContentWidth).
+			Render("Source")
+		sourceHeader = ensureFullWidth(sourceHeader, leftContentWidth, m.sourcePaneBg())
 
-	// No source padding needed — globals/exchange rates are only defined in frontmatter,
-	// and frontmatter lines provide natural alignment in the preview pane.
-	sourceContentHeight := max(paneContentHeight, 1)
+		sourceContentHeight := max(paneContentHeight, 1)
+		sourceContent := m.renderSourcePaneAligned(leftContentWidth, sourceContentHeight, aligned)
 
-	sourceContent := m.renderSourcePaneAligned(leftContentWidth, sourceContentHeight, aligned)
-
-	// Assemble source pane with header
-	var sourcePaneLines []string
-	sourcePaneLines = append(sourcePaneLines, sourceHeader)
-	sourcePaneLines = append(sourcePaneLines, strings.Split(sourceContent, "\n")...)
-	sourcePane := strings.Join(sourcePaneLines, "\n")
+		var sourcePaneLines []string
+		sourcePaneLines = append(sourcePaneLines, sourceHeader)
+		sourcePaneLines = append(sourcePaneLines, strings.Split(sourceContent, "\n")...)
+		sourcePane = strings.Join(sourcePaneLines, "\n")
+	}
 
 	// Render preview pane (if visible)
 	var previewPane string
-	if m.previewMode != PreviewHidden {
+	if showPreview {
 		headerTitle := "Results"
 		switch m.previewMode {
-		case PreviewMinimal:
-			headerTitle = "Results (minimal)"
 		case PreviewRendered:
-			headerTitle = "Preview"
+			headerTitle = "Side-by-Side"
+		case PreviewReading:
+			headerTitle = "Reading Mode"
 		}
 		previewHeader := lipgloss.NewStyle().
 			Bold(true).
@@ -153,12 +161,16 @@ func (m Model) View() tea.View {
 			Padding(0, 1).
 			Width(rightWidth).
 			Render(headerTitle)
-		// Ensure header is exactly rightWidth
 		previewHeader = ensureFullWidth(previewHeader, rightWidth, m.previewPaneBg())
+
+		// In Reading mode, prepend left margin gutter to the header too.
+		if m.previewMode == PreviewReading {
+			gutter := lipgloss.NewStyle().Background(m.previewPaneBg()).Render(strings.Repeat(" ", readingMarginWidth))
+			previewHeader = gutter + previewHeader
+		}
 
 		previewContent := m.renderPreviewPaneAligned(rightWidth, paneContentHeight, aligned)
 
-		// Assemble without bare newlines
 		var previewPaneLines []string
 		previewPaneLines = append(previewPaneLines, previewHeader)
 		previewPaneLines = append(previewPaneLines, strings.Split(previewContent, "\n")...)
@@ -168,17 +180,20 @@ func (m Model) View() tea.View {
 	// Build complete UI as array of lines to avoid bare newlines
 	var allUILines []string
 
-	// Add panes (source and preview)
-	if m.previewMode != PreviewHidden {
-		// SideBySide expects content widths and adds divider
-		// leftContentWidth already accounts for divider (leftWidth - dividerWidth)
+	// Add panes (source and/or preview)
+	if showSource && showPreview {
+		// Side-by-side: source + divider + preview
 		sbs := NewSideBySide(leftContentWidth, rightWidth, m.sourcePaneBg(), m.previewPaneBg())
 		panesOutput := sbs.Render(sourcePane, previewPane)
 		allUILines = append(allUILines, strings.Split(panesOutput, "\n")...)
-	} else {
-		// Single pane - use full left width (no divider in single-pane mode)
+	} else if showSource {
+		// Source only (PreviewHidden)
 		sourcePane = ensureLinesAreFullWidth(sourcePane, leftWidth, m.sourcePaneBg())
 		allUILines = append(allUILines, strings.Split(sourcePane, "\n")...)
+	} else {
+		// Preview only (PreviewReading)
+		previewPane = ensureLinesAreFullWidth(previewPane, rightWidth, m.previewPaneBg())
+		allUILines = append(allUILines, strings.Split(previewPane, "\n")...)
 	}
 
 	// Get context footer background once for all footer-related elements
@@ -279,6 +294,7 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int, results []Line
 			blockID:       al.BlockID,
 			isCalc:        al.IsCalc,
 			isFrontmatter: al.BlockID == "" && !al.IsCalc,
+			isPadding:     al.Kind == AlignedLinePadding,
 		}
 	}
 
@@ -292,9 +308,16 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int, results []Line
 // computeAlignedModelFresh computes a fresh AlignedModel without caching.
 // Used by computeAlignedPanes since View() receives a value copy of Model.
 func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int, results []LineResult) AlignedModel {
-	// Calculate content width for source pane (accounting for line numbers)
+	// Calculate content width for source pane (accounting for line numbers).
+	// In Reading mode (source hidden), use preview width so alignment doesn't
+	// create gaps from narrow source wrapping vs wide preview content.
 	lineNumWidth := 4
-	sourceContentWidth := max(sourceWidth-lineNumWidth-2, 10)
+	var sourceContentWidth int
+	if m.previewMode == PreviewReading {
+		sourceContentWidth = max(previewWidth-2, 10)
+	} else {
+		sourceContentWidth = max(sourceWidth-lineNumWidth-2, 10)
+	}
 
 	input := AlignedModelInput{
 		Lines:              m.GetLines(),
@@ -313,10 +336,10 @@ func (m Model) computeAlignedModelFresh(sourceWidth, previewWidth int, results [
 		input.EditBufLine = m.cursorLine
 	}
 
-	// In PreviewRendered mode, pre-render visible TextBlocks through the cache.
+	// In PreviewRendered/PreviewReading mode, pre-render visible TextBlocks through the cache.
 	// The rendered content is passed as a parallel data structure alongside LineResults,
 	// keeping GetLineResults() completely untouched.
-	if m.previewMode == PreviewRendered && m.renderCache != nil && m.doc != nil {
+	if (m.previewMode == PreviewRendered || m.previewMode == PreviewReading) && m.renderCache != nil && m.doc != nil {
 		input.RenderedTextBlocks = m.renderTextBlocks(previewWidth)
 	}
 
@@ -343,8 +366,11 @@ func (m Model) renderTextBlocks(previewWidth int) map[string][]string {
 			interpolated := tb.InterpolatedSource()
 			blockStart := lineNum
 
-			// If the user is editing a line in this TextBlock, splice the editBuf.
-			if m.editBufLoaded {
+			// If the user is editing a line in this TextBlock, splice the editBuf
+			// so the preview updates live. Skip in Reading mode — the rendered
+			// view should always show fully interpolated content, never raw
+			// {{variable}} template syntax from the edit buffer.
+			if m.editBufLoaded && m.previewMode != PreviewReading {
 				blockEnd := blockStart + len(interpolated)
 				if m.cursorLine >= blockStart && m.cursorLine < blockEnd {
 					spliced := make([]string, len(interpolated))
@@ -382,4 +408,5 @@ type previewLine struct {
 	blockID       string // Block this line belongs to
 	isCalc        bool   // Whether this is from a CalcBlock
 	isFrontmatter bool   // Whether this is from the YAML frontmatter block
+	isPadding     bool   // Whether this is alignment padding (skip in Reading mode)
 }

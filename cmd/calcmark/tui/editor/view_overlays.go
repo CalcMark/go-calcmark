@@ -226,6 +226,10 @@ func (m Model) renderFilePickerOverlay() string {
 
 	for pl := range strings.SplitSeq(pickerView, "\n") {
 		content := " " + pl
+		// Truncate lines that exceed the overlay width (e.g., long symlink targets).
+		if visW := lipgloss.Width(content); visW > o.InnerWidth {
+			content = truncateStyledLine(content, o.InnerWidth)
+		}
 		if m.filePickerFocus == FocusFilename {
 			// Dim the browser when filename has focus
 			dimStyle := lipgloss.NewStyle().Foreground(theme.Hint).Background(o.ItemBg)

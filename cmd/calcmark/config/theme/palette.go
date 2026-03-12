@@ -158,6 +158,13 @@ var (
 		"#1A1714",
 	)
 
+	// ReadingCursorBg — visible highlight for cursor line in Reading mode.
+	// Noticeably lighter than PreviewPaneBg so the line clearly stands out.
+	ReadingCursorBg = ac(
+		"#E2E8F0",
+		"#3D3530",
+	)
+
 	PaneBg = ac(
 		"#FAFAF9",
 		"#211D19",

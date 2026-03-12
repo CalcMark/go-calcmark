@@ -59,6 +59,7 @@ func DefaultStatusBarStyle() StatusBarStyle {
 			Foreground(theme.StatusFg).
 			Padding(0, 1),
 		Filename: lipgloss.NewStyle().
+			Foreground(theme.StatusFg).
 			Bold(true),
 		Modified: lipgloss.NewStyle().
 			Foreground(theme.Error),

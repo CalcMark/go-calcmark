@@ -1,0 +1,51 @@
+# Test: Scale factor applied twice when cursor moves outside frontmatter
+# Bug: yield = 4 buns with scale factor 2 shows 16 buns instead of 8
+# Expected: yield should always be 8 buns (4 * 2)
+
+# Initial state - cursor at start
+run observe=debug
+----
+-- debug:
+mode=StateDefault cursorLine=0 cursorCol=0 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=11 totalVisual=11 editBuf="" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check initial results - should be 8 buns (4 * scale factor 2)
+run observe=results
+----
+-- results:
+Line 8 (yield = 4 buns): value=8 buns, error=""
+Line 10 (a = yield): value=8 buns, error=""
+
+# Move cursor into frontmatter (line 5, the globals: loaves line)
+run observe=debug
+key down
+key down
+key down
+key down
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=5 cursorCol=0 cursorVisual=5 cursorHighlight=5 scrollOffset=0 totalSource=11 totalVisual=11 editBuf="  loaves: 2 loaves" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Check results while cursor is in frontmatter
+run observe=results
+----
+-- results:
+Line 8 (yield = 4 buns): value=8 buns, error=""
+Line 10 (a = yield): value=8 buns, error=""
+
+# Now move cursor out of frontmatter to body (line 8, yield = 4 buns)
+run observe=debug
+key down
+key down
+key down
+----
+-- debug:
+mode=StateDefault cursorLine=8 cursorCol=0 cursorVisual=8 cursorHighlight=8 scrollOffset=0 totalSource=11 totalVisual=11 editBuf="yield = 4 buns" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# BUG: Check results after moving cursor outside frontmatter
+# yield should still be 8 buns, not 16
+run observe=results
+----
+-- results:
+Line 8 (yield = 4 buns): value=8 buns, error=""
+Line 10 (a = yield): value=8 buns, error=""

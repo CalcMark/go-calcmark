@@ -35,7 +35,9 @@ func (m *Model) GetLineResults() []LineResult {
 	lineNum := 0
 
 	// Prepend empty results for frontmatter lines to maintain alignment
-	// with GetLines() which includes frontmatter
+	// with GetLines() which includes frontmatter.
+	// When frontmatterErr is set, attach the error to the closing ---
+	// delimiter so the user sees the problem near its source.
 	fmCount := m.frontmatterLineCount()
 	if fmCount > 0 {
 		for i := range fmCount {
@@ -43,12 +45,17 @@ func (m *Model) GetLineResults() []LineResult {
 			if i < len(allLines) {
 				source = allLines[i]
 			}
-			results = append(results, LineResult{
+			lr := LineResult{
 				LineNum:       lineNum,
 				Source:        source,
 				IsCalc:        false,
 				IsFrontmatter: true,
-			})
+			}
+			// Show frontmatter error on the closing --- line (last frontmatter line)
+			if m.frontmatterErr != nil && i == fmCount-1 {
+				lr.Error = m.frontmatterErr.Error()
+			}
+			results = append(results, lr)
 			lineNum++
 		}
 	}

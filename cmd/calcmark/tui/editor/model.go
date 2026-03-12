@@ -216,6 +216,7 @@ const (
 	PreviewMinimal                     // Show just arrow + value (left-aligned, narrower)
 	PreviewRendered                    // Full markdown rendering for TextBlocks
 	PreviewHidden                      // No preview pane
+	PreviewReading                     // Reading mode: preview only, source hidden
 )
 
 // PaneWidthConfig defines the source/preview width ratios for each preview mode.
@@ -231,6 +232,7 @@ var DefaultPaneWidths = map[PreviewMode]PaneWidthConfig{
 	PreviewMinimal:  {SourcePercent: 75, PreviewPercent: 25},
 	PreviewRendered: {SourcePercent: 50, PreviewPercent: 50},
 	PreviewHidden:   {SourcePercent: 100, PreviewPercent: 0},
+	PreviewReading:  {SourcePercent: 0, PreviewPercent: 100},
 }
 
 // GetPaneWidths returns the source and preview pane widths for the given total width.
@@ -305,8 +307,9 @@ type Model struct {
 	height      int
 	quitting    bool
 	previewMode  PreviewMode          // Preview pane mode: Full, Minimal, Rendered, Hidden
-	renderCache  *RenderedBlockCache // Memoized glamour output for TextBlocks in PreviewRendered mode
-	visualScroll *visualScrollState  // Shared visual scroll offset for stable viewport
+	renderCache  *RenderedBlockCache  // Memoized glamour output for TextBlocks in PreviewRendered mode
+	visualScroll *visualScrollState   // Shared visual scroll offset for stable viewport
+	readingNav   *readingNavState     // Visible source lines in Reading mode for cursor snapping
 
 	// Selection state
 	selectionAnchorLine int // Line of selection anchor, -1 if no selection
@@ -371,6 +374,7 @@ func New(doc *document.Document) Model {
 		previewMode:         PreviewFull,
 		renderCache:         NewRenderedBlockCache(128),
 		visualScroll:        &visualScrollState{},
+		readingNav:          &readingNavState{},
 		styles:              config.GetStyles(),
 		keys:                shared.DefaultKeyMap(),
 		selectionAnchorLine: -1, // No selection initially
@@ -609,6 +613,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Default: bracketed paste into document editor.
 		return m.handleBracketedPaste(msg.Content)
 
+	case tea.MouseWheelMsg:
+		return m.handleMouseWheel(msg)
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -695,6 +702,11 @@ func (m Model) ScrollOffset() int {
 // ShowPreview returns whether preview pane is visible (not hidden).
 func (m Model) ShowPreview() bool {
 	return m.previewMode != PreviewHidden
+}
+
+// ShowSource returns whether source pane is visible.
+func (m Model) ShowSource() bool {
+	return m.previewMode != PreviewReading
 }
 
 // PreviewModeValue returns the current preview mode.

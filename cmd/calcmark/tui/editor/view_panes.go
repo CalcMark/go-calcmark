@@ -3,6 +3,7 @@ package editor
 import (
 	"fmt"
 	"image/color"
+	"slices"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -10,6 +11,65 @@ import (
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
+
+// readingMarginWidth is the left gutter width in Reading mode for visual breathing room.
+const readingMarginWidth = 2
+
+// readingNavState holds the set of source lines visible in Reading mode.
+// Updated during renderReadingPane (View) and consulted by navigation (Update)
+// to skip invisible lines. Shared via pointer for Bubble Tea value-copy safety.
+type readingNavState struct {
+	visibleLines []int // sorted source line indices that have visual representation
+}
+
+// nearestVisible returns the closest visible source line to target.
+// Used by the renderer to project the cursor highlight.
+func (s *readingNavState) nearestVisible(target int) int {
+	if len(s.visibleLines) == 0 {
+		return target
+	}
+	best := s.visibleLines[0]
+	bestDist := best - target
+	if bestDist < 0 {
+		bestDist = -bestDist
+	}
+	for _, v := range s.visibleLines[1:] {
+		d := v - target
+		if d < 0 {
+			d = -d
+		}
+		if d < bestDist {
+			best = v
+			bestDist = d
+		}
+	}
+	return best
+}
+
+// nextVisible returns the first visible source line strictly after current.
+// Returns current if already at or past the last visible line.
+func (s *readingNavState) nextVisible(current int) int {
+	for _, v := range s.visibleLines {
+		if v > current {
+			return v
+		}
+	}
+	return current
+}
+
+// prevVisible returns the last visible source line strictly before current.
+// Returns current if already at or before the first visible line.
+func (s *readingNavState) prevVisible(current int) int {
+	prev := current
+	for _, v := range s.visibleLines {
+		if v >= current {
+			break
+		}
+		prev = v
+	}
+	return prev
+}
+
 
 // visualScrollState holds the persisted visual scroll offset between frames.
 // Shared via pointer so Bubble Tea's value-copied Model in View() can read/write
@@ -205,6 +265,11 @@ func (m Model) previewPaneBg() color.Color {
 //     preview lines (blockID == "") so it appears vertically adjacent to the YAML.
 //   - Without frontmatter: Globals panel is rendered as a fixed header at the top.
 func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes) string {
+	// Reading mode has its own rendering path with independent scroll.
+	if m.previewMode == PreviewReading {
+		return m.renderReadingPane(width, height, aligned)
+	}
+
 	previewLines := aligned.previewLines
 
 	pvBg := m.previewPaneBg()
@@ -247,7 +312,6 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 
 	linesWritten := 0
 	cursorLineProcessed := false
-	sourceLines := m.GetLines()
 	for j := start; j < end && linesWritten < resultsHeight; j++ {
 		if j >= len(previewLines) {
 			break
@@ -259,9 +323,23 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		// Value lines (USD_EUR: 0.6) → formatted value from globals state.
 		if pl.isFrontmatter {
 			var completeLine string
+			fmCount := m.frontmatterLineCount()
+			sourceLines := m.GetLines()
 			if pl.sourceLineNum < len(sourceLines) {
 				srcLine := sourceLines[pl.sourceLineNum]
-				if isFrontmatterStructuralLine(srcLine) {
+
+				// Show frontmatter error on the closing --- line
+				if m.frontmatterErr != nil && pl.sourceLineNum == fmCount-1 {
+					errStyle := lipgloss.NewStyle().
+						Foreground(theme.CalcErrorFg).
+						Background(pvBg)
+					errorText := components.CleanErrorMessage(m.frontmatterErr.Error())
+					maxLen := width - 4
+					if maxLen > 0 && lipgloss.Width(errorText) > maxLen {
+						errorText = components.TruncateWithEllipsis(errorText, maxLen)
+					}
+					completeLine = ensureFullWidth(errStyle.Render("⚠ "+errorText), width, pvBg)
+				} else if isFrontmatterStructuralLine(srcLine) {
 					completeLine = ensureFullWidth("", width, pvBg)
 				} else if fmValueMap != nil {
 					key := extractFrontmatterKey(srcLine)
@@ -285,22 +363,17 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		// This only applies to non-frontmatter lines (calc blocks, markdown).
 		if m.editBufLoaded && pl.sourceLineNum == m.cursorLine {
 			if !cursorLineProcessed {
-				// First occurrence of cursor line - output preComputedCursorLineCount lines
-				// to match the source pane's edit buffer rendering.
-				// Show the actual preview content (computed result) rather than blank.
 				cursorPreviewLines := []previewLine{}
 				for _, cpl := range previewLines {
-					if cpl.sourceLineNum == m.cursorLine {
+					if cpl.sourceLineNum == m.cursorLine && !cpl.isPadding {
 						cursorPreviewLines = append(cursorPreviewLines, cpl)
 					}
 				}
 				for k := 0; k < preComputedCursorLineCount && linesWritten < resultsHeight; k++ {
-					// Show preview content if available, otherwise empty
 					var completeLine string
 					if k < len(cursorPreviewLines) {
 						completeLine = ensureFullWidth(cursorPreviewLines[k].content, width, pvBg)
 					} else {
-						// Empty line with background
 						completeLine = ensureFullWidth("", width, pvBg)
 					}
 					allLines = append(allLines, completeLine)
@@ -308,11 +381,11 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 				}
 				cursorLineProcessed = true
 			}
-			// Skip all pre-computed lines for cursor (we've already output preComputedCursorLineCount lines)
 			continue
 		}
 
-		paddedContent := ensureFullWidth(pl.content, width, pvBg)
+		content := pl.content
+		paddedContent := ensureFullWidth(content, width, pvBg)
 		allLines = append(allLines, paddedContent)
 		linesWritten++
 	}
@@ -324,6 +397,223 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 	}
 
 	// Join all lines - newlines between fully-styled lines prevent bleed-through
+	return strings.Join(allLines, "\n")
+}
+
+// readingVisualLine is a pre-processed line for Reading mode rendering.
+// Built in a first pass to enable correct scrolling within the filtered line set.
+type readingVisualLine struct {
+	previewLine            // embedded original line (may be zero-value for separators)
+	isSeparator bool       // inserted block-transition separator
+	sourceLineNum int      // source line this maps to (-1 for separators)
+}
+
+// renderReadingPane renders the preview pane in Reading mode with independent scrolling.
+// Reading mode skips alignment padding and empty filler, adds block separators,
+// and scrolls within the filtered line set rather than the raw aligned lines.
+func (m Model) renderReadingPane(width, height int, aligned alignedPanes) string {
+	previewLines := aligned.previewLines
+	pvBg := m.previewPaneBg()
+	sourceLines := m.GetLines()
+
+	hasFrontmatter := m.frontmatterLineCount() > 0
+	var fmValueMap map[string]formattedGlobal
+	if hasFrontmatter {
+		fmValueMap = m.buildFrontmatterValueMap()
+	}
+
+	// First pass: build filtered reading lines and source→visual mapping.
+	// Rules:
+	//  1. Skip alignment padding (isPadding).
+	//  2. Skip inter-block blank lines (block separator handles spacing).
+	//  3. Keep at most ONE consecutive blank line within a block (collapse duplicates).
+	//  4. Insert a block separator on block transitions.
+	var filtered []readingVisualLine
+	sourceToReading := make(map[int]int) // source line → first reading visual line
+	prevBlockID := ""
+	lastNonEmptyBlockID := ""
+	lastFilteredWasBlank := false // for collapsing consecutive blanks
+	for _, pl := range previewLines {
+		// Skip alignment padding.
+		if pl.isPadding {
+			continue
+		}
+		// Handle empty preview lines.
+		if pl.content == "" && !pl.isCalc && !pl.isFrontmatter {
+			// Skip inter-block blanks (separator handles spacing).
+			if pl.blockID == "" || pl.blockID != lastNonEmptyBlockID {
+				continue
+			}
+			// Collapse consecutive blanks to at most one.
+			if lastFilteredWasBlank {
+				continue
+			}
+			lastFilteredWasBlank = true
+		} else {
+			lastFilteredWasBlank = false
+			if pl.blockID != "" {
+				lastNonEmptyBlockID = pl.blockID
+			}
+		}
+		// Skip structural frontmatter lines.
+		if pl.isFrontmatter {
+			if pl.sourceLineNum < len(sourceLines) && isFrontmatterStructuralLine(sourceLines[pl.sourceLineNum]) {
+				continue
+			}
+		}
+
+		// Insert block separator when block changes.
+		if pl.blockID != "" && prevBlockID != "" && pl.blockID != prevBlockID && len(filtered) > 0 {
+			filtered = append(filtered, readingVisualLine{
+				isSeparator:   true,
+				sourceLineNum: -1,
+			})
+			lastFilteredWasBlank = false
+		}
+		if pl.blockID != "" {
+			prevBlockID = pl.blockID
+		}
+
+		// Record first visual line for this source line.
+		if _, exists := sourceToReading[pl.sourceLineNum]; !exists {
+			sourceToReading[pl.sourceLineNum] = len(filtered)
+		}
+
+		filtered = append(filtered, readingVisualLine{
+			previewLine:   pl,
+			sourceLineNum: pl.sourceLineNum,
+		})
+	}
+
+	// Build the set of "navigable" source lines for Reading mode.
+	// Calc lines and frontmatter values are individually navigable.
+	// Within a markdown block, blank lines act as section boundaries
+	// (heading→paragraph, paragraph→list). Each section's first source
+	// line is navigable, so Up/Down jumps per visual section, not per
+	// entire multi-section block.
+	navigable := make(map[int]bool)
+	seenSection := make(map[string]bool) // blockID → already recorded first line in current section
+	for _, rl := range filtered {
+		if rl.isSeparator {
+			continue
+		}
+		pl := rl.previewLine
+		if pl.isCalc || pl.isFrontmatter {
+			navigable[pl.sourceLineNum] = true
+			continue
+		}
+		key := pl.blockID
+		if key == "" {
+			navigable[pl.sourceLineNum] = true
+			continue
+		}
+		// Blank line resets the section boundary — next content line
+		// becomes navigable (new heading, paragraph, or list).
+		if pl.content == "" {
+			delete(seenSection, key)
+			continue
+		}
+		if !seenSection[key] {
+			seenSection[key] = true
+			navigable[pl.sourceLineNum] = true
+		}
+	}
+	visible := make([]int, 0, len(navigable))
+	for srcLine := range navigable {
+		visible = append(visible, srcLine)
+	}
+	slices.Sort(visible)
+	m.readingNav.visibleLines = visible
+
+	// Project the cursor onto the nearest visible source line for highlighting.
+	// The actual m.cursorLine stays accurate (for status bar, evaluation),
+	// but the visual highlight lands on the closest rendered line.
+	highlightSourceLine := m.readingNav.nearestVisible(m.cursorLine)
+
+	// Compute scroll offset within the filtered list.
+	cursorVisual := resolveVisualLine(sourceToReading, highlightSourceLine)
+	offset := m.visualScroll.offset
+	maxOffset := max(0, len(filtered)-height)
+	offset = min(offset, maxOffset)
+	if cursorVisual < offset+scrollMargin {
+		offset = max(0, cursorVisual-scrollMargin)
+	}
+	if cursorVisual >= offset+height-scrollMargin {
+		offset = cursorVisual - height + scrollMargin + 1
+	}
+	offset = min(offset, maxOffset)
+	m.visualScroll.offset = offset
+
+	// Second pass: render visible window from filtered list.
+	start := offset
+	end := min(start+height, len(filtered))
+	var allLines []string
+	linesWritten := 0
+
+	for i := start; i < end && linesWritten < height; i++ {
+		rl := filtered[i]
+
+		if rl.isSeparator {
+			allLines = append(allLines, ensureFullWidth("", width, pvBg))
+			linesWritten++
+			continue
+		}
+
+		pl := rl.previewLine
+		isCursorLine := pl.sourceLineNum == highlightSourceLine
+		lineBg := pvBg
+		if isCursorLine {
+			lineBg = theme.ReadingCursorBg
+		}
+
+		// Frontmatter value lines.
+		if pl.isFrontmatter {
+			var completeLine string
+			if pl.sourceLineNum < len(sourceLines) {
+				srcLine := sourceLines[pl.sourceLineNum]
+				if fmValueMap != nil && !isFrontmatterStructuralLine(srcLine) {
+					key := extractFrontmatterKey(srcLine)
+					if fg, ok := fmValueMap[key]; ok {
+						if isCursorLine {
+							completeLine = m.renderFrontmatterValueLineWithBg(key, fg, width, lineBg)
+						} else {
+							completeLine = m.renderFrontmatterValueLine(key, fg, width)
+						}
+					}
+				}
+			}
+			if completeLine == "" {
+				completeLine = ensureFullWidth("", width, lineBg)
+			}
+			allLines = append(allLines, completeLine)
+			linesWritten++
+			continue
+		}
+
+		// Apply background: highlight for cursor, maintain for non-cursor.
+		content := pl.content
+		if content != "" {
+			if isCursorLine {
+				content = replaceBackground(content, pvBg, lineBg)
+			} else {
+				content = maintainBackground(content, lineBg)
+			}
+		}
+		allLines = append(allLines, ensureFullWidth(content, width, lineBg))
+		linesWritten++
+	}
+
+	// Fill remaining space.
+	for i := linesWritten; i < height; i++ {
+		allLines = append(allLines, ensureFullWidth("", width, pvBg))
+	}
+
+	// Prepend left margin gutter.
+	gutter := lipgloss.NewStyle().Background(pvBg).Render(strings.Repeat(" ", readingMarginWidth))
+	for i, line := range allLines {
+		allLines[i] = gutter + line
+	}
+
 	return strings.Join(allLines, "\n")
 }
 
@@ -345,6 +635,24 @@ func (m Model) renderFrontmatterValueLine(name string, fg formattedGlobal, width
 
 	formatted := nameStyle.Render(fmt.Sprintf("%-18s", name)) + valueStyle.Render(fg.value)
 	return ensureFullWidth(formatted, width, pvBg)
+}
+
+// renderFrontmatterValueLineWithBg renders a frontmatter value line with a custom background,
+// used for cursor line highlighting in Reading mode.
+func (m Model) renderFrontmatterValueLineWithBg(name string, fg formattedGlobal, width int, bg color.Color) string {
+	nameStyle := lipgloss.NewStyle().
+		Foreground(theme.GlobalsVarName).
+		Background(bg)
+	valueStyle := lipgloss.NewStyle().
+		Foreground(theme.Result).
+		Background(bg)
+
+	if fg.isExchange {
+		nameStyle = nameStyle.Foreground(theme.GlobalsExchange)
+	}
+
+	formatted := nameStyle.Render(fmt.Sprintf("%-18s", name)) + valueStyle.Render(fg.value)
+	return ensureFullWidth(formatted, width, bg)
 }
 
 // renderCalcLine renders a single calculation line result.
@@ -422,7 +730,7 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 	}
 
 	switch m.previewMode {
-	case PreviewFull, PreviewRendered:
+	case PreviewFull, PreviewRendered, PreviewReading:
 		// Full/Rendered mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
 			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + scaleSuffix
