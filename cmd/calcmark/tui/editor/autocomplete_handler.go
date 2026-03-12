@@ -111,6 +111,15 @@ func (m Model) triggerAutocomplete() (tea.Model, tea.Cmd) {
 // updateAutocompleteState checks for suggestions at current prefix and updates popup state.
 // Called after every character typed to show/hide the popup automatically.
 func (m *Model) updateAutocompleteState() {
+	// No autocomplete inside frontmatter — it's YAML, not CalcMark.
+	if m.cursorLine < m.frontmatterLineCount() {
+		if m.mode == StateAutocomplete {
+			m.mode = StateDefault
+			m.autocompleteState = components.AutosuggestState{}
+		}
+		return
+	}
+
 	prefix := m.getCurrentWordPrefix()
 
 	if len(prefix) < minAutocompletePrefix {

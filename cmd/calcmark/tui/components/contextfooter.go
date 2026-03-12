@@ -52,19 +52,22 @@ type ContextFooterState struct {
 }
 
 // RenderContextFooter renders the context footer from the given state.
-// Pure function: takes state, width, and background color, returns string.
-// IMPORTANT: Always returns exactly ContextFooterHeight lines.
-func RenderContextFooter(state ContextFooterState, width int, bg color.Color) string {
-	// Helper to pad output to exactly ContextFooterHeight lines
+// Pure function: takes state, width, background color, and maxHeight.
+// IMPORTANT: Always returns exactly maxHeight lines.
+func RenderContextFooter(state ContextFooterState, width int, bg color.Color, maxHeight int) string {
+	if maxHeight < ContextFooterHeight {
+		maxHeight = ContextFooterHeight
+	}
+	// Helper to pad output to exactly maxHeight lines
 	padToHeight := func(content string) string {
 		lines := strings.Split(content, "\n")
-		for len(lines) < ContextFooterHeight {
+		for len(lines) < maxHeight {
 			// Add empty lines with background color to prevent terminal bleed-through
 			lines = append(lines, StyledPadding(width, bg))
 		}
-		// Truncate if somehow more than expected (shouldn't happen)
-		if len(lines) > ContextFooterHeight {
-			lines = lines[:ContextFooterHeight]
+		// Truncate if somehow more than expected
+		if len(lines) > maxHeight {
+			lines = lines[:maxHeight]
 		}
 		// Ensure each line has background color by padding to full width
 		for i, line := range lines {
@@ -184,12 +187,19 @@ func RenderContextFooter(state ContextFooterState, width int, bg color.Color) st
 		line1 := iconStyle.Render("⚠ ") + msgStyle.Render(shortMsg)
 		lines = append(lines, line1)
 
-		// Line 2: Hint/suggestion if available
+		// Lines 2+: Hint/suggestion, word-wrapped to fill available height.
 		if hint != "" {
-			line2 := bgText("  ") + hintStyle.Render(hint)
-			lines = append(lines, line2)
-		} else {
-			lines = append(lines, StyledPadding(width, bg))
+			hintPrefix := "  "
+			availWidth := max(width-lipgloss.Width(hintPrefix)-1, 10)
+			// Word-wrap the hint across available lines (maxHeight - 1 for the error line)
+			wrappedHint := wordWrapText(hint, availWidth)
+			maxHintLines := maxHeight - 1
+			for i, hLine := range wrappedHint {
+				if i >= maxHintLines {
+					break
+				}
+				lines = append(lines, bgText(hintPrefix)+hintStyle.Render(hLine))
+			}
 		}
 
 		// Ensure width constraints - lines already have background from styles above
@@ -224,4 +234,29 @@ func RenderContextFooter(state ContextFooterState, width int, bg color.Color) st
 		Render(content)
 
 	return padToHeight(line1)
+}
+
+// wordWrapText breaks text into lines at word boundaries to fit within maxWidth.
+// Returns at least one line even for empty input.
+func wordWrapText(text string, maxWidth int) []string {
+	if maxWidth <= 0 {
+		return []string{text}
+	}
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	var lines []string
+	currentLine := words[0]
+	for _, word := range words[1:] {
+		if len(currentLine)+1+len(word) <= maxWidth {
+			currentLine += " " + word
+		} else {
+			lines = append(lines, currentLine)
+			currentLine = word
+		}
+	}
+	lines = append(lines, currentLine)
+	return lines
 }

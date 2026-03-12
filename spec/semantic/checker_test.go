@@ -1,6 +1,7 @@
 package semantic
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -260,5 +261,88 @@ func TestFunctionCallArgumentValidation(t *testing.T) {
 		if d.Code != DiagUndefinedVariable {
 			t.Errorf("Expected diagnostic code %s, got %s", DiagUndefinedVariable, d.Code)
 		}
+	}
+}
+
+// TestLineOffsetInRedefinitionMessage verifies that when a line offset is set
+// (e.g., because frontmatter precedes the calc block), the "first defined at
+// line N" message uses the document-absolute line number, not the block-relative one.
+func TestLineOffsetInRedefinitionMessage(t *testing.T) {
+	// Simulate a document with 4 lines of frontmatter (lines 1-4),
+	// then a calc block starting at line 5.
+	// Block-relative line 1 → document line 5.
+	checker := NewChecker()
+	checker.SetLineOffset(4) // 4 frontmatter lines before this block
+
+	// First assignment: "x = 10" at block-relative line 1
+	nodes := []ast.Node{
+		&ast.Assignment{
+			Name:  "x",
+			Value: &ast.NumberLiteral{Value: "10"},
+			Range: &ast.Range{
+				Start: ast.Position{Line: 1, Column: 1},
+				End:   ast.Position{Line: 1, Column: 6},
+			},
+		},
+		// Second assignment: "x = 20" at block-relative line 2 — redefinition
+		&ast.Assignment{
+			Name:  "x",
+			Value: &ast.NumberLiteral{Value: "20"},
+			Range: &ast.Range{
+				Start: ast.Position{Line: 2, Column: 1},
+				End:   ast.Position{Line: 2, Column: 6},
+			},
+		},
+	}
+
+	diagnostics := checker.Check(nodes)
+	if len(diagnostics) == 0 {
+		t.Fatal("Expected a redefinition diagnostic")
+	}
+
+	msg := diagnostics[0].Message
+	// Should say "line 5" (4 offset + block line 1), NOT "line 1"
+	if !strings.Contains(msg, "line 5") {
+		t.Errorf("Expected 'line 5' (document-absolute) in message, got: %s", msg)
+	}
+	if strings.Contains(msg, "line 1") {
+		t.Errorf("Should NOT contain block-relative 'line 1', got: %s", msg)
+	}
+}
+
+// TestLineOffsetZeroPreservesOriginalBehavior verifies that when no line offset
+// is set (default 0), line numbers are unchanged.
+func TestLineOffsetZeroPreservesOriginalBehavior(t *testing.T) {
+	checker := NewChecker()
+	// No SetLineOffset call — default is 0
+
+	nodes := []ast.Node{
+		&ast.Assignment{
+			Name:  "x",
+			Value: &ast.NumberLiteral{Value: "10"},
+			Range: &ast.Range{
+				Start: ast.Position{Line: 1, Column: 1},
+				End:   ast.Position{Line: 1, Column: 6},
+			},
+		},
+		&ast.Assignment{
+			Name:  "x",
+			Value: &ast.NumberLiteral{Value: "20"},
+			Range: &ast.Range{
+				Start: ast.Position{Line: 2, Column: 1},
+				End:   ast.Position{Line: 2, Column: 6},
+			},
+		},
+	}
+
+	diagnostics := checker.Check(nodes)
+	if len(diagnostics) == 0 {
+		t.Fatal("Expected a redefinition diagnostic")
+	}
+
+	msg := diagnostics[0].Message
+	// With no offset, should say "line 1"
+	if !strings.Contains(msg, "line 1") {
+		t.Errorf("Expected 'line 1' with zero offset, got: %s", msg)
 	}
 }

@@ -258,16 +258,18 @@ func (m *Model) loadDocumentFromString(content, suggestedFilename string) {
 	m.resetForNewDocument(doc, eval, "", content)
 }
 
-// cyclePreviewMode cycles through preview modes: Full → Minimal → Rendered → Hidden → Full
+// cyclePreviewMode cycles through preview modes: Minimal → Rendered → Reading → Minimal
+// Full and Hidden modes are still available programmatically but not in the Ctrl+P cycle.
 func (m *Model) cyclePreviewMode() {
 	switch m.previewMode {
-	case PreviewFull:
-		m.previewMode = PreviewMinimal
 	case PreviewMinimal:
 		m.previewMode = PreviewRendered
 	case PreviewRendered:
-		m.previewMode = PreviewHidden
-	case PreviewHidden:
-		m.previewMode = PreviewFull
+		m.previewMode = PreviewReading
+	case PreviewReading:
+		m.previewMode = PreviewMinimal
+	default:
+		// From any other mode (Full, Hidden), enter the cycle at Minimal.
+		m.previewMode = PreviewMinimal
 	}
 }

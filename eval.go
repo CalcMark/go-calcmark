@@ -158,6 +158,7 @@ func convertDiagnostics(semDiags []semantic.Diagnostic) []Diagnostic {
 			Severity: Severity(d.Severity),
 			Code:     d.Code,
 			Message:  d.Message,
+			Detailed: d.Detailed,
 		}
 	}
 	return diags

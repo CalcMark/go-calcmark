@@ -61,7 +61,8 @@ func TestContextFooterShowsVariableReferences(t *testing.T) {
 			m.height = 24
 			m.cursorLine = tt.cursorLine
 
-			footer := m.renderContextFooter(80, m.GetLineResults())
+			results := m.GetLineResults()
+			footer := m.renderContextFooter(80, results, m.contextFooterHeight(results))
 
 			// Strip ANSI escape codes for content matching
 			plain := stripAnsi(footer)

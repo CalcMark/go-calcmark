@@ -55,16 +55,16 @@ type Block interface {
 // CalcBlock represents one or more consecutive calculation lines.
 // Like a Jupyter code cell.
 type CalcBlock struct {
-	source       []string     // Raw source lines
-	statements   []ast.Node   // Parsed AST nodes (one per line)
-	lastValue    types.Type   // Value of last statement
-	results      []types.Type // All statement results (for inline display)
-	variables    []string     // Variables defined in this block
-	dependencies []string     // Variables referenced from other blocks
-	err          error        // Evaluation error (legacy, prefer diagnostics)
-	diagnostics  []Diagnostic // Structured errors with position info
-	scaleExempt    []bool // Per-statement: true if statement references @scale
-	convertApplied []bool // Per-statement: true if convert_to actually changed the unit
+	source         []string     // Raw source lines
+	statements     []ast.Node   // Parsed AST nodes (one per line)
+	lastValue      types.Type   // Value of last statement
+	results        []types.Type // All statement results (for inline display)
+	variables      []string     // Variables defined in this block
+	dependencies   []string     // Variables referenced from other blocks
+	err            error        // Evaluation error (legacy, prefer diagnostics)
+	diagnostics    []Diagnostic // Structured errors with position info
+	scaleExempt    []bool       // Per-statement: true if statement references @scale
+	convertApplied []bool       // Per-statement: true if convert_to actually changed the unit
 	dirty          bool
 }
 

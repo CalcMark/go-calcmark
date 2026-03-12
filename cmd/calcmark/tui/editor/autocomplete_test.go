@@ -821,3 +821,42 @@ func TestAutocompleteNotSuppressedOutsideFunctionCall(t *testing.T) {
 		t.Error("function suggestions should appear outside function calls")
 	}
 }
+
+// TestAutocompleteSuppressedInFrontmatter verifies that autocomplete does not
+// trigger when the cursor is on a frontmatter line. Frontmatter is YAML, not
+// CalcMark — autocomplete suggestions (functions, variables) are irrelevant.
+func TestAutocompleteSuppressedInFrontmatter(t *testing.T) {
+	source := "---\nscale: 9\nconvert_to: si\n---\n\nv = 10 lb\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	// Move cursor to frontmatter line 2 ("convert_to: si") and type "conv"
+	m.cursorLine = 2
+	m.loadCurrentLineIntoEditBuffer()
+	m.cursorCol = len("conv") // simulate having typed "conv"
+
+	// Trigger autocomplete — should NOT activate on frontmatter lines
+	m.updateAutocompleteState()
+
+	if m.mode == StateAutocomplete {
+		t.Error("Autocomplete should not activate on frontmatter lines")
+	}
+	if m.autocompleteState.Visible {
+		t.Error("Autocomplete popup should not be visible on frontmatter lines")
+	}
+
+	// Same prefix on a calc line SHOULD trigger autocomplete
+	m.cursorLine = 5 // "v = 10 lb"
+	m.editBuf = "conv"
+	m.cursorCol = 4
+	m.updateAutocompleteState()
+
+	if m.mode != StateAutocomplete {
+		t.Error("Autocomplete should activate on calc lines with matching prefix")
+	}
+}

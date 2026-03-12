@@ -189,6 +189,15 @@ func (f *Frontmatter) SetGlobal(name, valueExpr string) {
 	f.rawSource = "" // Invalidate raw source — Serialize() will reconstruct
 }
 
+// LineCount returns the number of source lines occupied by the frontmatter
+// (including both --- delimiters). Returns 0 if no frontmatter is present.
+func (f *Frontmatter) LineCount() int {
+	if f == nil || f.rawSource == "" {
+		return 0
+	}
+	return strings.Count(f.rawSource, "\n")
+}
+
 // SetRawSource replaces the serialized frontmatter text (including --- delimiters
 // and trailing newline) without re-parsing YAML. This allows the TUI editor to
 // preserve user-typed text even when intermediate edits produce invalid YAML.

@@ -15,7 +15,6 @@ import (
 // ansiEscapeRe matches ANSI escape sequences (CSI sequences).
 var ansiEscapeRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
-
 // MarkdownRenderer provides line-by-line markdown rendering with 1:1 line mapping.
 // This is essential for maintaining vertical alignment between source and preview panes.
 type MarkdownRenderer struct {

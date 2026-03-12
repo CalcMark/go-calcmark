@@ -1,6 +1,10 @@
 package semantic
 
-import "github.com/CalcMark/go-calcmark/spec/ast"
+import (
+	"strings"
+
+	"github.com/CalcMark/go-calcmark/spec/ast"
+)
 
 // Severity represents the severity level of a diagnostic.
 type Severity int
@@ -72,4 +76,63 @@ const (
 	DiagInvalidDirective   = "invalid_directive"
 	DiagUndefinedGlobal    = "undefined_global"
 	DiagMissingFrontmatter = "missing_frontmatter"
+
+	// Frontmatter diagnostics
+	DiagFrontmatterValidation = "frontmatter_validation"
+
+	// Parse diagnostics
+	DiagParseError = "parse_error"
 )
+
+// HintForDiagnostic returns a user-facing hint for a diagnostic based on its
+// code and message. This is the canonical source of hint definitions — the TUI
+// layer delegates here rather than defining hints itself.
+func HintForDiagnostic(code, message string) string {
+	switch code {
+	case DiagUndefinedVariable:
+		varName := extractQuoted(message)
+		if varName != "" {
+			return "Define it above: " + varName + " = <value>"
+		}
+		return "Define the variable before using it"
+
+	case DiagDivisionByZero:
+		return "Check that divisor is not zero"
+
+	case DiagIncompatibleUnits:
+		return "Units must be compatible for this operation"
+
+	case DiagTypeMismatch:
+		return "Check that values are compatible types"
+
+	case DiagParseError:
+		return "Check syntax - see error message for details"
+
+	case DiagInvalidCurrencyCode:
+		return "Use a valid 3-letter currency code (e.g., USD, EUR)"
+
+	case DiagFrontmatterValidation:
+		// Extract valid options list from the error message if present.
+		// Error format: "... valid categories: All, Area, Currency, ..."
+		if idx := strings.Index(message, "valid categories: "); idx >= 0 {
+			return message[idx:]
+		}
+		return "Check frontmatter YAML syntax"
+
+	default:
+		return ""
+	}
+}
+
+// extractQuoted extracts the first double-quoted string from a message.
+func extractQuoted(msg string) string {
+	start := strings.Index(msg, "\"")
+	if start < 0 {
+		return ""
+	}
+	end := strings.Index(msg[start+1:], "\"")
+	if end < 0 {
+		return ""
+	}
+	return msg[start+1 : start+1+end]
+}

@@ -16,7 +16,8 @@ import (
 func footerObserver() optionV2 {
 	return WithObserverV2("footer", func(out io.Writer, m tea.Model) error {
 		model := m.(Model)
-		footer := model.renderContextFooter(80, model.GetLineResults())
+		results := model.GetLineResults()
+		footer := model.renderContextFooter(80, results, model.contextFooterHeight(results))
 		plain := stripAnsi(footer)
 
 		// Trim trailing whitespace from each line and join

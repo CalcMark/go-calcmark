@@ -124,6 +124,97 @@ c = undefined_var + 1
 	}
 }
 
+// TestRedefinitionLineNumberWithFrontmatter verifies that the "first defined
+// at line N" message in variable redefinition errors uses document-absolute
+// line numbers, not block-relative. With 4 lines of frontmatter, block-relative
+// line 1 becomes document line 5.
+func TestRedefinitionLineNumberWithFrontmatter(t *testing.T) {
+	source := "---\nexchange:\n  USD_EUR: 1.1\n---\nx = 10\nx = 20\n"
+	// Frontmatter: lines 1-4 (---\nexchange:\n  USD_EUR: 1.1\n---\n)
+	// x = 10 at document line 5
+	// x = 20 at document line 6 (redefinition)
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument error: %v", err)
+	}
+
+	eval := NewEvaluator()
+	_ = eval.Evaluate(doc) // redefinition error expected
+
+	// Find the calc block
+	var cb *document.CalcBlock
+	for _, node := range doc.GetBlocks() {
+		if b, ok := node.Block.(*document.CalcBlock); ok {
+			cb = b
+			break
+		}
+	}
+	if cb == nil {
+		t.Fatal("expected a calc block")
+	}
+
+	diags := cb.Diagnostics()
+	if len(diags) == 0 {
+		t.Fatal("expected a redefinition diagnostic")
+	}
+
+	msg := diags[0].Message
+	// Should say "line 5" (document-absolute), not "line 1" (block-relative)
+	if !strings.Contains(msg, "line 5") {
+		t.Errorf("Expected 'line 5' (document-absolute) in message, got: %s", msg)
+	}
+	if strings.Contains(msg, "line 1") {
+		t.Errorf("Should NOT contain block-relative 'line 1', got: %s", msg)
+	}
+
+	// DocLine should carry the document-absolute line of the error itself (line 6)
+	if diags[0].DocLine != 6 {
+		t.Errorf("DocLine = %d, want 6 (document-absolute line of redefinition)", diags[0].DocLine)
+	}
+	// Line should still be block-relative for internal use
+	if diags[0].Line != 2 {
+		t.Errorf("Line = %d, want 2 (block-relative)", diags[0].Line)
+	}
+}
+
+// TestRedefinitionLineNumberWithoutFrontmatter verifies that without frontmatter,
+// the line number in the redefinition message is the plain document line.
+func TestRedefinitionLineNumberWithoutFrontmatter(t *testing.T) {
+	source := "x = 10\nx = 20\n"
+	// x = 10 at document line 1
+	// x = 20 at document line 2 (redefinition)
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument error: %v", err)
+	}
+
+	eval := NewEvaluator()
+	_ = eval.Evaluate(doc)
+
+	var cb *document.CalcBlock
+	for _, node := range doc.GetBlocks() {
+		if b, ok := node.Block.(*document.CalcBlock); ok {
+			cb = b
+			break
+		}
+	}
+	if cb == nil {
+		t.Fatal("expected a calc block")
+	}
+
+	diags := cb.Diagnostics()
+	if len(diags) == 0 {
+		t.Fatal("expected a redefinition diagnostic")
+	}
+
+	msg := diags[0].Message
+	if !strings.Contains(msg, "line 1") {
+		t.Errorf("Expected 'line 1' in message, got: %s", msg)
+	}
+}
+
 func TestEvaluatorDiagnostics(t *testing.T) {
 	tests := []struct {
 		name           string

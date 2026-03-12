@@ -420,3 +420,32 @@ func TestGetHintForDiagnostic_FrontmatterValidation(t *testing.T) {
 		})
 	}
 }
+
+// TestGetHintForDiagnostic_PrefersDetailed verifies that when a diagnostic
+// carries a Detailed field from the semantic checker, GetHintForDiagnostic
+// uses it instead of computing a generic hint from the code.
+func TestGetHintForDiagnostic_PrefersDetailed(t *testing.T) {
+	// Diagnostic with Detailed set — should use Detailed verbatim
+	diag := &document.Diagnostic{
+		Code:     "undefined_variable",
+		Message:  `Undefined variable "budget"`,
+		Detailed: "Defined variables: income, tax_rate, expenses",
+	}
+	got := GetHintForDiagnostic(diag)
+	if got != diag.Detailed {
+		t.Errorf("Expected Detailed field %q, got %q", diag.Detailed, got)
+	}
+
+	// Same code but without Detailed — should fall back to semantic hint
+	diagNoDetailed := &document.Diagnostic{
+		Code:    "undefined_variable",
+		Message: `Undefined variable "budget"`,
+	}
+	got2 := GetHintForDiagnostic(diagNoDetailed)
+	if got2 == "" {
+		t.Error("Expected fallback hint when Detailed is empty, got empty string")
+	}
+	if got2 == diag.Detailed {
+		t.Error("Should not produce the same output as Detailed when Detailed is empty")
+	}
+}

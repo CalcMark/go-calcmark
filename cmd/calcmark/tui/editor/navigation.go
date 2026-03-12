@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 )
 
 // ========================================
@@ -468,9 +469,18 @@ func (m *Model) moveCursor(dLine, dCol int) {
 }
 
 // getVisibleHeight returns the number of visible content lines in the viewport.
-// This accounts for the 6-line overhead from status bar, title, etc.
+// Uses the same dynamic footer height formula as View() to ensure the scroll
+// system and renderer agree on available space. Returns contentHeight (which
+// includes the header row) since the scroll system counts source lines only.
+//
+// Performance: calls GetLineResults() + contextFooterHeight() to compute the
+// exact same value as View(). GetLineResults iterates blocks but does not
+// re-evaluate — this is O(lines), not O(eval).
 func (m *Model) getVisibleHeight() int {
-	return m.height - 6
+	results := m.GetLineResults()
+	footerHeight := m.contextFooterHeight(results)
+	// Identical to View(): contentHeight = max(totalHeight - StatusBarHeight - footerHeight - 2, 5)
+	return max(m.height-components.StatusBarHeight-footerHeight-2, 5)
 }
 
 // adjustScrollForCursor ensures the cursor is visible within the viewport,

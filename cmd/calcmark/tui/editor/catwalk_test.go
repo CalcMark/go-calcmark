@@ -95,10 +95,10 @@ z = 30`
 			"autocomplete_nl",                     // TestEditorCatwalkAutocompleteNL
 			"diagnostic_wrong_line",               // TestEditorCatwalkDiagnosticLine
 			"diagnostic_wrong_line_compound",      // TestEditorCatwalkDiagnosticLine
-			"frontmatter_type_dashes",            // TestEditorCatwalkFrontmatterTypeDashes
-			"scale_double_bug",                   // TestEditorCatwalkScaleDoubleBug
-			"scale_invalid_category",             // TestEditorCatwalkScaleInvalidCategory
-			"scale_invalid_view",                 // TestEditorCatwalkScaleInvalidView
+			"frontmatter_type_dashes",             // TestEditorCatwalkFrontmatterTypeDashes
+			"scale_double_bug",                    // TestEditorCatwalkScaleDoubleBug
+			"scale_invalid_category",              // TestEditorCatwalkScaleInvalidCategory
+			"scale_invalid_view",                  // TestEditorCatwalkScaleInvalidView
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {

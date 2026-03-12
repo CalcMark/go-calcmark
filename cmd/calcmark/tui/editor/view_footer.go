@@ -10,7 +10,8 @@ import (
 
 // renderContextFooter renders the context footer showing errors or referenced variables.
 // Delegates to components.RenderContextFooter with prepared state.
-func (m Model) renderContextFooter(width int, results []LineResult) string {
+// maxHeight controls the footer height (2 normally, up to 4 on error lines).
+func (m Model) renderContextFooter(width int, results []LineResult, maxHeight int) string {
 
 	// Build state for the pure render function
 	state := components.ContextFooterState{}
@@ -20,17 +21,28 @@ func (m Model) renderContextFooter(width int, results []LineResult) string {
 		currentResult := results[m.cursorLine]
 		state.IsCalcLine = currentResult.IsCalc || currentResult.IsFrontmatter
 
-		// Show errors for any line type (calc, frontmatter, text).
-		// Previously gated on IsCalc, which made frontmatter errors invisible.
-		if currentResult.Error != "" {
+		// Find the effective error for this line. For frontmatter lines the
+		// error lives on the closing --- but applies to the whole block.
+		// Uses the same helper as contextFooterHeight to keep height and
+		// content in sync (pure-functional-layout-calculations pattern).
+		if errResult := m.effectiveErrorForLine(results); errResult != nil {
 			state.HasError = true
-			state.Diagnostic = currentResult.Diagnostic
 
-			// If no structured diagnostic, parse the error string for display
-			if state.Diagnostic == nil {
-				errInfo := components.ParseErrorForDisplay(currentResult.Error)
-				state.ErrorMessage = errInfo.ShortMessage
-				state.ErrorHint = errInfo.Hint
+			if errResult.IsBlocked {
+				// Blocked errors are caused by an undefined variable from a prior
+				// error. Show a brief message instead of the full diagnostic so the
+				// user focuses on the root cause. Footer stays compact (2 lines).
+				state.ErrorMessage = components.CleanErrorMessage(errResult.Error)
+				state.ErrorHint = "Caused by error above — fix it first"
+			} else {
+				state.Diagnostic = errResult.Diagnostic
+
+				// If no structured diagnostic, parse the error string for display
+				if state.Diagnostic == nil {
+					errInfo := components.ParseErrorForDisplay(errResult.Error)
+					state.ErrorMessage = errInfo.ShortMessage
+					state.ErrorHint = errInfo.Hint
+				}
 			}
 		}
 
@@ -99,7 +111,7 @@ func (m Model) renderContextFooter(width int, results []LineResult) string {
 		contextFooterBg = m.sourcePaneBg() // Fallback to source pane background
 	}
 
-	return components.RenderContextFooter(state, width, contextFooterBg)
+	return components.RenderContextFooter(state, width, contextFooterBg, maxHeight)
 }
 
 // getLineReferences returns variables referenced in the given line.

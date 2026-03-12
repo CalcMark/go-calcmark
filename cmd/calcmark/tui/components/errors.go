@@ -6,6 +6,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/semantic"
 )
 
 // ErrorDisplayInfo contains parsed error information for display.
@@ -16,104 +17,61 @@ type ErrorDisplayInfo struct {
 }
 
 // GetHintForDiagnostic returns a helpful hint based on the structured diagnostic.
+// Prefers the Detailed field populated by the semantic checker. Falls back to
+// semantic.HintForDiagnostic for diagnostics that lack Detailed (e.g. synthetic
+// frontmatter diagnostics created in the TUI layer).
 func GetHintForDiagnostic(diag *document.Diagnostic) string {
-	switch diag.Code {
-	case "undefined_variable":
-		// Extract variable name from message: `Undefined variable "varname" - ...`
-		varName := ExtractQuotedString(diag.Message)
-		if varName != "" {
-			return fmt.Sprintf("Define it above: %s = <value>", varName)
-		}
-		return "Define the variable before using it"
-
-	case "division_by_zero":
-		return "Check that divisor is not zero"
-
-	case "incompatible_units":
-		return "Units must be compatible for this operation"
-
-	case "type_mismatch":
-		return "Check that values are compatible types"
-
-	case "parse_error":
-		return "Check syntax - see error message for details"
-
-	case "invalid_currency_code":
-		return "Use a valid 3-letter currency code (e.g., USD, EUR)"
-
-	case "frontmatter_validation":
-		// Extract valid options list from the error message if present.
-		// Error format: "... valid categories: All, Area, Currency, ..."
-		if idx := strings.Index(diag.Message, "valid categories: "); idx >= 0 {
-			validList := diag.Message[idx:]
-			return validList
-		}
-		return "Check frontmatter YAML syntax"
-
-	default:
-		return ""
+	if diag.Detailed != "" {
+		return diag.Detailed
 	}
+	return semantic.HintForDiagnostic(diag.Code, diag.Message)
 }
 
 // ParseErrorForDisplay extracts structured error information for user-friendly display.
 // Used as a fallback when structured diagnostics aren't available.
+// Infers the diagnostic code from the error message text, then delegates hint
+// generation to semantic.HintForDiagnostic.
 func ParseErrorForDisplay(errMsg string) ErrorDisplayInfo {
 	info := ErrorDisplayInfo{}
 
 	lowerErr := strings.ToLower(errMsg)
 
-	// Handle: "undefined_variable: Undefined variable \"varname\" - ..."
-	// or: "undefined variable: \"varname\""
-	if strings.Contains(lowerErr, "undefined variable") || strings.Contains(lowerErr, "undefined_variable") {
-		// Extract variable name from quotes
+	// Infer diagnostic code from error message text
+	switch {
+	case strings.Contains(lowerErr, "undefined variable") || strings.Contains(lowerErr, "undefined_variable"):
 		varName := ExtractQuotedString(errMsg)
 		if varName != "" {
-			info.Code = "undefined_variable"
+			info.Code = semantic.DiagUndefinedVariable
 			info.ShortMessage = fmt.Sprintf("Undefined variable: %s", varName)
-			info.Hint = fmt.Sprintf("Define it above: %s = <value>", varName)
-			return info
 		}
-	}
 
-	// Handle: "division_by_zero" or "division by zero"
-	if strings.Contains(lowerErr, "division") && strings.Contains(lowerErr, "zero") {
-		info.Code = "division_by_zero"
+	case strings.Contains(lowerErr, "division") && strings.Contains(lowerErr, "zero"):
+		info.Code = semantic.DiagDivisionByZero
 		info.ShortMessage = "Division by zero"
-		info.Hint = "Check that divisor is not zero"
-		return info
-	}
 
-	// Handle: "incompatible units" or "incompatible_units"
-	if strings.Contains(lowerErr, "incompatible") && strings.Contains(lowerErr, "unit") {
-		info.Code = "incompatible_units"
-		// Try to extract units from message
+	case strings.Contains(lowerErr, "incompatible") && strings.Contains(lowerErr, "unit"):
+		info.Code = semantic.DiagIncompatibleUnits
 		info.ShortMessage = CleanErrorMessage(errMsg)
-		info.Hint = "Units must be compatible for this operation"
-		return info
-	}
 
-	// Handle: "type_mismatch" or "type mismatch"
-	if strings.Contains(lowerErr, "type") && strings.Contains(lowerErr, "mismatch") {
-		info.Code = "type_mismatch"
+	case strings.Contains(lowerErr, "type") && strings.Contains(lowerErr, "mismatch"):
+		info.Code = semantic.DiagTypeMismatch
 		info.ShortMessage = CleanErrorMessage(errMsg)
-		info.Hint = "Check that values are compatible types"
-		return info
-	}
 
-	// Handle: frontmatter validation errors (e.g., "invalid unit category")
-	if strings.Contains(lowerErr, "frontmatter") && strings.Contains(lowerErr, "invalid") {
-		info.Code = "frontmatter_validation"
+	case strings.Contains(lowerErr, "frontmatter") && strings.Contains(lowerErr, "invalid"):
+		info.Code = semantic.DiagFrontmatterValidation
 		info.ShortMessage = CleanErrorMessage(errMsg)
-		if idx := strings.Index(errMsg, "valid categories: "); idx >= 0 {
-			info.Hint = errMsg[idx:]
-		} else {
-			info.Hint = "Check frontmatter YAML syntax"
-		}
-		return info
 	}
 
-	// Default: clean up the raw error message
-	info.ShortMessage = CleanErrorMessage(errMsg)
+	// Get hint from semantic layer
+	if info.Code != "" {
+		info.Hint = semantic.HintForDiagnostic(info.Code, errMsg)
+	}
+
+	// Default short message if not set above
+	if info.ShortMessage == "" {
+		info.ShortMessage = CleanErrorMessage(errMsg)
+	}
+
 	return info
 }
 

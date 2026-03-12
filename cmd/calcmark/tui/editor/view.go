@@ -90,8 +90,17 @@ func (m Model) View() tea.View {
 	totalWidth := m.width
 	totalHeight := m.height
 
-	// Reserve space: status bar + context footer (2) + separator (1) + empty line (1)
-	contentHeight := max(totalHeight-components.StatusBarHeight-4, 5)
+	// Compute line results ONCE per frame and pass to all sub-renderers.
+	// Must happen before height calculation because footer height depends on
+	// whether the cursor line has an error.
+	results := m.GetLineResults()
+
+	// Determine context footer height: 2 lines normally, up to 4 on error lines.
+	// Must be computed before contentHeight since it affects the height budget.
+	footerHeight := m.contextFooterHeight(results)
+
+	// Reserve space: status bar + context footer + separator (1) + empty line (1)
+	contentHeight := max(totalHeight-components.StatusBarHeight-footerHeight-2, 5)
 
 	// Calculate pane widths based on preview mode using centralized configuration
 	leftWidth, rightWidth := m.GetPaneWidths(totalWidth)
@@ -114,9 +123,6 @@ func (m Model) View() tea.View {
 
 	// Pane content height (minus header row)
 	paneContentHeight := max(contentHeight-1, 3)
-
-	// Compute line results ONCE per frame and pass to all sub-renderers.
-	results := m.GetLineResults()
 
 	// CRITICAL: Compute aligned line structure ONCE to avoid cycles.
 	// Both widths are fixed, and we compute wrapping/padding based on them.
@@ -209,7 +215,7 @@ func (m Model) View() tea.View {
 	allUILines = append(allUILines, emptyLine)
 
 	// Context footer (variables referenced in current line)
-	contextFooter := m.renderContextFooter(totalWidth, results)
+	contextFooter := m.renderContextFooter(totalWidth, results, footerHeight)
 	// The context footer is already multiple lines, so we need to handle each line
 	contextFooterLines := strings.Split(contextFooter, "\n")
 	for i, line := range contextFooterLines {
@@ -303,6 +309,92 @@ func (m Model) computeAlignedPanes(sourceWidth, previewWidth int, results []Line
 		previewLines:   previewLines,
 		sourceToVisual: aligned.SourceToVisual,
 	}
+}
+
+// contextFooterHeight determines the height of the context footer based on
+// whether the cursor line has an error. Returns ContextFooterHeight (2) by
+// default, expanding up to 4 when the cursor is on an error line with a hint.
+// Autocomplete and function-help override errors (lower priority number wins),
+// so the footer stays at default height when those are active.
+func (m Model) contextFooterHeight(results []LineResult) int {
+	// Autocomplete active → keep 2-line footer to maximize popup space.
+	// Function help (P0.5) also renders 2 lines of content; if the footer
+	// happens to be taller (error on same line), padToHeight fills the extra
+	// rows with background — no visual artifacts. Checking function context
+	// here would require editBuf to be loaded, adding coupling for marginal gain.
+	if m.mode == StateAutocomplete && m.autocompleteState.Visible {
+		return components.ContextFooterHeight
+	}
+
+	// Check if cursor line has an error (including frontmatter block errors)
+	if r := m.effectiveErrorForLine(results); r != nil {
+		// Blocked errors stay compact — the user should fix the root cause.
+		if r.IsBlocked {
+			return components.ContextFooterHeight
+		}
+		// Compute how many lines the hint needs
+		hint := ""
+		if r.Diagnostic != nil {
+			hint = components.GetHintForDiagnostic(r.Diagnostic)
+		} else {
+			errInfo := components.ParseErrorForDisplay(r.Error)
+			hint = errInfo.Hint
+		}
+		if hint != "" {
+			// Line 1: error message, Lines 2+: hint (word-wrapped).
+			// Cap at 4 lines total.
+			return min(4, 2+countWrappedLines(hint, m.width-4))
+		}
+		// Error with no hint: stay at 2
+	}
+	return components.ContextFooterHeight
+}
+
+// effectiveErrorForLine returns the LineResult carrying the error that applies
+// to the cursor line. For most lines this is the line itself. For frontmatter
+// lines, the error is only attached to the closing --- delimiter, but it applies
+// to the whole block — so when the cursor is on any frontmatter line, we find
+// and return the closing line's result. Returns nil if there is no error.
+func (m Model) effectiveErrorForLine(results []LineResult) *LineResult {
+	if m.cursorLine >= len(results) {
+		return nil
+	}
+	r := results[m.cursorLine]
+	if r.Error != "" {
+		return &r
+	}
+	// For frontmatter lines without a direct error, look for the block error
+	// on the closing --- line.
+	if r.IsFrontmatter && m.frontmatterErr != nil {
+		for i := len(results) - 1; i >= 0; i-- {
+			if results[i].IsFrontmatter && results[i].Error != "" {
+				return &results[i]
+			}
+		}
+	}
+	return nil
+}
+
+// countWrappedLines returns how many visual lines a string takes at the given width.
+func countWrappedLines(s string, width int) int {
+	if width <= 0 || s == "" {
+		return 1
+	}
+	lines := 1
+	col := 0
+	for _, r := range s {
+		if r == '\n' {
+			lines++
+			col = 0
+			continue
+		}
+		col++
+		if col >= width {
+			lines++
+			col = 0
+		}
+	}
+	return lines
 }
 
 // computeAlignedModelFresh computes a fresh AlignedModel without caching.

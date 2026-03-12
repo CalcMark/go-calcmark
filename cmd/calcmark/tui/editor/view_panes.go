@@ -70,7 +70,6 @@ func (s *readingNavState) prevVisible(current int) int {
 	return prev
 }
 
-
 // visualScrollState holds the persisted visual scroll offset between frames.
 // Shared via pointer so Bubble Tea's value-copied Model in View() can read/write
 // the same state as Update(). This is safe because Bubble Tea guarantees
@@ -113,9 +112,7 @@ func (m Model) computeVisualScroll(aligned alignedPanes, visibleLines int) int {
 	offset = min(offset, maxOffset)
 
 	// Only adjust if cursor is outside the current viewport.
-	if cursorVisualLine < offset {
-		offset = cursorVisualLine
-	}
+	offset = min(offset, cursorVisualLine)
 	if cursorVisualLine >= offset+visibleLines {
 		offset = cursorVisualLine - visibleLines + 1
 	}
@@ -390,9 +387,9 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 // readingVisualLine is a pre-processed line for Reading mode rendering.
 // Built in a first pass to enable correct scrolling within the filtered line set.
 type readingVisualLine struct {
-	previewLine            // embedded original line (may be zero-value for separators)
-	isSeparator bool       // inserted block-transition separator
-	sourceLineNum int      // source line this maps to (-1 for separators)
+	previewLine        // embedded original line (may be zero-value for separators)
+	isSeparator   bool // inserted block-transition separator
+	sourceLineNum int  // source line this maps to (-1 for separators)
 }
 
 // renderReadingPane renders the preview pane in Reading mode with independent scrolling.

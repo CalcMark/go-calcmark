@@ -113,6 +113,7 @@ type Checker struct {
 	env         *Environment
 	diagnostics []Diagnostic
 	frontmatter FrontmatterInfo // optional; enables @directive validation
+	lineOffset  int             // added to block-relative line numbers to produce document-absolute lines
 }
 
 // NewChecker creates a new semantic checker with an empty environment.
@@ -130,6 +131,14 @@ func NewCheckerWithEnv(env *Environment) *Checker {
 		env:         env,
 		diagnostics: make([]Diagnostic, 0),
 	}
+}
+
+// SetLineOffset sets the number of lines preceding this calc block in the
+// document (e.g. frontmatter lines). Line numbers embedded in diagnostic
+// messages are adjusted by this offset so they are document-absolute rather
+// than block-relative.
+func (c *Checker) SetLineOffset(offset int) {
+	c.lineOffset = offset
 }
 
 // SetFrontmatter provides frontmatter context for @directive validation.
@@ -200,7 +209,7 @@ func (c *Checker) checkAssignment(a *ast.Assignment) {
 		msg := "cannot reassign '" + a.Name + "' — variables are immutable"
 		if existing.Range != nil {
 			msg += " (first defined at line " +
-				strconv.Itoa(existing.Range.Start.Line+1) + ")"
+				strconv.Itoa(existing.Range.Start.Line+c.lineOffset) + ")"
 		}
 
 		c.diagnostics = append(c.diagnostics, Diagnostic{

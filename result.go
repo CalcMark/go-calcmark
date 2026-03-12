@@ -22,6 +22,7 @@ type Diagnostic struct {
 	Severity Severity
 	Code     string
 	Message  string
+	Detailed string // Detailed explanation with context and guidance
 }
 
 // Severity indicates the severity level of a diagnostic.

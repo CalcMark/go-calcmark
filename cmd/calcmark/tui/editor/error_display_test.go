@@ -95,10 +95,10 @@ func TestErrorDisplayInContextFooter(t *testing.T) {
 		t.Error("View should show undefined variable name 'undefined_var'")
 	}
 
-	// Should show hint about how to fix
-	if !strings.Contains(view, "Define it above") {
+	// Should show hint from semantic checker (lists defined variables)
+	if !strings.Contains(view, "Defined variables") {
 		t.Logf("VIEW:\n%s", view)
-		t.Error("View should show hint about defining the variable")
+		t.Error("View should show hint about defined variables from semantic checker")
 	}
 
 	// Should NOT show raw error code format
