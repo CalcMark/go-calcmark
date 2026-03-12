@@ -10,8 +10,8 @@
 # have appeared while typing. Without it, Enter accepts the suggestion
 # instead of creating a newline.
 #
-# Shows: @scale, @convert_to, {{interpolation}}, NL sum, percentage widening,
-# @scale directive reference, unit conversion.
+# Shows: frontmatter @scale, custom units (patties/buns/cans), NL sum,
+# percentage widening, currency, and an error (undefined variable).
 Output site/assets/images/hero.gif
 
 Set Shell "bash"
@@ -34,7 +34,7 @@ Show
 # Wait for the TUI editor to render
 Sleep 2s
 
-# Frontmatter — type the opening delimiter and content
+# --- Frontmatter ---
 Type "---"
 Sleep 500ms
 Escape
@@ -47,19 +47,13 @@ Escape
 Enter
 Sleep 1s
 
-Type "  factor: 4"
+Type "  factor: 2"
 Sleep 300ms
 Escape
 Enter
 Sleep 1s
 
-Type "  unit_categories: [Mass, Volume]"
-Sleep 300ms
-Escape
-Enter
-Sleep 1s
-
-Type "convert_to: si"
+Type "  unit_categories: [Custom]"
 Sleep 300ms
 Escape
 Enter
@@ -71,8 +65,8 @@ Escape
 Enter
 Sleep 1.5s
 
-# Markdown heading
-Type "# Party Guacamole"
+# --- Content ---
+Type "# BBQ Shopping"
 Escape
 Enter
 Sleep 1s
@@ -81,8 +75,39 @@ Escape
 Enter
 Sleep 1s
 
-# Prose with interpolation placeholders
-Type "Makes {{servings}} -- needs {{avocados}} of avocados."
+Type "burgers = 8 patties"
+Escape
+Enter
+Sleep 1s
+
+Type "buns = 10 buns"
+Escape
+Enter
+Sleep 1s
+
+Type "drinks = 12 cans"
+Escape
+Enter
+Sleep 1s
+
+Type "meat = $32"
+Escape
+Enter
+Sleep 1s
+
+Type "sides = $15"
+Escape
+Enter
+Sleep 1s
+
+# NL function
+Type "total = sum of meat, sides, $5"
+Escape
+Enter
+Sleep 1s
+
+# Percentage widening
+Type "tip = total + 15%"
 Escape
 Enter
 Sleep 1s
@@ -91,8 +116,8 @@ Escape
 Enter
 Sleep 1s
 
-# Section heading
-Type "## Ingredients (1 batch)"
+# Markdown context before the error
+Type "## Get help when things go wrong"
 Escape
 Enter
 Sleep 1s
@@ -101,83 +126,9 @@ Escape
 Enter
 Sleep 1s
 
-# Recipe variables (scaled + converted by frontmatter)
-Type "avocados = 3 avocados"
-Escape
-Enter
-Sleep 1s
-
-Type "lime_juice = 2 tablespoons"
-Escape
-Enter
-Sleep 1s
-
-Type "onion = 0.25 cups"
-Escape
-Enter
-Sleep 1s
-
-Type "servings = 4 servings"
-Escape
-Enter
-Sleep 1s
-
-Escape
-Enter
-Sleep 1s
-
-# Cost section
-Type "## Cost"
-Escape
-Enter
-Sleep 1s
-
-Escape
-Enter
-Sleep 1s
-
-Type "ingredients = $6.50"
-Escape
-Enter
-Sleep 1s
-
-Type "with_tax = ingredients + 8%"
-Escape
-Enter
-Sleep 1s
-
-Type "per_batch = with_tax / @scale"
-Escape
-Enter
-Sleep 1s
-
-# NL function: sum
-Type "sum of ingredients, $2, $1.50"
-Escape
-Enter
-Sleep 1s
-
-Escape
-Enter
-Sleep 1s
-
-# Unit conversions
-Type "## Quick math"
-Escape
-Enter
-Sleep 1s
-
-Escape
-Enter
-Sleep 1s
-
-Type "500 grams in oz"
-Escape
-Enter
-Sleep 1s
-
-Type "350 fahrenheit in celsius"
-Sleep 1.5s
+# Error: undefined variable — shows diagnostic footer
+Type "per_person = tip / guests"
+Sleep 2s
 
 Escape
 Enter
