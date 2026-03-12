@@ -54,6 +54,10 @@ func (m *Model) GetLineResults() []LineResult {
 			// Show frontmatter error on the closing --- line (last frontmatter line)
 			if m.frontmatterErr != nil && i == fmCount-1 {
 				lr.Error = m.frontmatterErr.Error()
+				lr.Diagnostic = &document.Diagnostic{
+					Code:    "frontmatter_validation",
+					Message: m.frontmatterErr.Error(),
+				}
 			}
 			results = append(results, lr)
 			lineNum++

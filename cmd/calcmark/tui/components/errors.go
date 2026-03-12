@@ -41,6 +41,15 @@ func GetHintForDiagnostic(diag *document.Diagnostic) string {
 	case "invalid_currency_code":
 		return "Use a valid 3-letter currency code (e.g., USD, EUR)"
 
+	case "frontmatter_validation":
+		// Extract valid options list from the error message if present.
+		// Error format: "... valid categories: All, Area, Currency, ..."
+		if idx := strings.Index(diag.Message, "valid categories: "); idx >= 0 {
+			validList := diag.Message[idx:]
+			return validList
+		}
+		return "Check frontmatter YAML syntax"
+
 	default:
 		return ""
 	}
@@ -91,6 +100,18 @@ func ParseErrorForDisplay(errMsg string) ErrorDisplayInfo {
 		return info
 	}
 
+	// Handle: frontmatter validation errors (e.g., "invalid unit category")
+	if strings.Contains(lowerErr, "frontmatter") && strings.Contains(lowerErr, "invalid") {
+		info.Code = "frontmatter_validation"
+		info.ShortMessage = CleanErrorMessage(errMsg)
+		if idx := strings.Index(errMsg, "valid categories: "); idx >= 0 {
+			info.Hint = errMsg[idx:]
+		} else {
+			info.Hint = "Check frontmatter YAML syntax"
+		}
+		return info
+	}
+
 	// Default: clean up the raw error message
 	info.ShortMessage = CleanErrorMessage(errMsg)
 	return info
@@ -111,6 +132,12 @@ func ExtractQuotedString(msg string) string {
 
 // CleanErrorMessage removes redundant prefixes and cleans up error messages.
 func CleanErrorMessage(errMsg string) string {
+	// Remove repeated "frontmatter: " prefixes (caused by double-wrapping in
+	// ParseFrontmatter and NewDocument).
+	for strings.HasPrefix(errMsg, "frontmatter: frontmatter: ") {
+		errMsg = errMsg[len("frontmatter: "):]
+	}
+
 	// Remove error code prefixes like "undefined_variable: "
 	if idx := strings.Index(errMsg, ": "); idx > 0 && idx < 30 {
 		prefix := errMsg[:idx]

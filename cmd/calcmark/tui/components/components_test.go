@@ -3,6 +3,8 @@ package components
 import (
 	"strings"
 	"testing"
+
+	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
 func TestRenderStatusBar(t *testing.T) {
@@ -341,5 +343,80 @@ func TestVariableSuggestionSource(t *testing.T) {
 	filtered := source.GetSuggestions("a")
 	if len(filtered) != 2 { // alpha, average
 		t.Errorf("Expected 2 suggestions for 'a', got %d", len(filtered))
+	}
+}
+
+func TestCleanErrorMessage(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "double frontmatter prefix",
+			input: `frontmatter: frontmatter: invalid unit category "Weight"`,
+			want:  `invalid unit category "Weight"`,
+		},
+		{
+			name:  "triple frontmatter prefix",
+			input: `frontmatter: frontmatter: frontmatter: bad`,
+			want:  `bad`,
+		},
+		{
+			name:  "single frontmatter prefix",
+			input: `frontmatter: invalid YAML`,
+			want:  `invalid YAML`,
+		},
+		{
+			name:  "snake_case error code",
+			input: `undefined_variable: Undefined variable "x"`,
+			want:  `Undefined variable "x"`,
+		},
+		{
+			name:  "no prefix",
+			input: "Division by zero",
+			want:  "Division by zero",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CleanErrorMessage(tt.input)
+			if got != tt.want {
+				t.Errorf("CleanErrorMessage(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetHintForDiagnostic_FrontmatterValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		message string
+		want    string
+	}{
+		{
+			name:    "invalid unit category with valid list",
+			message: `frontmatter: invalid unit category "Weight" in scale.unit_categories; valid categories: All, Area, Currency, Custom`,
+			want:    "valid categories: All, Area, Currency, Custom",
+		},
+		{
+			name:    "generic frontmatter error",
+			message: "frontmatter: unexpected key 'foo'",
+			want:    "Check frontmatter YAML syntax",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diag := &document.Diagnostic{
+				Code:    "frontmatter_validation",
+				Message: tt.message,
+			}
+			got := GetHintForDiagnostic(diag)
+			if got != tt.want {
+				t.Errorf("GetHintForDiagnostic() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

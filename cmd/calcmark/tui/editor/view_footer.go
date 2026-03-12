@@ -18,9 +18,11 @@ func (m Model) renderContextFooter(width int, results []LineResult) string {
 	// Check bounds
 	if m.cursorLine < len(results) {
 		currentResult := results[m.cursorLine]
-		state.IsCalcLine = currentResult.IsCalc
+		state.IsCalcLine = currentResult.IsCalc || currentResult.IsFrontmatter
 
-		if currentResult.IsCalc && currentResult.Error != "" {
+		// Show errors for any line type (calc, frontmatter, text).
+		// Previously gated on IsCalc, which made frontmatter errors invisible.
+		if currentResult.Error != "" {
 			state.HasError = true
 			state.Diagnostic = currentResult.Diagnostic
 
@@ -33,7 +35,7 @@ func (m Model) renderContextFooter(width int, results []LineResult) string {
 		}
 
 		// Get variable references if no error
-		if !state.HasError && state.IsCalcLine {
+		if !state.HasError && currentResult.IsCalc {
 			state.References = m.getLineReferences(m.cursorLine, results)
 
 			// When the current line is scaled, append @scale = N as a synthetic reference
