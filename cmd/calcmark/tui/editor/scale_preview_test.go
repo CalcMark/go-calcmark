@@ -206,6 +206,60 @@ func TestConvertOnlyIndicator(t *testing.T) {
 	t.Error("missing result for w")
 }
 
+// TestTransformIndicatorsExampleDoc validates indicator flags using the
+// testdata/examples/transform-indicators.cm document, which exercises all
+// four indicator combinations: none, scale only, convert only, and both.
+func TestTransformIndicatorsExampleDoc(t *testing.T) {
+	content := "---\nscale:\n  factor: 2\n  unit_categories: [Custom, Volume]\nconvert_to:\n  system: si\n  unit_categories: [Mass, Volume]\n---\n\nv = 2 buns\na = 3 pints\nc = 3 cup\np = 1 lb\n\nm = 10 m\n"
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	m := New(doc)
+	m.width = 80
+	m.height = 24
+
+	byVar := make(map[string]LineResult)
+	for _, lr := range m.GetLineResults() {
+		if lr.VarName != "" {
+			byVar[lr.VarName] = lr
+		}
+	}
+
+	tests := []struct {
+		varName     string
+		wantScaled  bool
+		wantConvert bool
+		wantValue   string
+		reason      string
+	}{
+		{"v", true, false, "4 buns", "Custom scaled, custom unit can't convert"},
+		{"a", true, true, "", "Volume scaled + converted to SI"},
+		{"c", true, true, "", "Volume scaled + converted to SI"},
+		{"p", false, true, "", "Mass not in scale categories, but in convert_to"},
+		{"m", false, false, "10 m", "Already SI, not in scale categories"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.varName, func(t *testing.T) {
+			lr, ok := byVar[tt.varName]
+			if !ok {
+				t.Fatalf("missing result for %s", tt.varName)
+			}
+			if lr.IsScaled != tt.wantScaled {
+				t.Errorf("IsScaled=%v, want %v (%s)", lr.IsScaled, tt.wantScaled, tt.reason)
+			}
+			if lr.IsConverted != tt.wantConvert {
+				t.Errorf("IsConverted=%v, want %v (%s)", lr.IsConverted, tt.wantConvert, tt.reason)
+			}
+			if tt.wantValue != "" && lr.Value != tt.wantValue {
+				t.Errorf("Value=%q, want %q", lr.Value, tt.wantValue)
+			}
+		})
+	}
+}
+
 // TestScaleChangeUpdatesScaledCurrency verifies currency scaling via TUI.
 func TestScaleChangeUpdatesScaledCurrency(t *testing.T) {
 	content := "---\nscale:\n  factor: 1\n  unit_categories: [Currency]\n---\ncost = $5.00"

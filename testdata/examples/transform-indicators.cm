@@ -1,0 +1,15 @@
+---
+scale:
+  factor: 2
+  unit_categories: [Custom, Volume]
+convert_to:
+  system: si
+  unit_categories: [Mass, Volume]
+---
+
+v = 2 buns
+a = 3 pints
+c = 3 cup
+p = 1 lb
+
+m = 10 m
