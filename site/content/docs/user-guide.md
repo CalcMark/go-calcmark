@@ -17,7 +17,7 @@ weight: 20
   - [Global Variables](#global-variables) -- Reusable values in frontmatter
   - [@Directive References](#directive-references) -- `@scale` and `@globals.name` in expressions
   - [Scale and Convert](#scale-convert) -- Document-wide scaling and unit system conversion
-  - [Built-in Functions](#built-in-functions) -- All 15 functions
+  - [Built-in Functions](#built-in-functions)
   - [Function Reference](#function-reference) -- Detailed examples for every function
   - [Natural Language Syntax](#natural-language-syntax) -- NL forms reference table
   - [Network Functions](#network-functions) -- RTT, throughput, transfer time, downtime
@@ -47,7 +47,7 @@ The CalcMark editor provides keyboard shortcuts for common actions. Press **F1**
 | Ctrl+N | New empty document |
 | Ctrl+S | Save document |
 | Ctrl+O | Open file |
-| Ctrl+E | Export to format |
+| Ctrl+T | Export to format |
 | Ctrl+Q | Quit editor |
 
 ### Edit {#shortcuts-edit}
@@ -383,7 +383,7 @@ price = $5.00           → $5.00 (unchanged — not in categories)
 
 `flour` displays as `3 cups` because Volume is in the category list. `eggs` is unchanged because `eggs` is a custom unit — add `Custom` to `unit_categories` to scale it. Temperature and currency are unaffected unless you add `Temperature` or `Currency` to `unit_categories`.
 
-In the editor, scaled values show a `*` suffix in the results pane. The context footer shows `@scale = N` when you're on a scaled line.
+In the editor, scaled values show a `×` (multiply) suffix in the results pane. Converted values show a `•` (bullet) suffix. When both scaling and conversion apply, the result shows `×•`. The context footer shows `@scale = N` when you're on a scaled line.
 
 #### Converting
 
@@ -401,7 +401,7 @@ weight = 10 pounds       -> 4.54 kg
 temp = 72 fahrenheit     -> 22.2222 celsius
 ```
 
-`distance` displays as `8.05 km`, `weight` as `4.54 kg`, and `temp` as `22.2222 celsius`. If you use the `in` keyword explicitly (e.g., `distance in feet`), that conversion takes priority over `convert_to`.
+`distance` displays as `8.05 km`, `weight` as `4.54 kg`, and `temp` as `22.2222 celsius`. Converted values show a `•` suffix in the editor results pane. If you use the `in` keyword explicitly (e.g., `distance in feet`), that conversion takes priority over `convert_to`.
 
 #### Both Together
 
@@ -420,7 +420,7 @@ convert_to: si
 butter = 4 ounces       -> 227 g (doubled, then converted)
 ```
 
-`butter` is first doubled to `8 ounces` (Mass is in `unit_categories`), then converted to `227 g`.
+`butter` is first doubled to `8 ounces` (Mass is in `unit_categories`), then converted to `227 g`. In the editor, this result shows `×•` — both the scale and convert indicators.
 
 #### Filtering by Category
 
@@ -441,6 +441,17 @@ Valid categories: `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, 
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [Language Reference — Frontmatter](/docs/language-reference/#frontmatter) for the full specification.
 
+#### Transform Indicators {#transform-indicators}
+
+The editor results pane shows symbols next to values that have been transformed:
+
+| Indicator | Meaning | Example |
+|-----------|---------|---------|
+| `×` | Scaled | `4 buns×` — factor applied |
+| `•` | Converted | `4.54 kg•` — unit system changed |
+| `×•` | Both | `227 g×•` — scaled then converted |
+| _(none)_ | Untransformed | `10 m` — no transforms applied |
+
 ### Built-in Functions {#built-in-functions}
 
 {{< feature-table category="function" >}}
@@ -459,6 +470,24 @@ avg(1, 2, 3, 4, 5)                -> 3
 average of 100, 200, 300           -> 200  (NL form)
 avg($100, $200, $300)              -> $200.00  (preserves currency)
 ```
+
+#### `sum` / `sum of` {#sum-examples}
+
+```calcmark
+sum($100, $200, $300)              -> $600.00
+sum(10, 20, 30)                    -> 60
+sum of total_a, total_b, total_c   -> (NL form, sums variables)
+```
+
+#### `number` {#number-examples}
+
+```calcmark
+number(10 kg)                      -> 10
+number($250)                       -> 250
+number(3.5 hours)                  -> 3.5
+```
+
+Strips the unit or currency from any value, returning a plain number. Useful when you need the raw numeric value for a calculation that doesn't preserve units.
 
 #### `sqrt` / `square root of` {#sqrt-examples}
 
