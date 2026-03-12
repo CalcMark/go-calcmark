@@ -274,15 +274,7 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 
 	pvBg := m.previewPaneBg()
 
-	hasFrontmatter := m.frontmatterLineCount() > 0
 	resultsHeight := height
-
-	// Build a value map for frontmatter 1:1 alignment.
-	// When frontmatter is present, each value line maps to a formatted global.
-	var fmValueMap map[string]formattedGlobal
-	if hasFrontmatter {
-		fmValueMap = m.buildFrontmatterValueMap()
-	}
 
 	// Build complete lines to avoid bare newlines
 	var allLines []string
@@ -318,9 +310,9 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 		}
 		pl := previewLines[j]
 
-		// Frontmatter lines: render 1:1 aligned with source YAML.
-		// Structural lines (---, exchange:, globals:) → blank preview rows.
-		// Value lines (USD_EUR: 0.6) → formatted value from globals state.
+		// Frontmatter lines: render as styled YAML text in the preview pane.
+		// This shows the full frontmatter content (not just globals values)
+		// so the preview pane is never blank for frontmatter lines.
 		if pl.isFrontmatter {
 			var completeLine string
 			fmCount := m.frontmatterLineCount()
@@ -339,17 +331,12 @@ func (m Model) renderPreviewPaneAligned(width, height int, aligned alignedPanes)
 						errorText = components.TruncateWithEllipsis(errorText, maxLen)
 					}
 					completeLine = ensureFullWidth(errStyle.Render("⚠ "+errorText), width, pvBg)
-				} else if isFrontmatterStructuralLine(srcLine) {
-					completeLine = ensureFullWidth("", width, pvBg)
-				} else if fmValueMap != nil {
-					key := extractFrontmatterKey(srcLine)
-					if fg, ok := fmValueMap[key]; ok {
-						completeLine = m.renderFrontmatterValueLine(key, fg, width)
-					} else {
-						completeLine = ensureFullWidth("", width, pvBg)
-					}
 				} else {
-					completeLine = ensureFullWidth("", width, pvBg)
+					// Render YAML text with frontmatter styling
+					fmStyle := lipgloss.NewStyle().
+						Foreground(theme.SourceFrontmatter).
+						Background(pvBg)
+					completeLine = ensureFullWidth(fmStyle.Render(srcLine), width, pvBg)
 				}
 			} else {
 				completeLine = ensureFullWidth("", width, pvBg)
@@ -416,12 +403,6 @@ func (m Model) renderReadingPane(width, height int, aligned alignedPanes) string
 	pvBg := m.previewPaneBg()
 	sourceLines := m.GetLines()
 
-	hasFrontmatter := m.frontmatterLineCount() > 0
-	var fmValueMap map[string]formattedGlobal
-	if hasFrontmatter {
-		fmValueMap = m.buildFrontmatterValueMap()
-	}
-
 	// First pass: build filtered reading lines and source→visual mapping.
 	// Rules:
 	//  1. Skip alignment padding (isPadding).
@@ -455,12 +436,7 @@ func (m Model) renderReadingPane(width, height int, aligned alignedPanes) string
 				lastNonEmptyBlockID = pl.blockID
 			}
 		}
-		// Skip structural frontmatter lines.
-		if pl.isFrontmatter {
-			if pl.sourceLineNum < len(sourceLines) && isFrontmatterStructuralLine(sourceLines[pl.sourceLineNum]) {
-				continue
-			}
-		}
+		// All frontmatter lines are now rendered as YAML text (no skipping).
 
 		// Insert block separator when block changes.
 		if pl.blockID != "" && prevBlockID != "" && pl.blockID != prevBlockID && len(filtered) > 0 {
@@ -566,23 +542,16 @@ func (m Model) renderReadingPane(width, height int, aligned alignedPanes) string
 			lineBg = theme.ReadingCursorBg
 		}
 
-		// Frontmatter value lines.
+		// Frontmatter lines: render as styled YAML text.
 		if pl.isFrontmatter {
 			var completeLine string
 			if pl.sourceLineNum < len(sourceLines) {
 				srcLine := sourceLines[pl.sourceLineNum]
-				if fmValueMap != nil && !isFrontmatterStructuralLine(srcLine) {
-					key := extractFrontmatterKey(srcLine)
-					if fg, ok := fmValueMap[key]; ok {
-						if isCursorLine {
-							completeLine = m.renderFrontmatterValueLineWithBg(key, fg, width, lineBg)
-						} else {
-							completeLine = m.renderFrontmatterValueLine(key, fg, width)
-						}
-					}
-				}
-			}
-			if completeLine == "" {
+				fmStyle := lipgloss.NewStyle().
+					Foreground(theme.SourceFrontmatter).
+					Background(lineBg)
+				completeLine = ensureFullWidth(fmStyle.Render(srcLine), width, lineBg)
+			} else {
 				completeLine = ensureFullWidth("", width, lineBg)
 			}
 			allLines = append(allLines, completeLine)
@@ -615,44 +584,6 @@ func (m Model) renderReadingPane(width, height int, aligned alignedPanes) string
 	}
 
 	return strings.Join(allLines, "\n")
-}
-
-// renderFrontmatterValueLine renders a single frontmatter value in the preview pane,
-// formatted as "name    value" with appropriate styling for exchange rates vs globals.
-func (m Model) renderFrontmatterValueLine(name string, fg formattedGlobal, width int) string {
-	pvBg := m.previewPaneBg()
-
-	nameStyle := lipgloss.NewStyle().
-		Foreground(theme.GlobalsVarName).
-		Background(pvBg)
-	valueStyle := lipgloss.NewStyle().
-		Foreground(theme.Result).
-		Background(pvBg)
-
-	if fg.isExchange {
-		nameStyle = nameStyle.Foreground(theme.GlobalsExchange)
-	}
-
-	formatted := nameStyle.Render(fmt.Sprintf("%-18s", name)) + valueStyle.Render(fg.value)
-	return ensureFullWidth(formatted, width, pvBg)
-}
-
-// renderFrontmatterValueLineWithBg renders a frontmatter value line with a custom background,
-// used for cursor line highlighting in Reading mode.
-func (m Model) renderFrontmatterValueLineWithBg(name string, fg formattedGlobal, width int, bg color.Color) string {
-	nameStyle := lipgloss.NewStyle().
-		Foreground(theme.GlobalsVarName).
-		Background(bg)
-	valueStyle := lipgloss.NewStyle().
-		Foreground(theme.Result).
-		Background(bg)
-
-	if fg.isExchange {
-		nameStyle = nameStyle.Foreground(theme.GlobalsExchange)
-	}
-
-	formatted := nameStyle.Render(fmt.Sprintf("%-18s", name)) + valueStyle.Render(fg.value)
-	return ensureFullWidth(formatted, width, bg)
 }
 
 // renderCalcLine renders a single calculation line result.
