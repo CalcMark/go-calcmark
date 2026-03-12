@@ -17,7 +17,8 @@
       </div>
     </div>
     <div class="hero-media">
-      <img src="{{ "images/hero.gif" | relURL }}" alt="CalcMark TUI editor building a budget with live-updating results" class="hero-gif">
+      {{- $hero := resources.Get "images/hero.gif" | fingerprint -}}
+      <img src="{{ $hero.RelPermalink }}" alt="CalcMark TUI editor building a recipe with scaling, interpolation, and live results" class="hero-gif">
     </div>
   </div>
 </section>

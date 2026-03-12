@@ -1,7 +1,14 @@
 # hero.tape - CalcMark hero demo GIF (TUI editor session)
 # Regenerate: task record-demos
-# Shows the TUI editor with variables, units, NL functions, and napkin math.
-Output site/static/images/hero.gif
+#
+# IMPORTANT: VHS Enter keystrokes can get swallowed when the TUI is busy
+# evaluating. Use Sleep 1s minimum after each Enter before the next Type.
+# For lines that trigger heavy evaluation (frontmatter, many variables),
+# use Sleep 1.5s or more.
+#
+# Shows: @scale, @convert_to, {{interpolation}}, NL sum, percentage widening,
+# @scale directive reference, unit conversion.
+Output site/assets/images/hero.gif
 
 Set Shell "bash"
 Set FontSize 18
@@ -23,69 +30,126 @@ Show
 # Wait for the TUI editor to render
 Sleep 2s
 
-# Markdown heading (ignored by evaluator)
-Type "# Trip to Berlin"
+# Frontmatter — use Ctrl+F to insert template, then type content
+# Typing --- directly is unreliable in VHS because the TUI may
+# interpret it differently. Ctrl+F inserts the --- delimiters for us.
+Type "---"
+Sleep 500ms
 Enter
-Enter
-Sleep 600ms
+Sleep 1s
 
-# Variables with $ notation
-Type "flight = $1200"
+Type "scale:"
+Sleep 300ms
 Enter
-Sleep 600ms
+Sleep 1s
 
-Type "hotel = 5 * $180"
+Type "  factor: 4"
+Sleep 300ms
 Enter
-Sleep 600ms
+Sleep 1s
 
-Type "food = 7 * $45"
+Type "  unit_categories: [Mass, Volume]"
+Sleep 300ms
 Enter
-Sleep 600ms
+Sleep 1s
 
-Type "total = flight + hotel + food"
+Type "convert_to: si"
+Sleep 300ms
 Enter
-Sleep 800ms
+Sleep 1s
 
-Type "15% of total"
+Type "---"
+Sleep 500ms
+Enter
+Sleep 1.5s
+
+# Markdown heading
+Type "# Party Guacamole"
+Enter
+Sleep 1s
+
+Enter
+Sleep 1s
+
+# Prose with interpolation placeholders
+Type "Makes {{servings}} -- needs {{avocados}} of avocados."
+Enter
+Sleep 1s
+
+Enter
+Sleep 1s
+
+# Section heading
+Type "## Ingredients (1 batch)"
+Enter
+Sleep 1s
+
+Enter
+Sleep 1s
+
+# Recipe variables (scaled + converted by frontmatter)
+Type "avocados = 3 avocados"
+Enter
+Sleep 1s
+
+Type "lime_juice = 2 tablespoons"
+Enter
+Sleep 1s
+
+Type "onion = 0.25 cups"
+Enter
+Sleep 1s
+
+Type "servings = 4 servings"
+Enter
+Sleep 1s
+
+Enter
+Sleep 1s
+
+# Cost section
+Type "## Cost"
+Enter
+Sleep 1s
+
+Enter
+Sleep 1s
+
+Type "ingredients = $6.50"
+Enter
+Sleep 1s
+
+Type "with_tax = ingredients + 8%"
+Enter
+Sleep 1s
+
+Type "per_batch = with_tax / @scale"
+Enter
+Sleep 1s
+
+# NL function: sum
+Type "sum of ingredients, $2, $1.50"
+Enter
+Sleep 1s
+
 Enter
 Sleep 1s
 
 # Unit conversions
+Type "## Quick math"
 Enter
-Type "## Quick conversions"
-Enter
-Enter
-Sleep 400ms
+Sleep 1s
 
-Type "5 miles in km"
 Enter
-Enter
-Sleep 600ms
+Sleep 1s
 
-Type "20 celsius in fahrenheit"
+Type "500 grams in oz"
 Enter
-Sleep 800ms
+Sleep 1s
 
-# NL functions
-Enter
-Enter
-Type "## Infrastructure check"
-Enter
-Enter
-Sleep 400ms
+Type "350 fahrenheit in celsius"
+Sleep 1.5s
 
-Type "read 100 MB from ssd"
-Enter
-Sleep 600ms
-
-Type "compress 1 GB using gzip"
-Enter
-Sleep 800ms
-
-# Napkin rounding
-Type "1500000 as napkin"
-Enter
-Sleep 800ms
 Enter
 Sleep 2s
 

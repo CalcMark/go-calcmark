@@ -1,0 +1,28 @@
+---
+scale:
+  factor: 4
+  unit_categories: [Mass, Volume]
+convert_to: si
+---
+# Party Guacamole
+
+Makes {{servings}} — you'll need {{avocados}} of avocados.
+
+## Ingredients (1 batch)
+
+avocados = 3 avocados
+lime_juice = 2 tablespoons
+onion = 0.25 cups
+servings = 4 servings
+
+## Cost
+
+ingredients = $6.50
+with_tax = ingredients + 8%
+per_batch = with_tax / @scale
+sum of ingredients, $2, $1.50
+
+## Quick math
+
+500 grams in oz
+350 fahrenheit in celsius

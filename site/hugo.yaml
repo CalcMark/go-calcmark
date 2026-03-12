@@ -49,6 +49,9 @@ menus:
     - name: User Guide
       url: /docs/user-guide/
       weight: 20
+    - name: The Editor
+      url: /docs/editor/
+      weight: 22
     - name: Language Reference
       url: /docs/language-reference/
       weight: 30
@@ -58,6 +61,9 @@ menus:
     - name: Agent & API Integration
       url: /docs/agent-integration/
       weight: 36
+    - name: Go Package
+      url: /docs/go-package/
+      weight: 37
     - name: Configuration
       url: /docs/configuration/
       weight: 40

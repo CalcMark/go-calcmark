@@ -357,20 +357,33 @@ z = unknown * 2     -> MARKDOWN (unknown is undefined)
 
 ### EBNF Grammar
 
+The grammar below covers the core expression hierarchy. Natural language function syntax (described in [Natural Language Syntax](#natural-language-syntax)) is parsed at the Primary level but omitted here for clarity.
+
 ```
 Statement       ::= Assignment | Expression
 Assignment      ::= IDENTIFIER "=" Expression
 Expression      ::= Or
 Or              ::= And ("or" And)*
-And             ::= Not ("and" Not)*
-Not             ::= "not" Not | Comparison
-Comparison      ::= Additive (ComparisonOp Additive)?
+And             ::= Comparison ("and" Comparison)*
+Comparison      ::= Additive (ComparisonOp Additive)*
 ComparisonOp    ::= ">" | "<" | ">=" | "<=" | "==" | "!="
 Additive        ::= Multiplicative (("+"|"-") Multiplicative)*
+                     ("as" ConversionTarget)?
+ConversionTarget ::= "napkin" | "precise" | UnitName
 Multiplicative  ::= Exponent (("*"|"/"|"%") Exponent)*
+                     ("in" UnitName)?
+                     ("per" TimeUnit)?
+                     ("over" Expression)?
+                     ("at" Expression "per" Expression ("with" Expression)?)?
 Exponent        ::= Unary ("^" Unary)*
-Unary           ::= ("-"|"+")? Primary
-Primary         ::= Number | Currency | Boolean | Identifier | "(" Expression ")"
+Unary           ::= ("not" | "-" | "+")* Postfix
+Postfix         ::= Primary ("%" ("of" Expression)?)?
+Primary         ::= Number | Currency | Quantity | Percentage
+                   | Boolean | Date | Duration | Rate
+                   | DirectiveRef | Identifier
+                   | FunctionCall | "(" Expression ")"
+FunctionCall    ::= FunctionName "(" (Expression ("," Expression)*)? ")"
+DirectiveRef    ::= "@scale" | "@globals." IDENTIFIER
 ```
 
 ### Operator Precedence
@@ -379,12 +392,13 @@ From **highest** to **lowest**:
 
 1. Parentheses `()`
 2. Exponentiation `^` (right-associative)
-3. Unary `-`, `+`, `not` (prefix)
-4. Multiplicative `*`, `/`, `%` (left-associative)
-5. Additive `+`, `-` (left-associative)
-6. Comparison `>`, `<`, `>=`, `<=`, `==`, `!=` (non-associative)
-7. Logical AND `and` (left-associative)
-8. Logical OR `or` (left-associative)
+3. Unary `not`, `-`, `+` (prefix)
+4. Postfix `%`, `% of`
+5. Multiplicative `*`, `/`, `%` (left-associative); postfix `in`, `per`, `over`, `at`
+6. Additive `+`, `-` (left-associative); postfix `as`
+7. Comparison `>`, `<`, `>=`, `<=`, `==`, `!=`
+8. Logical AND `and` (left-associative)
+9. Logical OR `or` (left-associative)
 
 ---
 
@@ -395,6 +409,7 @@ From **highest** to **lowest**:
 | Type | Example | Internal |
 |------|---------|----------|
 | **Number** | `42`, `3.14`, `1,000` | Arbitrary-precision decimal |
+| **Percentage** | `50%`, `8.25%` | Fractional decimal (0.5, 0.0825) |
 | **Currency** | `$100`, `€50.99` | Symbol + decimal |
 | **Boolean** | `true`, `false`, `yes`, `no` | Boolean |
 | **Quantity** | `10 meters`, `5 kg`, `100 MB` | Value + unit |
@@ -421,6 +436,19 @@ Rate * Number -> Rate        (commutative)
 Rate * Quantity -> Quantity   (e.g., 10 MB/s * 500 MB = 5000 MB)
 Quantity * Rate -> Quantity   (commutative)
 ```
+
+**Percentage widening:**
+
+When a percentage appears in addition or subtraction with another type, it widens to a proportion of that value:
+
+```calcmark
+$100 + 15% -> $115.00        (same as $100 * 1.15)
+$100 - 15% -> $85.00         (same as $100 * 0.85)
+10 kg + 50% -> 15 kg         (same as 10 kg * 1.5)
+15% of 200 -> 30             ("of" syntax)
+```
+
+In multiplication or standalone use, percentages behave as their decimal value (`50%` = `0.5`).
 
 **Functions (drop units when mixed):**
 
@@ -471,6 +499,10 @@ Quantity + Currency -> ERROR (incompatible types)
 
 #### Currency
 
+Currency literals use either a prefix symbol or a postfix ISO 4217 code.
+
+**Symbol syntax** (prefix only):
+
 ```
 $100            USD
 $1,000.50       With separators
@@ -481,23 +513,34 @@ $1,000.50       With separators
 $ 100           Invalid (no space between symbol and number)
 ```
 
-**Supported symbols:** `$`, `€`, `£`, `¥`
+**Supported symbols:** `$` (USD), `€` (EUR), `£` (GBP), `¥` (JPY)
 
-Currency codes also work as postfix syntax:
+**ISO code syntax** (postfix):
+
+Any 3-letter uppercase code works as a postfix currency identifier. Codes with a corresponding symbol display with that symbol; others display with the ISO code:
 
 ```calcmark
 100 USD         -> $100.00
 50 EUR          -> €50.00
 25 GBP          -> £25.00
+1000 JPY        -> ¥1,000
+100 CHF         -> 100 CHF
+50 CAD          -> 50 CAD
 ```
+
+Semantic validation checks whether the code is a known ISO 4217 currency. Unknown codes produce an `invalid_currency_code` diagnostic. Currency conversion between different codes requires `exchange:` rates defined in [Frontmatter](#frontmatter).
 
 #### Percentages
 
+Percentages are their own type, stored as a decimal fraction internally:
+
 ```calcmark
-50%             -> 0.5 (Number)
-8.25%           -> 0.0825
-15% of 200      -> 30
+50%             -> Percentage (0.5 internally)
+8.25%           -> Percentage (0.0825 internally)
+15% of 200      -> 30  ("of" syntax)
 ```
+
+See [Type Compatibility](#type-compatibility) for percentage widening rules.
 
 #### Booleans
 
@@ -627,6 +670,16 @@ area = PI * radius ^ 2
 | `==` | Equal | `5 == 5` | `true` |
 | `!=` | Not equal | `5 != 3` | `true` |
 
+### Logical
+
+| Operator | Name | Example | Result |
+|----------|------|---------|--------|
+| `and` | Logical AND | `true and false` | `false` |
+| `or` | Logical OR | `true or false` | `true` |
+| `not` | Logical NOT | `not true` | `false` |
+
+Case-insensitive: `AND`, `and`, `And` all work.
+
 ### Unary
 
 | Operator | Name | Example | Result |
@@ -634,6 +687,18 @@ area = PI * radius ^ 2
 | `-` | Negation | `-5` | `-5` |
 | `+` | Plus | `+5` | `5` |
 | `not` | Logical NOT | `not true` | `false` |
+
+### Conversion and Postfix
+
+| Operator | Name | Example | Result |
+|----------|------|---------|--------|
+| `in` | Unit conversion | `10 meters in feet` | `32.81 feet` |
+| `as` | Display modifier | `1234567 as napkin` | `~1.2M` |
+| `per` | Rate denominator | `100 MB per day` | `100 MB/day` |
+| `over` | Accumulation | `100 MB/s over 1 day` | `~8.64 TB` |
+| `at...per` | Capacity | `10 TB at 2 TB per disk` | `5 disk` |
+| `% of` | Percentage of | `15% of 200` | `30` |
+| `from` | Date offset | `2 days from today` | *(date)* |
 
 ### Assignment
 
@@ -659,7 +724,7 @@ Case-insensitive: `AND`, `and`, `And` all work.
 
 ```
 if, then, else, elif, end
-for, in, while
+for, while
 return, break, continue
 let, const
 ```
@@ -669,7 +734,7 @@ let, const
 All built-in function names are reserved:
 
 ```
-avg, sqrt, accumulate, convert_rate, capacity,
+avg, sum, sqrt, number, accumulate, convert_rate, capacity,
 downtime, rtt, throughput, transfer_time,
 read, seek, compress, compound, grow, depreciate
 ```
@@ -685,13 +750,12 @@ in, as, of, per, over, at, from, with, napkin, precise
 These words have special meaning in specific syntactic positions but are not reserved as variable names:
 
 ```
-by, compounded, buffer, to, monthly, quarterly, weekly, daily, yearly
+by, compounded, to, monthly, quarterly, weekly, daily, yearly
 ```
 
 ```calcmark
 compound $1000 by 5% monthly over 10 years         (by, monthly)
 compound $1000 by 5% compounded monthly over 10    (by, compounded)
-10000 req/s at 500 per server with 20% buffer      (buffer)
 depreciate $50000 by 15% over 5 to $5000           (to)
 ```
 
@@ -730,7 +794,11 @@ CalcMark supports natural language forms for many functions. These are equivalen
 | Pattern | Equivalent |
 |---------|------------|
 | `average of X, Y, Z` | `avg(X, Y, Z)` |
+| `sum of X, Y, Z` | `sum(X, Y, Z)` |
 | `square root of X` | `sqrt(X)` |
+| `X over Y` | `accumulate(X, Y)` |
+| `X at Y per Z` | `capacity(X, Y, Z)` |
+| `X at Y per Z with W% buffer` | `capacity(X, Y, Z, W%)` |
 | `read X from Y` | `read(X, Y)` |
 | `compress X using Y` | `compress(X, Y)` |
 | `transfer X across Y Z` | `transfer_time(X, Y, Z)` |
@@ -877,20 +945,33 @@ See the [User Guide: Growth Functions](/docs/user-guide/#growth-functions) for t
 
 ## Validation & Diagnostics
 
-### Diagnostic Codes
-
-| Code | Severity | Description |
-|------|----------|-------------|
-| `SyntaxError` | Error | Invalid syntax |
-| `UndefinedVariable` | Warning | Variable used before definition |
-| `TypeMismatch` | Error | Incompatible types in operation |
-| `DivisionByZero` | Error | Division or modulus by zero |
-
 ### Diagnostic Levels
 
 | Severity | Meaning |
 |----------|---------|
 | **Error** | Prevents evaluation, line becomes MARKDOWN |
-| **Warning** | Line stays CALCULATION but evaluation may fail |
-| **Info** | Informational, doesn't affect classification |
-| **Hint** | Suggestions for improvement |
+| **Warning** | Line evaluates but issue is noted |
+| **Hint** | Suggestion or style recommendation |
+
+### Diagnostic Codes
+
+| Code | Severity | Description |
+|------|----------|-------------|
+| `type_mismatch` | Error | Incompatible types in operation |
+| `division_by_zero` | Error | Division or modulus by zero |
+| `invalid_currency_code` | Error | Unsupported currency symbol |
+| `incompatible_currencies` | Error | Mixed currency codes without exchange rate |
+| `incompatible_units` | Error | Unit mismatch in operation |
+| `unsupported_unit` | Error | Unit not recognized for conversion |
+| `invalid_date` | Error | Invalid date literal |
+| `invalid_month` | Error | Month name or number out of range |
+| `invalid_day` | Error | Day out of range for the given month |
+| `invalid_year` | Error | Invalid year value |
+| `invalid_leap_year` | Error | Feb 29 in a non-leap year |
+| `invalid_date_operation` | Error | Invalid operation on date types |
+| `invalid_directive` | Error | Invalid `@` directive reference |
+| `undefined_global` | Error | `@globals.name` references undefined global |
+| `missing_frontmatter` | Warning | Directive requires frontmatter section |
+| `undefined_variable` | Warning | Variable used before definition |
+| `variable_redefinition` | Warning | Variable assigned more than once |
+| `mixed_base_units` | Hint | Mixing binary (KiB) and decimal (KB) data units |

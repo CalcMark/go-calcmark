@@ -133,6 +133,8 @@ See [Sharing with GitHub Gist](/docs/user-guide/#sharing-gist) in the User Guide
 ## Next Steps
 
 - Read the full [User Guide]({{< ref "docs/user-guide" >}}) for all features
+- Learn about [The Editor]({{< ref "docs/editor" >}}) — preview modes, shortcuts, autocomplete
 - Explore the [Examples]({{< ref "docs/examples" >}}) to see CalcMark in action
 - Check the [Language Reference]({{< ref "docs/language-reference" >}}) for the formal specification
-- Use CalcMark from code or AI agents -- see [Agent & API Integration]({{< ref "docs/agent-integration" >}})
+- Use CalcMark from code or AI agents — see [Agent & API Integration]({{< ref "docs/agent-integration" >}})
+- Embed CalcMark in your Go application — see [Go Package]({{< ref "docs/go-package" >}})
