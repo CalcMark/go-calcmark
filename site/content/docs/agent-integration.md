@@ -6,6 +6,37 @@ weight: 36
 
 CalcMark works as a command-line calculation engine. Pipe expressions in, get structured JSON out. No server, no SDK -- just stdin/stdout.
 
+## Installation
+
+Check if `cm` is available:
+
+```bash
+cm version
+```
+
+If not found, install it:
+
+**macOS / Linux (Homebrew):**
+
+```bash
+brew install calcmark/tap/calcmark
+```
+
+**Linux (direct download):**
+
+```bash
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)  ARCH="amd64" ;;
+  aarch64) ARCH="arm64" ;;
+  armv6l)  ARCH="armv6" ;;
+esac
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+curl -sL "https://github.com/CalcMark/go-calcmark/releases/latest/download/calcmark_${OS}_${ARCH}.tar.gz" | tar xz -C /usr/local/bin cm
+```
+
+Always ask the user before installing software.
+
 ## Quick Start
 
 ```bash
@@ -32,11 +63,173 @@ pace = time / distance
 EOF
 ```
 
-Or pipe a file:
+Or evaluate a file:
 
 ```bash
 cm eval budget.cm --format json
 ```
+
+## Essential Syntax
+
+### Variables and Expressions
+
+```calcmark
+price = $100
+quantity = 12
+total = price * quantity
+```
+
+### Units and Conversions
+
+```calcmark
+distance = 42.195 km
+distance in miles
+weight = 5 kg in pounds
+```
+
+### Currency
+
+Supported symbols: `$` (USD), `€` (EUR), `£` (GBP), `¥` (JPY). Any 3-letter ISO code works as a postfix: `100 CHF`, `50 CAD`.
+
+### Percentages
+
+```calcmark
+marked_up = $100 + 15%
+discounted = $250 - 20%
+15% of $2000
+```
+
+When added/subtracted with another type, percentages widen: `$100 + 15%` = `$115.00`.
+
+### Dates and Durations
+
+```calcmark
+deadline = Jan 15 2025
+remaining = deadline - today
+launch = today + 90 days
+2 weeks from today
+```
+
+### Rates
+
+```calcmark
+speed = 100 MB/s
+cost = $50/hour
+throughput = 1000 req/s
+```
+
+Rate accumulation with `over`:
+
+```calcmark
+monthly_cost = $50/hour over 30 days
+data = 100 MB/s over 1 day
+```
+
+### Capacity Planning
+
+```calcmark
+servers = 50000 req/s at 2000 req/s per server with 25% buffer
+```
+
+### Napkin Math
+
+Round to 2 significant figures with magnitude suffix:
+
+```calcmark
+1234567 as napkin
+```
+
+Result: `~1.2M`
+
+### Multiplier Suffixes
+
+```calcmark
+10K              -> 10,000
+5M               -> 5,000,000
+2B               -> 2,000,000,000
+1.5T             -> 1,500,000,000,000
+```
+
+## Functions
+
+Prefer the natural language (NL) form where available:
+
+| Function | NL Form | Example |
+|----------|---------|---------|
+| `compound(p, r, t)` | `compound P by R over T` | `compound $10000 by 7% over 30 years` |
+| `depreciate(v, r, t)` | `depreciate V by R over T` | `depreciate $50000 by 15% over 5 years` |
+| `grow(start, step, n)` | `grow S by X over N` | `grow $500 by $100 over 36` |
+| `accumulate(r, t)` | `rate over duration` | `1000 req/s over 1 day` |
+| `capacity(d, c, u, b)` | `demand at cap per unit` | `50000 req/s at 2000 req/s per server with 25% buffer` |
+| `convert_rate(r, t)` | `rate per time` | `1200 req/s per minute` |
+| `read(size, type)` | `read X from Y` | `read 100 MB from ssd` |
+| `compress(size, algo)` | `compress X using Y` | `compress 1 GB using gzip` |
+| `transfer_time(s, scope, net)` | `transfer X across Y Z` | `transfer 500 KB across regional gigabit` |
+| `avg(a, b, c)` | `average of a, b, c` | `average of $100, $200, $300` |
+| `sum(a, b, c)` | `sum of a, b, c` | `sum of $50, $75, $100` |
+| `sqrt(x)` | `square root of x` | `square root of 144` |
+| `number(x)` | | `number($100)` → `100` (strips unit) |
+
+Run `cm help functions` for the complete list with signatures.
+
+### Smart Type Handling
+
+CalcMark automatically handles many type combinations without `number()`:
+
+```calcmark
+monthly_users = 2500 customers
+price = $49
+revenue = price * monthly_users
+```
+
+Result: `$122,500.00` -- currency * quantity gives currency, dropping the custom unit.
+
+More examples:
+- `$100 + 15%` → `$115.00` (percentage widening)
+- `€4500 in USD` → converts using frontmatter exchange rates
+- `$450 * servers` → currency, where `servers` is a quantity from capacity planning
+
+Use `number()` only when you need a dimensionless value, such as dividing two currencies for a ratio: `number(ltv) / number(cac)`.
+
+## Frontmatter
+
+Documents can start with YAML frontmatter for configuration:
+
+```yaml
+---
+title: Budget Analysis
+locale: en-US
+globals:
+  tax_rate: 0.32
+  headcount: 12
+exchange:
+  USD_EUR: 0.92
+  EUR_USD: 1.09
+---
+```
+
+Reference globals with `@globals.name`:
+
+```calcmark
+team_cost = salary * @globals.headcount
+```
+
+An agent can research current exchange rates and insert them into frontmatter for accurate multi-currency documents.
+
+Run `cm help frontmatter` for all directives including `scale` and `convert_to`.
+
+## Template Interpolation
+
+Embed calculated values in prose with `{{variable_name}}`:
+
+```calcmark
+total = $1500
+servers = 50000 req/s at 2000 req/s per server with 25% buffer
+
+The project costs {{total}} and requires {{servers}} app servers.
+```
+
+When combined with `cm convert --to=html`, this produces readable reports with inline results.
 
 ## JSON Response Structure
 
@@ -98,9 +291,14 @@ Use `type` for dispatch, `numeric_value` + `unit` for computation, and `value` f
 |------|----------|
 | `--format json` | Structured data for programs and agents |
 | `--format text` | Human-readable plain text |
-| `--format html` | HTML document with rendered markdown |
-| `--format md` | Markdown with results inline |
-| `--format cm` | Normalized CalcMark source (round-trip safe) |
+| `cm convert --to=html` | HTML document with rendered markdown and results |
+| `cm convert --to=md` | Markdown with results inline |
+
+Convert to a file with `-o`:
+
+```bash
+cm convert report.cm --to=html -o report.html
+```
 
 ## Error Handling
 
@@ -112,7 +310,9 @@ echo "x = unknown + 1" | cm --format json
 # stderr: evaluation error: undefined_variable: undefined variable "unknown"
 ```
 
-Markdown lines (prose, headers, lists) are not errors -- they appear as `"type": "text"` blocks in the JSON output.
+**Errors go to stderr as plain text, not JSON.** Always check the exit code.
+
+**Silent misinterpretation:** If CalcMark doesn't recognize an expression, it treats it as markdown prose. The JSON will contain `"type": "text"` blocks instead of `"type": "calculation"`. Always verify your output contains calculation blocks when you expect them.
 
 ## Verbose Mode
 
@@ -138,28 +338,54 @@ cm help frontmatter  # All frontmatter directives with valid options
 cm help --all        # Everything at once
 ```
 
-## What CalcMark Can Do
+## Workflow Patterns
 
-CalcMark handles arithmetic, unit conversions, currency, dates, rates, capacity planning, and growth modeling. A few examples:
+### Quick Calculation
+
+Pipe a one-liner and extract the result from JSON:
 
 ```bash
-# Unit conversion
-echo "marathon = 26.2 miles in km" | cm --format json
-
-# Date arithmetic
-echo "deadline = Jan 15 2025 + 90 days" | cm --format json
-
-# Rate accumulation
-echo "cost = $0.10/hour over 30 days" | cm --format json
-
-# Capacity planning
 echo "servers = 50000 req/s at 2000 req/s per server with 25% buffer" | cm --format json
-
-# Napkin math (2 significant figures)
-echo "1234567 as napkin" | cm --format json
 ```
 
-See the [Language Reference](/docs/language-reference/) for the full specification and the [User Guide](/docs/user-guide/) for all features.
+### Research Artifact
+
+Write a `.cm` file as evidence of analytical work:
+
+1. Write the `.cm` file with calculations and prose
+2. Evaluate: `cm eval analysis.cm --format json`
+3. Both the source file and JSON results serve as artifacts
+
+### Document Deliverable
+
+Create a CalcMark document and convert it for the user:
+
+1. Write the `.cm` file with frontmatter, headers, calculations, and `{{template}}` interpolation
+2. Convert: `cm convert report.cm --to=html -o report.html`
+3. Deliver the HTML (or markdown) to the user
+
+### Iterative Analysis
+
+Build up a `.cm` file across multiple steps:
+
+1. Start with initial assumptions and calculations
+2. Evaluate and review results
+3. Adjust variables based on findings
+4. Re-evaluate to see updated results
+5. Repeat until the analysis is complete
+
+## Security
+
+- Always ask the user before installing `cm`
+- Write `.cm` files only in the project directory or temp directory
+- Never modify shell profiles or global PATH
+- Never run `cm` with elevated privileges
+
+## Agent Skill
+
+A distributable CalcMark skill is available for AI coding agents. It wraps this page's content with platform-specific metadata for Claude Code, Cursor, Copilot CLI, and Gemini CLI:
+
+[github.com/CalcMark/agent-skill](https://github.com/CalcMark/agent-skill)
 
 ## Source Code
 
