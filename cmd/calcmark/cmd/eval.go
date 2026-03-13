@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/format"
@@ -50,15 +53,15 @@ func runEval(args []string) error {
 
 		// Read from file
 		if err := validateReadFilePath(filename); err != nil {
-			return fmt.Errorf("invalid file: %w", err)
+			return returnError("invalid file: %w", err)
 		}
 
 		bytes, err := os.ReadFile(filename)
 		if err != nil {
-			return fmt.Errorf("read file: %w", err)
+			return returnError("read file: %w", err)
 		}
 		if err := validateFileContent(bytes); err != nil {
-			return fmt.Errorf("invalid file: %w", err)
+			return returnError("invalid file: %w", err)
 		}
 		input = string(bytes)
 	}
@@ -69,31 +72,31 @@ func runEval(args []string) error {
 		const maxStdinSize = 1*1024*1024 + 1 // 1MB + 1 byte to detect overflow
 		bytes, err := io.ReadAll(io.LimitReader(os.Stdin, maxStdinSize))
 		if err != nil {
-			return fmt.Errorf("read stdin: %w", err)
+			return returnError("read stdin: %w", err)
 		}
 		if len(bytes) >= maxStdinSize {
-			return fmt.Errorf("stdin input too large (max 1MB)")
+			return returnErrorMsg("stdin input too large (max 1MB)")
 		}
 		if err := validateStdinContent(bytes); err != nil {
-			return fmt.Errorf("invalid input: %w", err)
+			return returnError("invalid input: %w", err)
 		}
 		input = string(bytes)
 
 		if strings.TrimSpace(input) == "" {
-			return fmt.Errorf("no input — pipe a document or pass a filename (run 'cm eval --help' for details)")
+			return returnErrorMsg("no input — pipe a document or pass a filename (run 'cm eval --help' for details)")
 		}
 	}
 
 	// Parse and evaluate
 	doc, err := document.NewDocument(input)
 	if err != nil {
-		return fmt.Errorf("parse error: %w", err)
+		return returnError("parse error: %w", err)
 	}
 
 	eval := implDoc.NewEvaluator()
 	eval.SetDisplayFormatter(localeFormatter())
 	if err := eval.Evaluate(doc); err != nil {
-		return fmt.Errorf("evaluation error: %w", err)
+		return returnError("evaluation error: %w", err)
 	}
 
 	// Use the selected formatter for eval output (defaults to "text")
@@ -105,8 +108,89 @@ func runEval(args []string) error {
 	}
 
 	if err := formatter.Format(os.Stdout, doc, opts); err != nil {
-		return fmt.Errorf("format error: %w", err)
+		return returnError("format error: %w", err)
 	}
 
 	return nil
+}
+
+// returnError wraps an error and, when JSON format is active, writes a JSON
+// error envelope to stdout so that agents and pipelines always receive valid
+// JSON. The error is still returned for Cobra to print on stderr and set
+// exit code 1.
+func returnError(wrapFmt string, inner error) error {
+	wrapped := fmt.Errorf(wrapFmt, inner)
+	if evalFormat == "json" {
+		writeJSONError(os.Stdout, wrapped)
+	}
+	return wrapped
+}
+
+// returnErrorMsg is like returnError but for errors without a wrapped inner error.
+func returnErrorMsg(msg string) error {
+	err := fmt.Errorf("%s", msg)
+	if evalFormat == "json" {
+		writeJSONError(os.Stdout, err)
+	}
+	return err
+}
+
+// jsonErrorEnvelope wraps an error for JSON output on stdout.
+type jsonErrorEnvelope struct {
+	Error jsonError `json:"error"`
+}
+
+// jsonError represents a structured error in JSON output.
+type jsonError struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+	Line    int    `json:"line,omitempty"`
+	Code    string `json:"code,omitempty"`
+}
+
+// lineCodeMessageRe matches "line N: code: message" patterns in error messages.
+var lineCodeMessageRe = regexp.MustCompile(`^line (\d+): (\w+): (.+)$`)
+
+// parseEvalError extracts structured fields from an error message.
+// Error messages follow patterns like:
+//
+//	"evaluation error: line 2: variable_redefinition: cannot reassign 'x'"
+//	"parse error: <details>"
+//	"frontmatter error: <details>"
+func parseEvalError(err error) jsonError {
+	msg := err.Error()
+
+	// Extract error type from prefix
+	errType := "unknown_error"
+	remainder := msg
+	for _, prefix := range []string{"evaluation error: ", "parse error: ", "frontmatter error: ", "format error: "} {
+		if strings.HasPrefix(msg, prefix) {
+			// "evaluation error: " → "evaluation_error"
+			errType = strings.ReplaceAll(strings.TrimSuffix(prefix, ": "), " ", "_")
+			remainder = msg[len(prefix):]
+			break
+		}
+	}
+
+	je := jsonError{
+		Type:    errType,
+		Message: remainder,
+	}
+
+	// Try to extract "line N: code: message" from remainder
+	if m := lineCodeMessageRe.FindStringSubmatch(remainder); m != nil {
+		je.Line, _ = strconv.Atoi(m[1])
+		je.Code = m[2]
+		je.Message = m[3]
+	}
+
+	return je
+}
+
+// writeJSONError writes a JSON error envelope to w.
+func writeJSONError(w io.Writer, err error) {
+	envelope := jsonErrorEnvelope{Error: parseEvalError(err)}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(envelope)
 }
