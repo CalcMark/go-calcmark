@@ -87,6 +87,16 @@ distance in miles
 weight = 5 kg in pounds
 ```
 
+Use front-matter to bulk covert all, or some, types of units:
+
+```calcmark
+---
+convert_to:
+  system: si # or imperial
+  unit_categories: [Custom, Mass, Volume] # won't convert Temperatures, Length, etc.
+---
+```
+
 ### Currency
 
 Supported symbols: `$` (USD), `€` (EUR), `£` (GBP), `¥` (JPY). Any 3-letter ISO code works as a postfix: `100 CHF`, `50 CAD`.
@@ -217,6 +227,16 @@ team_cost = salary * @globals.headcount
 An agent can research current exchange rates and insert them into frontmatter for accurate multi-currency documents.
 
 Run `cm help frontmatter` for all directives including `scale` and `convert_to`.
+
+Scaling is handy for things like scaling recipes:
+
+```calcmark
+---
+scale:
+  factor: 2 # double a recipe
+  unit_categories: [Weight, Mass] # don't double the oven temperature!
+---
+```
 
 ## Template Interpolation
 
