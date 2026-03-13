@@ -355,6 +355,23 @@ Use distinct names for each step of a calculation:
 base_cost = $100
 adjusted_cost = base_cost + 15%
 ```
+### Calculations Are Separate From Markdown
+
+Calculations live on their own lines, not interspersed with markdown. The only exception is `{{ interpolated_variables}}`.
+
+OK:
+
+```calcmark
+Hello there. We need {{ larks }}.
+
+larks = 3 mascots
+```
+
+NOT OK:
+
+```calcmark
+Hello there. We need `larks = 3 mascots` or `{{ 3 mascots }}` or anything similar.
+```
 
 ### Unit Propagation
 
