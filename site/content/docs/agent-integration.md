@@ -221,6 +221,10 @@ exchange:
 Reference globals with `@globals.name`:
 
 ```calcmark
+---
+globals:
+  headcount: 15
+---
 team_cost = salary * @globals.headcount
 ```
 
@@ -234,7 +238,7 @@ Scaling is handy for things like scaling recipes:
 ---
 scale:
   factor: 2 # double a recipe
-  unit_categories: [Weight, Mass] # don't double the oven temperature!
+  unit_categories: [Volume, Mass] # don't double the oven temperature!
 ---
 ```
 
