@@ -438,9 +438,11 @@ Build up a `.cm` file across multiple steps:
 
 ## Agent Skill
 
-A distributable CalcMark skill is available for AI coding agents. It wraps this page's content with platform-specific metadata for Claude Code, Cursor, Copilot CLI, and Gemini CLI:
+If you use an AI coding agent, you can teach it CalcMark with a one-line install. The [CalcMark Agent Skill](https://github.com/CalcMark/agent-skill) gives your agent an offline cheat sheet covering syntax, CLI patterns, and JSON output format — so it can write `.cm` files, run calculations, and convert documents without consulting external docs.
 
-[github.com/CalcMark/agent-skill](https://github.com/CalcMark/agent-skill)
+**Supported platforms:** Claude Code, Cursor, GitHub Copilot CLI, and Gemini CLI.
+
+Each platform installs with a single `curl` command. See the [agent-skill README](https://github.com/CalcMark/agent-skill#install) for instructions.
 
 ## Source Code
 
