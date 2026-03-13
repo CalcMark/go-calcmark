@@ -314,6 +314,61 @@ echo "x = unknown + 1" | cm --format json
 
 **Silent misinterpretation:** If CalcMark doesn't recognize an expression, it treats it as markdown prose. The JSON will contain `"type": "text"` blocks instead of `"type": "calculation"`. Always verify your output contains calculation blocks when you expect them.
 
+## Common Pitfalls
+
+### Variables Are Immutable
+
+Variables cannot be reassigned. This will error:
+
+```calcmark
+x = 10
+x = 20   # ERROR: variable_redefinition: cannot reassign 'x'
+```
+
+Use distinct names for each step of a calculation:
+
+```calcmark
+base_cost = $100
+adjusted_cost = base_cost + 15%
+```
+
+### Unit Propagation
+
+Arithmetic on quantities preserves the unit of the numerator. This can produce unexpected results:
+
+```calcmark
+customers = 343 customers
+servers_raw = customers / 10   # Result: 34.3 customers (NOT servers!)
+```
+
+Use the NL `capacity` form to get correct unit conversion:
+
+```calcmark
+servers = 343 customers at 10 customers per server   # Result: 35 server ✓
+```
+
+### Prefer NL Forms Over Raw Arithmetic
+
+CalcMark's natural language functions handle rounding, units, and edge cases that raw division does not. When a built-in function exists, use it:
+
+| Instead of | Use |
+|------------|-----|
+| `total / num_servers` | `demand at cap per unit` (capacity) |
+| `principal * (1 + rate) ^ years` | `compound P by R over T` |
+| `start + (step * periods)` | `grow S by X over N` |
+
+Run `cm help functions` to discover all available NL forms.
+
+### Error Output Goes to stderr
+
+Errors are plain text on stderr, not JSON. If you pipe `cm` output directly into a JSON parser and an error occurs, the parser will receive empty input and fail silently. Always check the exit code:
+
+```bash
+if ! result=$(cm eval file.cm --format json 2>/dev/null); then
+  cm eval file.cm 2>&1  # re-run to see the error message
+fi
+```
+
 ## Verbose Mode
 
 By default, only the last result is shown in text mode. Use `-v` to get all intermediate values:
