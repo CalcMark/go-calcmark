@@ -688,3 +688,43 @@ h6:hover .heading-anchor {
     gap: var(--space-2);
   }
 }
+
+/* Page Table of Contents */
+.page-toc {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-bg-muted) 50%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.page-toc summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.page-toc nav#TableOfContents ul {
+  list-style: none;
+  padding-left: 0;
+  margin: var(--space-2) 0 0;
+}
+
+.page-toc nav#TableOfContents ul ul {
+  padding-left: var(--space-4);
+}
+
+.page-toc nav#TableOfContents a {
+  display: block;
+  padding: 2px 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.page-toc nav#TableOfContents a:hover {
+  color: var(--color-primary);
+}

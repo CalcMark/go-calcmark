@@ -97,13 +97,13 @@ A CalcMark document is a sequence of **lines**. Each line is independently:
 
 ---
 
-## Frontmatter
+## Frontmatter {#frontmatter}
 
 A CalcMark document can begin with a YAML frontmatter block delimited by `---`. Frontmatter defines document-level configuration that is available to all calculations.
 
 {{< feature-table category="frontmatter" >}}
 
-### Exchange Rates
+### Exchange Rates {#exchange-rates}
 
 Define currency conversion rates using `FROM_TO: rate` format (underscore separator):
 
@@ -119,7 +119,7 @@ exchange:
 
 Rates are not automatically reversed. If you define `USD_EUR`, you must also define `EUR_USD` to convert in the other direction.
 
-### Global Variables
+### Global Variables {#global-variables}
 
 Define values available throughout the document:
 
@@ -135,7 +135,7 @@ globals:
 
 Globals support all CalcMark literal types (numbers, currencies, quantities, dates, durations, rates, booleans, percentages). Expressions like `1 + 1` are not allowed -- only literal values.
 
-### Scale
+### Scale {#scale}
 
 Multiply all quantity results by a factor. Applied after evaluation, before display.
 
@@ -192,7 +192,7 @@ tax = income * @globals.tax_rate
 
 `@scale` always resolves to a `Number`. `@globals.name` resolves to whatever type the global is (Number, Currency, Quantity, etc.).
 
-### Convert To
+### Convert To {#convert-to}
 
 Convert quantity results to a target measurement system. Applied after scale.
 
@@ -222,7 +222,7 @@ convert_to:
 
 Valid categories: `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`.
 
-### Measurement Conventions
+### Measurement Conventions {#measurement-conventions}
 
 Some unit names are ambiguous — a "gallon" in the US (3.785 L) is different from a "gallon" in the UK (4.546 L). Similarly, an "ounce" of gold (troy, 31.10g) differs from an "ounce" of flour (standard, 28.35g).
 
@@ -297,7 +297,7 @@ All three directives compose. Here's how `1 gallon` flows through each combinati
 | `1 us gal` (inline) + `measurement: { volume: imperial }` + `convert_to: si` | `3.79 l` | Inline qualifier overrides convention |
 | `1 gallon in ml` (explicit) + `convert_to: si` | `3,785 ml` | Explicit `in` skips `convert_to` |
 
-### Transform Order
+### Transform Order {#transform-order}
 
 When frontmatter directives are present, they apply in this order:
 
@@ -722,7 +722,7 @@ area = PI * radius ^ 2
 
 ---
 
-## Operators
+## Operators {#operators}
 
 ### Arithmetic
 
@@ -1084,7 +1084,7 @@ See the [User Guide: Growth Functions](/docs/user-guide/#growth-functions) for t
 
 ---
 
-## Validation & Diagnostics
+## Validation & Diagnostics {#diagnostics}
 
 ### Diagnostic Levels
 
