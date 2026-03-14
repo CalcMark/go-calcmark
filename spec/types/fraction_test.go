@@ -112,10 +112,10 @@ func TestFractionString(t *testing.T) {
 
 func TestFractionToDecimal(t *testing.T) {
 	tests := []struct {
-		name string
-		num  int64
+		name  string
+		num   int64
 		denom int64
-		want string
+		want  string
 	}{
 		{"1/3", 1, 3, "0.333333333333333"},
 		{"1/2", 1, 2, "0.5"},
@@ -167,9 +167,9 @@ func TestFractionIsProper(t *testing.T) {
 
 func TestFractionExceedsComputationLimit(t *testing.T) {
 	tests := []struct {
-		name  string
-		rat   *big.Rat
-		want  bool
+		name string
+		rat  *big.Rat
+		want bool
 	}{
 		{"small fraction", new(big.Rat).SetFrac64(1, 3), false},
 		{"large denominator", new(big.Rat).SetFrac(big.NewInt(1), new(big.Int).Exp(big.NewInt(10), big.NewInt(10), nil)), true},

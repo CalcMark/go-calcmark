@@ -120,8 +120,8 @@ func TestFractionUnary(t *testing.T) {
 
 func TestFractionComparison(t *testing.T) {
 	tests := []struct {
-		name string
-		left types.Type
+		name  string
+		left  types.Type
 		right types.Type
 		op    string
 		want  bool
@@ -154,7 +154,7 @@ func TestFractionSqrt(t *testing.T) {
 	tests := []struct {
 		name       string
 		input      types.Type
-		wantFrac   bool   // true if we expect a Fraction result
+		wantFrac   bool // true if we expect a Fraction result
 		wantString string
 	}{
 		{"sqrt(1/4) = 1/2", frac(1, 4), true, "1/2"},
