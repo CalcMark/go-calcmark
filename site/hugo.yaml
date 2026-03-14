@@ -14,6 +14,9 @@ enableGitInfo: true
 params:
   description: "Calculations embedded in markdown documents."
   githubURL: "https://github.com/CalcMark/go-calcmark"
+  # Version is injected at build time via HUGO_PARAMS_version environment variable.
+  # Falls back to "dev" for local builds.
+  version: "dev"
 
 markup:
   goldmark:

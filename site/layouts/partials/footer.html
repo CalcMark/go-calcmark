@@ -1,7 +1,7 @@
 <footer class="site-footer">
   <div class="container footer-inner">
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
-    <span><img src="{{ $lark.RelPermalink }}" alt="" class="footer-lark" aria-hidden="true">CalcMark &mdash; MIT License</span>
+    <span><img src="{{ $lark.RelPermalink }}" alt="" class="footer-lark" aria-hidden="true">CalcMark {{ with .Site.Params.version }}{{ . }}{{ end }} &mdash; MIT License</span>
     <a href="{{ .Site.Params.githubURL }}">GitHub</a>
   </div>
 </footer>
