@@ -59,7 +59,7 @@ it_load = 200 kilowatts
 
 A standard 1 MW facility costs $7M-$12M. Our load as a fraction of 1 MW:
 
-load_frac = 200 / 1000
+load_frac = 1/5
 mw_cost = $9.5M
 power = load_frac * mw_cost
 

@@ -9,11 +9,10 @@ total_income = salary + side_hustle
 rent = $1500
 utilities = $200
 insurance = $150
-fixed_total = rent + utilities + insurance
+fixed_total = sum of rent, utilities, insurance
 
 ## Savings Target
-savings_rate = 0.20
-savings = total_income * savings_rate
+savings = 20% of total_income
 
 ## Discretionary
 remaining = total_income - fixed_total - savings
