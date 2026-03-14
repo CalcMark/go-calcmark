@@ -165,6 +165,23 @@ include_errors = true
 
 # Default output format: "text", "json", "html", "md", "cm"
 default_format = "text"
+
+[measurement]
+# How bare volume names (gallon, pint, cup, fl oz) are interpreted.
+# "us" = US Customary (default), "imperial" = Imperial (UK).
+volume = "us"
+
+# How bare mass names (ounce, pound) are interpreted.
+# "standard" = avoirdupois/everyday weight (1 oz = 28.35g, default).
+# "troy" = precious metals (1 troy oz = 31.10g).
+mass = "standard"
+
+# How "ton" is interpreted.
+# "short" = US (2000 lb, default), "long" = Imperial (2240 lb), "metric" = 1000 kg.
+ton = "short"
+
+# Annotate bare ambiguous units in output (e.g., "oz" → "us oz").
+strict = true
 ```
 
 ## Theme Examples

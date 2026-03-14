@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 )
 
@@ -20,8 +21,9 @@ type DirectiveResolver interface {
 // Interpreter executes validated AST nodes and produces typed results.
 // This is a Go-specific implementation of CalcMark execution.
 type Interpreter struct {
-	env       *Environment
-	directive DirectiveResolver
+	env         *Environment
+	directive   DirectiveResolver
+	measurement *units.MeasurementConfig
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
@@ -41,6 +43,20 @@ func NewInterpreterWithEnv(env *Environment) *Interpreter {
 // SetDirectiveResolver provides frontmatter context for resolving @directive references.
 func (interp *Interpreter) SetDirectiveResolver(dr DirectiveResolver) {
 	interp.directive = dr
+}
+
+// SetMeasurement configures how bare ambiguous unit names are resolved.
+// This is a pre-interpreter directive: it affects how unit names are interpreted
+// before any evaluation occurs (unlike convert_to which is post-evaluation).
+func (interp *Interpreter) SetMeasurement(mc *units.MeasurementConfig) {
+	interp.measurement = mc
+}
+
+// resolveUnit maps a bare ambiguous unit name to its qualified form using
+// the active measurement conventions. Returns the unit unchanged if no
+// measurement config is set or the unit is not ambiguous.
+func (interp *Interpreter) resolveUnit(unitName string) string {
+	return units.ResolveUnit(unitName, interp.measurement)
 }
 
 // Eval executes a list of AST nodes and returns the results.

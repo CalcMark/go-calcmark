@@ -171,12 +171,17 @@ func getFunctions() []Feature {
 			Example:     "sqrt(16) → 4",
 		},
 		{
-			Name:        "number",
-			Category:    CategoryFunction,
-			Syntax:      "number(value)",
-			Description: "Extract the numeric value from any type",
-			Aliases:     nil,
-			Example:     "number(10 kg) → 10",
+			Name:     "number",
+			Category: CategoryFunction,
+			Syntax:   "number(value)",
+			Description: "Strip the unit or currency from a typed value, returning a plain number. " +
+				"Use when you need a dimensionless ratio from two typed values: " +
+				"number($500) / number($1000) → 0.5. " +
+				"Only wrap what's needed — if a value is already a plain number, don't wrap it again. " +
+				"Which side you wrap matters: $100 / number($50) → $2.00 (currency), " +
+				"number($100) / number($50) → 2 (plain number).",
+			Aliases: nil,
+			Example: "number($500) / number($1000) → 0.5",
 		},
 		{
 			Name:        "accumulate",
@@ -708,6 +713,17 @@ func getFrontmatterFeatures() []Feature {
 			Syntax:      "convert_to: <system>",
 			Description: fmt.Sprintf("Convert quantity results to a measurement system (si or imperial). Accepts a system name or a map with system and unit_categories. Valid categories: %s.", categories),
 			Example:     "convert_to: si",
+		},
+		{
+			Name:     "measurement",
+			Category: CategoryFrontmatter,
+			Syntax:   "measurement:\n  volume: us|imperial\n  mass: standard|troy\n  ton: short|long|metric",
+			Description: "Configure how ambiguous unit names are interpreted. " +
+				"Each axis is independent. Only axes that differ from US Customary defaults need to be specified. " +
+				"\"standard\" mass means avoirdupois (everyday weight: 1 oz = 28.35g). " +
+				"\"troy\" mass is for precious metals (1 troy oz = 31.10g). " +
+				"Optional strict: true/false controls whether formatter annotates bare ambiguous units in output.",
+			Example: "measurement:\n  volume: imperial\n  mass: troy",
 		},
 		{
 			Name:        "@scale",

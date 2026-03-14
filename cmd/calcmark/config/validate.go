@@ -38,6 +38,10 @@ var knownKeys = map[string]bool{
 	"formatter.verbose":        true,
 	"formatter.include_errors": true,
 	"formatter.default_format": true,
+	"measurement.volume":       true,
+	"measurement.mass":         true,
+	"measurement.ton":          true,
+	"measurement.strict":       true,
 }
 
 // ValidateHexColor reports whether s is a valid hex color string.

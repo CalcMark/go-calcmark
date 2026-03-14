@@ -1,0 +1,10 @@
+# Measurement Conventions — Parser Tests
+
+## Inline Qualified Units
+gold = 10 troy oz
+milk = 2 imp pt
+cargo = 5 short ton
+ship = 3 long ton
+us_butter = 4 us oz
+us_water = 1 us gal
+imp_beer = 1 imp gal

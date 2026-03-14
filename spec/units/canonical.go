@@ -135,22 +135,58 @@ var StandardUnits = map[string]UnitMapping{
 		Description: "1000 kilograms",
 	},
 
-	// Mass - US Customary
+	// Mass - US Customary (standard = avoirdupois, the everyday weight system)
 	"ounce": {
 		Canonical:   "ounce",
 		Symbol:      "oz",
-		Aliases:     []string{"ounce", "ounces", "oz"},
+		Aliases:     []string{"ounce", "ounces", "oz", "us oz"},
 		System:      "US_Customary",
 		Quantity:    "Mass",
-		Description: "Avoirdupois ounce, 1/16 pound, 28.349523125 grams",
+		Description: "Standard (avoirdupois) ounce, 1/16 pound, 28.349523125 grams",
 	},
 	"pound": {
 		Canonical:   "pound",
 		Symbol:      "lb",
-		Aliases:     []string{"pound", "pounds", "lb", "lbs"},
+		Aliases:     []string{"pound", "pounds", "lb", "lbs", "us lb"},
 		System:      "US_Customary",
 		Quantity:    "Mass",
-		Description: "Avoirdupois pound, 453.59237 grams",
+		Description: "Standard (avoirdupois) pound, 453.59237 grams",
+	},
+
+	// Mass - Troy (precious metals: 1 troy oz = 31.1035g)
+	"troy ounce": {
+		Canonical:   "troy ounce",
+		Symbol:      "troy oz",
+		Aliases:     []string{"troy ounce", "troy ounces", "troy oz"},
+		System:      "Troy",
+		Quantity:    "Mass",
+		Description: "Troy ounce, used for precious metals, 31.1035 grams",
+	},
+	"troy pound": {
+		Canonical:   "troy pound",
+		Symbol:      "troy lb",
+		Aliases:     []string{"troy pound", "troy pounds", "troy lb"},
+		System:      "Troy",
+		Quantity:    "Mass",
+		Description: "Troy pound, 12 troy ounces, 373.2417 grams",
+	},
+
+	// Mass - Ton variants
+	"short ton": {
+		Canonical:   "short ton",
+		Symbol:      "short ton",
+		Aliases:     []string{"short ton", "short tons"},
+		System:      "US_Customary",
+		Quantity:    "Mass",
+		Description: "US short ton, 2000 pounds, 907.185 kg",
+	},
+	"long ton": {
+		Canonical:   "long ton",
+		Symbol:      "long ton",
+		Aliases:     []string{"long ton", "long tons"},
+		System:      "Imperial",
+		Quantity:    "Mass",
+		Description: "Imperial long ton, 2240 pounds, 1016.047 kg",
 	},
 
 	// ========== VOLUME UNITS ==========
@@ -173,7 +209,7 @@ var StandardUnits = map[string]UnitMapping{
 		Description: "SI base unit of volume, 1 cubic decimeter",
 	},
 
-	// Volume - US Customary
+	// Volume - US Customary (with "us" prefix aliases for explicit qualification)
 	"teaspoon": {
 		Canonical:   "teaspoon",
 		Symbol:      "tsp",
@@ -193,15 +229,23 @@ var StandardUnits = map[string]UnitMapping{
 	"cup": {
 		Canonical:   "cup",
 		Symbol:      "cup",
-		Aliases:     []string{"cup", "cups"},
+		Aliases:     []string{"cup", "cups", "us cup"},
 		System:      "US_Customary",
 		Quantity:    "Volume",
 		Description: "US legal cup, 240 milliliters",
 	},
+	"fluid ounce": {
+		Canonical:   "fluid ounce",
+		Symbol:      "fl oz",
+		Aliases:     []string{"fluid ounce", "fluid ounces", "fl oz", "us fl oz"},
+		System:      "US_Customary",
+		Quantity:    "Volume",
+		Description: "US fluid ounce, 29.5735 milliliters",
+	},
 	"pint": {
 		Canonical:   "pint",
 		Symbol:      "pt",
-		Aliases:     []string{"pint", "pints", "pt"},
+		Aliases:     []string{"pint", "pints", "pt", "us pt"},
 		System:      "US_Customary",
 		Quantity:    "Volume",
 		Description: "US liquid pint, 2 cups, 473.176 milliliters",
@@ -209,7 +253,7 @@ var StandardUnits = map[string]UnitMapping{
 	"quart": {
 		Canonical:   "quart",
 		Symbol:      "qt",
-		Aliases:     []string{"quart", "quarts", "qt"},
+		Aliases:     []string{"quart", "quarts", "qt", "us qt"},
 		System:      "US_Customary",
 		Quantity:    "Volume",
 		Description: "US liquid quart, 2 pints, 946.353 milliliters",
@@ -217,10 +261,52 @@ var StandardUnits = map[string]UnitMapping{
 	"gallon": {
 		Canonical:   "gallon",
 		Symbol:      "gal",
-		Aliases:     []string{"gallon", "gallons", "gal"},
+		Aliases:     []string{"gallon", "gallons", "gal", "us gal"},
 		System:      "US_Customary",
 		Quantity:    "Volume",
 		Description: "US liquid gallon, 4 quarts, 3.785411784 liters",
+	},
+
+	// Volume - Imperial
+	"imperial gallon": {
+		Canonical:   "imperial gallon",
+		Symbol:      "imp gal",
+		Aliases:     []string{"imperial gallon", "imperial gallons", "imp gal"},
+		System:      "Imperial",
+		Quantity:    "Volume",
+		Description: "Imperial gallon, 4.54609 liters",
+	},
+	"imperial quart": {
+		Canonical:   "imperial quart",
+		Symbol:      "imp qt",
+		Aliases:     []string{"imperial quart", "imperial quarts", "imp qt"},
+		System:      "Imperial",
+		Quantity:    "Volume",
+		Description: "Imperial quart, 1.13652 liters",
+	},
+	"imperial pint": {
+		Canonical:   "imperial pint",
+		Symbol:      "imp pt",
+		Aliases:     []string{"imperial pint", "imperial pints", "imp pt"},
+		System:      "Imperial",
+		Quantity:    "Volume",
+		Description: "Imperial pint, 568.261 milliliters",
+	},
+	"imperial cup": {
+		Canonical:   "imperial cup",
+		Symbol:      "imp cup",
+		Aliases:     []string{"imperial cup", "imperial cups", "imp cup"},
+		System:      "Imperial",
+		Quantity:    "Volume",
+		Description: "Imperial cup, 284.131 milliliters",
+	},
+	"imperial fluid ounce": {
+		Canonical:   "imperial fluid ounce",
+		Symbol:      "imp fl oz",
+		Aliases:     []string{"imperial fluid ounce", "imperial fluid ounces", "imp fl oz"},
+		System:      "Imperial",
+		Quantity:    "Volume",
+		Description: "Imperial fluid ounce, 28.4131 milliliters",
 	},
 
 	// ========================================

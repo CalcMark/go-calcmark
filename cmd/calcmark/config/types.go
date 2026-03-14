@@ -8,9 +8,10 @@ type Config struct {
 	// Affects decimal and thousand separators in output. Top-level because locale
 	// is application-wide and will eventually affect input parsing too.
 	// Precedence: --locale flag > config.toml > "en-US" default.
-	Locale    string          `mapstructure:"locale" toml:"locale"`
-	TUI       TUIConfig       `mapstructure:"tui" toml:"tui"`
-	Formatter FormatterConfig `mapstructure:"formatter" toml:"formatter"`
+	Locale      string            `mapstructure:"locale" toml:"locale"`
+	TUI         TUIConfig         `mapstructure:"tui" toml:"tui"`
+	Formatter   FormatterConfig   `mapstructure:"formatter" toml:"formatter"`
+	Measurement MeasurementConfig `mapstructure:"measurement" toml:"measurement"`
 }
 
 // TUIConfig holds TUI-specific settings.
@@ -66,4 +67,26 @@ type FormatterConfig struct {
 	Verbose       bool   `mapstructure:"verbose" toml:"verbose"`
 	IncludeErrors bool   `mapstructure:"include_errors" toml:"include_errors"`
 	DefaultFormat string `mapstructure:"default_format" toml:"default_format"`
+}
+
+// MeasurementConfig holds default measurement conventions.
+// These are global defaults that can be overridden per-document via frontmatter.
+// Precedence: frontmatter > config.toml > built-in defaults (US Customary).
+type MeasurementConfig struct {
+	// Volume: "us" (default) or "imperial".
+	// Controls how bare volume names (gallon, pint, cup, fl oz) are interpreted.
+	Volume string `mapstructure:"volume" toml:"volume"`
+
+	// Mass: "standard" (default) or "troy".
+	// "standard" = avoirdupois (everyday weight: 1 oz = 28.35g).
+	// "troy" = precious metals (1 troy oz = 31.10g).
+	Mass string `mapstructure:"mass" toml:"mass"`
+
+	// Ton: "short" (default), "long", or "metric".
+	// "short" = US (2000 lb), "long" = Imperial (2240 lb), "metric" = 1000 kg.
+	Ton string `mapstructure:"ton" toml:"ton"`
+
+	// Strict: annotate bare ambiguous units in output (default true).
+	// When true, "oz" displays as "us oz" or "troy oz" depending on convention.
+	Strict bool `mapstructure:"strict" toml:"strict"`
 }

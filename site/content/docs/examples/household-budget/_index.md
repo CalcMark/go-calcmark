@@ -134,19 +134,19 @@ remaining = net_income - total_outflow
 
 ## Budget Health Check
 
-Express each category as a percentage of net income. Dividing currency by currency produces a plain number, which you can multiply by 100 for a percentage.
+Express each category as a percentage of net income. Dividing one currency by another is an error — dollars divided by dollars doesn't produce a dollar amount. Wrap both sides with `number()` to get a dimensionless ratio. Which side you wrap matters: `$500 / number($1000)` gives `$0.50` (currency), while `number($500) / number($1000)` gives `0.5` (plain number). For percentages, you want the plain number:
 
 ```calcmark
 Calculate percentages of net income:
 
-savings_rate = total_savings / net_income * 100
-fixed_pct = total_fixed / net_income * 100
-variable_pct = total_variable / net_income * 100
+savings_rate = number(total_savings) / number(net_income) * 100
+fixed_pct = number(total_fixed) / number(net_income) * 100
+variable_pct = number(total_variable) / number(net_income) * 100
 ```
 
 `savings_rate` is about 16.02, `fixed_pct` is about 42.83, and `variable_pct` is about 24.03. These percentages give you a quick snapshot of where your money goes.
 
-**CalcMark features:** Currency division producing plain numbers; percentage calculations.
+**CalcMark features:** `number()` to strip currency for ratio calculations; percentage math.
 
 ---
 
@@ -164,9 +164,9 @@ needs = total_fixed + groceries + gas + utilities
 wants = dining_out + entertainment + personal_care + streaming
 savings_check = total_savings
 
-needs_pct = needs / net_income * 100
-wants_pct = wants / net_income * 100
-savings_pct = savings_check / net_income * 100
+needs_pct = number(needs) / number(net_income) * 100
+wants_pct = number(wants) / number(net_income) * 100
+savings_pct = number(savings_check) / number(net_income) * 100
 ```
 
 `needs_pct` lands around 47.7%, `wants_pct` around 7.95%, and `savings_pct` around 16.02%. Needs are under the 50% ceiling. Wants are well below 30%, which means there is room to redirect more toward savings to hit the 20% target.
@@ -184,11 +184,11 @@ Current emergency fund balance:
 
 current_emergency = $8500
 monthly_expenses = total_fixed + total_variable
-months_runway = current_emergency / monthly_expenses
+months_runway = number(current_emergency) / number(monthly_expenses)
 target_months = 6
 target_fund = monthly_expenses * target_months
 shortfall = target_fund - current_emergency
-months_to_goal = shortfall / emergency_fund_contribution
+months_to_goal = number(shortfall) / number(emergency_fund_contribution)
 ```
 
 `months_runway` is about 1.57 -- roughly six weeks of coverage. The six-month `target_fund` is `$32,550`, leaving a `shortfall` of `$24,050`. At `$500/month`, `months_to_goal` is about 48 months (four years).
@@ -223,7 +223,7 @@ This example showcases the following CalcMark features:
 - **Currency arithmetic** -- addition, subtraction, multiplication, division
 - **Decimal arithmetic** -- plain numbers for tax rates and percentages
 - **Named variables** -- reusable values referenced across sections
-- **Percentage calculations** -- dividing currency by currency for ratios
+- **Percentage calculations** -- `number()` to extract values for ratio calculations
 - **Rate literals** -- `$300/month`, `$200/month`
 - **Rate conversion** -- `$300/month per day` to convert time units
 - **Markdown prose** -- headings, paragraphs, and bullet lists between calculations

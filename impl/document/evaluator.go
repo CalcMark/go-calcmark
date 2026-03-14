@@ -78,6 +78,12 @@ func (e *Evaluator) getDisplayFormatter() display.Formatter {
 	return display.DefaultFormatter()
 }
 
+// GetDisplayFormatter returns the evaluator's display formatter for use by output formatters.
+// After Evaluate(), this includes measurement conventions wired from frontmatter.
+func (e *Evaluator) GetDisplayFormatter() display.Formatter {
+	return e.getDisplayFormatter()
+}
+
 // Evaluate evaluates all blocks in the document in dependency order.
 // CalcBlocks are evaluated top-down with accumulated environment.
 // TextBlocks are checked for lines that look like failed calculations.
@@ -92,6 +98,18 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 	// Apply frontmatter (exchange rates, globals) to environment before evaluation
 	if err := doc.ApplyFrontmatter(e.env); err != nil {
 		return fmt.Errorf("frontmatter: %w", err)
+	}
+
+	// Wire measurement conventions into the display formatter for strict annotation.
+	// Default: strict=true (annotate bare ambiguous units like "oz" → "us oz").
+	if fm := doc.GetFrontmatter(); fm != nil && fm.Measurement != nil {
+		strict := true // default
+		if fm.Measurement.Strict != nil {
+			strict = *fm.Measurement.Strict
+		}
+		df := e.getDisplayFormatter()
+		df.SetMeasurement(&fm.Measurement.MeasurementConfig, strict)
+		e.displayFormatter = &df
 	}
 
 	// Evaluate blocks in document order (top-down)
@@ -397,7 +415,12 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	evalEnv := env.Clone()
 	interp := interpreter.NewInterpreterWithEnv(evalEnv)
 	if doc != nil && doc.GetFrontmatter() != nil {
-		interp.SetDirectiveResolver(NewDirectiveResolver(doc.GetFrontmatter()))
+		fm := doc.GetFrontmatter()
+		interp.SetDirectiveResolver(NewDirectiveResolver(fm))
+		// Wire measurement conventions (pre-interpreter: affects unit name resolution)
+		if fm.Measurement != nil {
+			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
+		}
 	}
 	results, err := interp.Eval(nodes)
 	if err != nil {
@@ -529,7 +552,12 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// Evaluate statements one by one to collect partial results even if a later statement fails
 	interp := interpreter.NewInterpreterWithEnv(e.env)
 	if doc != nil && doc.GetFrontmatter() != nil {
-		interp.SetDirectiveResolver(NewDirectiveResolver(doc.GetFrontmatter()))
+		fm := doc.GetFrontmatter()
+		interp.SetDirectiveResolver(NewDirectiveResolver(fm))
+		// Wire measurement conventions (pre-interpreter: affects unit name resolution)
+		if fm.Measurement != nil {
+			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
+		}
 	}
 	results := make([]types.Type, 0, len(nodes))
 	var evalErr error

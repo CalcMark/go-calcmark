@@ -250,15 +250,16 @@ func TestRegistry_FrontmatterCategory(t *testing.T) {
 	r := NewRegistry()
 	features := r.ByCategory(CategoryFrontmatter)
 
-	if len(features) != 4 {
-		t.Errorf("expected 4 frontmatter features, got %d", len(features))
+	if len(features) != 5 {
+		t.Errorf("expected 5 frontmatter features, got %d", len(features))
 	}
 
 	expected := map[string]bool{
-		"exchange":   false,
-		"globals":    false,
-		"scale":      false,
-		"convert_to": false,
+		"exchange":    false,
+		"globals":     false,
+		"scale":       false,
+		"convert_to":  false,
+		"measurement": false,
 	}
 	for _, f := range features {
 		if _, ok := expected[f.Name]; !ok {

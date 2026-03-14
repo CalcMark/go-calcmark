@@ -222,13 +222,78 @@ convert_to:
 
 Valid categories: `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`.
 
+### Measurement Conventions
+
+Some unit names are ambiguous — a "gallon" in the US (3.785 L) is different from a "gallon" in the UK (4.546 L). Similarly, an "ounce" of gold (troy, 31.10g) differs from an "ounce" of flour (standard, 28.35g).
+
+CalcMark defaults to US Customary definitions for backwards compatibility. Use `measurement:` to declare which conventions your document uses:
+
+```yaml
+measurement:
+  volume: imperial    # gallon, pint, fl oz → Imperial (UK) definitions
+  mass: troy          # ounce, pound → troy (precious metals) definitions
+  ton: long           # ton → Imperial long ton (2240 lb)
+```
+
+Each axis is independent — only specify axes that differ from the US defaults.
+
+| Axis | Options | Default | Affected Units |
+|------|---------|---------|---------------|
+| `volume` | `us`, `imperial` | `us` | gallon, quart, pint, fl oz, cup |
+| `mass` | `standard`, `troy` | `standard` | ounce, pound |
+| `ton` | `short`, `long`, `metric` | `short` | ton |
+
+**What does "standard" mass mean?** Standard is the avoirdupois system — the everyday weight you encounter at the grocery store and on bathroom scales (1 oz = 28.35g, 1 lb = 16 oz). Troy weight is used for precious metals and gemstones (1 troy oz = 31.10g, 1 troy lb = 12 troy oz).
+
+#### Inline Qualifiers
+
+Override the document convention for a single expression using explicit prefixes:
+
+```
+gold = 10 troy oz          # Always troy, regardless of frontmatter
+milk = 2 imp pt            # Always imperial pint
+shipping = 5 short ton     # Always US short ton
+```
+
+Available prefixes: `us`, `imp`/`imperial`, `troy`, `short`, `long`, `metric`.
+
+#### Strict Mode
+
+By default, when `measurement:` is present, the formatter annotates bare ambiguous units in output so readers always know which definition is active:
+
+| Source | Frontmatter | Output |
+|--------|-------------|--------|
+| `2 oz` | (none) | `2 us oz` |
+| `2 oz` | `mass: troy` | `2 troy ounce` |
+| `2 troy oz` | (any) | `2 troy oz` (already explicit) |
+
+Set `strict: false` to suppress annotation:
+
+```yaml
+measurement:
+  volume: imperial
+  strict: false       # bare units display without prefix
+```
+
+#### Precedence
+
+`config.toml` (global default) < frontmatter (per-document) < inline qualifier (per-expression).
+
+#### Interaction with Other Directives
+
+- **`convert_to`**: Independent. `measurement` controls input interpretation (which gallon definition is used). `convert_to` controls output system (convert everything to SI or Imperial). They compose cleanly.
+- **`scale`**: Unaffected. Scale multiplies values; measurement resolves unit identities.
+- **`locale`**: Independent. Locale controls number formatting (decimal/thousand separators), not unit definitions.
+
 ### Transform Order
 
-When both `scale` and `convert_to` are present, transforms apply in this order:
+When frontmatter directives are present, they apply in this order:
 
-1. **Evaluate** all expressions
-2. **Scale** quantity results
-3. **Convert** to target measurement system
+1. **Resolve** measurement conventions (bare unit names mapped to qualified forms)
+2. **Evaluate** all expressions
+3. **Scale** quantity results
+4. **Convert** to target measurement system
+5. **Annotate** ambiguous units in output (strict mode)
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [User Guide — Frontmatter](/docs/user-guide/#frontmatter) for a gentler introduction.
 
@@ -735,11 +800,21 @@ profit_margin = operating_income as % of total_revenue
 This returns a `Percentage` type (e.g., `41.01%`). Both values must be
 the same type — you can't compute `$100 as % of 50 kg`.
 
-For a raw number ratio, use `number()` instead:
+For a raw number ratio, use `number()` to strip the type from both sides:
 
 ```
 ratio = number(operating_income) / number(total_revenue)
 ```
+
+**Which side you wrap matters.** `number()` strips the unit or currency, returning a plain number. The arithmetic rules then determine the result type:
+
+| Expression | Result | Why |
+|-----------|--------|-----|
+| `$100 / number($50)` | `$2.00` | currency / number = currency |
+| `number($100) / number($50)` | `2` | number / number = plain number |
+| `number($100) / $50` | error | number / currency is not defined |
+
+**Don't over-wrap.** If a value is already a plain number (from a previous `number()` call, or because it was never typed), wrapping it again is harmless but noisy. Only wrap typed values (currency, quantity) that need their type stripped.
 
 The same rule applies to fractions with units:
 

@@ -126,11 +126,11 @@ func runConvert(filename string) error {
 		out = os.Stdout
 	}
 
-	// Format and write
+	// Format and write — use evaluator's formatter (includes measurement annotations)
 	opts := format.Options{
 		Verbose:          true,
 		Template:         templateContent,
-		DisplayFormatter: localeFormatter(),
+		DisplayFormatter: eval.GetDisplayFormatter(),
 	}
 	if err := formatter.Format(out, doc, opts); err != nil {
 		return fmt.Errorf("format error: %w", err)
