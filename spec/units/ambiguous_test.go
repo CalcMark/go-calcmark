@@ -128,9 +128,9 @@ func TestConventionPrefix_Default(t *testing.T) {
 		{"oz", "us"},
 		{"gallon", "us"},
 		{"ton", "short"},
-		{"meter", ""},      // not ambiguous
-		{"troy oz", ""},    // already qualified
-		{"imp gal", ""},    // already qualified
+		{"meter", ""},   // not ambiguous
+		{"troy oz", ""}, // already qualified
+		{"imp gal", ""}, // already qualified
 	}
 	for _, tt := range tests {
 		got := ConventionPrefix(tt.input, mc)

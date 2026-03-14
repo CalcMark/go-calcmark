@@ -298,14 +298,22 @@ func addMassConversions(r map[string]ConversionInfo) {
 
 	// Short Ton (US: 2000 lbs = 907.185 kg)
 	registerUnit(r, ConversionInfo{cat,
-		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound * 2000).Kilograms() },
-		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() / 2000 },
+		func(v float64) float64 {
+			return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound * 2000).Kilograms()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() / 2000
+		},
 	}, "short ton", "short tons")
 
 	// Long Ton (Imperial: 2240 lbs = 1016.047 kg)
 	registerUnit(r, ConversionInfo{cat,
-		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound * 2240).Kilograms() },
-		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() / 2240 },
+		func(v float64) float64 {
+			return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound * 2240).Kilograms()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() / 2240
+		},
 	}, "long ton", "long tons")
 }
 
