@@ -706,6 +706,50 @@ Case-insensitive: `AND`, `and`, `And` all work.
 |----------|------|---------|--------|
 | `=` | Assign | `x = 5` | Stores 5 in variable x |
 
+### Type Arithmetic Rules {#type-arithmetic-rules}
+
+Not every combination of types can be multiplied or divided. CalcMark
+follows **dimensional analysis**: the result of an operation must have a
+meaningful type.
+
+| Expression | Result | Why |
+|-----------|--------|-----|
+| `$100 + $50` | `$150` | Adding prices is natural |
+| `$100 - $50` | `$50` | Subtracting prices is natural |
+| `$100 * 5` | `$500` | Scaling a price by a number |
+| `$100 / 5` | `$20` | Splitting a price evenly |
+| `$100 * $50` | **error** | "Square dollars" isn't a real unit |
+| `$100 / $50` | **error** | Dollars divided by dollars isn't dollars |
+| `10 kg + 5 kg` | `15 kg` | Adding quantities is natural |
+| `10 kg * 3` | `30 kg` | Scaling a quantity by a number |
+| `10 kg * 5 kg` | **error** | "Square kilograms" isn't a real unit |
+| `10 kg / 5 kg` | **error** | kg divided by kg isn't kg |
+
+**To get a ratio**, use `number()` to extract the raw value first:
+
+```
+profit_margin = number(operating_income) / number(total_revenue)
+```
+
+The same rule applies to fractions with units:
+
+| Expression | Result | Why |
+|-----------|--------|-----|
+| `2/3 cup + 1/4 cup` | `11/12 cup` | Adding quantities |
+| `2/3 cup * 3` | `2 cup` | Scaling by a number |
+| `2/3 cup * 1/3 cup` | **error** | Square cups isn't real |
+| `1/3 * $200` | `$66.67` | Dimensionless fraction scales currency |
+
+#### Fractions vs Division
+
+CalcMark uses whitespace to disambiguate fractions from division:
+
+- `1/3` — fraction (no spaces around `/`)
+- `1 / 3` — division (spaces around `/`)
+- `a/b` where `a` and `b` are variables — always division
+
+Only literal integers without spaces produce fractions.
+
 ---
 
 ## Reserved Keywords
