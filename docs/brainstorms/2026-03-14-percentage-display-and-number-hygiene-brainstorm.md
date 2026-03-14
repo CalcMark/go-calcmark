@@ -32,13 +32,25 @@ gross_margin = gross_profit as a % of total_revenue
 
 This already exists and produces `Percentage(62%)`. The two features are complementary:
 
-| Syntax | Operands | What it does |
-|--------|----------|-------------|
-| `X as a % of Y` | binary | Compute ratio and convert: `(X / Y) * 100` → Percentage |
-| `X as percentage` | unary | Convert existing ratio: `X * 100` → Percentage |
-| `percent(X)` | unary function | Same as above, function syntax |
+| Syntax | Form | What it does |
+|--------|------|-------------|
+| `X as a % of Y` | NL binary | Compute ratio and convert: `(X / Y) * 100` → Percentage |
+| `percent(X, Y)` | function binary | Same — functional equivalent of `X as a % of Y` |
+| `X as percentage` | NL unary | Convert existing ratio: `X * 100` → Percentage |
+| `percent(X)` | function unary | Same — functional equivalent of `X as percentage` |
 
-The unary form fills the gap when you already have a ratio from `number(X) / number(Y)` and want to convert it to a Percentage for downstream math.
+`percent()` is overloaded by arity — one arg converts, two args computes the ratio. This keeps the pattern where every NL syntax has a function equivalent:
+
+```
+gross_margin = percent(gross_profit, total_revenue)    // binary: compute + convert
+gross_margin = gross_profit as a % of total_revenue    // NL equivalent
+
+ratio = number(profit) / number(rev)
+margin = percent(ratio)           // unary: convert 0.62 → 62%
+margin = ratio as percentage      // NL equivalent
+```
+
+The binary form also solves the `number()` wrapping problem — `percent($500, $1000)` handles the type stripping internally, so users don't need to write `number($500) / number($1000) as percentage`.
 
 ### 3. INFO diagnostic for redundant `number()` wrapping
 
