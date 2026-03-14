@@ -1,7 +1,7 @@
 ---
 title: "refactor: Restructure documentation into task-oriented sub-pages with Guides pillar"
 type: refactor
-status: active
+status: completed
 date: 2026-03-14
 origin: docs/brainstorms/2026-03-14-documentation-restructure-brainstorm.md
 ---
