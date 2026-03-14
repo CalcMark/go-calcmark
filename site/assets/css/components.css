@@ -121,6 +121,21 @@
   gap: var(--space-1);
 }
 
+.sidebar-section {
+  display: block;
+  padding: var(--space-1) var(--space-4);
+  margin-top: var(--space-4);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-section:first-child {
+  margin-top: 0;
+}
+
 .sidebar-link {
   display: block;
   padding: var(--space-2) var(--space-4);

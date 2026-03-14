@@ -37,9 +37,6 @@ menus:
     - name: Docs
       url: /docs/
       weight: 10
-    - name: Guides
-      url: /guides/
-      weight: 15
     - name: Examples
       url: /docs/examples/
       weight: 20
@@ -53,30 +50,51 @@ menus:
         external: true
 
   docs:
+    # ── Guides ──
+    - name: Guides
+      params: { section: true }
+      weight: 1
     - name: Getting Started
       url: /docs/getting-started/
       weight: 10
     - name: User Guide
       url: /docs/user-guide/
       weight: 20
-    - name: The Editor
-      url: /docs/editor/
-      weight: 22
+    - name: Domain Recipes
+      url: /guides/
+      weight: 25
+
+    # ── Reference ──
+    - name: Reference
+      params: { section: true }
+      weight: 30
     - name: Language Reference
       url: /docs/language-reference/
-      weight: 30
-    - name: CLI Reference
-      url: /docs/cli-reference/
-      weight: 35
-    - name: Agent & API Integration
+      weight: 31
+    - name: Examples
+      identifier: sidebar-examples
+      url: /docs/examples/
+      weight: 32
+    - name: Agent & API
       url: /docs/agent-integration/
-      weight: 36
+      weight: 33
     - name: Go Package
       url: /docs/go-package/
-      weight: 37
+      weight: 34
+
+    # ── Apps ──
+    - name: Apps
+      params: { section: true }
+      weight: 40
+    - name: The Editor
+      url: /docs/editor/
+      weight: 41
+    - name: Command Line
+      url: /docs/cli-reference/
+      weight: 42
     - name: Configuration
       url: /docs/configuration/
-      weight: 40
+      weight: 43
     - name: Examples
       url: /docs/examples/
       weight: 50

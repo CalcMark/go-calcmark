@@ -1,17 +1,18 @@
 {{ define "main" }}
-<div class="{{ if eq .Section "docs" }}docs-layout {{ end }}container">
-  {{ if eq .Section "docs" }}{{ partial "sidebar.html" . }}{{ end }}
-  <article class="{{ if eq .Section "docs" }}docs-content{{ else }}guide-content{{ end }}">
+{{ $hasSidebar := or (eq .Section "docs") (eq .Section "guides") }}
+<div class="{{ if $hasSidebar }}docs-layout {{ end }}container">
+  {{ if $hasSidebar }}{{ partial "sidebar.html" . }}{{ end }}
+  <article class="docs-content">
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
     <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
     {{ with .Params.summary }}<p class="text-muted">{{ . | markdownify }}</p>{{ end }}
     {{ if .Params.build }}{{ if eq .Params.build.list "never" }}<p class="full-doc-link"><a href="../">← Back to walkthrough</a></p>{{ end }}{{ end }}
-    {{ with .TableOfContents }}
+    {{ if $hasSidebar }}{{ with .TableOfContents }}
     <details class="page-toc" open>
       <summary>On this page</summary>
       {{ . }}
     </details>
-    {{ end }}
+    {{ end }}{{ end }}
     {{ .Content }}
     {{ if .GitInfo }}
     <footer class="page-meta">

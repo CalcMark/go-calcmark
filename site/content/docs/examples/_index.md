@@ -1,7 +1,7 @@
 ---
 title: "Examples"
 summary: "Worked examples showing CalcMark in action."
-weight: 50
+weight: 900
 ---
 
 Explore complete CalcMark files that demonstrate real-world use cases. Each example page has a Larky icon you can click to copy the `cm remote` command — paste it into your terminal to open the file directly.

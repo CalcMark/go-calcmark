@@ -1,19 +1,13 @@
 ---
-title: "Guides"
-summary: "Domain-specific tutorials that teach CalcMark through real-world problem-solving."
+title: "Domain Recipes"
+summary: "Learn CalcMark through real-world scenarios — system sizing, budgets, recipes, and unit conversion."
 ---
 
-# Guides
+These tutorials teach CalcMark through real-world scenarios. Each one walks through a domain-specific problem, introduces the relevant language features along the way, and ends with a complete worked example.
 
-These tutorials teach CalcMark through real-world scenarios. Each guide walks through a domain-specific problem, introduces the relevant language features along the way, and ends with a complete worked example.
-
-**New to CalcMark?** Start with [Getting Started](/docs/getting-started/) for installation and core concepts, then come back here to solve a real problem.
+**New to CalcMark?** Start with [Getting Started](/docs/getting-started/) for installation and core concepts, then come back here.
 
 **Want to try without installing?** Open the [CalcMark Lark playground](https://lark.calcmark.org) in your browser and paste any example.
-
----
-
-## Choose Your Domain
 
 ### [System Sizing & Capacity Planning](/guides/system-sizing/)
 
@@ -29,12 +23,4 @@ Scale recipes with fractions, measurement conventions (US vs Imperial), and the 
 
 ### [Unit Conversion & Measurement](/guides/unit-conversion/)
 
-Convert between unit systems, handle ambiguous units (US gallon vs Imperial gallon, standard ounce vs troy ounce), and use inline qualifiers. The definitive guide to CalcMark's measurement conventions.
-
----
-
-## Reference
-
-- [User Guide](/docs/user-guide/) — Task-oriented how-to pages for each feature area
-- [Language Reference](/docs/language-reference/) — Formal specification with deep-linkable anchors
-- [Examples](/docs/examples/) — Complete worked documents ready to copy and modify
+Convert between unit systems, handle ambiguous units (US gallon vs Imperial gallon, standard ounce vs troy ounce), and use inline qualifiers.

@@ -1,8 +1,17 @@
 <aside class="docs-sidebar">
   <nav class="sidebar-nav" aria-label="Documentation">
+    {{ $seen := dict }}
     {{ range .Site.Menus.docs }}
+    {{ if .Params.section }}
+    <span class="sidebar-section">{{ .Name }}</span>
+    {{ else }}
+    {{ $key := .URL | default .Name }}
+    {{ if not (index $seen $key) }}
+    {{ $seen = merge $seen (dict $key true) }}
     <a class="sidebar-link{{ if or ($.IsMenuCurrent "docs" .) ($.HasMenuCurrent "docs" .) }} sidebar-link--active{{ end }}"
        href="{{ .URL }}">{{ .Name }}</a>
+    {{ end }}
+    {{ end }}
     {{ end }}
   </nav>
 </aside>
