@@ -170,11 +170,14 @@ Every CalcMark value is a `types.Type`. The concrete types are in `github.com/Ca
 
 | Type | Example | Go Type |
 |------|---------|---------|
-| `*Number` | `42`, `3.14`, `15%` | `types.Number` |
+| `*Number` | `42`, `3.14` | `types.Number` |
 | `*Currency` | `$100`, `85 EUR` | `types.Currency` |
 | `*Quantity` | `5 kg`, `100 Mbps` | `types.Quantity` |
+| `*Fraction` | `1/3`, `2/3 cup` | `types.Fraction` |
+| `*Percentage` | `15%`, `20% of 500` | `types.Percentage` |
 | `*Duration` | `3 hours`, `2 weeks` | `types.Duration` |
 | `*Date` | `2026-03-11` | `types.Date` |
+| `*Time` | `2:30 PM`, `14:30` | `types.Time` |
 | `*Rate` | `100 MB/s`, `$50/hour` | `types.Rate` |
 | `*Boolean` | `true`, `false` | `types.Boolean` |
 
