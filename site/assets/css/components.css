@@ -149,6 +149,13 @@
   max-width: var(--content-max-width);
 }
 
+/* Guide content — same readable width, centered without sidebar */
+.guide-content {
+  padding: var(--space-8) 0;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
 /* Hero section */
 .hero {
   padding: var(--space-16) 0;

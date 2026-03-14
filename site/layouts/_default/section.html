@@ -1,9 +1,9 @@
 {{ define "main" }}
-<div class="docs-layout container">
+<div class="{{ if eq .Section "docs" }}docs-layout {{ end }}container">
   {{ if eq .Section "docs" }}{{ partial "sidebar.html" . }}{{ end }}
   {{- $visiblePages := where .Pages.ByWeight "Params.build.list" "!=" "never" -}}
   {{- if $visiblePages -}}
-  <div class="docs-content">
+  <div class="{{ if eq .Section "docs" }}docs-content{{ else }}guide-content{{ end }}">
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
     <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
     {{ .Content }}
