@@ -1312,3 +1312,175 @@ func TestFrontmatter_ScaleConvertTo_RoundTrip(t *testing.T) {
 		t.Errorf("convert_to lost in round-trip: %+v", parsed.ConvertTo)
 	}
 }
+
+// ========== Measurement Convention Tests ==========
+
+func TestParseFrontmatter_MeasurementFullConfig(t *testing.T) {
+	source := `---
+measurement:
+  volume: imperial
+  mass: troy
+  ton: long
+  strict: false
+---
+gold = 10 oz
+`
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Measurement == nil {
+		t.Fatal("expected measurement config, got nil")
+	}
+	if fm.Measurement.Volume != "imperial" {
+		t.Errorf("volume = %q, want %q", fm.Measurement.Volume, "imperial")
+	}
+	if fm.Measurement.Mass != "troy" {
+		t.Errorf("mass = %q, want %q", fm.Measurement.Mass, "troy")
+	}
+	if fm.Measurement.Ton != "long" {
+		t.Errorf("ton = %q, want %q", fm.Measurement.Ton, "long")
+	}
+	if fm.Measurement.Strict == nil || *fm.Measurement.Strict != false {
+		t.Errorf("strict = %v, want false", fm.Measurement.Strict)
+	}
+}
+
+func TestParseFrontmatter_MeasurementPartialConfig(t *testing.T) {
+	source := `---
+measurement:
+  volume: imperial
+---
+milk = 1 gallon
+`
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Measurement == nil {
+		t.Fatal("expected measurement config, got nil")
+	}
+	if fm.Measurement.Volume != "imperial" {
+		t.Errorf("volume = %q, want %q", fm.Measurement.Volume, "imperial")
+	}
+	// Defaults should be filled in
+	if fm.Measurement.Mass != "standard" {
+		t.Errorf("mass default = %q, want %q", fm.Measurement.Mass, "standard")
+	}
+	if fm.Measurement.Ton != "short" {
+		t.Errorf("ton default = %q, want %q", fm.Measurement.Ton, "short")
+	}
+	if fm.Measurement.Strict != nil {
+		t.Errorf("strict should be nil (unset), got %v", *fm.Measurement.Strict)
+	}
+}
+
+func TestParseFrontmatter_MeasurementInvalidVolume(t *testing.T) {
+	source := `---
+measurement:
+  volume: metric
+---
+`
+	_, _, err := ParseFrontmatter(source)
+	if err == nil {
+		t.Fatal("expected error for invalid volume convention")
+	}
+	if !strings.Contains(err.Error(), "unknown volume convention") {
+		t.Errorf("error should mention volume convention, got: %v", err)
+	}
+}
+
+func TestParseFrontmatter_MeasurementInvalidMass(t *testing.T) {
+	source := `---
+measurement:
+  mass: avoidupois
+---
+`
+	_, _, err := ParseFrontmatter(source)
+	if err == nil {
+		t.Fatal("expected error for invalid mass convention")
+	}
+	if !strings.Contains(err.Error(), "unknown mass convention") {
+		t.Errorf("error should mention mass convention, got: %v", err)
+	}
+	// Error should explain what "standard" means
+	if !strings.Contains(err.Error(), "everyday weight") {
+		t.Errorf("error should explain standard = everyday weight, got: %v", err)
+	}
+}
+
+func TestParseFrontmatter_MeasurementInvalidTon(t *testing.T) {
+	source := `---
+measurement:
+  ton: imperial
+---
+`
+	_, _, err := ParseFrontmatter(source)
+	if err == nil {
+		t.Fatal("expected error for invalid ton convention")
+	}
+	if !strings.Contains(err.Error(), "unknown ton convention") {
+		t.Errorf("error should mention ton convention, got: %v", err)
+	}
+}
+
+func TestParseFrontmatter_MeasurementUnknownKey(t *testing.T) {
+	source := `---
+measurement:
+  volume: us
+  cups: metric
+---
+`
+	_, _, err := ParseFrontmatter(source)
+	if err == nil {
+		t.Fatal("expected error for unknown measurement key")
+	}
+	if !strings.Contains(err.Error(), "unknown key") {
+		t.Errorf("error should mention unknown key, got: %v", err)
+	}
+}
+
+func TestParseFrontmatter_MeasurementNotMap(t *testing.T) {
+	source := `---
+measurement: imperial
+---
+`
+	_, _, err := ParseFrontmatter(source)
+	if err == nil {
+		t.Fatal("expected error for non-map measurement value")
+	}
+	if !strings.Contains(err.Error(), "must be a map") {
+		t.Errorf("error should mention map requirement, got: %v", err)
+	}
+}
+
+func TestParseFrontmatter_MeasurementAllTonOptions(t *testing.T) {
+	for _, ton := range []string{"short", "long", "metric"} {
+		t.Run(ton, func(t *testing.T) {
+			source := "---\nmeasurement:\n  ton: " + ton + "\n---\n"
+			fm, _, err := ParseFrontmatter(source)
+			if err != nil {
+				t.Fatalf("unexpected error for ton=%q: %v", ton, err)
+			}
+			if fm.Measurement.Ton != ton {
+				t.Errorf("ton = %q, want %q", fm.Measurement.Ton, ton)
+			}
+		})
+	}
+}
+
+func TestParseFrontmatter_MeasurementNoConfig(t *testing.T) {
+	source := `---
+exchange:
+  USD_EUR: 0.92
+---
+price = 100 USD
+`
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fm.Measurement != nil {
+		t.Errorf("expected nil measurement config when not specified, got %+v", fm.Measurement)
+	}
+}

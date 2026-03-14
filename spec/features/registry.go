@@ -710,6 +710,17 @@ func getFrontmatterFeatures() []Feature {
 			Example:     "convert_to: si",
 		},
 		{
+			Name:     "measurement",
+			Category: CategoryFrontmatter,
+			Syntax:   "measurement:\n  volume: us|imperial\n  mass: standard|troy\n  ton: short|long|metric",
+			Description: "Configure how ambiguous unit names are interpreted. " +
+				"Each axis is independent. Only axes that differ from US Customary defaults need to be specified. " +
+				"\"standard\" mass means avoirdupois (everyday weight: 1 oz = 28.35g). " +
+				"\"troy\" mass is for precious metals (1 troy oz = 31.10g). " +
+				"Optional strict: true/false controls whether formatter annotates bare ambiguous units in output.",
+			Example: "measurement:\n  volume: imperial\n  mass: troy",
+		},
+		{
 			Name:        "@scale",
 			Category:    CategoryKeyword,
 			Syntax:      "@scale",

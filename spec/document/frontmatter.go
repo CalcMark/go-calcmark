@@ -28,6 +28,48 @@ type ConvertToConfig struct {
 	UnitCategories []string // empty = all
 }
 
+// MeasurementConfig configures how ambiguous unit names are interpreted.
+// Each axis controls an independent dimension of unit ambiguity.
+// Only axes that differ from US Customary defaults need to be specified.
+type MeasurementConfig struct {
+	// Volume controls how bare volume names (gallon, pint, fl oz, etc.) are interpreted.
+	// "us" (default) = US Customary, "imperial" = Imperial (UK).
+	Volume string
+
+	// Mass controls how bare mass names (ounce, pound) are interpreted.
+	// "standard" (default) = avoirdupois (everyday weight: 1 oz = 28.35g),
+	// "troy" = troy weight (precious metals: 1 troy oz = 31.10g).
+	Mass string
+
+	// Ton controls how "ton" is interpreted.
+	// "short" (default) = US short ton (2000 lb), "long" = Imperial long ton (2240 lb),
+	// "metric" = metric tonne (1000 kg).
+	Ton string
+
+	// Strict controls whether the formatter annotates bare ambiguous units in output.
+	// nil = use config default (true), true = annotate, false = pass through.
+	Strict *bool
+}
+
+// validVolumeConventions lists the valid options for the volume axis.
+var validVolumeConventions = map[string]bool{
+	"us":       true,
+	"imperial": true,
+}
+
+// validMassConventions lists the valid options for the mass axis.
+var validMassConventions = map[string]bool{
+	"standard": true, // avoirdupois — everyday weight (1 oz = 28.35g)
+	"troy":     true, // precious metals (1 troy oz = 31.10g)
+}
+
+// validTonConventions lists the valid options for the ton axis.
+var validTonConventions = map[string]bool{
+	"short":  true, // US short ton (2000 lb)
+	"long":   true, // Imperial long ton (2240 lb)
+	"metric": true, // metric tonne (1000 kg)
+}
+
 // Frontmatter represents structured metadata at the start of a CalcMark document.
 // It is delimited by --- markers and contains YAML content.
 //
@@ -62,6 +104,9 @@ type Frontmatter struct {
 
 	// ConvertTo is the document-level unit system conversion (nil if not present).
 	ConvertTo *ConvertToConfig
+
+	// Measurement configures how ambiguous unit names are interpreted (nil if not present).
+	Measurement *MeasurementConfig
 
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
@@ -275,10 +320,11 @@ func (f *Frontmatter) HasExchangeRate(key string) bool {
 // frontmatterYAML is the intermediate struct for YAML unmarshaling.
 // This keeps the YAML structure separate from the normalized Frontmatter type.
 type frontmatterYAML struct {
-	Exchange  map[string]float64 `yaml:"exchange"`
-	Globals   map[string]string  `yaml:"globals"`
-	Scale     any                `yaml:"scale"`
-	ConvertTo any                `yaml:"convert_to"`
+	Exchange    map[string]float64 `yaml:"exchange"`
+	Globals     map[string]string  `yaml:"globals"`
+	Scale       any                `yaml:"scale"`
+	ConvertTo   any                `yaml:"convert_to"`
+	Measurement any                `yaml:"measurement"`
 }
 
 // parseScaleConfig parses the scale field which can be a scalar number or a map
@@ -379,6 +425,88 @@ func validateConvertToConfig(system string, categories []string) (*ConvertToConf
 		return nil, fmt.Errorf("convert_to system must be 'si' or 'imperial', got %q", system)
 	}
 	return &ConvertToConfig{System: normalized, UnitCategories: categories}, nil
+}
+
+// parseMeasurementConfig parses the measurement field which must be a map
+// with axis keys (volume, mass, ton) and an optional strict boolean.
+func parseMeasurementConfig(raw any) (*MeasurementConfig, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("measurement must be a map with axis keys (volume, mass, ton), got %T", raw)
+	}
+
+	mc := &MeasurementConfig{
+		Volume: "us",
+		Mass:   "standard",
+		Ton:    "short",
+	}
+
+	// Validate keys
+	for key := range m {
+		switch key {
+		case "volume", "mass", "ton", "strict":
+			// valid
+		default:
+			return nil, fmt.Errorf("unknown key %q in measurement; valid keys: volume, mass, ton, strict", key)
+		}
+	}
+
+	// Parse volume axis
+	if v, ok := m["volume"]; ok {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("measurement.volume must be a string, got %T", v)
+		}
+		normalized := strings.ToLower(strings.TrimSpace(s))
+		if !validVolumeConventions[normalized] {
+			return nil, fmt.Errorf("unknown volume convention %q — valid options: us, imperial", s)
+		}
+		mc.Volume = normalized
+	}
+
+	// Parse mass axis
+	if v, ok := m["mass"]; ok {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("measurement.mass must be a string, got %T", v)
+		}
+		normalized := strings.ToLower(strings.TrimSpace(s))
+		if !validMassConventions[normalized] {
+			return nil, fmt.Errorf(
+				"unknown mass convention %q — valid options: standard (everyday weight: 1 oz = 28.35g), troy (precious metals: 1 troy oz = 31.10g)",
+				s,
+			)
+		}
+		mc.Mass = normalized
+	}
+
+	// Parse ton axis
+	if v, ok := m["ton"]; ok {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("measurement.ton must be a string, got %T", v)
+		}
+		normalized := strings.ToLower(strings.TrimSpace(s))
+		if !validTonConventions[normalized] {
+			return nil, fmt.Errorf("unknown ton convention %q — valid options: short (US, 2000 lb), long (Imperial, 2240 lb), metric (1000 kg)", s)
+		}
+		mc.Ton = normalized
+	}
+
+	// Parse strict flag
+	if v, ok := m["strict"]; ok {
+		b, ok := v.(bool)
+		if !ok {
+			return nil, fmt.Errorf("measurement.strict must be true or false, got %T", v)
+		}
+		mc.Strict = &b
+	}
+
+	return mc, nil
 }
 
 // parseUnitCategories extracts and validates unit_categories from a map form.
@@ -545,6 +673,15 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 			return nil, "", fmt.Errorf("frontmatter: %w", err)
 		}
 		fm.ConvertTo = ct
+	}
+
+	// Parse measurement directive
+	if raw.Measurement != nil {
+		mc, err := parseMeasurementConfig(raw.Measurement)
+		if err != nil {
+			return nil, "", fmt.Errorf("frontmatter: %w", err)
+		}
+		fm.Measurement = mc
 	}
 
 	// Calculate remaining source (after closing delimiter)
