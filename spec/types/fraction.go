@@ -15,8 +15,8 @@ type Fraction struct {
 	Unit     string // empty for dimensionless fractions
 }
 
-// maxDisplayDenominator is the threshold above which fractions fall back to decimal display.
-const maxDisplayDenominator = 1000
+// MaxDisplayDenominator is the threshold above which fractions fall back to decimal display.
+const MaxDisplayDenominator = 1000
 
 // maxComputationDenominator is the threshold above which fractions permanently convert to decimal.
 var maxComputationDenominator = new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil) // 10^9
@@ -94,7 +94,7 @@ func (f *Fraction) String() string {
 	// Rule 1: denominator == 1 → integer
 	if denom.Cmp(big.NewInt(1)) == 0 {
 		result = num.String()
-	} else if denom.Cmp(big.NewInt(maxDisplayDenominator)) > 0 {
+	} else if denom.Cmp(big.NewInt(MaxDisplayDenominator)) > 0 {
 		// Rule 2: denominator > 1000 → decimal fallback
 		d := f.ToDecimal()
 		if negative {

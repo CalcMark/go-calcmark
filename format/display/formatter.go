@@ -57,7 +57,9 @@ func (f Formatter) Format(t types.Type) string {
 	case *types.Boolean:
 		return v.String()
 	case *types.Fraction:
-		// Fractions format themselves — bypass decimal rounding
+		if f.cfg.UnicodeFractions {
+			return FormatFractionUnicode(v)
+		}
 		return v.String()
 	case *types.Percentage:
 		return v.String()

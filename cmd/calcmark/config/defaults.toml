@@ -11,6 +11,10 @@ locale = "en-US"
 # Set to "light" if you use a light terminal background.
 color_mode = "dark"
 
+# Use Unicode fraction symbols (½, ⅓, ¾, ⅛, etc.) in the preview pane.
+# Set to false if your terminal font shows empty boxes for these characters.
+unicode_fractions = true
+
 [tui.theme]
 # These overrides replace the corresponding palette color for your color_mode.
 # Leave empty to use the built-in adaptive palette defaults.

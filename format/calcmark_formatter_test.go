@@ -389,3 +389,45 @@ x = 10
 		}
 	}
 }
+
+// TestCalcMarkFormatterFractionRoundTrip verifies that fraction literals survive
+// the format round-trip as ASCII text. Unicode Number Forms (½, ⅓, etc.) must
+// NEVER appear in exported .cm files — they would break re-parsing.
+func TestCalcMarkFormatterFractionRoundTrip(t *testing.T) {
+	source := "a = 1/2\nb = 1/3\nc = 3/4\nd = 11 3/8\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &CalcMarkFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format error: %v", err)
+	}
+
+	output := buf.String()
+
+	// Source lines must be preserved exactly — no Unicode substitution
+	for _, want := range []string{"a = 1/2", "b = 1/3", "c = 3/4", "d = 11 3/8"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("Expected %q in output, got:\n%s", want, output)
+		}
+	}
+
+	// Unicode vulgar fractions must NEVER appear in .cm export
+	unicodeFractions := []string{"½", "⅓", "⅔", "¼", "¾", "⅛", "⅜", "⅝", "⅞"}
+	for _, uf := range unicodeFractions {
+		if strings.Contains(output, uf) {
+			t.Errorf("Unicode fraction %s must not appear in .cm export, got:\n%s", uf, output)
+		}
+	}
+}

@@ -130,3 +130,28 @@ func localeFormatter() display.Formatter {
 	}
 	return display.NewFormatter(dcfg)
 }
+
+// tuiFormatter builds a display.Formatter for the TUI with Unicode fractions enabled.
+// Machine-readable output (JSON, CLI --format display) uses localeFormatter() which
+// always produces ASCII fractions.
+func tuiFormatter() display.Formatter {
+	cfg := config.Get()
+	locale := cfg.Locale
+
+	var dcfg display.DisplayConfig
+	if locale == "" {
+		dcfg = display.DefaultConfig()
+	} else {
+		var err error
+		dcfg, err = display.NewConfig(locale)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "calcmark: invalid locale %q, using en-US: %v\n", locale, err)
+			dcfg = display.DefaultConfig()
+		}
+	}
+
+	// Enable Unicode fractions by default; user can disable in config
+	dcfg.UnicodeFractions = cfg.TUI.UnicodeFractions == nil || *cfg.TUI.UnicodeFractions
+
+	return display.NewFormatter(dcfg)
+}

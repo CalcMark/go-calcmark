@@ -34,6 +34,7 @@ var knownKeys = map[string]bool{
 	"locale":                   true,
 	"tui.color_mode":           true,
 	"tui.dark_mode":            true,
+	"tui.unicode_fractions":    true,
 	"formatter.verbose":        true,
 	"formatter.include_errors": true,
 	"formatter.default_format": true,
