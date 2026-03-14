@@ -28,23 +28,10 @@ type ConvertToConfig struct {
 	UnitCategories []string // empty = all
 }
 
-// MeasurementConfig configures how ambiguous unit names are interpreted.
-// Each axis controls an independent dimension of unit ambiguity.
-// Only axes that differ from US Customary defaults need to be specified.
-type MeasurementConfig struct {
-	// Volume controls how bare volume names (gallon, pint, fl oz, etc.) are interpreted.
-	// "us" (default) = US Customary, "imperial" = Imperial (UK).
-	Volume string
-
-	// Mass controls how bare mass names (ounce, pound) are interpreted.
-	// "standard" (default) = avoirdupois (everyday weight: 1 oz = 28.35g),
-	// "troy" = troy weight (precious metals: 1 troy oz = 31.10g).
-	Mass string
-
-	// Ton controls how "ton" is interpreted.
-	// "short" (default) = US short ton (2000 lb), "long" = Imperial long ton (2240 lb),
-	// "metric" = metric tonne (1000 kg).
-	Ton string
+// MeasurementFrontmatter wraps units.MeasurementConfig with an optional Strict flag
+// that controls formatter annotation of bare ambiguous units.
+type MeasurementFrontmatter struct {
+	units.MeasurementConfig
 
 	// Strict controls whether the formatter annotates bare ambiguous units in output.
 	// nil = use config default (true), true = annotate, false = pass through.
@@ -106,7 +93,7 @@ type Frontmatter struct {
 	ConvertTo *ConvertToConfig
 
 	// Measurement configures how ambiguous unit names are interpreted (nil if not present).
-	Measurement *MeasurementConfig
+	Measurement *MeasurementFrontmatter
 
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
@@ -429,7 +416,7 @@ func validateConvertToConfig(system string, categories []string) (*ConvertToConf
 
 // parseMeasurementConfig parses the measurement field which must be a map
 // with axis keys (volume, mass, ton) and an optional strict boolean.
-func parseMeasurementConfig(raw any) (*MeasurementConfig, error) {
+func parseMeasurementConfig(raw any) (*MeasurementFrontmatter, error) {
 	if raw == nil {
 		return nil, nil
 	}
@@ -439,10 +426,8 @@ func parseMeasurementConfig(raw any) (*MeasurementConfig, error) {
 		return nil, fmt.Errorf("measurement must be a map with axis keys (volume, mass, ton), got %T", raw)
 	}
 
-	mc := &MeasurementConfig{
-		Volume: "us",
-		Mass:   "standard",
-		Ton:    "short",
+	mc := &MeasurementFrontmatter{
+		MeasurementConfig: *units.DefaultMeasurement(),
 	}
 
 	// Validate keys

@@ -1,0 +1,12 @@
+---
+measurement:
+  mass: troy
+---
+# Troy Mass Convention
+
+## Bare oz/lb resolve to troy when mass: troy is set
+gold_bar = 10 oz in grams
+silver = 1 lb in grams
+
+## Explicit US qualifier overrides frontmatter
+flour = 8 us oz in grams

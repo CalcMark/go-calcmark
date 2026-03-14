@@ -12,43 +12,45 @@ import (
 // Also handles rate-to-rate conversion: "10 m/s in inch/s"
 // Also handles currency conversion: "100 USD in EUR" (requires exchange rate in frontmatter)
 func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type, error) {
+	// Resolve the target unit using measurement conventions.
+	// This is a pre-interpreter step for the target side of "X in Y".
+	targetUnit := interp.resolveUnit(u.TargetUnit)
+
 	// Evaluate the quantity expression
 	result, err := interp.evalNode(u.Quantity)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if this is currency conversion
+	// Check if this is currency conversion (currency codes are not affected by measurement conventions)
 	if currency, ok := result.(*types.Currency); ok {
-		// If the target is a known quantity unit (not a currency), give a clear error
-		_, isQuantityUnit := units.NormalizeUnitName(u.TargetUnit)
-		isDuration := types.IsValidDurationUnit(u.TargetUnit)
+		_, isQuantityUnit := units.NormalizeUnitName(targetUnit)
+		isDuration := types.IsValidDurationUnit(targetUnit)
 		if isQuantityUnit || isDuration {
 			return nil, fmt.Errorf("cannot convert currency (%s) to unit '%s'; use a currency code like USD, EUR, GBP",
-				currency.Code, u.TargetUnit)
+				currency.Code, targetUnit)
 		}
-		return interp.evalCurrencyConversion(currency, u.TargetUnit)
+		return interp.evalCurrencyConversion(currency, targetUnit)
 	}
 
 	// Check if this is a rate-to-rate conversion
 	if u.TargetTimeUnit != "" {
-		return interp.evalRateUnitConversion(result, u.TargetUnit, u.TargetTimeUnit)
+		return interp.evalRateUnitConversion(result, targetUnit, u.TargetTimeUnit)
 	}
 
 	// Check if source is a rate and target is a time unit
 	// This handles "10 MB/day in seconds" -> keep MB, convert day to seconds
 	if rate, ok := result.(*types.Rate); ok {
-		if types.IsTimeUnit(u.TargetUnit) {
-			// Rate with time-only target: keep the quantity unit, convert time
-			return interp.evalRateUnitConversion(result, rate.Amount.Unit, u.TargetUnit)
+		if types.IsTimeUnit(targetUnit) {
+			return interp.evalRateUnitConversion(result, rate.Amount.Unit, targetUnit)
 		}
 		return nil, fmt.Errorf("rate conversion requires a rate target (e.g., 'MB/s'), got '%s'; use '%s in %s/%s' or '%s per %s'",
-			u.TargetUnit, rate.String(), rate.Amount.Unit, u.TargetUnit, rate.String(), u.TargetUnit)
+			targetUnit, rate.String(), rate.Amount.Unit, targetUnit, rate.String(), targetUnit)
 	}
 
 	// Duration conversion: "1 day in seconds", "2 weeks in hours"
 	if duration, ok := result.(*types.Duration); ok {
-		converted, err := duration.Convert(u.TargetUnit)
+		converted, err := duration.Convert(targetUnit)
 		if err != nil {
 			return nil, fmt.Errorf("cannot convert duration: %w", err)
 		}
@@ -61,7 +63,7 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		dec := fractionToNumber(frac)
 		if types.IsValidDurationUnit(frac.Unit) {
 			dur := &types.Duration{Value: dec.Value, Unit: frac.Unit}
-			converted, err := dur.Convert(u.TargetUnit)
+			converted, err := dur.Convert(targetUnit)
 			if err != nil {
 				return nil, fmt.Errorf("cannot convert duration: %w", err)
 			}
@@ -78,7 +80,7 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 	}
 
 	// Use existing unit conversion logic
-	converted, err := convertQuantity(qty, u.TargetUnit)
+	converted, err := convertQuantity(qty, targetUnit)
 	if err != nil {
 		return nil, err
 	}

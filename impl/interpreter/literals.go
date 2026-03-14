@@ -67,5 +67,8 @@ func (interp *Interpreter) evalQuantityLiteral(q *ast.QuantityLiteral) (types.Ty
 		return nil, fmt.Errorf("invalid quantity value %q: %w", q.Value, err)
 	}
 
-	return types.NewQuantity(value, q.Unit), nil
+	// Resolve ambiguous unit names using measurement conventions.
+	// This is a pre-interpreter step: "oz" → "troy ounce" when mass: troy is set.
+	unit := interp.resolveUnit(q.Unit)
+	return types.NewQuantity(value, unit), nil
 }

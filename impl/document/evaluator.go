@@ -397,7 +397,12 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	evalEnv := env.Clone()
 	interp := interpreter.NewInterpreterWithEnv(evalEnv)
 	if doc != nil && doc.GetFrontmatter() != nil {
-		interp.SetDirectiveResolver(NewDirectiveResolver(doc.GetFrontmatter()))
+		fm := doc.GetFrontmatter()
+		interp.SetDirectiveResolver(NewDirectiveResolver(fm))
+		// Wire measurement conventions (pre-interpreter: affects unit name resolution)
+		if fm.Measurement != nil {
+			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
+		}
 	}
 	results, err := interp.Eval(nodes)
 	if err != nil {
@@ -529,7 +534,12 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// Evaluate statements one by one to collect partial results even if a later statement fails
 	interp := interpreter.NewInterpreterWithEnv(e.env)
 	if doc != nil && doc.GetFrontmatter() != nil {
-		interp.SetDirectiveResolver(NewDirectiveResolver(doc.GetFrontmatter()))
+		fm := doc.GetFrontmatter()
+		interp.SetDirectiveResolver(NewDirectiveResolver(fm))
+		// Wire measurement conventions (pre-interpreter: affects unit name resolution)
+		if fm.Measurement != nil {
+			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
+		}
 	}
 	results := make([]types.Type, 0, len(nodes))
 	var evalErr error

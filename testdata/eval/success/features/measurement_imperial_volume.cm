@@ -1,0 +1,13 @@
+---
+measurement:
+  volume: imperial
+---
+# Imperial Volume Convention
+
+## Bare units resolve to imperial when volume: imperial is set
+beer = 1 gallon in liters
+milk = 1 pint in ml
+cream = 1 cup in ml
+
+## Explicit US qualifier overrides frontmatter
+us_beer = 1 us gal in liters

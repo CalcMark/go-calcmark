@@ -1,23 +1,21 @@
-# Measurement Conventions
+# Measurement Conventions — Inline Qualified Units
 
-## Inline Qualified Units (always available)
-
-### Imperial Volume
+## Imperial Volume
 milk = 2 imp pt in ml
 beer = 1 imp gal in liters
 
-### Troy Mass (precious metals: 1 troy oz = 31.1035g)
+## Troy Mass (precious metals: 1 troy oz = 31.1035g)
 gold = 10 troy oz in grams
 silver_bar = 1 troy lb in grams
 
-### US-Qualified (explicit US standard)
+## US-Qualified (explicit US standard)
 us_milk = 1 us gal in liters
 us_weight = 1 us oz in grams
 
-### Ton Variants
+## Ton Variants
 cargo = 1 short ton in kg
 ship = 1 long ton in kg
 
-### Cross-System Conversion
+## Cross-System Conversion
 volume_ratio = 1 imp gal in us gal
 mass_compare = 1 troy oz in us oz
