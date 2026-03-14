@@ -341,6 +341,13 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-subtle);
+  display: flex;
+  flex-direction: column;
+}
+
+.feature-card .feature-link {
+  margin-top: auto;
+  padding-top: var(--space-3);
 }
 
 .feature-card h3 {
@@ -355,9 +362,8 @@
   margin-bottom: 0;
 }
 
-.feature-card .feature-link {
+.feature-card > .feature-link {
   display: inline-block;
-  margin-top: var(--space-3);
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-primary);
