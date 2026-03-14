@@ -11,8 +11,8 @@ on:
       - "cmd/docgen/**"
       - "Taskfile.yml"
       - ".github/workflows/site.yml"
-  release:
-    types: [published]
+    tags:
+      - "v*.*.*"
 
 concurrency:
   group: "pages"
