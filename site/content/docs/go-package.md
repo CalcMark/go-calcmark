@@ -12,6 +12,22 @@ Full API documentation is on [pkg.go.dev](https://pkg.go.dev/github.com/CalcMark
 go get github.com/CalcMark/go-calcmark
 ```
 
+## Start with an Example: CalcMark Lark
+
+[CalcMark Lark](https://github.com/CalcMark/calcmark-lark) is a web-based playground built entirely on the go-calcmark library. The full integration is ~30 lines in [handler.go](https://github.com/CalcMark/calcmark-lark/blob/main/handler.go) — parse, evaluate, format:
+
+```go
+doc, err := document.NewDocument(source)
+// ...
+evaluator := impldoc.NewEvaluator()
+evaluator.Evaluate(doc)
+// ...
+formatter := format.GetFormatter("html", "")
+formatter.Format(buf, doc, format.Options{Template: customTemplate})
+```
+
+Lark also demonstrates custom HTML templates for rendering CalcMark output — see [template.go](https://github.com/CalcMark/calcmark-lark/blob/main/template.go) for a complete working example.
+
 ## Evaluate a Single Expression
 
 The simplest entry point — pass an expression, get a result:
@@ -147,22 +163,6 @@ if err := formatter.Format(os.Stdout, doc, opts); err != nil {
 ```
 
 Available formats: `"html"`, `"md"`, `"text"`, `"json"`, `"cm"`.
-
-## Real-World Example: CalcMark Lark
-
-[CalcMark Lark](https://github.com/CalcMark/calcmark-lark) is a web-based playground built entirely on the go-calcmark library. The full integration is ~30 lines in [handler.go](https://github.com/CalcMark/calcmark-lark/blob/main/handler.go) — parse, evaluate, format:
-
-```go
-doc, err := document.NewDocument(source)
-// ...
-evaluator := impldoc.NewEvaluator()
-evaluator.Evaluate(doc)
-// ...
-formatter := format.GetFormatter("html", "")
-formatter.Format(buf, doc, format.Options{Template: customTemplate})
-```
-
-Lark also demonstrates custom HTML templates for rendering CalcMark output — see [template.go](https://github.com/CalcMark/calcmark-lark/blob/main/template.go) for a complete working example.
 
 ## The Type System
 
