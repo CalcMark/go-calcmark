@@ -1,10 +1,12 @@
 ---
-title: "Agent & API Integration"
+title: "Agents"
 summary: "Use CalcMark as a calculation engine from scripts, AI agents, and pipelines."
 weight: 36
 ---
 
-CalcMark works as a command-line calculation engine. Pipe expressions in, get structured JSON out. No server, no SDK -- just stdin/stdout.
+CalcMark works as a command-line calculation engine. Pipe expressions in, get structured JSON out. No server, no SDK — just stdin/stdout.
+
+{{< repo-file path="site/content/docs/agent-integration.md" text="View source on GitHub" >}}
 
 ## Installation
 

@@ -75,7 +75,7 @@ menus:
       identifier: sidebar-examples
       url: /docs/examples/
       weight: 32
-    - name: Agent & API
+    - name: Agents
       url: /docs/agent-integration/
       weight: 33
     - name: Go Package
