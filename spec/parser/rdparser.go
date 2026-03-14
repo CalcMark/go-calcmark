@@ -379,7 +379,11 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 	// Do this at expression level to allow it to apply to entire sub-expressions
 	// including those in parentheses
 	if p.match(lexer.AS) {
-		// "X as % of Y" — compute X/Y as a percentage
+		// "X as % of Y" or "X as a % of Y" — compute X/Y as a percentage
+		// Accept optional article "a" between "as" and "%"
+		if p.check(lexer.IDENTIFIER) && string(p.peek().Value) == "a" && p.peekAhead(1).Type == lexer.MODULUS {
+			p.advance() // consume "a"
+		}
 		if p.check(lexer.MODULUS) {
 			p.advance() // consume "%"
 			if !p.match(lexer.OF) {

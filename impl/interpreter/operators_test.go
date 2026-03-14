@@ -193,6 +193,9 @@ func TestAsPercentOf(t *testing.T) {
 		// Duration cross-unit → Percentage (normalized to seconds)
 		{"3 hours as % of 1 day", "x = 3 hours as % of 1 day\n", "12.5%", false, ""},
 
+		// "as a % of" variant (natural English article)
+		{"as a % of", "x = $100 as a % of $500\n", "20%", false, ""},
+
 		// Error: Currency vs Quantity
 		{"currency vs quantity", "x = $100 as % of 50 kg\n", "", true, "both values must be the same type"},
 
