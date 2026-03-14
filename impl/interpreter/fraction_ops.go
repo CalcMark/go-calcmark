@@ -55,14 +55,22 @@ func evalFractionOperation(left, right *types.Fraction, operator string) (types.
 
 	f := types.NewFractionFromRat(result)
 
-	// Preserve unit from left operand (first-unit-wins)
+	// Preserve unit: left wins if present, otherwise inherit from right.
+	// This handles mixed numbers like "12 1/2 pints" where the integer part
+	// (left, no unit) combines with the fraction part (right, unit="pints").
 	if left.Unit != "" {
 		f.Unit = left.Unit
+	} else if right.Unit != "" {
+		f.Unit = right.Unit
 	}
 
 	// Check computation limits — if exceeded, convert to decimal
 	if f.ExceedsComputationLimit() {
-		return fractionToNumber(f), nil
+		num := fractionToNumber(f)
+		if f.Unit != "" {
+			return &types.Quantity{Value: num.Value, Unit: f.Unit}, nil
+		}
+		return num, nil
 	}
 
 	return f, nil

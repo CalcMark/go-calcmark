@@ -46,6 +46,11 @@ func TestFractionArithmetic(t *testing.T) {
 		// Number * Fraction
 		{"3 * 1/3", num(3), frac(1, 3), "*", "1"},
 
+		// Fraction with unit (mixed number desugaring: 12 + 1/2 pints)
+		{"12 + 1/2 pints", num(12), fracUnit(1, 2, "pint"), "+", "12 1/2 pint"},
+		{"1/2 pints * 3", fracUnit(1, 2, "pint"), num(3), "*", "1 1/2 pint"},
+		{"2/3 cup + 1/4 cup", fracUnit(2, 3, "cup"), fracUnit(1, 4, "cup"), "+", "11/12 cup"},
+
 		// Fraction * Currency → Currency (rounded by currency display)
 		{"1/3 * $200", frac(1, 3), cur(200, "$"), "*", "$66.67"},
 
@@ -196,6 +201,12 @@ func TestFractionNumber(t *testing.T) {
 // Helper functions for test readability
 func frac(num, denom int64) *types.Fraction {
 	f, _ := types.NewFraction(num, denom)
+	return f
+}
+
+func fracUnit(num, denom int64, unit string) *types.Fraction {
+	f, _ := types.NewFraction(num, denom)
+	f.Unit = unit
 	return f
 }
 
