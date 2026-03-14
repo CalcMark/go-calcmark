@@ -57,6 +57,11 @@ func (f Formatter) Format(t types.Type) string {
 	case *types.Boolean:
 		return v.String()
 	case *types.Fraction:
+		// Fractions with units delegate to Quantity formatting for unit normalization
+		// (e.g., 287 1/2 pint → ~36 gal). Dimensionless fractions format directly.
+		if v.Unit != "" {
+			return f.FormatQuantity(&types.Quantity{Value: v.ToDecimal(), Unit: v.Unit})
+		}
 		if f.cfg.UnicodeFractions {
 			return FormatFractionUnicode(v)
 		}

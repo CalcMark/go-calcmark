@@ -1,6 +1,7 @@
 package display
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -94,5 +95,41 @@ func TestFormatterUnicodeFlagRouting(t *testing.T) {
 	got = unicodeFormatter.Format(f)
 	if got != "⅓" {
 		t.Errorf("Unicode mode: got %q, want \"⅓\"", got)
+	}
+}
+
+func TestFractionWithUnitNormalization(t *testing.T) {
+	// Fractions with units must go through the same display normalization
+	// as Quantities. Large values should auto-convert to appropriate units
+	// (e.g., 287.5 pints → ~36 gal).
+	tests := []struct {
+		name string
+		num  int64
+		denom int64
+		unit  string
+		wantUnit string // expected unit after normalization
+	}{
+		// 287/2 pints = 143.5 pints → should normalize to gallons (~18 gal)
+		{"large pints to gallons", 575, 2, "pint", "gal"},
+		// 1/2 pint normalizes to 1 cup (correct: cup is the best display unit)
+		{"half pint normalizes to cup", 1, 2, "pint", "cup"},
+		// Dimensionless fractions don't normalize
+		{"dimensionless fraction", 1, 3, "", "1/3"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, _ := types.NewFraction(tt.num, tt.denom)
+			f.Unit = tt.unit
+
+			// Test with default (ASCII) formatter
+			formatter := DefaultFormatter()
+			got := formatter.Format(f)
+
+			// The result should contain the expected unit
+			if !strings.Contains(got, tt.wantUnit) {
+				t.Errorf("expected unit %q in output, got %q", tt.wantUnit, got)
+			}
+		})
 	}
 }
