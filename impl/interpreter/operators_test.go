@@ -237,6 +237,41 @@ func TestAsPercentOf(t *testing.T) {
 	}
 }
 
+// TestFractionUnitConversion verifies that fractions with units can be
+// converted using the "in" keyword (e.g., "1/2 hour in minutes").
+func TestFractionUnitConversion(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantValue string
+	}{
+		{"1/2 hour in minutes", "x = 1/2 hour in minutes\n", "30 minutes"},
+		{"1/4 cup in ml", "x = 1/4 cup in ml\n", "60 ml"},
+		{"3/4 lb in oz", "x = 3/4 lb in oz\n", "12.000000000000002 oz"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(results) != 1 {
+				t.Fatalf("expected 1 result, got %d", len(results))
+			}
+			got := results[0].String()
+			if got != tt.wantValue {
+				t.Errorf("got %q, want %q", got, tt.wantValue)
+			}
+		})
+	}
+}
+
 func qty(val int64, unit string) *types.Quantity {
 	return &types.Quantity{Value: decimal.NewFromInt(val), Unit: unit}
 }
