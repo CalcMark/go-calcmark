@@ -17,6 +17,7 @@ weight: 20
   - [Global Variables](#global-variables) -- Reusable values in frontmatter
   - [@Directive References](#directive-references) -- `@scale` and `@globals.name` in expressions
   - [Scale and Convert](#scale-convert) -- Document-wide scaling and unit system conversion
+  - [Measurement Conventions](#measurement-conventions) -- US, Imperial, and Troy unit systems
   - [Built-in Functions](#built-in-functions)
   - [Function Reference](#function-reference) -- Detailed examples for every function
   - [Natural Language Syntax](#natural-language-syntax) -- NL forms reference table
@@ -245,15 +246,13 @@ file_size_mb = file_size in MB
 
 Convert between currencies using `in` with exchange rates defined in YAML frontmatter:
 
-```yaml
+```calcmark
 ---
 exchange:
   USD_EUR: 0.92
   EUR_GBP: 0.86
 ---
-```
 
-```calcmark
 price_usd = $100
 price_eur = price_usd in EUR
 
@@ -451,6 +450,58 @@ The editor results pane shows symbols next to values that have been transformed:
 | `•` | Converted | `4.54 kg•` — unit system changed |
 | `×•` | Both | `227 g×•` — scaled then converted |
 | _(none)_ | Untransformed | `10 m` — no transforms applied |
+
+### Measurement Conventions {#measurement-conventions}
+
+Some units are ambiguous. A "gallon" in the US (3.785 L) is different from a "gallon" in the UK (4.546 L). An "ounce" of gold (troy, 31.10g) differs from an "ounce" of flour (standard, 28.35g).
+
+By default, CalcMark uses US Customary definitions. Add `measurement:` to your frontmatter to declare different conventions:
+
+```calcmark
+---
+measurement:
+  volume: imperial
+---
+
+milk = 2 pint
+milk_in_ml = milk in ml
+```
+
+`milk` resolves as 2 imperial pints, and `milk_in_ml` shows `1,137 ml` (not 946 ml as it would with US pints).
+
+Three independent axes are available:
+
+| Axis | Options | Default | Affected Units |
+|------|---------|---------|---------------|
+| `volume` | `us`, `imperial` | `us` | gallon, quart, pint, fl oz, cup |
+| `mass` | `standard`, `troy` | `standard` | ounce, pound |
+| `ton` | `short`, `long`, `metric` | `short` | ton |
+
+"Standard" mass means avoirdupois — the everyday weight system (1 oz = 28.35g). Troy is for precious metals (1 troy oz = 31.10g).
+
+#### Inline Qualifiers
+
+Override the convention for a single expression with an explicit prefix:
+
+```text
+gold = 10 troy oz       → always troy, regardless of frontmatter
+beer = 1 imp gal        → always imperial gallon
+cargo = 5 short ton     → always US short ton
+```
+
+Prefixes: `us`, `imp`/`imperial`, `troy`, `short`, `long`, `metric`.
+
+#### Strict Annotation
+
+When `measurement:` is present, the formatter annotates bare ambiguous units in output so readers know which definition is active. `2 oz` displays as `2 us oz`. Set `strict: false` to suppress this:
+
+```yaml
+measurement:
+  volume: imperial
+  strict: false
+```
+
+Measurement conventions compose with `scale` and `convert_to` — see the [Language Reference](/docs/language-reference/#measurement-conventions) for the full composition table and pipeline order.
 
 ### Built-in Functions {#built-in-functions}
 
