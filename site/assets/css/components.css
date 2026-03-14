@@ -355,6 +355,19 @@
   margin-bottom: 0;
 }
 
+.feature-card .feature-link {
+  display: inline-block;
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.feature-card .feature-link:hover {
+  text-decoration: underline;
+}
+
 /* Page cards (list pages) */
 .page-grid {
   display: grid;

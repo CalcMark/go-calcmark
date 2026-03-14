@@ -27,52 +27,96 @@
 <section class="features container">
   <h2>Why CalcMark?</h2>
   <div class="feature-grid">
+
     <div class="feature-card">
       <h3>Variables flow downward</h3>
       <p>Define once, reference anywhere below. Change one number and watch everything update.</p>
       <pre class="feature-snippet"><code>income = $5000           <span class="r">$5,000.00</span>
 rent = income * 0.30     <span class="r">$1,500.00</span>
 remaining = income - rent <span class="r">$3,500.00</span></code></pre>
+      <a class="feature-link" href="/docs/getting-started/#core-concepts">How variables work &rarr;</a>
     </div>
+
     <div class="feature-card">
       <h3>Units are first-class</h3>
-      <p>Write <code>5 miles in km</code> or <code>20 celsius in fahrenheit</code>. CalcMark understands physical units.</p>
-      <pre class="feature-snippet"><code>5 miles in km              <span class="r">8.05 km</span>
-20 celsius in fahrenheit   <span class="r">68 fahrenheit</span>
-3 gallons in liters        <span class="r">11.4 liters</span></code></pre>
+      <p>Physical, data, and energy units with automatic conversion. Write <code>5 miles in km</code> and get the answer.</p>
+      <pre class="feature-snippet"><code>5 miles in km            <span class="r">8.05 km</span>
+20 celsius in fahrenheit <span class="r">68 fahrenheit</span>
+500 MB in GB             <span class="r">0.49 GB</span></code></pre>
+      <a class="feature-link" href="/docs/user-guide/units/">Units &amp; conversion &rarr;</a>
     </div>
+
     <div class="feature-card">
-      <h3>Currencies built in</h3>
-      <p><code>$100</code>, <code>50 EUR</code>, exchange rates via YAML frontmatter. Automatic formatting.</p>
-      <pre class="feature-snippet"><code>price = $1200      <span class="r">$1,200.00</span>
-price in EUR       <span class="r">€1,104.00</span>
-15% of price       <span class="r">$180.00</span></code></pre>
+      <h3>Measurement conventions</h3>
+      <p>US gallon or Imperial? Standard ounce or Troy? Declare your convention and CalcMark resolves the ambiguity.</p>
+      <pre class="feature-snippet"><code>measurement:
+  volume: imperial
+milk = 2 pint in ml     <span class="r">1,137 ml</span>
+gold = 10 troy oz       <span class="r">311 grams</span></code></pre>
+      <a class="feature-link" href="/docs/language-reference/#measurement-conventions">Measurement conventions &rarr;</a>
     </div>
+
+    <div class="feature-card">
+      <h3>Financial modeling</h3>
+      <p>Currency arithmetic, exchange rates, percentages, and growth functions for budgets and P&amp;L statements.</p>
+      <pre class="feature-snippet"><code>revenue = $4.2M          <span class="r">$4.2M</span>
+costs = 60% of revenue   <span class="r">$2.52M</span>
+profit = revenue - costs  <span class="r">$1.68M</span>
+compound($1000, 7%, 10 years) <span class="r">$1,967.15</span></code></pre>
+      <a class="feature-link" href="/guides/business-planning/">Business planning guide &rarr;</a>
+    </div>
+
+    <div class="feature-card">
+      <h3>Natural language syntax</h3>
+      <p>Read from storage, compress data, calculate network throughput &mdash; in plain English.</p>
+      <pre class="feature-snippet"><code>read 100 MB from ssd     <span class="r">0.18 s</span>
+compress 1 GB using gzip <span class="r">341 MB</span>
+transfer 50 GB at 10 gbps <span class="r">40 s</span></code></pre>
+      <a class="feature-link" href="/docs/user-guide/functions/#natural-language-syntax">NL syntax reference &rarr;</a>
+    </div>
+
+    <div class="feature-card">
+      <h3>Recipe scaling</h3>
+      <p>Fractions, frontmatter scaling, and unit conversion compose naturally for cooking math.</p>
+      <pre class="feature-snippet"><code>scale: 3
+flour = 2/3 cup          <span class="r">2 cup</span>
+butter = 1/4 cup         <span class="r">3/4 cup</span>
+per_loaf = $7.80 / @scale <span class="r">$2.60</span></code></pre>
+      <a class="feature-link" href="/guides/recipe-scaling/">Recipe scaling guide &rarr;</a>
+    </div>
+
+    <div class="feature-card">
+      <h3>System sizing</h3>
+      <p>Capacity planning with rates, napkin math, and the <code>at...per</code> syntax for fleet sizing.</p>
+      <pre class="feature-snippet"><code>peak = 10K req/s
+servers = peak at 2K per server <span class="r">5</span>
+storage = 100 MB/s over 1 day  <span class="r">8.64 TB</span>
+1500000 as napkin        <span class="r">~1.5M</span></code></pre>
+      <a class="feature-link" href="/guides/system-sizing/">System sizing guide &rarr;</a>
+    </div>
+
     <div class="feature-card">
       <h3>Markdown meets math</h3>
-      <p>Write prose and calculations together. Your thinking stays in the document, right next to the numbers.</p>
-      <pre class="feature-snippet"><code># Planning a trip
-We need flights and a hotel.
+      <p>Prose and calculations in one document. Embed results in text with <code>&#123;&#123;variable&#125;&#125;</code> templates.</p>
+      <pre class="feature-snippet"><code>## Summary
+Total: {{ "{{total_cost}}" }}
 
-budget = $2000       <span class="r">$2,000.00</span>
-spent = $1350        <span class="r">$1,350.00</span>
-remaining = budget - spent <span class="r">$650.00</span></code></pre>
+headcount = 12
+rate = $150K
+total_cost = headcount * rate <span class="r">$1.8M</span></code></pre>
+      <a class="feature-link" href="/docs/user-guide/frontmatter/#template-variables">Template interpolation &rarr;</a>
     </div>
+
     <div class="feature-card">
-      <h3>Export anywhere</h3>
-      <p>Convert to HTML, Markdown, JSON, or plain text. Pipe expressions from the command line.</p>
-      <pre class="feature-snippet"><code><span class="c">$</span> cm convert budget.cm --to=html
-<span class="c">$</span> cm convert budget.cm --to=json
-<span class="c">$</span> cm convert budget.cm --to=markdown
-<span class="c">$</span> cm convert budget.cm --to=text</code></pre>
+      <h3>CLI &amp; agent integration</h3>
+      <p>Pipe expressions, export to JSON/HTML/Markdown, or integrate with AI agents via stdin/stdout.</p>
+      <pre class="feature-snippet"><code><span class="c">$</span> echo "5 kg in lbs" | cm
+<span class="r">11 lbs</span>
+<span class="c">$</span> cm eval budget.cm --format json
+<span class="c">$</span> cm convert report.cm --to html</code></pre>
+      <a class="feature-link" href="/docs/agent-integration/">Agent &amp; API integration &rarr;</a>
     </div>
-    <div class="feature-card">
-      <h3>Natural language</h3>
-      <p>Read from storage, compress data, transfer across networks — in plain English.</p>
-      <pre class="feature-snippet"><code>read 100 MB from ssd       <span class="r">0.18 s</span>
-compress 1 GB using gzip   <span class="r">341 MB</span>
-1500000 as napkin          <span class="r">1.5M</span></code></pre>
-    </div>
+
   </div>
 </section>
 
