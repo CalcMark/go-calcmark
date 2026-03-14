@@ -499,6 +499,19 @@ func NormalizeUnitName(input string) (canonical string, found bool) {
 	return "", false
 }
 
+// GetUnitQuantity returns the quantity type for a unit name (e.g., "Length", "Mass", "Volume").
+// Returns the quantity and true if found, empty string and false otherwise.
+func GetUnitQuantity(unitName string) (string, bool) {
+	canonical, found := NormalizeUnitName(unitName)
+	if !found {
+		return "", false
+	}
+	if unit, ok := StandardUnits[canonical]; ok {
+		return unit.Quantity, true
+	}
+	return "", false
+}
+
 // GetUnitSymbol returns the standard symbol for a unit name.
 func GetUnitSymbol(unitName string) (string, bool) {
 	canonical, found := NormalizeUnitName(unitName)

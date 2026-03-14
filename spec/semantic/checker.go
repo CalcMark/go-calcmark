@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
 // findSimilarNames returns variable names similar to the given name.
@@ -177,6 +178,8 @@ func (c *Checker) checkNode(node ast.Node) {
 		c.checkIdentifier(n)
 	case *ast.FunctionCall:
 		c.checkFunctionCall(n)
+	case *ast.FractionLiteral:
+		c.checkFractionLiteral(n)
 	// Literals don't need semantic checking (they're syntactically valid)
 	case *ast.NumberLiteral, *ast.CurrencyLiteral, *ast.BooleanLiteral:
 		// No semantic checks needed for simple literals
@@ -501,6 +504,40 @@ func (c *Checker) checkDirectiveRef(d *ast.DirectiveRef) {
 			Detailed: "CalcMark supports two directive references:\n  @scale — the numeric scale factor from frontmatter\n  @globals.name — a named global variable from frontmatter",
 			Range:    d.Range,
 		})
+	}
+}
+
+// checkFractionLiteral validates fraction literals.
+// Checks: denominator is not zero, unit category is allowed for fraction quantities.
+func (c *Checker) checkFractionLiteral(f *ast.FractionLiteral) {
+	// Check for zero denominator
+	if f.Denominator == 0 {
+		c.addDiagnostic(Diagnostic{
+			Severity: Warning,
+			Code:     DiagDivisionByZero,
+			Message:  "Fraction with zero denominator will cause a runtime error",
+			Range:    f.Range,
+		})
+	}
+
+	// If fraction has a unit, check category is allowed
+	// Fraction quantities are only allowed for: Length, Mass, Volume, Custom (arbitrary units)
+	// NOT allowed for: Duration, Currency, Boolean, Rate
+	if f.Unit != "" {
+		if quantity, found := units.GetUnitQuantity(f.Unit); found {
+			switch quantity {
+			case "Length", "Mass", "Volume":
+				// Allowed
+			default:
+				c.addDiagnostic(Diagnostic{
+					Severity: Error,
+					Code:     DiagTypeMismatch,
+					Message:  "Fraction quantities are not supported for " + quantity + " units; use decimal notation instead",
+					Range:    f.Range,
+				})
+			}
+		}
+		// If unit is not found in standard units, it's a custom/arbitrary unit — allowed
 	}
 }
 
