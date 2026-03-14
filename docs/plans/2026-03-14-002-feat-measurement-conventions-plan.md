@@ -1,7 +1,7 @@
 ---
 title: "feat: Measurement conventions with document-level and inline overrides"
 type: feat
-status: active
+status: completed
 date: 2026-03-14
 origin: docs/brainstorms/2026-03-14-measurement-conventions-brainstorm.md
 ---
