@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 )
 
@@ -17,7 +18,9 @@ const maxSeparatorInputLen = 1000
 // It is a value type wrapping a DisplayConfig.
 // Use NewFormatter to create one, or DefaultFormatter() for en-US defaults.
 type Formatter struct {
-	cfg DisplayConfig
+	cfg         DisplayConfig
+	measurement *units.MeasurementConfig // nil = no annotation
+	strict      bool                     // annotate bare ambiguous units in output
 }
 
 // NewFormatter creates a Formatter from a DisplayConfig.
@@ -28,6 +31,28 @@ func NewFormatter(cfg DisplayConfig) Formatter {
 // DefaultFormatter returns a Formatter with en-US defaults.
 func DefaultFormatter() Formatter {
 	return NewFormatter(DefaultConfig())
+}
+
+// SetMeasurement configures the formatter to annotate bare ambiguous units
+// in output. When strict is true (the default), bare units like "oz" are
+// displayed as "us oz" or "troy oz" depending on the active convention.
+func (f *Formatter) SetMeasurement(mc *units.MeasurementConfig, strict bool) {
+	f.measurement = mc
+	f.strict = strict
+}
+
+// annotateUnit returns the display unit name. In strict mode, bare ambiguous
+// units are prefixed with their convention (e.g., "oz" → "us oz").
+// Already-qualified units pass through unchanged.
+func (f Formatter) annotateUnit(unit string) string {
+	if !f.strict || f.measurement == nil {
+		return unit
+	}
+	prefix := units.ConventionPrefix(unit, f.measurement)
+	if prefix == "" {
+		return unit
+	}
+	return prefix + " " + unit
 }
 
 // Config returns the underlying DisplayConfig.
@@ -92,18 +117,23 @@ func (f Formatter) FormatQuantity(q *types.Quantity) string {
 		return f.formatExplicitQuantity(q)
 	}
 
+	// Annotate bare ambiguous units in strict mode (e.g., "oz" → "us oz").
+	// This is a display-only concern — the underlying value is unchanged.
+	displayUnit := f.annotateUnit(q.Unit)
+
 	normValue, normUnit := NormalizeForDisplay(q.Value, q.Unit)
 
 	var result string
 	if normUnit != q.Unit {
-		result = f.formatNormalizedQuantity(normValue, normUnit)
+		// Unit was normalized (auto-scaled). Annotate the normalized unit.
+		result = f.formatNormalizedQuantity(normValue, f.annotateUnit(normUnit))
 	} else {
 		// Round for human readability unless precise display requested
 		displayValue := q.Value
 		if !q.IsPrecise {
 			displayValue = roundForDisplay(displayValue)
 		}
-		result = f.formatWithSuffix(displayValue, q.Unit)
+		result = f.formatWithSuffix(displayValue, displayUnit)
 	}
 
 	if q.IsNapkin {
