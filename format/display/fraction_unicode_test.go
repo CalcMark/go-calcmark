@@ -103,10 +103,10 @@ func TestFractionWithUnitNormalization(t *testing.T) {
 	// as Quantities. Large values should auto-convert to appropriate units
 	// (e.g., 287.5 pints → ~36 gal).
 	tests := []struct {
-		name string
-		num  int64
-		denom int64
-		unit  string
+		name     string
+		num      int64
+		denom    int64
+		unit     string
 		wantUnit string // expected unit after normalization
 	}{
 		// 287/2 pints = 143.5 pints → should normalize to gallons (~18 gal)
