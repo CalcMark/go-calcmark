@@ -148,7 +148,7 @@ if err := formatter.Format(os.Stdout, doc, opts); err != nil {
 
 Available formats: `"html"`, `"md"`, `"text"`, `"json"`, `"cm"`.
 
-### Real-World Example: CalcMark Lark
+## Real-World Example: CalcMark Lark
 
 [CalcMark Lark](https://github.com/CalcMark/calcmark-lark) is a web-based playground built entirely on the go-calcmark library. The full integration is ~30 lines in [handler.go](https://github.com/CalcMark/calcmark-lark/blob/main/handler.go) — parse, evaluate, format:
 
