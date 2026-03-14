@@ -285,6 +285,18 @@ measurement:
 - **`scale`**: Unaffected. Scale multiplies values; measurement resolves unit identities.
 - **`locale`**: Independent. Locale controls number formatting (decimal/thousand separators), not unit definitions.
 
+All three directives compose. Here's how `1 gallon` flows through each combination:
+
+| Directives | Result | What happened |
+|-----------|--------|---------------|
+| (none) | `1 gal` | US gallon, default display |
+| `measurement: { volume: imperial }` | `1 imperial gallon` | Resolved as imperial |
+| `convert_to: si` | `3.79 l` | US gallon → liters |
+| `measurement: { volume: imperial }` + `convert_to: si` | `4.55 l` | Imperial gallon → liters |
+| `measurement: { volume: imperial }` + `scale: 3` + `convert_to: si` | `13.6 l` | Imperial gallon × 3 → liters |
+| `1 us gal` (inline) + `measurement: { volume: imperial }` + `convert_to: si` | `3.79 l` | Inline qualifier overrides convention |
+| `1 gallon in ml` (explicit) + `convert_to: si` | `3,785 ml` | Explicit `in` skips `convert_to` |
+
 ### Transform Order
 
 When frontmatter directives are present, they apply in this order:
