@@ -102,7 +102,67 @@ profit, _ := env.Get("profit")
 fmt.Println(profit) // $200,000.00
 ```
 
-The document evaluator handles block ordering, dependency resolution, frontmatter directives (exchange rates, globals, scale), and variable interpolation in text blocks.
+The document evaluator handles block ordering, dependency resolution, frontmatter directives (exchange rates, globals, scale, measurement), and variable interpolation in text blocks.
+
+### Configuring the Evaluator
+
+The evaluator accepts optional configuration before calling `Evaluate`:
+
+```go
+import "github.com/CalcMark/go-calcmark/format/display"
+
+eval := implDoc.NewEvaluator()
+
+// Set locale for number formatting (decimal/thousand separators)
+cfg, _ := display.NewConfig("de-DE")
+eval.SetDisplayFormatter(display.NewFormatter(cfg))
+
+if err := eval.Evaluate(doc); err != nil {
+    log.Fatal(err)
+}
+
+// After Evaluate(), the formatter includes any measurement conventions
+// from frontmatter. Pass it to output formatters for consistent display.
+df := eval.GetDisplayFormatter()
+```
+
+Measurement conventions from frontmatter are wired automatically during `Evaluate()`. Library consumers can also set them directly on the interpreter for lower-level control — see `interpreter.SetMeasurement()`.
+
+### Formatting Output
+
+The `format` package provides registry-based output formatters:
+
+```go
+import "github.com/CalcMark/go-calcmark/format"
+
+formatter := format.GetFormatter("html", "")
+opts := format.Options{
+    Verbose:          true,
+    DisplayFormatter: eval.GetDisplayFormatter(),
+    Template:         customHTMLTemplate, // optional Go template string
+}
+if err := formatter.Format(os.Stdout, doc, opts); err != nil {
+    log.Fatal(err)
+}
+```
+
+Available formats: `"html"`, `"md"`, `"text"`, `"json"`, `"cm"`.
+
+### Real-World Example: CalcMark Lark
+
+[CalcMark Lark](https://github.com/CalcMark/calcmark-lark) is a web-based playground built entirely on the go-calcmark library. The full integration is ~30 lines in [handler.go](https://github.com/CalcMark/calcmark-lark/blob/main/handler.go) — parse, evaluate, format:
+
+```go
+doc, err := document.NewDocument(source)
+// ...
+evaluator := impldoc.NewEvaluator()
+evaluator.Evaluate(doc)
+// ...
+formatter := format.GetFormatter("html", "")
+formatter.Format(buf, doc, format.Options{Template: customTemplate})
+```
+
+Lark also demonstrates custom HTML templates for rendering CalcMark output — see [template.go](https://github.com/CalcMark/calcmark-lark/blob/main/template.go) for a complete working example.
 
 ## The Type System
 
