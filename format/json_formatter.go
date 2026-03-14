@@ -57,13 +57,15 @@ type JSONBlock struct {
 
 // JSONResult represents a single evaluated statement's result.
 // Value is the locale-formatted display string.
-// Type is the CalcMark type name (e.g., "number", "currency").
+// Type is the CalcMark type name (e.g., "number", "currency", "fraction").
 // NumericValue, Unit, DateValue decompose the value for programmatic consumption.
 type JSONResult struct {
 	Source        string   `json:"source"`
 	Value         string   `json:"value,omitempty"`
 	Type          string   `json:"type,omitempty"`
 	NumericValue  *float64 `json:"numeric_value,omitempty"`
+	Numerator     *int64   `json:"numerator,omitempty"`
+	Denominator   *int64   `json:"denominator,omitempty"`
 	Unit          string   `json:"unit,omitempty"`
 	DateValue     string   `json:"date_value,omitempty"`
 	IsApproximate bool     `json:"is_approximate,omitempty"`
@@ -123,6 +125,24 @@ func populateResult(jr *JSONResult, result types.Type) {
 		jr.Type = "percentage"
 		f := v.Value.InexactFloat64()
 		jr.NumericValue = &f
+	case *types.Fraction:
+		jr.Type = "fraction"
+		f := v.ToDecimal().InexactFloat64()
+		jr.NumericValue = &f
+		if v.Num().IsInt64() {
+			n := v.Num().Int64()
+			jr.Numerator = &n
+		}
+		if v.Denom().IsInt64() {
+			d := v.Denom().Int64()
+			jr.Denominator = &d
+		}
+		if v.Unit != "" {
+			jr.Unit = v.Unit
+		}
+		if v.IsNapkin {
+			jr.IsApproximate = true
+		}
 	case *types.Boolean:
 		jr.Type = "boolean"
 	}
