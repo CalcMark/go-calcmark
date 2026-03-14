@@ -109,6 +109,8 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalPreciseConversion(n)
 	case *ast.PercentageOf:
 		return interp.evalPercentageOf(n)
+	case *ast.AsPercentOf:
+		return interp.evalAsPercentOf(n)
 	case *ast.FunctionCall:
 		return interp.evalFunctionCall(n)
 	case *ast.DirectiveRef:

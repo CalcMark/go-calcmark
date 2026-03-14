@@ -71,9 +71,9 @@ Fixed and variable expenses total {{total_expenses}}, plus
 
 Calculate percentages of net income:
 
-savings_rate = number(total_savings) / number(net_income) * 100
-fixed_pct = number(total_fixed) / number(net_income) * 100
-variable_pct = number(total_variable) / number(net_income) * 100
+savings_rate = total_savings as % of net_income
+fixed_pct = total_fixed as % of net_income
+variable_pct = total_variable as % of net_income
 
 ## The 50/30/20 Rule Check
 
@@ -84,9 +84,9 @@ needs = total_fixed + groceries + gas + utilities
 wants = dining_out + entertainment + personal_care + streaming
 savings_check = total_savings
 
-needs_pct = number(needs) / number(net_income) * 100
-wants_pct = number(wants) / number(net_income) * 100
-savings_pct = number(savings_check) / number(net_income) * 100
+needs_pct = needs as % of net_income
+wants_pct = wants as % of net_income
+savings_pct = savings_check as % of net_income
 
 ## Annual Projections
 

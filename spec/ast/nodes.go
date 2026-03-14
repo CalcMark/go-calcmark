@@ -140,6 +140,22 @@ func (p *PercentageOf) GetRange() *Range {
 	return p.Range
 }
 
+// AsPercentOf represents "X as % of Y" — computes the ratio X/Y as a Percentage.
+// This is the inverse of PercentageOf: "20% of 500" = 100, "100 as % of 500" = 20%.
+type AsPercentOf struct {
+	Numerator   Node // The value to express as a percentage
+	Denominator Node // The reference value (the "whole")
+	Range       *Range
+}
+
+func (a *AsPercentOf) String() string {
+	return fmt.Sprintf("AsPercentOf(%s of %s)", a.Numerator.String(), a.Denominator.String())
+}
+
+func (a *AsPercentOf) GetRange() *Range {
+	return a.Range
+}
+
 // RateLiteral represents a rate expression (e.g., "100 MB/s", "5 GB per day", "$0.10 per hour").
 // Rates combine a quantity (amount) with a time period.
 type RateLiteral struct {
@@ -424,6 +440,8 @@ func ContainsScaleRef(node Node) bool {
 		return ContainsScaleRef(n.Expression)
 	case *PercentageOf:
 		return ContainsScaleRef(n.Percentage) || ContainsScaleRef(n.Value)
+	case *AsPercentOf:
+		return ContainsScaleRef(n.Numerator) || ContainsScaleRef(n.Denominator)
 	case *RateLiteral:
 		return ContainsScaleRef(n.Amount)
 	default:

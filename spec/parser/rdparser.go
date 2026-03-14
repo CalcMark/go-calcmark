@@ -375,10 +375,26 @@ func (p *RecursiveDescentParser) parseAdditive() (ast.Node, error) {
 		}
 	}
 
-	// Check for "as napkin" or "as <unit>" keyword: "1234567 as napkin", "1 day as seconds"
+	// Check for "as % of", "as napkin", or "as <unit>" keyword
 	// Do this at expression level to allow it to apply to entire sub-expressions
 	// including those in parentheses
 	if p.match(lexer.AS) {
+		// "X as % of Y" — compute X/Y as a percentage
+		if p.check(lexer.MODULUS) {
+			p.advance() // consume "%"
+			if !p.match(lexer.OF) {
+				return nil, p.error("expected 'of' after 'as %'")
+			}
+			denominator, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			return &ast.AsPercentOf{
+				Numerator:   left,
+				Denominator: denominator,
+				Range:       left.GetRange(),
+			}, nil
+		}
 		if p.match(lexer.NAPKIN) {
 			return &ast.NapkinConversion{
 				Expression: left,

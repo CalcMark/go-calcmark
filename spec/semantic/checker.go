@@ -199,6 +199,8 @@ func (c *Checker) checkNode(node ast.Node) {
 		c.checkNapkinConversion(n)
 	case *ast.PercentageOf:
 		c.checkPercentageOf(n)
+	case *ast.AsPercentOf:
+		c.checkAsPercentOf(n)
 	case *ast.DirectiveRef:
 		c.checkDirectiveRef(n)
 	}
@@ -434,6 +436,16 @@ func (c *Checker) checkPercentageOf(p *ast.PercentageOf) {
 	}
 	if p.Value != nil {
 		c.checkExpression(p.Value)
+	}
+}
+
+// checkAsPercentOf validates "X as % of Y" expressions.
+func (c *Checker) checkAsPercentOf(a *ast.AsPercentOf) {
+	if a.Numerator != nil {
+		c.checkExpression(a.Numerator)
+	}
+	if a.Denominator != nil {
+		c.checkExpression(a.Denominator)
 	}
 }
 

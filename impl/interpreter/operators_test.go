@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/spec/parser"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
@@ -164,6 +165,73 @@ func TestSameTypeMulDivErrors(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+// TestAsPercentOf verifies "X as % of Y" produces correct Percentage results
+// and proper errors for type mismatches.
+func TestAsPercentOf(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantValue   string // expected String() output
+		wantErr     bool
+		errContains string
+	}{
+		// Same-type Currency → Percentage
+		{"$100 as % of $500", "x = $100 as % of $500\n", "20%", false, ""},
+		{"$152400 as % of $780000", "x = $152400 as % of $780000\n", "19.53846153846154%", false, ""},
+
+		// Same-type Number → Percentage
+		{"30 as % of 100", "x = 30 as % of 100\n", "30%", false, ""},
+
+		// Same-type Quantity → Percentage
+		{"10 kg as % of 50 kg", "x = 10 kg as % of 50 kg\n", "20%", false, ""},
+
+		// Duration cross-unit → Percentage (normalized to seconds)
+		{"3 hours as % of 1 day", "x = 3 hours as % of 1 day\n", "12.5%", false, ""},
+
+		// Error: Currency vs Quantity
+		{"currency vs quantity", "x = $100 as % of 50 kg\n", "", true, "both values must be the same type"},
+
+		// Error: Different currencies
+		{"$ vs €", "x = $100 as % of €50\n", "", true, "both values must be the same type"},
+
+		// Error: Different quantity units
+		{"kg vs meters", "x = 10 kg as % of 5 meters\n", "", true, "both values must be the same type"},
+
+		// Division by zero
+		{"div by zero", "x = $100 as % of $0\n", "", true, "division by zero"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("parse error: %v", err)
+			}
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got results: %v", results)
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(results) != 1 {
+				t.Fatalf("expected 1 result, got %d", len(results))
+			}
+			got := results[0].String()
+			if got != tt.wantValue {
+				t.Errorf("got %q, want %q", got, tt.wantValue)
 			}
 		})
 	}

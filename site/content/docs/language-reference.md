@@ -698,6 +698,7 @@ Case-insensitive: `AND`, `and`, `And` all work.
 | `over` | Accumulation | `100 MB/s over 1 day` | `~8.64 TB` |
 | `at...per` | Capacity | `10 TB at 2 TB per disk` | `5 disk` |
 | `% of` | Percentage of | `15% of 200` | `30` |
+| `as % of` | Ratio as percentage | `$100 as % of $500` | `20%` |
 | `from` | Date offset | `2 days from today` | *(date)* |
 
 ### Assignment
@@ -725,10 +726,19 @@ meaningful type.
 | `10 kg * 5 kg` | **error** | "Square kilograms" isn't a real unit |
 | `10 kg / 5 kg` | **error** | kg divided by kg isn't kg |
 
-**To get a ratio**, use `number()` to extract the raw value first:
+**To get a percentage**, use `as % of`:
 
 ```
-profit_margin = number(operating_income) / number(total_revenue)
+profit_margin = operating_income as % of total_revenue
+```
+
+This returns a `Percentage` type (e.g., `41.01%`). Both values must be
+the same type — you can't compute `$100 as % of 50 kg`.
+
+For a raw number ratio, use `number()` instead:
+
+```
+ratio = number(operating_income) / number(total_revenue)
 ```
 
 The same rule applies to fractions with units:
