@@ -55,3 +55,11 @@ test_*.png
 tiny.cm
 .task/
 .env
+
+# Scratch files at repo root (test.cm, test.html, test.md, testing.cm, etc.)
+/test.*
+/testing.*
+/tester.*
+
+# Hugo dev server output at repo root (not site/public/)
+/public/
