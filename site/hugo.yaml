@@ -27,6 +27,10 @@ markup:
     codeFences: true
     guessSyntax: false
     tabWidth: 4
+  tableOfContents:
+    startLevel: 2
+    endLevel: 3
+    ordered: false
 
 menus:
   main:
