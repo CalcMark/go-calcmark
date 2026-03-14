@@ -46,6 +46,14 @@ func FuzzParserParse(f *testing.F) {
 		// Potential attack: many tokens
 		"x = 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1\n",
 
+		// Fraction expressions
+		"x = 1/3\n",
+		"y = 11 3/8\n",
+		"z = 1/3 + 1/4\n",
+		"w = 1/3 cup\n",
+		"v = -1/3\n",
+		"u = 1/0\n",
+
 		// Date/time expressions
 		"deadline = Jan 15, 2025\n",
 		"duration = 3 days\n",

@@ -46,6 +46,17 @@ func FuzzLexerTokenize(f *testing.F) {
 		"- list item\n",
 		"1. ordered item\n",
 
+		// Fraction patterns
+		"1/3\n",
+		"0/0\n",
+		"1/0\n",
+		"999/1000\n",
+		"1/99999\n",
+		"11 3/8\n",
+		"1e3/4\n",
+		"$1/3\n",
+		"1/3/4\n",
+
 		// Operators and special characters
 		"a + b - c * d / e\n",
 		"x = (((1)))\n",
