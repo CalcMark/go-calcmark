@@ -99,6 +99,7 @@ z = 30`
 			"scale_double_bug",                    // TestEditorCatwalkScaleDoubleBug
 			"scale_invalid_category",              // TestEditorCatwalkScaleInvalidCategory
 			"scale_invalid_view",                  // TestEditorCatwalkScaleInvalidView
+			"fraction_results",                    // TestEditorCatwalkFractionResults
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {
@@ -1978,6 +1979,50 @@ func TestEditorCatwalkScaleInvalidView(t *testing.T) {
 			WithObserverV2("lines", func(out io.Writer, m tea.Model) error {
 				_, err := out.Write([]byte(m.(Model).DebugLines()))
 				return err
+			}),
+		)
+	})
+}
+
+// TestEditorCatwalkFractionResults verifies that fraction arithmetic displays
+// fraction output in the TUI, not decimal approximations.
+func TestEditorCatwalkFractionResults(t *testing.T) {
+	content := `a = 1/3
+b = a * 2
+c = 1/3 + 1/4
+d = 7/3
+e = 2/4
+f = 1/3 + 1/3 + 1/3
+
+`
+
+	doc, err := document.NewDocument(content)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
+		if !strings.HasSuffix(path, "fraction_results") {
+			return
+		}
+
+		m := New(doc)
+		m.width = 80
+		m.height = 24
+		m.previewMode = PreviewFull
+
+		RunModelV2(t, path, m,
+			WithObserverV2("results", func(out io.Writer, m tea.Model) error {
+				model := m.(Model)
+				results := model.GetLineResults()
+				var buf strings.Builder
+				for _, r := range results {
+					if r.IsCalc || r.Error != "" {
+						buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n", r.LineNum, r.Source, r.Value, r.Error))
+					}
+				}
+				_, wErr := out.Write([]byte(buf.String()))
+				return wErr
 			}),
 		)
 	})
