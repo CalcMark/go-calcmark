@@ -478,7 +478,7 @@ This cross-validates that the planned engagement volume is feasible given team s
 
 ```calcmark
 est_delivery_hrs = number(total_rev) / blended_rate
-capacity_consumed = est_delivery_hrs / number(total_capacity)
+capacity_consumed = est_delivery_hrs / total_capacity
 bench = 1 - capacity_consumed
 ```
 

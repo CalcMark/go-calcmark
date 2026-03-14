@@ -171,12 +171,17 @@ func getFunctions() []Feature {
 			Example:     "sqrt(16) → 4",
 		},
 		{
-			Name:        "number",
-			Category:    CategoryFunction,
-			Syntax:      "number(value)",
-			Description: "Extract the numeric value from any type",
-			Aliases:     nil,
-			Example:     "number(10 kg) → 10",
+			Name:     "number",
+			Category: CategoryFunction,
+			Syntax:   "number(value)",
+			Description: "Strip the unit or currency from a typed value, returning a plain number. " +
+				"Use when you need a dimensionless ratio from two typed values: " +
+				"number($500) / number($1000) → 0.5. " +
+				"Only wrap what's needed — if a value is already a plain number, don't wrap it again. " +
+				"Which side you wrap matters: $100 / number($50) → $2.00 (currency), " +
+				"number($100) / number($50) → 2 (plain number).",
+			Aliases: nil,
+			Example: "number($500) / number($1000) → 0.5",
 		},
 		{
 			Name:        "accumulate",

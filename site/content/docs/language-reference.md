@@ -800,11 +800,21 @@ profit_margin = operating_income as % of total_revenue
 This returns a `Percentage` type (e.g., `41.01%`). Both values must be
 the same type — you can't compute `$100 as % of 50 kg`.
 
-For a raw number ratio, use `number()` instead:
+For a raw number ratio, use `number()` to strip the type from both sides:
 
 ```
 ratio = number(operating_income) / number(total_revenue)
 ```
+
+**Which side you wrap matters.** `number()` strips the unit or currency, returning a plain number. The arithmetic rules then determine the result type:
+
+| Expression | Result | Why |
+|-----------|--------|-----|
+| `$100 / number($50)` | `$2.00` | currency / number = currency |
+| `number($100) / number($50)` | `2` | number / number = plain number |
+| `number($100) / $50` | error | number / currency is not defined |
+
+**Don't over-wrap.** If a value is already a plain number (from a previous `number()` call, or because it was never typed), wrapping it again is harmless but noisy. Only wrap typed values (currency, quantity) that need their type stripped.
 
 The same rule applies to fractions with units:
 
