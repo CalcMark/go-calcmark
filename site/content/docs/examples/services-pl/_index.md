@@ -428,7 +428,7 @@ Gross profit is revenue minus cost of revenue — the money left to cover operat
 
 ```calcmark
 gross_profit = total_rev - total_cor
-gross_margin = gross_profit / total_rev
+gross_margin = number(gross_profit) / number(total_rev)
 ```
 
 Industry benchmarks for SaaS-attached professional services: below 15% gross margin is struggling, 15–25% is typical, and 25–35% is strong. Pure-play consulting firms run 30–45%, but they carry lower base salaries and less product R&D overhead.
@@ -450,7 +450,7 @@ Contribution (also called operating income) is what the services business unit d
 
 ```calcmark
 contribution = gross_profit - total_opex
-contribution_margin = contribution / total_rev
+contribution_margin = number(contribution) / number(total_rev)
 ```
 
 Gross profit = `$2.6M` at 62% gross margin. After opex, contribution = `$2M` at 48% contribution margin.
@@ -468,8 +468,8 @@ Revenue per head and cost per head measure how productively the team is deployed
 ```calcmark
 rev_per_hc = total_rev / number(billable_hc)
 cost_per_hc = labor_cost / number(billable_hc)
-blended_rate = total_rev / (number(billable_hc) * net_hrs * target_util)
-rev_per_labor_dollar = total_rev / labor_cost
+blended_rate = number(total_rev) / (number(billable_hc) * net_hrs * target_util)
+rev_per_labor_dollar = number(total_rev) / number(labor_cost)
 ```
 
 ### Capacity Check
@@ -477,8 +477,8 @@ rev_per_labor_dollar = total_rev / labor_cost
 This cross-validates that the planned engagement volume is feasible given team size and utilization assumptions. Bench capacity is the fraction of available hours not consumed by planned delivery — a bench below 10% leaves no slack for unexpected demand, attrition, or delivery problems; above 30% signals too much unproductive capacity.
 
 ```calcmark
-est_delivery_hrs = total_rev / blended_rate
-capacity_consumed = est_delivery_hrs / total_capacity
+est_delivery_hrs = number(total_rev) / blended_rate
+capacity_consumed = est_delivery_hrs / number(total_capacity)
 bench = 1 - capacity_consumed
 ```
 
@@ -487,11 +487,11 @@ bench = 1 - capacity_consumed
 Recurring (retainer) revenue as a percentage of total is a leading indicator of business stability and predictability — boards want to see this growing. The per-type breakdowns help spot mix shift when presenting a bridge between periods.
 
 ```calcmark
-recurring_ratio = retainer_rev / total_rev
+recurring_ratio = number(retainer_rev) / number(total_rev)
 
-impl_rev_pct = (qs_rev + std_rev + ent_rev) / total_rev
-advisory_rev_pct = (advisory_rev + workshop_rev) / total_rev
-training_rev_pct = training_rev / total_rev
+impl_rev_pct = number(qs_rev + std_rev + ent_rev) / number(total_rev)
+advisory_rev_pct = number(advisory_rev + workshop_rev) / number(total_rev)
+training_rev_pct = number(training_rev) / number(total_rev)
 ```
 
 **CalcMark features:** `number()` for unit-stripping in per-head calculations.
@@ -527,7 +527,7 @@ The cost base does not grow proportionally — fixed and semi-fixed labor costs 
 sa_incr_margin_rate = 55%
 sa_incr_margin = sa_uplift * sa_incr_margin_rate
 sa_gross_profit = gross_profit + sa_incr_margin
-sa_gross_margin = sa_gross_profit / sa_total_rev
+sa_gross_margin = number(sa_gross_profit) / number(sa_total_rev)
 ```
 
 ---
@@ -566,9 +566,9 @@ Labor costs don't shrink with utilization — salaries are paid whether people a
 
 ```calcmark
 sb_gross_profit = sb_total_rev - total_cor
-sb_gross_margin = sb_gross_profit / sb_total_rev
+sb_gross_margin = number(sb_gross_profit) / number(sb_total_rev)
 sb_contribution = sb_gross_profit - total_opex
-sb_contribution_margin = sb_contribution / sb_total_rev
+sb_contribution_margin = number(sb_contribution) / number(sb_total_rev)
 ```
 
 ---
@@ -583,17 +583,17 @@ When presenting to a board, the most useful format is a bridge from prior period
 - **Recurring Revenue %** — how much of next year's revenue is already visible?
 
 ```calcmark
-board_rev_attainment = sb_total_rev / total_rev
+board_rev_attainment = number(sb_total_rev) / number(total_rev)
 board_gross_margin = sb_gross_margin
 board_util = sb_util
-board_recurring_pct = sb_retainer_rev / sb_total_rev
+board_recurring_pct = number(sb_retainer_rev) / number(sb_total_rev)
 ```
 
 Revenue per head is a proxy for operational efficiency and team leverage. In healthy professional services businesses, revenue per billable head runs 2.5–4x fully-loaded compensation (TSIA benchmark). Below 2x signals rates are too low, utilization is too low, or the cost base is too high.
 
 ```calcmark
 board_rev_per_head = sb_total_rev / number(billable_hc)
-rev_to_comp = board_rev_per_head / sr_loaded
+rev_to_comp = number(board_rev_per_head) / number(sr_loaded)
 ```
 
 ---
