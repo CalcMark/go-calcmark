@@ -43,11 +43,12 @@ func (c *CurrencyLiteral) GetRange() *Range {
 	return c.Range
 }
 
-// FractionLiteral represents a fraction literal (e.g., "1/3", "7/8").
+// FractionLiteral represents a fraction literal (e.g., "1/3", "7/8", "1/3 cup").
 // Numerator and Denominator are stored as int64, parsed once at parse time.
 type FractionLiteral struct {
 	Numerator   int64  // The numerator value
 	Denominator int64  // The denominator value
+	Unit        string // Optional unit (e.g., "cup" for "1/3 cup"), empty if dimensionless
 	SourceText  string // Original text from source (e.g., "1/3")
 	Range       *Range
 }

@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -912,11 +913,37 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			}
 		}
 
+		// Check for mixed number: integer NUMBER followed by FRACTION (e.g., "11 3/8")
+		// Only when the number is an integer (no decimal point) and not a multiplier suffix
+		if tok.Type == lexer.NUMBER && !strings.Contains(tok.Value, ".") && p.check(lexer.FRACTION) {
+			numNode := &ast.NumberLiteral{
+				Value:      string(tok.Value),
+				SourceText: string(tok.OriginalText),
+				Range:      tokenRange(tok),
+			}
+			// parseFractionLiteral handles optional unit attachment
+			fracNode, err := p.parseFractionLiteral()
+			if err != nil {
+				return nil, err
+			}
+			return &ast.BinaryOp{
+				Operator: "+",
+				Left:     numNode,
+				Right:    fracNode,
+				Range:    ast.SpanNodes(numNode, fracNode),
+			}, nil
+		}
+
 		// Plain number without unit (or followed by keyword identifier)
 		return &ast.NumberLiteral{
 			Value:      string(tok.Value),
 			SourceText: string(tok.OriginalText),
 		}, nil
+	}
+
+	// Fraction literals: "1/3", "7/8"
+	if p.check(lexer.FRACTION) {
+		return p.parseFractionLiteral()
 	}
 
 	// Booleans
@@ -1413,4 +1440,52 @@ func isTimeUnit(unit string) bool {
 	default:
 		return false
 	}
+}
+
+// parseFractionLiteral consumes a FRACTION token and returns a FractionLiteral node.
+// The token value is "num/denom" (e.g., "1/3"). Parsing to int64 happens here once.
+// Optionally checks for a following unit identifier.
+func (p *RecursiveDescentParser) parseFractionLiteral() (ast.Node, error) {
+	if !p.match(lexer.FRACTION) {
+		return nil, p.error("expected fraction literal")
+	}
+	tok := p.previous()
+
+	parts := strings.SplitN(tok.Value, "/", 2)
+	if len(parts) != 2 {
+		return nil, p.error("invalid fraction format: " + tok.Value)
+	}
+
+	num, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return nil, p.error("fraction numerator too large: " + parts[0])
+	}
+	denom, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return nil, p.error("fraction denominator too large: " + parts[1])
+	}
+
+	fracNode := &ast.FractionLiteral{
+		Numerator:   num,
+		Denominator: denom,
+		SourceText:  tok.OriginalText,
+		Range:       tokenRange(tok),
+	}
+
+	// Check for unit after fraction: "1/3 cup"
+	if p.check(lexer.IDENTIFIER) {
+		identTok := p.peek()
+		unitName := string(identTok.Value)
+		if !isNaturalSyntaxKeyword(unitName) {
+			p.advance()
+			normalizedUnit, isKnownUnit := units.NormalizeUnitName(unitName)
+			if isKnownUnit {
+				unitName = normalizedUnit
+			}
+			fracNode.Unit = unitName
+			fracNode.SourceText = tok.OriginalText + " " + unitName
+		}
+	}
+
+	return fracNode, nil
 }

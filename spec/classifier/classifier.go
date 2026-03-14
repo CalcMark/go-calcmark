@@ -301,7 +301,7 @@ func ClassifyLine(line string, env IdentifierResolver) (LineType, error) {
 		}
 
 		// Literals are always calculations
-		if token.Type == lexer.NUMBER || token.Type == lexer.CURRENCY || token.Type == lexer.QUANTITY || token.Type == lexer.BOOLEAN {
+		if token.Type == lexer.NUMBER || token.Type == lexer.CURRENCY || token.Type == lexer.QUANTITY || token.Type == lexer.BOOLEAN || token.Type == lexer.FRACTION {
 			return Calculation, nil
 		}
 
