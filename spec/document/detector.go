@@ -363,7 +363,8 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 func isNumberToken(t lexer.TokenType) bool {
 	switch t {
 	case lexer.NUMBER, lexer.NUMBER_PERCENT, lexer.NUMBER_K,
-		lexer.NUMBER_M, lexer.NUMBER_B, lexer.NUMBER_T, lexer.NUMBER_SCI:
+		lexer.NUMBER_M, lexer.NUMBER_B, lexer.NUMBER_T, lexer.NUMBER_SCI,
+		lexer.FRACTION:
 		return true
 	}
 	return false

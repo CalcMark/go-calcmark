@@ -1,0 +1,14 @@
+# Fraction Results in TUI
+# Verifies that fraction arithmetic shows fraction output, not decimals.
+
+# Test 1: Initial state - fractions display as fractions
+run observe=results
+----
+-- results:
+Line 0 (a = 1/3): value=1/3, error=""
+Line 1 (b = a * 2): value=2/3, error=""
+Line 2 (c = 1/3 + 1/4): value=7/12, error=""
+Line 3 (d = 7/3): value=2 1/3, error=""
+Line 4 (e = 2/4): value=1/2, error=""
+Line 5 (f = 1/3 + 1/3 + 1/3): value=1, error=""
+Line 6 (): value=, error=""

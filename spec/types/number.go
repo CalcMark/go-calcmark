@@ -41,6 +41,8 @@ func ToDecimal(t Type) (decimal.Decimal, error) {
 		return v.Value, nil
 	case *Percentage:
 		return v.Value, nil
+	case *Fraction:
+		return v.ToDecimal(), nil
 	default:
 		return decimal.Zero, &TypeError{Message: "expected numeric type, got " + typeName(t)}
 	}
@@ -68,6 +70,8 @@ func typeName(t Type) string {
 		return "Rate"
 	case *Percentage:
 		return "Percentage"
+	case *Fraction:
+		return "Fraction"
 	default:
 		return "unknown"
 	}

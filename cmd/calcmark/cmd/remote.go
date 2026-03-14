@@ -81,7 +81,7 @@ func runRemote() error {
 		return fmt.Errorf("parse error: %w", parseErr)
 	}
 	app := tui.NewEditorApp(doc, "")
-	app.SetFormatter(localeFormatter())
+	app.SetFormatter(tuiFormatter())
 	app.SetDebugKeys(debugKeysFlag)
 	runTUIApp(app)
 	return nil

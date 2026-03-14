@@ -25,6 +25,7 @@ const (
 	NUMBER_B       // 5B
 	NUMBER_T       // 2.5T
 	NUMBER_SCI     // 1.2e10, 4.5e-7
+	FRACTION       // 1/3, 7/8 (no spaces around /)
 
 	// Operators
 	PLUS
@@ -139,6 +140,8 @@ func (tt TokenType) String() string {
 		return "NUMBER_T"
 	case NUMBER_SCI:
 		return "NUMBER_SCI"
+	case FRACTION:
+		return "FRACTION"
 	case CURRENCY_SYM:
 		return "CURRENCY_SYM"
 	case CURRENCY_CODE:

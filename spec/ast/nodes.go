@@ -43,6 +43,24 @@ func (c *CurrencyLiteral) GetRange() *Range {
 	return c.Range
 }
 
+// FractionLiteral represents a fraction literal (e.g., "1/3", "7/8", "1/3 cup").
+// Numerator and Denominator are stored as int64, parsed once at parse time.
+type FractionLiteral struct {
+	Numerator   int64  // The numerator value
+	Denominator int64  // The denominator value
+	Unit        string // Optional unit (e.g., "cup" for "1/3 cup"), empty if dimensionless
+	SourceText  string // Original text from source (e.g., "1/3")
+	Range       *Range
+}
+
+func (f *FractionLiteral) String() string {
+	return fmt.Sprintf("FractionLiteral(%d/%d)", f.Numerator, f.Denominator)
+}
+
+func (f *FractionLiteral) GetRange() *Range {
+	return f.Range
+}
+
 // QuantityLiteral represents a number with a unit (e.g., "5 kg", "10 meters").
 type QuantityLiteral struct {
 	Value      string // The numeric value
@@ -409,8 +427,8 @@ func ContainsScaleRef(node Node) bool {
 	case *RateLiteral:
 		return ContainsScaleRef(n.Amount)
 	default:
-		// Leaf nodes: NumberLiteral, CurrencyLiteral, QuantityLiteral,
-		// DateLiteral, TimeLiteral, DurationLiteral,
+		// Leaf nodes: NumberLiteral, FractionLiteral, CurrencyLiteral,
+		// QuantityLiteral, DateLiteral, TimeLiteral, DurationLiteral,
 		// BooleanLiteral, Identifier, RelativeDateLiteral
 		return false
 	}

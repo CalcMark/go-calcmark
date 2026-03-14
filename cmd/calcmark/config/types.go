@@ -15,9 +15,10 @@ type Config struct {
 
 // TUIConfig holds TUI-specific settings.
 type TUIConfig struct {
-	Theme     ThemeConfig `mapstructure:"theme" toml:"theme"`
-	DarkMode  bool        `mapstructure:"dark_mode" toml:"-"` // Deprecated: use ColorMode instead
-	ColorMode string      `mapstructure:"color_mode" toml:"color_mode"`
+	Theme            ThemeConfig `mapstructure:"theme" toml:"theme"`
+	DarkMode         bool        `mapstructure:"dark_mode" toml:"-"` // Deprecated: use ColorMode instead
+	ColorMode        string      `mapstructure:"color_mode" toml:"color_mode"`
+	UnicodeFractions *bool       `mapstructure:"unicode_fractions" toml:"unicode_fractions"` // nil = default (true)
 }
 
 // ThemeConfig defines user-facing color overrides as hex strings.

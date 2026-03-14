@@ -221,6 +221,100 @@ func TestSetextHeadingRendersAsH2(t *testing.T) {
 	}
 }
 
+func TestSmartypantsFractionsInProse(t *testing.T) {
+	// gomarkdown's SmartypantsFractions converts prose fractions to styled HTML.
+	// This is DESIRABLE for plain prose text — "Use 1/2 cup" renders as a proper fraction.
+	// gomarkdown uses <sup>num</sup>&frasl;<sub>denom</sub> format.
+	tests := []struct {
+		name   string
+		source string
+		want   string // HTML expected (sup/frasl/sub format)
+	}{
+		{"1/2 in prose", "Use 1/2 cup of flour", "<sup>1</sup>&frasl;<sub>2</sub>"},
+		{"1/4 in prose", "Use 1/4 cup of sugar", "<sup>1</sup>&frasl;<sub>4</sub>"},
+		{"3/4 in prose", "Fill 3/4 of the tank", "<sup>3</sup>&frasl;<sub>4</sub>"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			block := NewTextBlock([]string{tt.source})
+			html := block.Render()
+
+			if !strings.Contains(html, tt.want) {
+				t.Errorf("SmartypantsFractions should convert prose fractions: expected %s in %q", tt.want, html)
+			}
+		})
+	}
+}
+
+func TestInterpolatedFractionsNotCorrupted(t *testing.T) {
+	// When a CalcMark fraction like a = 1/2 is interpolated into text via {{a}},
+	// the sentinel-wrapped value must survive markdown rendering intact.
+	// SmartypantsFractions must NOT corrupt the interpolated value.
+	//
+	// Pipeline: "Total: {{a}}" → "Total: \x021/2\x03" → markdown → post-process sentinels
+	// The \x02...\x03 sentinels should prevent SmartypantsFractions from seeing "1/2".
+	tests := []struct {
+		name       string
+		source     string // raw source with {{var}} placeholder
+		htmlSource string // sentinel-wrapped source (simulating interpolation)
+		wantInHTML string // expected content in final HTML
+		banned     string // must NOT appear
+	}{
+		{
+			name:       "interpolated 1/2 preserved",
+			source:     "Total: {{a}}",
+			htmlSource: "Total: \x021/2\x03",
+			wantInHTML: "1/2",
+			banned:     "&frac12;",
+		},
+		{
+			name:       "interpolated 1/4 preserved",
+			source:     "Add {{b}} cup",
+			htmlSource: "Add \x021/4\x03 cup",
+			wantInHTML: "1/4",
+			banned:     "&frac14;",
+		},
+		{
+			name:       "interpolated 3/4 preserved",
+			source:     "Fill {{c}} tank",
+			htmlSource: "Fill \x023/4\x03 tank",
+			wantInHTML: "3/4",
+			banned:     "&frac34;",
+		},
+		{
+			name:       "interpolated 1/3 preserved",
+			source:     "Use {{d}} cup",
+			htmlSource: "Use \x021/3\x03 cup",
+			wantInHTML: "1/3",
+			banned:     "",
+		},
+		{
+			name:       "mixed: prose 1/2 converted but interpolated 1/2 preserved",
+			source:     "Prose 1/2 and calc {{a}}",
+			htmlSource: "Prose 1/2 and calc \x021/2\x03",
+			wantInHTML: `<span class="cm-interpolated">1/2</span>`,
+			banned:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			block := NewTextBlock([]string{tt.source})
+			block.SetInterpolatedHTMLSource([]string{tt.htmlSource})
+			block.SetDirty(true)
+			html := block.Render()
+
+			if tt.wantInHTML != "" && !strings.Contains(html, tt.wantInHTML) {
+				t.Errorf("Expected %q in rendered HTML, got: %s", tt.wantInHTML, html)
+			}
+			if tt.banned != "" && strings.Contains(html, tt.banned) {
+				t.Errorf("Interpolated value must not be converted: found %s in %q", tt.banned, html)
+			}
+		})
+	}
+}
+
 func TestStandaloneHorizontalRule(t *testing.T) {
 	// --- after a blank line (or at start) should render as horizontal rule.
 	source := []string{

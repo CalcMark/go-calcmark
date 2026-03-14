@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -68,6 +69,12 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 			},
 			PerUnit: v.PerUnit,
 		}, nil
+
+	case *types.Fraction:
+		result := roundFractionToNapkin(v)
+		result.IsNapkin = true
+		result.Unit = v.Unit
+		return result, nil
 
 	case *types.Percentage:
 		// Percentages are already small decimal values; pass through unchanged.
@@ -146,4 +153,59 @@ func roundToNapkinPrecision(numValue decimal.Decimal) decimal.Decimal {
 	}
 
 	return decimal.NewFromFloat(roundedFloat)
+}
+
+// napkinDenominators are the common fraction denominators for napkin rounding.
+var napkinDenominators = []int64{1, 2, 3, 4, 6, 8}
+
+// roundFractionToNapkin rounds a fraction to the nearest common fraction.
+// Common denominators: 1, 2, 3, 4, 6, 8.
+// For mixed numbers, the integer part is preserved and only the fractional remainder is rounded.
+func roundFractionToNapkin(f *types.Fraction) *types.Fraction {
+	// Extract sign and work with absolute value
+	negative := f.Value.Sign() < 0
+	abs := new(big.Rat).Abs(f.Value)
+
+	// Extract integer part
+	wholePart := new(big.Int).Div(abs.Num(), abs.Denom())
+	remainder := new(big.Rat).Sub(abs, new(big.Rat).SetInt(wholePart))
+
+	// If remainder is zero, return the integer
+	if remainder.Sign() == 0 {
+		result := new(big.Rat).SetInt(wholePart)
+		if negative {
+			result.Neg(result)
+		}
+		return types.NewFractionFromRat(result)
+	}
+
+	// Find nearest common fraction for the remainder
+	bestCandidate := new(big.Rat)
+	bestDist := new(big.Rat).SetFrac64(1, 1) // Start with max distance
+
+	for _, d := range napkinDenominators {
+		// Find nearest p/d to remainder: p = round(remainder * d)
+		scaled := new(big.Rat).Mul(remainder, new(big.Rat).SetInt64(d))
+		// Round: add 0.5 and truncate
+		scaledPlusHalf := new(big.Rat).Add(scaled, new(big.Rat).SetFrac64(1, 2))
+		p := new(big.Int).Div(scaledPlusHalf.Num(), scaledPlusHalf.Denom())
+
+		candidate := new(big.Rat).SetFrac(p, big.NewInt(d))
+
+		// Compute distance
+		dist := new(big.Rat).Sub(remainder, candidate)
+		dist.Abs(dist)
+
+		if dist.Cmp(bestDist) < 0 {
+			bestDist.Set(dist)
+			bestCandidate.Set(candidate)
+		}
+	}
+
+	// Combine: whole + best candidate
+	result := new(big.Rat).Add(new(big.Rat).SetInt(wholePart), bestCandidate)
+	if negative {
+		result.Neg(result)
+	}
+	return types.NewFractionFromRat(result)
 }

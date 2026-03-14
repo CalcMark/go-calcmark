@@ -202,6 +202,25 @@ func (l *Lexer) readNumber() Token {
 		}
 	}
 
+	// Check for fraction literal: integer part followed by /digits (no spaces).
+	// Must come before decimal point check — if integer has a decimal point, it's not a fraction.
+	if denomStr, consumed, ok := tryParseFraction(l.text, l.pos, numStr.String()); ok {
+		// Advance past '/' and denominator digits
+		for range consumed {
+			l.advance()
+		}
+		fractionValue := numStr.String() + "/" + denomStr
+		return Token{
+			Type:         FRACTION,
+			Value:        fractionValue,
+			OriginalText: string(l.text[startPos:l.pos]),
+			Line:         startLine,
+			Column:       startColumn,
+			StartPos:     startPos,
+			EndPos:       l.pos,
+		}
+	}
+
 	// Read decimal part - only consume the dot if followed by at least one digit.
 	// "2.5" is valid, but "2." is not (trailing dot without decimals is invalid).
 	// This ensures "2. Second" (markdown ordered list) doesn't tokenize as a calculation.

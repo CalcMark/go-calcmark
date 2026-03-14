@@ -80,6 +80,7 @@ func NewRegistry() *Registry {
 	r.features = append(r.features, getGrowthFeatures()...)
 	r.features = append(r.features, getKeywords()...)
 	r.features = append(r.features, getOperators()...)
+	r.features = append(r.features, getFractionFeatures()...)
 	r.features = append(r.features, getFrontmatterFeatures()...)
 	return r
 }
@@ -721,6 +722,35 @@ func getFrontmatterFeatures() []Feature {
 			Description: "Embed a calculated value in prose. After evaluation, {{var}} tags in text blocks are replaced with display-formatted values. Supports forward references — a summary at the top can reference results computed below.",
 			Aliases:     []Alias{{Name: "template", Parseable: false}, {Name: "interpolation", Parseable: false}},
 			Example:     "Total: {{revenue}}",
+		},
+	}
+}
+
+// getFractionFeatures returns fraction-related features.
+func getFractionFeatures() []Feature {
+	return []Feature{
+		{
+			Name:        "fraction literal",
+			Category:    CategoryOperator,
+			Syntax:      "1/3",
+			Description: "Exact rational number. Write numerator/denominator without spaces to create a fraction.",
+			Aliases:     []Alias{{Name: "fraction", Parseable: false}, {Name: "rational", Parseable: false}},
+			Example:     "1/3",
+		},
+		{
+			Name:        "mixed number",
+			Category:    CategoryOperator,
+			Syntax:      "11 3/8",
+			Description: "Mixed number combining an integer and a fraction.",
+			Aliases:     []Alias{{Name: "mixed fraction", Parseable: false}},
+			Example:     "11 3/8 inch",
+		},
+		{
+			Name:        "fraction arithmetic",
+			Category:    CategoryOperator,
+			Syntax:      "1/3 + 1/4",
+			Description: "Exact rational arithmetic. Results are automatically simplified to lowest terms.",
+			Example:     "1/3 + 1/3 + 1/3",
 		},
 	}
 }

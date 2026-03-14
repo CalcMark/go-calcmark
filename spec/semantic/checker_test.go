@@ -346,3 +346,64 @@ func TestLineOffsetZeroPreservesOriginalBehavior(t *testing.T) {
 		t.Errorf("Expected 'line 1' with zero offset, got: %s", msg)
 	}
 }
+
+func TestFractionSemanticChecks(t *testing.T) {
+	t.Run("zero denominator warning", func(t *testing.T) {
+		env := NewEnvironment()
+		checker := NewCheckerWithEnv(env)
+		nodes := []ast.Node{
+			&ast.Expression{
+				Expr: &ast.FractionLiteral{Numerator: 1, Denominator: 0},
+			},
+		}
+		diagnostics := checker.Check(nodes)
+		if len(diagnostics) != 1 {
+			t.Fatalf("expected 1 diagnostic, got %d", len(diagnostics))
+		}
+		if diagnostics[0].Code != DiagDivisionByZero {
+			t.Errorf("expected %s, got %s", DiagDivisionByZero, diagnostics[0].Code)
+		}
+	})
+
+	t.Run("valid fraction no diagnostics", func(t *testing.T) {
+		env := NewEnvironment()
+		checker := NewCheckerWithEnv(env)
+		nodes := []ast.Node{
+			&ast.Expression{
+				Expr: &ast.FractionLiteral{Numerator: 1, Denominator: 3},
+			},
+		}
+		diagnostics := checker.Check(nodes)
+		if len(diagnostics) != 0 {
+			t.Errorf("expected 0 diagnostics, got %d: %v", len(diagnostics), diagnostics)
+		}
+	})
+
+	t.Run("fraction with valid unit", func(t *testing.T) {
+		env := NewEnvironment()
+		checker := NewCheckerWithEnv(env)
+		nodes := []ast.Node{
+			&ast.Expression{
+				Expr: &ast.FractionLiteral{Numerator: 1, Denominator: 3, Unit: "cup"},
+			},
+		}
+		diagnostics := checker.Check(nodes)
+		if len(diagnostics) != 0 {
+			t.Errorf("expected 0 diagnostics, got %d: %v", len(diagnostics), diagnostics)
+		}
+	})
+
+	t.Run("fraction with arbitrary unit allowed", func(t *testing.T) {
+		env := NewEnvironment()
+		checker := NewCheckerWithEnv(env)
+		nodes := []ast.Node{
+			&ast.Expression{
+				Expr: &ast.FractionLiteral{Numerator: 1, Denominator: 3, Unit: "pizza"},
+			},
+		}
+		diagnostics := checker.Check(nodes)
+		if len(diagnostics) != 0 {
+			t.Errorf("expected 0 diagnostics for arbitrary unit, got %d", len(diagnostics))
+		}
+	})
+}

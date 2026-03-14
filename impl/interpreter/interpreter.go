@@ -95,6 +95,8 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalDurationLiteral(n)
 	case *ast.RelativeDateLiteral:
 		return interp.evalRelativeDateLiteral(n)
+	case *ast.FractionLiteral:
+		return interp.evalFractionLiteral(n)
 	case *ast.QuantityLiteral:
 		return interp.evalQuantityLiteral(n)
 	case *ast.RateLiteral:

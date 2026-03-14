@@ -15,7 +15,7 @@ import (
 const maxLocaleLen = 64
 
 // DisplayConfig holds locale-specific formatting preferences.
-// It is a value type (~56 bytes) designed to be stack-allocatable.
+// It is a value type designed to be stack-allocatable.
 type DisplayConfig struct {
 	// Tag is the parsed BCP 47 language tag.
 	Tag language.Tag
@@ -25,6 +25,10 @@ type DisplayConfig struct {
 
 	// ThousandSep is the thousands grouping separator (e.g., "," for en-US, "." for de-DE).
 	ThousandSep string
+
+	// UnicodeFractions enables Unicode Number Forms (e.g., ½, ⅓, ¾) for fraction display.
+	// Only used in TUI; JSON and CLI output always uses ASCII fractions.
+	UnicodeFractions bool
 }
 
 // DefaultConfig returns the en-US display configuration.

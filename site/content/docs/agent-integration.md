@@ -111,6 +111,24 @@ discounted = $250 - 20%
 
 When added/subtracted with another type, percentages widen: `$100 + 15%` = `$115.00`.
 
+### Fractions
+
+Write fractions without spaces around `/` to get exact rational arithmetic:
+
+```calcmark
+flour = 2/3 cup
+sugar = 1/4 cup
+total = flour + sugar
+bolt = 5/8 inch
+pipe = 11 3/8 inch
+```
+
+Fractions stay exact through arithmetic: `1/3 + 1/3 + 1/3` equals exactly `1`, not `0.999999...`. Mixed numbers like `11 3/8` are supported.
+
+Fractions work as scalar multipliers with any type: `1/3 * $200` gives `$66.67`.
+
+**Whitespace matters:** `1/3` (no spaces) is a fraction literal. `1 / 3` (spaces) is division and produces a decimal.
+
 ### Dates and Durations
 
 ```calcmark
@@ -299,15 +317,36 @@ The response is an array of **blocks**. Each block is either `"calculation"` or 
 |-------|---------------|-------------|
 | `source` | yes | The original CalcMark expression |
 | `value` | yes | Display-formatted result (locale-aware) |
-| `type` | yes | CalcMark type: `number`, `currency`, `quantity`, `duration`, `rate`, `date`, `boolean` |
+| `type` | yes | CalcMark type: `number`, `currency`, `quantity`, `fraction`, `duration`, `rate`, `date`, `boolean` |
 | `numeric_value` | yes | Machine-readable number (always uses `.` decimal, no formatting) |
 | `variable` | when assigned | Variable name if this was an assignment (`x = ...`) |
-| `unit` | when typed | Unit identifier: `USD`, `km`, `second`, etc. |
+| `unit` | when typed | Unit identifier: `USD`, `km`, `second`, `pint`, etc. |
+| `numerator` | for fractions | Exact numerator after GCD reduction (e.g., `25` for `12 1/2`) |
+| `denominator` | for fractions | Exact denominator after GCD reduction (e.g., `2` for `12 1/2`) |
 | `is_explicit` | when converted | `true` if the result used an explicit `in`/`as` conversion |
 | `is_approximate` | when napkin | `true` if `as napkin` rounding was applied |
 | `date_value` | for dates | ISO 8601 date string (`2025-01-08`) |
 
 Use `type` for dispatch, `numeric_value` + `unit` for computation, and `value` for display.
+
+#### Fraction results
+
+Fraction results include `numerator` and `denominator` for exact rational reconstruction. The `numeric_value` is a decimal approximation for convenience. Example for `flour = 1/2 pint`:
+
+```json
+{
+  "source": "flour = 1/2 pint",
+  "value": "1 cup",
+  "type": "fraction",
+  "numeric_value": 0.5,
+  "numerator": 1,
+  "denominator": 2,
+  "unit": "pint",
+  "variable": "flour"
+}
+```
+
+Note: `value` is the display-formatted string (may auto-convert units for readability), while `numeric_value`, `numerator`, `denominator`, and `unit` reflect the exact computed value in the original unit.
 
 ## Output Formats
 

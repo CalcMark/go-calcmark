@@ -653,3 +653,45 @@ func TestJSONFormatterNapkinEstimate(t *testing.T) {
 		t.Fatal("NumericValue should not be nil for napkin estimate")
 	}
 }
+
+// TestJSONFormatterFractionASCII verifies that JSON output uses ASCII fractions,
+// never Unicode Number Forms.
+func TestJSONFormatterFractionASCII(t *testing.T) {
+	source := "a = 1/2\nb = 7/3\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &JSONFormatter{}
+	opts := Options{Verbose: false}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format error: %v", err)
+	}
+
+	output := buf.String()
+
+	// Values must be ASCII fractions
+	if !strings.Contains(output, `"1/2"`) {
+		t.Errorf("Expected ASCII \"1/2\" in JSON output, got:\n%s", output)
+	}
+	if !strings.Contains(output, `"2 1/3"`) {
+		t.Errorf("Expected ASCII \"2 1/3\" in JSON output, got:\n%s", output)
+	}
+
+	// Unicode fractions must NEVER appear
+	unicodeFractions := []string{"½", "⅓", "⅔", "¼", "¾"}
+	for _, uf := range unicodeFractions {
+		if strings.Contains(output, uf) {
+			t.Errorf("Unicode fraction %s must not appear in JSON output", uf)
+		}
+	}
+}

@@ -56,6 +56,7 @@ func renderMarkdown(source string) string {
 	// - SkipHTML: strip raw HTML to prevent XSS
 	// - Safelink: block javascript:, vbscript:, data: URI schemes
 	// - HrefTargetBlank: open links in new tab
+	// - SmartypantsFractions: converts prose 1/2→½, 1/4→¼, 3/4→¾ (desirable for text)
 	htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.SkipHTML | html.Safelink
 	opts := html.RendererOptions{Flags: htmlFlags}
 	renderer := html.NewRenderer(opts)
