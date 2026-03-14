@@ -12,7 +12,16 @@ import (
 // USER REQUIREMENT: First-unit-wins rule
 func evalQuantityOperation(left, right *types.Quantity, operator string) (types.Type, error) {
 	if operator != "+" && operator != "-" {
-		return nil, fmt.Errorf("unsupported quantity operation: %s", operator)
+		switch operator {
+		case "*":
+			return nil, fmt.Errorf("cannot multiply quantity by quantity — the result would be \"square %s\" which isn't a real unit. Use number() to get the raw values: number(%s) * number(%s)",
+				left.Unit, left.String(), right.String())
+		case "/":
+			return nil, fmt.Errorf("cannot divide quantity by quantity — dividing %s by %s doesn't produce %s. Use number() to get a ratio: number(%s) / number(%s)",
+				left.Unit, right.Unit, left.Unit, left.String(), right.String())
+		default:
+			return nil, fmt.Errorf("unsupported quantity operation: %s", operator)
+		}
 	}
 
 	// First-unit-wins: convert right to left's unit

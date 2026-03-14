@@ -94,7 +94,7 @@ func TestRegressionInvalidInputs(t *testing.T) {
 		{"average without of", "average 1, 2, 3\n", true, ""},
 
 		// Type mismatches
-		{"unit times unit", "5 meters * 3 meters\n", true, "unsupported"},
+		{"unit times unit", "5 meters * 3 meters\n", true, "cannot multiply quantity by quantity"},
 	}
 
 	for _, tt := range tests {
