@@ -420,3 +420,7 @@ depreciate $50000 by 15% over 5 years to $5000
 | 2 | rate | Depreciation rate as percentage |
 | 3 | periods | Number of periods (number or duration) |
 | 4 | salvage | Optional: minimum floor value |
+
+---
+
+**Related guides:** [System Sizing](/guides/system-sizing/) (network/storage functions) | [Business Planning](/guides/business-planning/) (growth functions)

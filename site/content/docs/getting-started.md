@@ -132,9 +132,19 @@ See [Sharing with GitHub Gist](/docs/user-guide/#sharing-gist) in the User Guide
 
 ## Next Steps
 
-- Read the full [User Guide]({{< ref "docs/user-guide" >}}) for all features
-- Learn about [The Editor]({{< ref "docs/editor" >}}) — preview modes, shortcuts, autocomplete
-- Explore the [Examples]({{< ref "docs/examples" >}}) to see CalcMark in action
-- Check the [Language Reference]({{< ref "docs/language-reference" >}}) for the formal specification
-- Use CalcMark from code or AI agents — see [Agent & API Integration]({{< ref "docs/agent-integration" >}})
-- Embed CalcMark in your Go application — see [Go Package]({{< ref "docs/go-package" >}})
+**Learn by domain** — pick a [Guide](/guides/) that matches your use case:
+- [System Sizing](/guides/system-sizing/) — capacity planning, bandwidth, SLA budgets
+- [Business Planning](/guides/business-planning/) — P&L, budgets, financial modeling
+- [Recipe Scaling](/guides/recipe-scaling/) — fractions, measurement conventions, scaling
+- [Unit Conversion](/guides/unit-conversion/) — measurement systems, ambiguous units
+
+**Go deeper:**
+- [User Guide](/docs/user-guide/) — task-oriented reference for every feature
+- [The Editor](/docs/editor/) — preview modes, shortcuts, autocomplete
+- [Examples](/docs/examples/) — complete worked documents
+- [Language Reference](/docs/language-reference/) — formal specification
+
+**Integrate:**
+- [Agent & API Integration](/docs/agent-integration/) — use CalcMark from code or AI agents
+- [Go Package](/docs/go-package/) — embed in your Go application
+- [CalcMark Lark](https://lark.calcmark.org) — try in your browser, no install needed

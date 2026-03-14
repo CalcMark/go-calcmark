@@ -5,3 +5,14 @@ weight: 10
 ---
 
 CalcMark is a calculation language that blends seamlessly with markdown. Write your thinking in plain text, add calculations that reference each other, and watch results update as you type.
+
+## Where to Start
+
+| If you want to... | Go to... |
+|-------------------|----------|
+| Install and try CalcMark | [Getting Started](/docs/getting-started/) |
+| Learn through a real-world scenario | [Guides](/guides/) — system sizing, budgets, recipes, unit conversion |
+| Look up a specific feature | [User Guide](/docs/user-guide/) — task-oriented sub-pages |
+| Find the exact specification | [Language Reference](/docs/language-reference/) — formal spec with deep-linkable anchors |
+| Copy a working document | [Examples](/docs/examples/) — complete worked problems |
+| Try without installing | [CalcMark Lark](https://lark.calcmark.org) — browser playground |

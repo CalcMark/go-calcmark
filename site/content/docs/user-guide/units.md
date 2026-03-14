@@ -88,4 +88,8 @@ measurement:
   strict: false
 ```
 
-Measurement conventions compose with `scale` and `convert_to` -- see the [Language Reference](/docs/language-reference/#measurement-conventions) for the full composition table and pipeline order.
+Measurement conventions compose with `scale` and `convert_to` — see the [Language Reference](/docs/language-reference/#measurement-conventions) for the full composition table and pipeline order.
+
+---
+
+**Related guides:** [Unit Conversion & Measurement](/guides/unit-conversion/) | [Recipe Scaling](/guides/recipe-scaling/)
