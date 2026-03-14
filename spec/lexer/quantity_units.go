@@ -20,26 +20,36 @@ func IsQuantityUnit(unit string) bool {
 		"nmi": true, "nautical mile": true, "nautical miles": true,
 	}
 
-	// Mass units
+	// Mass units (including troy, US-qualified, and ton variants)
 	massUnits := map[string]bool{
 		"mg": true, "milligram": true, "milligrams": true,
 		"g": true, "gram": true, "grams": true,
 		"kg": true, "kilogram": true, "kilograms": true,
 		"t": true, "tonne": true, "tonnes": true, "metric ton": true, "metric tons": true,
-		"oz": true, "ounce": true, "ounces": true,
-		"lb": true, "lbs": true, "pound": true, "pounds": true,
+		"oz": true, "ounce": true, "ounces": true, "us oz": true,
+		"lb": true, "lbs": true, "pound": true, "pounds": true, "us lb": true,
+		"troy oz": true, "troy ounce": true, "troy ounces": true,
+		"troy lb": true, "troy pound": true, "troy pounds": true,
+		"short ton": true, "short tons": true,
+		"long ton": true, "long tons": true,
 	}
 
-	// Volume units
+	// Volume units (including imperial and US-qualified variants)
 	volumeUnits := map[string]bool{
 		"ml": true, "milliliter": true, "milliliters": true, "millilitre": true, "millilitres": true,
 		"l": true, "liter": true, "liters": true, "litre": true, "litres": true,
 		"tsp": true, "teaspoon": true, "teaspoons": true,
 		"tbsp": true, "tablespoon": true, "tablespoons": true,
-		"cup": true, "cups": true,
-		"pt": true, "pint": true, "pints": true,
-		"qt": true, "quart": true, "quarts": true,
-		"gal": true, "gallon": true, "gallons": true,
+		"cup": true, "cups": true, "us cup": true,
+		"fl oz": true, "fluid ounce": true, "fluid ounces": true, "us fl oz": true,
+		"pt": true, "pint": true, "pints": true, "us pt": true,
+		"qt": true, "quart": true, "quarts": true, "us qt": true,
+		"gal": true, "gallon": true, "gallons": true, "us gal": true,
+		"imp gal": true, "imperial gallon": true, "imperial gallons": true,
+		"imp qt": true, "imperial quart": true, "imperial quarts": true,
+		"imp pt": true, "imperial pint": true, "imperial pints": true,
+		"imp cup": true, "imperial cup": true, "imperial cups": true,
+		"imp fl oz": true, "imperial fluid ounce": true, "imperial fluid ounces": true,
 	}
 
 	// Temperature units

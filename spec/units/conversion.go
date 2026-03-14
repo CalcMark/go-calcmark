@@ -272,11 +272,41 @@ func addMassConversions(r map[string]ConversionInfo) {
 		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() },
 	}, "lb", "lbs", "pound", "pounds")
 
-	// Ounce
+	// Ounce (standard/avoirdupois — everyday weight: 1 oz = 28.35g)
 	registerUnit(r, ConversionInfo{cat,
 		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisOunce).Kilograms() },
 		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisOunces() },
-	}, "oz", "ounce", "ounces")
+	}, "oz", "ounce", "ounces", "us oz")
+
+	// Troy Ounce (precious metals: 1 troy oz = 31.1035g)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.TroyOunce).Kilograms() },
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).TroyOunces() },
+	}, "troy oz", "troy ounce", "troy ounces")
+
+	// Troy Pound (12 troy ounces, 373.24g)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.TroyPound).Kilograms() },
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).TroyPounds() },
+	}, "troy lb", "troy pound", "troy pounds")
+
+	// US-qualified pound alias
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound).Kilograms() },
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() },
+	}, "us lb")
+
+	// Short Ton (US: 2000 lbs = 907.185 kg)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound * 2000).Kilograms() },
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() / 2000 },
+	}, "short ton", "short tons")
+
+	// Long Ton (Imperial: 2240 lbs = 1016.047 kg)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.AvoirdupoisPound * 2240).Kilograms() },
+		func(v float64) float64 { return (martinlindhe.Mass(v) * martinlindhe.Kilogram).AvoirdupoisPounds() / 2240 },
+	}, "long ton", "long tons")
 }
 
 func addVolumeConversions(r map[string]ConversionInfo) {
@@ -298,25 +328,61 @@ func addVolumeConversions(r map[string]ConversionInfo) {
 	registerUnit(r, ConversionInfo{cat,
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.USLiquidGallon).Liters() },
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).USLiquidGallons() },
-	}, "gal", "gallon", "gallons")
+	}, "gal", "gallon", "gallons", "us gal")
+
+	// US Fluid Ounce
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.USFluidOunce).Liters() },
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).USFluidOunces() },
+	}, "fl oz", "fluid ounce", "fluid ounces", "us fl oz")
 
 	// US Pint
 	registerUnit(r, ConversionInfo{cat,
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.USLiquidPint).Liters() },
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).USLiquidPints() },
-	}, "pt", "pint", "pints")
+	}, "pt", "pint", "pints", "us pt")
 
 	// US Quart
 	registerUnit(r, ConversionInfo{cat,
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.USLiquidQuart).Liters() },
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).USLiquidQuarts() },
-	}, "qt", "quart", "quarts")
+	}, "qt", "quart", "quarts", "us qt")
 
 	// US Cup
 	registerUnit(r, ConversionInfo{cat,
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.USLegalCup).Liters() },
 		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).USLegalCups() },
-	}, "cup", "cups")
+	}, "cup", "cups", "us cup")
+
+	// Imperial Gallon (4.54609 liters)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.ImperialGallon).Liters() },
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).ImperialGallons() },
+	}, "imp gal", "imperial gallon", "imperial gallons")
+
+	// Imperial Quart
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.ImperialQuart).Liters() },
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).ImperialQuarts() },
+	}, "imp qt", "imperial quart", "imperial quarts")
+
+	// Imperial Pint
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.ImperialPint).Liters() },
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).ImperialPints() },
+	}, "imp pt", "imperial pint", "imperial pints")
+
+	// Imperial Cup (half an imperial pint)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.ImperialCup).Liters() },
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).ImperialCups() },
+	}, "imp cup", "imperial cup", "imperial cups")
+
+	// Imperial Fluid Ounce (28.4131 mL)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.ImperialFluidOunce).Liters() },
+		func(v float64) float64 { return (martinlindhe.Volume(v) * martinlindhe.Liter).ImperialFluidOunces() },
+	}, "imp fl oz", "imperial fluid ounce", "imperial fluid ounces")
 
 	// US Tablespoon
 	registerUnit(r, ConversionInfo{cat,
