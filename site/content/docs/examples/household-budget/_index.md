@@ -134,7 +134,7 @@ remaining = net_income - total_outflow
 
 ## Budget Health Check
 
-Express each category as a percentage of net income. Use `number()` to extract the raw value from a currency amount, then divide to get a plain ratio.
+Express each category as a percentage of net income. Dividing one currency by another is an error — dollars divided by dollars doesn't produce a dollar amount. Wrap both sides with `number()` to get a dimensionless ratio. Which side you wrap matters: `$500 / number($1000)` gives `$0.50` (currency), while `number($500) / number($1000)` gives `0.5` (plain number). For percentages, you want the plain number:
 
 ```calcmark
 Calculate percentages of net income:
@@ -146,7 +146,7 @@ variable_pct = number(total_variable) / number(net_income) * 100
 
 `savings_rate` is about 16.02, `fixed_pct` is about 42.83, and `variable_pct` is about 24.03. These percentages give you a quick snapshot of where your money goes.
 
-**CalcMark features:** `number()` to extract raw values for ratio calculations; percentage math.
+**CalcMark features:** `number()` to strip currency for ratio calculations; percentage math.
 
 ---
 

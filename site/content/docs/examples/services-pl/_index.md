@@ -424,7 +424,7 @@ total_cor = delivery_labor + delivery_te
 
 ### Gross Profit & Gross Margin
 
-Gross profit is revenue minus cost of revenue — the money left to cover operating expenses and generate contribution. Gross margin expresses this as a percentage of revenue.
+Gross profit is revenue minus cost of revenue — the money left to cover operating expenses and generate contribution. Gross margin expresses this as a percentage of revenue. Wrap both sides with `number()` to get a dimensionless ratio — `number($X) / number($Y)` gives a plain number, while `$X / number($Y)` would give a currency result.
 
 ```calcmark
 gross_profit = total_rev - total_cor
