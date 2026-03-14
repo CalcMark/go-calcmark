@@ -37,6 +37,10 @@ func (interp *Interpreter) evalPreciseConversion(n *ast.PreciseConversion) (type
 	case *types.Rate:
 		return v, nil
 
+	case *types.Fraction:
+		// Fractions are already exact — no-op
+		return v, nil
+
 	case *types.Percentage:
 		// Percentages pass through unchanged.
 		return v, nil

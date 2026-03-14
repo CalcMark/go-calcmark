@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"slices"
 	"strings"
 
@@ -264,6 +265,8 @@ func ExtractNumber(val types.Type) (*types.Number, error) {
 		return types.NewNumber(v.Value), nil
 	case *types.Duration:
 		return types.NewNumber(v.Value), nil
+	case *types.Fraction:
+		return types.NewNumber(decimal.NewFromBigRat(v.Value, 15)), nil
 	case *types.Rate:
 		return types.NewNumber(v.Amount.Value), nil
 	default:
@@ -657,6 +660,22 @@ func aggregateValues(funcName string, args []types.Type) (types.Type, error) {
 		}
 		return &types.Duration{Value: sum, Unit: f.Unit}, nil
 
+	case *types.Fraction:
+		sum := new(big.Rat).Set(f.Value)
+		for _, arg := range args[1:] {
+			fr, ok := arg.(*types.Fraction)
+			if !ok {
+				return nil, fmt.Errorf("%s(): expected fraction, got %s", funcName, formatTypeForError(arg))
+			}
+			sum.Add(sum, fr.Value)
+		}
+		result := types.NewFractionFromRat(sum)
+		result.Unit = f.Unit
+		if result.ExceedsComputationLimit() {
+			return fractionToNumber(result), nil
+		}
+		return result, nil
+
 	case *types.Percentage:
 		sum := f.Value
 		for _, arg := range args[1:] {
@@ -677,6 +696,23 @@ func aggregateValues(funcName string, args []types.Type) (types.Type, error) {
 func evalSqrt(args []types.Type) (types.Type, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("sqrt() requires exactly one argument")
+	}
+
+	// Fraction sqrt: exact result if both num and denom are perfect squares
+	if frac, ok := args[0].(*types.Fraction); ok {
+		if frac.Value.Sign() < 0 {
+			return nil, fmt.Errorf("sqrt() argument must be non-negative")
+		}
+		absNum := new(big.Int).Abs(frac.Num())
+		absDenom := frac.Denom()
+		if isPerfectSquare(absNum) && isPerfectSquare(absDenom) {
+			rootNum := isqrt(absNum)
+			rootDenom := isqrt(absDenom)
+			result := new(big.Rat).SetFrac(rootNum, rootDenom)
+			return types.NewFractionFromRat(result), nil
+		}
+		// Not perfect squares — fall through to decimal sqrt
+		args[0] = fractionToNumber(frac)
 	}
 
 	num, ok := args[0].(*types.Number)

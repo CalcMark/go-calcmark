@@ -47,6 +47,19 @@ func (interp *Interpreter) evalBooleanLiteral(b *ast.BooleanLiteral) (types.Type
 	return types.NewBoolean(value), nil
 }
 
+func (interp *Interpreter) evalFractionLiteral(f *ast.FractionLiteral) (types.Type, error) {
+	// Defense-in-depth: validate denominator even if semantic checker didn't run
+	if f.Denominator == 0 {
+		return nil, fmt.Errorf("division by zero: fraction %d/0", f.Numerator)
+	}
+	frac, err := types.NewFraction(f.Numerator, f.Denominator)
+	if err != nil {
+		return nil, err
+	}
+	frac.Unit = f.Unit
+	return frac, nil
+}
+
 func (interp *Interpreter) evalQuantityLiteral(q *ast.QuantityLiteral) (types.Type, error) {
 	// Expand multipliers like "1k" → 1000, "1M" → 1000000
 	value, err := expandNumberLiteral(q.Value)

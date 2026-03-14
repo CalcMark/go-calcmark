@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -50,6 +51,56 @@ func (interp *Interpreter) evalUnaryOp(u *ast.UnaryOp) (types.Type, error) {
 // evalBinaryOperation performs binary arithmetic operations.
 // This is a pure function for easier testing.
 func evalBinaryOperation(left, right types.Type, operator string) (types.Type, error) {
+	// Fraction normalization — handles Fraction×Fraction, Fraction×Number,
+	// and Fraction as scalar multiplier for other types.
+
+	// Fraction ^ anything: three cases
+	if leftFrac, ok := left.(*types.Fraction); ok && operator == "^" {
+		if rightNum, ok := right.(*types.Number); ok {
+			// Case 1: exponent > maxExponent → convert to decimal (DoS protection)
+			if rightNum.Value.Abs().GreaterThan(decimal.NewFromInt(maxExponent)) {
+				return evalBinaryOperation(fractionToNumber(leftFrac), right, operator)
+			}
+			if rightNum.Value.Equal(rightNum.Value.Truncate(0)) {
+				// Case 2: integer exponent → exact fraction result
+				n := rightNum.Value.IntPart()
+				return fractionPow(leftFrac, n)
+			}
+			// Case 3: fractional exponent → convert to decimal
+			return evalBinaryOperation(fractionToNumber(leftFrac), right, operator)
+		}
+		// Fraction ^ Fraction → convert both to decimal
+		if rightFrac, ok := right.(*types.Fraction); ok {
+			return evalBinaryOperation(fractionToNumber(leftFrac), fractionToNumber(rightFrac), operator)
+		}
+	}
+
+	// Denominator pre-check: if product would be too large, convert to decimal
+	if leftFrac, ok := left.(*types.Fraction); ok {
+		if rightFrac, ok := right.(*types.Fraction); ok {
+			if leftFrac.Denom().BitLen()+rightFrac.Denom().BitLen() > denominatorBitLenLimit {
+				return evalBinaryOperation(fractionToNumber(leftFrac), fractionToNumber(rightFrac), operator)
+			}
+			return evalFractionOperation(leftFrac, rightFrac, operator)
+		}
+		if _, ok := right.(*types.Number); ok {
+			rightFrac := numberToFraction(right.(*types.Number))
+			return evalFractionOperation(leftFrac, rightFrac, operator)
+		}
+		// Fraction × non-numeric type (Currency, Duration, Rate, Quantity)
+		// → convert fraction to decimal, fall through to existing dispatch
+		left = fractionToNumber(leftFrac)
+	}
+	// Mirror for right-side fraction
+	if rightFrac, ok := right.(*types.Fraction); ok {
+		if _, ok := left.(*types.Number); ok {
+			leftFrac := numberToFraction(left.(*types.Number))
+			return evalFractionOperation(leftFrac, rightFrac, operator)
+		}
+		// Non-numeric × Fraction → convert fraction to decimal
+		right = fractionToNumber(rightFrac)
+	}
+
 	// Rate arithmetic widening: when a Rate appears on the RIGHT side of
 	// * or /, extract the rate's Amount (a Quantity) and drop the time
 	// denominator. This makes "2 * (2 posts/week)" yield "4 posts".
@@ -453,6 +504,20 @@ func evalUnaryOperation(operand types.Type, operator string) (types.Type, error)
 		return nil, fmt.Errorf("'not' operator requires boolean, got %T", operand)
 	}
 
+	if frac, ok := operand.(*types.Fraction); ok {
+		switch operator {
+		case "-":
+			neg := new(big.Rat).Neg(frac.Value)
+			f := types.NewFractionFromRat(neg)
+			f.Unit = frac.Unit
+			return f, nil
+		case "+":
+			return frac, nil
+		default:
+			return nil, fmt.Errorf("unknown unary operator: %s", operator)
+		}
+	}
+
 	if num, ok := operand.(*types.Number); ok {
 		switch operator {
 		case "-":
@@ -513,6 +578,14 @@ func evalUnaryOperation(operand types.Type, operator string) (types.Type, error)
 
 // evalComparison performs comparison operations.
 func evalComparison(left, right types.Type, operator string) (types.Type, error) {
+	// Fraction comparisons: convert to decimal for exact comparison
+	if leftFrac, ok := left.(*types.Fraction); ok {
+		return evalComparison(fractionToNumber(leftFrac), right, operator)
+	}
+	if rightFrac, ok := right.(*types.Fraction); ok {
+		return evalComparison(left, fractionToNumber(rightFrac), operator)
+	}
+
 	// Percentage comparisons
 	if leftPct, ok := left.(*types.Percentage); ok {
 		if rightPct, ok := right.(*types.Percentage); ok {
