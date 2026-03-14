@@ -307,7 +307,7 @@ When frontmatter directives are present, they apply in this order:
 4. **Convert** to target measurement system
 5. **Annotate** ambiguous units in output (strict mode)
 
-See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [User Guide — Frontmatter](/docs/user-guide/#frontmatter) for a gentler introduction.
+See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [User Guide — Frontmatter](/docs/user-guide/frontmatter/) for a gentler introduction.
 
 ### Template Interpolation {#template-interpolation}
 
@@ -908,7 +908,7 @@ Bare frequency adverbs (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) are
 
 {{< feature-table category="function" >}}
 
-For detailed examples of every function, including natural language syntax forms, see the [User Guide: Function Reference](/docs/user-guide/#function-reference).
+For detailed examples of every function, including natural language syntax forms, see the [User Guide: Function Reference](/docs/user-guide/functions/#function-reference).
 
 ### Unit Handling in Functions
 
@@ -951,13 +951,13 @@ CalcMark supports natural language forms for many functions. These are equivalen
 | `depreciate X by Y% over Z` | `depreciate(X, Y%, Z)` |
 | `depreciate X by Y% over Z to W` | `depreciate(X, Y%, Z, W)` |
 
-See the [User Guide: Natural Language Syntax](/docs/user-guide/#natural-language-syntax) for the complete reference table with examples.
+See the [User Guide: Natural Language Syntax](/docs/user-guide/functions/#natural-language-syntax) for the complete reference table with examples.
 
 ---
 
 ## Napkin Math {#as-napkin}
 
-The `as napkin` modifier rounds results to 2 significant figures and normalizes units. See the [User Guide: Napkin Math](/docs/user-guide/#napkin-math) for usage examples.
+The `as napkin` modifier rounds results to 2 significant figures and normalizes units. See the [User Guide: Napkin Math](/docs/user-guide/formatting/#napkin-math) for usage examples.
 
 **Syntax:** `expression as napkin`
 
@@ -979,7 +979,7 @@ Can be chained after a unit conversion: `10 meters as feet as precise`
 
 ## Rates {#rates}
 
-Rates are defined using slash syntax (e.g., `100 MB/s`, `$50/hour`). See the [User Guide: Rates](/docs/user-guide/#rates) for rate accumulation with `over` and rate conversion.
+Rates are defined using slash syntax (e.g., `100 MB/s`, `$50/hour`). See the [User Guide: Rates](/docs/user-guide/formatting/#rates) for rate accumulation with `over` and rate conversion.
 
 ### Rate Arithmetic Widening
 
@@ -1017,19 +1017,19 @@ Rate widening only applies to binary `*` and `/`. It does not affect functions l
 
 ## Date Arithmetic {#dates}
 
-CalcMark supports date literals (`Jan 15 2025`, `today`), duration arithmetic, and the `from` keyword. See the [User Guide: Date Arithmetic](/docs/user-guide/#date-arithmetic) for details.
+CalcMark supports date literals (`Jan 15 2025`, `today`), duration arithmetic, and the `from` keyword. See the [User Guide: Date Arithmetic](/docs/user-guide/formatting/#date-arithmetic) for details.
 
 ---
 
 ## Network Functions {#network}
 
-CalcMark provides `rtt`, `throughput`, `transfer_time`, and `downtime` for network planning. See the [User Guide: Network Functions](/docs/user-guide/#network-functions) for scope tables and examples.
+CalcMark provides `rtt`, `throughput`, `transfer_time`, and `downtime` for network planning. See the [User Guide: Network Functions](/docs/user-guide/functions/#network-functions) for scope tables and examples.
 
 ---
 
 ## Storage Functions {#storage}
 
-CalcMark provides `read`, `seek`, and `compress` for storage planning. See the [User Guide: Storage Functions](/docs/user-guide/#storage-functions) for device type tables and examples.
+CalcMark provides `read`, `seek`, and `compress` for storage planning. See the [User Guide: Storage Functions](/docs/user-guide/functions/#storage-functions) for device type tables and examples.
 
 ---
 
@@ -1080,7 +1080,7 @@ depreciate $50000 by 15% over 5 years     -> (NL form)
 depreciate $50000 by 15% over 5 years to $5000
 ```
 
-See the [User Guide: Growth Functions](/docs/user-guide/#growth-functions) for the full argument reference.
+See the [User Guide: Growth Functions](/docs/user-guide/functions/#growth-functions) for the full argument reference.
 
 ---
 
