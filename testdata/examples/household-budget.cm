@@ -33,7 +33,7 @@ phone_plans = $120
 internet = $80
 streaming = $45
 
-total_fixed = rent + car_payment + car_insurance + health_insurance + phone_plans + internet + streaming
+total_fixed = sum of rent, car_payment, car_insurance, health_insurance, phone_plans, internet, streaming
 
 ## Variable Expenses
 
@@ -47,7 +47,7 @@ entertainment = $200
 personal_care = $100
 household_supplies = $150
 
-total_variable = groceries + gas + utilities + dining_out + entertainment + personal_care + household_supplies
+total_variable = sum of groceries, gas, utilities, dining_out, entertainment, personal_care, household_supplies
 
 ## Savings Goals
 
@@ -71,9 +71,9 @@ Fixed and variable expenses total {{total_expenses}}, plus
 
 Calculate percentages of net income:
 
-savings_rate = total_savings / net_income * 100
-fixed_pct = total_fixed / net_income * 100
-variable_pct = total_variable / net_income * 100
+savings_rate = total_savings as % of net_income
+fixed_pct = total_fixed as % of net_income
+variable_pct = total_variable as % of net_income
 
 ## The 50/30/20 Rule Check
 
@@ -84,9 +84,9 @@ needs = total_fixed + groceries + gas + utilities
 wants = dining_out + entertainment + personal_care + streaming
 savings_check = total_savings
 
-needs_pct = needs / net_income * 100
-wants_pct = wants / net_income * 100
-savings_pct = savings_check / net_income * 100
+needs_pct = needs as % of net_income
+wants_pct = wants as % of net_income
+savings_pct = savings_check as % of net_income
 
 ## Annual Projections
 
@@ -101,11 +101,11 @@ Current emergency fund balance:
 
 current_emergency = $8500
 monthly_expenses = total_fixed + total_variable
-months_runway = current_emergency / monthly_expenses
+months_runway = number(current_emergency) / number(monthly_expenses)
 target_months = 6
 target_fund = monthly_expenses * target_months
 shortfall = target_fund - current_emergency
-months_to_goal = shortfall / emergency_fund_contribution
+months_to_goal = number(shortfall) / number(emergency_fund_contribution)
 
 The current {{current_emergency}} covers {{months_runway}} months of
 expenses. The target is {{target_fund}} (6 months). At {{emergency_fund_contribution}}/month,

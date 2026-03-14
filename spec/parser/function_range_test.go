@@ -129,5 +129,8 @@ func walkAST(node ast.Node, visit func(ast.Node)) {
 	case *ast.PercentageOf:
 		walkAST(n.Percentage, visit)
 		walkAST(n.Value, visit)
+	case *ast.AsPercentOf:
+		walkAST(n.Numerator, visit)
+		walkAST(n.Denominator, visit)
 	}
 }

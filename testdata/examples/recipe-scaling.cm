@@ -12,14 +12,14 @@ Currency costs scale automatically with the batch size.
 
 ## Ingredients (1 loaf)
 
-flour = 1.5 cups
-sugar = 0.75 cups
+flour = 3/2 cups
+sugar = 3/4 cups
 butter = 4 ounces
-milk = 0.25 cups
+milk = 1/4 cups
 bananas = 3 bananas
 eggs = 2 eggs
 baking_soda = 1 teaspoons
-salt = 0.25 teaspoons
+salt = 1/4 teaspoons
 vanilla = 1 teaspoons
 
 oven = 350 fahrenheit
@@ -33,7 +33,7 @@ cost_milk = $0.25
 cost_bananas = $0.75
 cost_eggs = $0.60
 
-total_cost = cost_flour + cost_sugar + cost_butter + cost_milk + cost_bananas + cost_eggs
+total_cost = sum of cost_flour, cost_sugar, cost_butter, cost_milk, cost_bananas, cost_eggs
 per_loaf = total_cost / @scale
 
 Scaled batch costs {{total_cost}} total, or {{per_loaf}} per loaf.

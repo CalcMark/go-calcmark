@@ -698,6 +698,7 @@ Case-insensitive: `AND`, `and`, `And` all work.
 | `over` | Accumulation | `100 MB/s over 1 day` | `~8.64 TB` |
 | `at...per` | Capacity | `10 TB at 2 TB per disk` | `5 disk` |
 | `% of` | Percentage of | `15% of 200` | `30` |
+| `as % of` | Ratio as percentage | `$100 as % of $500` | `20%` |
 | `from` | Date offset | `2 days from today` | *(date)* |
 
 ### Assignment
@@ -705,6 +706,59 @@ Case-insensitive: `AND`, `and`, `And` all work.
 | Operator | Name | Example | Effect |
 |----------|------|---------|--------|
 | `=` | Assign | `x = 5` | Stores 5 in variable x |
+
+### Type Arithmetic Rules {#type-arithmetic-rules}
+
+Not every combination of types can be multiplied or divided. CalcMark
+follows **dimensional analysis**: the result of an operation must have a
+meaningful type.
+
+| Expression | Result | Why |
+|-----------|--------|-----|
+| `$100 + $50` | `$150` | Adding prices is natural |
+| `$100 - $50` | `$50` | Subtracting prices is natural |
+| `$100 * 5` | `$500` | Scaling a price by a number |
+| `$100 / 5` | `$20` | Splitting a price evenly |
+| `$100 * $50` | **error** | "Square dollars" isn't a real unit |
+| `$100 / $50` | **error** | Dollars divided by dollars isn't dollars |
+| `10 kg + 5 kg` | `15 kg` | Adding quantities is natural |
+| `10 kg * 3` | `30 kg` | Scaling a quantity by a number |
+| `10 kg * 5 kg` | **error** | "Square kilograms" isn't a real unit |
+| `10 kg / 5 kg` | **error** | kg divided by kg isn't kg |
+
+**To get a percentage**, use `as % of`:
+
+```
+profit_margin = operating_income as % of total_revenue
+```
+
+This returns a `Percentage` type (e.g., `41.01%`). Both values must be
+the same type — you can't compute `$100 as % of 50 kg`.
+
+For a raw number ratio, use `number()` instead:
+
+```
+ratio = number(operating_income) / number(total_revenue)
+```
+
+The same rule applies to fractions with units:
+
+| Expression | Result | Why |
+|-----------|--------|-----|
+| `2/3 cup + 1/4 cup` | `11/12 cup` | Adding quantities |
+| `2/3 cup * 3` | `2 cup` | Scaling by a number |
+| `2/3 cup * 1/3 cup` | **error** | Square cups isn't real |
+| `1/3 * $200` | `$66.67` | Dimensionless fraction scales currency |
+
+#### Fractions vs Division
+
+CalcMark uses whitespace to disambiguate fractions from division:
+
+- `1/3` — fraction (no spaces around `/`)
+- `1 / 3` — division (spaces around `/`)
+- `a/b` where `a` and `b` are variables — always division
+
+Only literal integers without spaces produce fractions.
 
 ---
 

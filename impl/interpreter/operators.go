@@ -236,6 +236,16 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 				return nil, fmt.Errorf("cannot %s different currencies: %s and %s",
 					operator, leftCur.Symbol, rightCur.Symbol)
 			}
+			// Same-type * and / are nonsensical (square dollars, unitless ratio).
+			// Users should use number() to extract the raw value first.
+			switch operator {
+			case "*":
+				return nil, fmt.Errorf("cannot multiply currency by currency — the result would be \"square dollars\" which isn't a real unit. Use number() to get the raw values: number(%s) * number(%s)",
+					leftCur.String(), rightCur.String())
+			case "/":
+				return nil, fmt.Errorf("cannot divide currency by currency — dividing %s by %s doesn't produce a dollar amount. Use number() to get a ratio: number(%s) / number(%s)",
+					leftCur.String(), rightCur.String(), leftCur.String(), rightCur.String())
+			}
 			result, err := evalNumberOperation(
 				&types.Number{Value: leftCur.Value},
 				&types.Number{Value: rightCur.Value},

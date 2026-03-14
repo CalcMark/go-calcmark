@@ -24,6 +24,17 @@ func numberToFraction(n *types.Number) *types.Fraction {
 
 // evalFractionOperation performs arithmetic on two Fractions.
 func evalFractionOperation(left, right *types.Fraction, operator string) (types.Type, error) {
+	// Same-type * and / on fractions with units is nonsensical (e.g., cup * cup = square cups).
+	// Only bare (dimensionless) fractions can multiply/divide freely.
+	if (operator == "*" || operator == "/") && left.Unit != "" && right.Unit != "" {
+		if operator == "*" {
+			return nil, fmt.Errorf("cannot multiply quantity by quantity — the result would be \"square %s\" which isn't a real unit. Use number() to get the raw values: number(%s) * number(%s)",
+				left.Unit, left.String(), right.String())
+		}
+		return nil, fmt.Errorf("cannot divide quantity by quantity — dividing %s by %s doesn't produce %s. Use number() to get a ratio: number(%s) / number(%s)",
+			left.Unit, right.Unit, left.Unit, left.String(), right.String())
+	}
+
 	result := new(big.Rat)
 
 	switch operator {

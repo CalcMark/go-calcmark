@@ -602,6 +602,14 @@ func getKeywords() []Feature {
 			Example:     "1 second as hour as precise",
 		},
 		{
+			Name:        "as % of",
+			Category:    CategoryKeyword,
+			Syntax:      "value as % of total",
+			Description: "Compute the ratio of two same-type values as a percentage. Both operands must be the same type (e.g., both currency, both quantities). The inverse of '% of': 20% of $500 = $100, $100 as % of $500 = 20%.",
+			Aliases:     nil,
+			Example:     "$100 as % of $500 → 20%",
+		},
+		{
 			Name:        "at",
 			Category:    CategoryKeyword,
 			Syntax:      "demand at capacity per unit [with N% buffer]",

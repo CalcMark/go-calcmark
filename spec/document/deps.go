@@ -138,6 +138,10 @@ func extractIdentifiers(node ast.Node, identifiers map[string]bool) {
 		extractIdentifiers(n.Percentage, identifiers)
 		extractIdentifiers(n.Value, identifiers)
 
+	case *ast.AsPercentOf:
+		extractIdentifiers(n.Numerator, identifiers)
+		extractIdentifiers(n.Denominator, identifiers)
+
 	case *ast.RateLiteral:
 		extractIdentifiers(n.Amount, identifiers)
 

@@ -1,7 +1,7 @@
 ---
 title: "fix: Example quality pass and currency/quantity division bug"
 type: fix
-status: active
+status: completed
 date: 2026-03-14
 ---
 
@@ -194,48 +194,48 @@ After Phases 1-4, re-run all examples through `--format html` and `--format mark
 
 ### Bug fix (Phase 1)
 
-- [ ] `$500 / $1000` → error with `number()` hint
-- [ ] `$100 * $50` → error with `number()` hint
-- [ ] `10 dogs / 5 dogs` → error with `number()` hint (improve existing message)
-- [ ] `10 kg * 5 kg` → error with `number()` hint (improve existing message)
-- [ ] `2/3 cup / 1/3 cup` → error with `number()` hint
-- [ ] `2/3 cup * 1/3 cup` → error with `number()` hint
-- [ ] `$100 / €50` → error (different currencies, already correct)
-- [ ] `$100 / 5` → `$20.00` (Currency / Number — unchanged)
-- [ ] `$100 * 5` → `$500.00` (Currency * Number — unchanged)
-- [ ] `1/3 * $200` → `$66.67` (dimensionless Fraction * Currency — unchanged)
-- [ ] `10 kg * 3` → `30 kg` (Quantity * Number — unchanged)
-- [ ] `number($500) / number($1000)` → `0.5` (workaround works)
-- [ ] Error messages suggest `number()` as the fix
-- [ ] All existing tests pass (update tests that relied on wrong behavior)
+- [x] `$500 / $1000` → error with `number()` hint
+- [x] `$100 * $50` → error with `number()` hint
+- [x] `10 dogs / 5 dogs` → error with `number()` hint (improve existing message)
+- [x] `10 kg * 5 kg` → error with `number()` hint (improve existing message)
+- [x] `2/3 cup / 1/3 cup` → error with `number()` hint
+- [x] `2/3 cup * 1/3 cup` → error with `number()` hint
+- [x] `$100 / €50` → error (different currencies, already correct)
+- [x] `$100 / 5` → `$20.00` (Currency / Number — unchanged)
+- [x] `$100 * 5` → `$500.00` (Currency * Number — unchanged)
+- [x] `1/3 * $200` → `$66.67` (dimensionless Fraction * Currency — unchanged)
+- [x] `10 kg * 3` → `30 kg` (Quantity * Number — unchanged)
+- [x] `number($500) / number($1000)` → `0.5` (workaround works)
+- [x] Error messages suggest `number()` as the fix
+- [x] All existing tests pass (update tests that relied on wrong behavior)
 
 ### Example quality (Phase 2)
 
-- [ ] `recipe-scaling.cm` uses fractions (`2/3 cup`, `1/4 tsp`)
-- [ ] All files with 3+ item sums use `sum of`
-- [ ] Percentage calculations display correctly after Phase 1 fix
-- [ ] No `* 0.xx` patterns where `% of` is clearer
-- [ ] All examples produce clean output via `--format display -v`
+- [x] `recipe-scaling.cm` uses fractions (`2/3 cup`, `1/4 tsp`)
+- [x] All files with 3+ item sums use `sum of`
+- [x] Percentage calculations display correctly after Phase 1 fix
+- [x] No `* 0.xx` patterns where `% of` is clearer
+- [x] All examples produce clean output via `--format display -v`
 
 ### Diagnostic quality (Phase 3)
 
-- [ ] Every same-type arithmetic error explains *why* it doesn't work
-- [ ] Every error suggests the `number()` fix with a concrete example using the user's actual values
-- [ ] Error messages are conversational, not technical jargon
+- [x] Every same-type arithmetic error explains *why* it doesn't work
+- [x] Every error suggests the `number()` fix with a concrete example using the user's actual values
+- [x] Error messages are conversational, not technical jargon
 
 ### Documentation (Phase 4)
 
-- [ ] "What's Not Supported" section in site docs with real-world explanations
-- [ ] Type arithmetic rules documented with before/after examples
-- [ ] Fraction whitespace rule documented
+- [x] "What's Not Supported" section in site docs with real-world explanations
+- [x] Type arithmetic rules documented with before/after examples
+- [x] Fraction whitespace rule documented
 - [ ] Fraction unit restrictions documented
 
 ### Output quality (Phase 5)
 
-- [ ] `task test` passes
-- [ ] `task quality` passes
-- [ ] All 18 examples produce reasonable `--format html` output
-- [ ] No currency values where dimensionless ratios are expected
+- [x] `task test` passes
+- [x] `task quality` passes
+- [x] All 18 examples produce reasonable `--format html` output
+- [x] No currency values where dimensionless ratios are expected
 
 ## Dependencies & Risks
 

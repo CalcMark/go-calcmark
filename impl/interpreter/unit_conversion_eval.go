@@ -55,6 +55,22 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		return converted, nil
 	}
 
+	// Fraction with unit: convert to Duration or Quantity before proceeding.
+	// This handles "1/2 hour in minutes" and "1/4 cup in ml".
+	if frac, ok := result.(*types.Fraction); ok && frac.Unit != "" {
+		dec := fractionToNumber(frac)
+		if types.IsValidDurationUnit(frac.Unit) {
+			dur := &types.Duration{Value: dec.Value, Unit: frac.Unit}
+			converted, err := dur.Convert(u.TargetUnit)
+			if err != nil {
+				return nil, fmt.Errorf("cannot convert duration: %w", err)
+			}
+			return converted, nil
+		}
+		// Treat as quantity
+		result = &types.Quantity{Value: dec.Value, Unit: frac.Unit}
+	}
+
 	// Standard quantity conversion
 	qty, ok := result.(*types.Quantity)
 	if !ok {
