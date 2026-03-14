@@ -24,3 +24,7 @@ salary_gbp = salary in GBP
 ```
 
 Exchange rates use the format `FROM_TO: rate` where 1 unit of FROM equals `rate` units of TO.
+
+---
+
+**Related guide:** [Business Planning](/guides/business-planning/) — currency arithmetic, ratios, and financial modeling

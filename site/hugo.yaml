@@ -37,6 +37,9 @@ menus:
     - name: Docs
       url: /docs/
       weight: 10
+    - name: Guides
+      url: /guides/
+      weight: 15
     - name: Examples
       url: /docs/examples/
       weight: 20
