@@ -223,7 +223,7 @@ Boolean + Number → ERROR (no boolean arithmetic)
 1,000           ✓ Thousands separator (comma)
 1_000_000       ✓ Thousands separator (underscore)
 0.5             ✓ Leading zero
-.5              ✗ Must have leading zero
+.5              ✓ Leading zero optional
 1.2.3           ✗ Multiple decimal points
 ```
 

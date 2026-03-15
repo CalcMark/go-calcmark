@@ -1,0 +1,41 @@
+# Leading Dot Decimals
+# Numbers without a leading zero: .5 is equivalent to 0.5
+
+## Bare leading-dot number
+.5
+
+## Assignment
+a = .5
+b = .5 tomatoes
+
+## Arithmetic
+.5 + .5
+.5 * 2
+.5 - .25
+
+## With units
+.5 tomatoes
+.75 cups
+
+## Adjacent units
+.5kg
+.25lb
+
+## Multipliers
+.5k
+.5M
+.5B
+.5T
+
+## Percentage
+.5%
+
+## Scientific notation
+.5e3
+
+## Unary operators
+-.5
++.5
+
+## Currency
+$.5

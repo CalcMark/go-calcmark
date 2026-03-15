@@ -1,0 +1,28 @@
+# Leading Dot Decimals
+# Verify .5 evaluates equivalently to 0.5
+
+## Bare value
+a = .5 # expected: 0.5
+
+## Arithmetic
+b = .5 + .5 # expected: 1
+c = .5 * 2 # expected: 1
+d = .25 + .75 # expected: 1
+
+## With units
+e = .5 tomatoes + .5 tomatoes # expected: 1 tomato
+
+## Assignment with unit
+f = .5 tomatoes # expected: 0.5 tomatoes
+
+## Division (not fraction)
+g = .5 / 2 # expected: 0.25
+
+## Unary
+h = -.5 # expected: -0.5
+
+## Percentage widening
+i = 100 + .5% # expected: 100.5
+
+## Multiplier
+j = .5k # expected: 500

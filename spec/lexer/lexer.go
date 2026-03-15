@@ -835,6 +835,16 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			continue
 		}
 
+		// Leading-dot decimal number (.5 is equivalent to 0.5)
+		// Routes to readNumber() which handles the empty integer part, decimal reading,
+		// unit attachment, multipliers, percentages, and scientific notation.
+		// No duration lookahead needed: 0.5 days already produces QUANTITY (not DURATION_LITERAL),
+		// so .5 days should behave identically.
+		if char == '.' && unicode.IsDigit(l.peek(1)) {
+			tokens = append(tokens, l.readNumber())
+			continue
+		}
+
 		// Number
 		if unicode.IsDigit(char) {
 			// Check if this starts a duration: NUMBER + UNIT
