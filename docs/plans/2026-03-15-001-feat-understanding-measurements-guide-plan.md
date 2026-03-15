@@ -1,7 +1,7 @@
 ---
 title: "feat: Understanding Measurements guide — progressive walkthrough"
 type: feat
-status: active
+status: completed
 date: 2026-03-15
 origin: docs/brainstorms/2026-03-15-measurements-walkthrough-guide-brainstorm.md
 ---

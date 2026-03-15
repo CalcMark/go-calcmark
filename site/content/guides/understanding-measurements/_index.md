@@ -4,15 +4,12 @@ summary: "Learn how CalcMark handles quantities, unit conversions, fractions, an
 weight: 25
 ---
 
-# Understanding Measurements
-
 In 1999, NASA lost the $327 million Mars Climate Orbiter because one engineering team used pound-force seconds while another used newton-seconds. A unit mismatch burned up a spacecraft.
 
-Larky isn't sending anything to Mars — but his cookie recipe is *critical*. When his friend in London asks for it in metric, getting the butter wrong isn't an option. This guide follows Larky's recipe from simple quantities through unit conversions, fractions, napkin estimates, and measurement conventions — building one concept at a time.
+Larky isn't sending anything to Mars — but their cookie recipe is *critical*. When their friend in London asks for it in metric, getting the butter wrong isn't an option. This guide follows Larky's recipe from simple quantities through unit conversions, fractions, napkin estimates, and measurement conventions — building one concept at a time.
 
 Each example has three views. **CalcMark** shows what you write. **Editor** shows what the CalcMark editor displays. **JSON** shows the machine-readable output from `cm --format json`.
 
----
 
 ## Key Features Covered
 
@@ -26,7 +23,6 @@ Each example has three views. **CalcMark** shows what you write. **Editor** show
 | Custom units (`24 cookies`) | Domain-specific units unaffected by conversion directives | [Language Reference](/docs/language-reference/#type-system) |
 | `measurement:` | Declare US vs Imperial conventions | [Units](/docs/user-guide/units/#measurement-conventions) |
 
----
 
 ## Quantities: Numbers with Units
 
@@ -62,7 +58,6 @@ sugar = 1 cup                       1 cup
 
 Each line creates a **Quantity** — a number paired with a unit. Notice something in the JSON: the `value` field shows "1 pt" (CalcMark normalizes the display), but `numeric_value` stays `2` and `unit` stays `cups`. The display is human-friendly; the data preserves what you wrote.
 
----
 
 ## Inline Conversions
 
@@ -99,7 +94,6 @@ With `in`, both the display and the data change. The JSON shows `numeric_value: 
 
 Conversions only work between compatible units. `cups in ml` works (both are volume). `cups in grams` would be an error — volume and mass are different physical dimensions.
 
----
 
 ## Fractions
 
@@ -139,7 +133,6 @@ Fractions get their own type in JSON — `"type": "fraction"` — with `numerato
 
 The distinction between fractions and division is whitespace: `1/2` (no spaces) is a fraction; `1 / 2` (with spaces) is division. Both equal 0.5, but a fraction remembers its exact rational form.
 
----
 
 ## Document-Wide Conversion
 
@@ -185,7 +178,6 @@ The oven temperature uses an explicit `in celsius` conversion. When a line alrea
 
 You can also use `convert_to: imperial` to go the other direction.
 
----
 
 ## Napkin Math
 
@@ -252,7 +244,6 @@ exact_flour = 20 cups                1.25 gal
 
 Without napkin, the display normalizes to "1.25 gal" but `numeric_value` stays at `20` and `unit` stays `"cups"`. The data is untouched.
 
----
 
 ## Measurement Conventions
 
@@ -310,7 +301,6 @@ The `measurement:` directive has three independent axes:
 
 Only specify axes that differ from the defaults.
 
----
 
 ## Custom Units
 
@@ -346,7 +336,6 @@ Custom units like `pinch` and `cookies` behave like any other quantity — you c
 
 This makes custom units perfect for recipe yields, serving counts, or any domain-specific measure that shouldn't be touched by unit conversion directives.
 
----
 
 ## What's Really in Your Data?
 
@@ -369,7 +358,6 @@ The key distinctions:
 
 When you pipe CalcMark to another tool via `--format json`, `convert_to` and `in` give you precisely converted data — safe for further computation. Napkin math gives you a rounded estimate flagged with `is_approximate: true`, so your downstream tool knows to treat it accordingly.
 
----
 
 ## What to Read Next
 
