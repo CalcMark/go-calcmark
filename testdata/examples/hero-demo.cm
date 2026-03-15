@@ -1,12 +1,12 @@
 ---
 scale:
   factor: 4
-  unit_categories: [Mass, Volume]
+  unit_categories: [Mass, Volume, Custom]
 convert_to: si
 ---
 # Party Guacamole
 
-Makes {{servings}} — you'll need {{avocados}} of avocados.
+Makes {{servings}} — you'll need {{avocados}}.
 
 ## Ingredients (1 batch)
 
