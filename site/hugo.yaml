@@ -63,6 +63,12 @@ menus:
     - name: Domain Recipes
       url: /guides/
       weight: 25
+    - name: Thinking in CalcMark
+      url: /guides/thinking-in-calcmark/
+      weight: 24
+    - name: Understanding Measurements
+      url: /guides/understanding-measurements/
+      weight: 26
 
     # ── Reference ──
     - name: Reference

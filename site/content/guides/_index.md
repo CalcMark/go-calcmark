@@ -17,6 +17,10 @@ Model server fleets, bandwidth requirements, storage capacity, and SLA budgets. 
 
 Build P&L statements, budgets, and financial projections. Uses currency arithmetic, `number()` for ratios, `sum of`, and template interpolation.
 
+### [Thinking in CalcMark](/guides/thinking-in-calcmark/)
+
+Transition from calculator thinking to idiomatic CalcMark — `sum of`, percentage operators, rates with `over`, and growth functions like `compound` and `depreciate`.
+
 ### [Understanding Measurements](/guides/understanding-measurements/)
 
 Learn how CalcMark handles quantities, unit conversions, fractions, and napkin math — and how each affects your data in the editor and JSON output.
