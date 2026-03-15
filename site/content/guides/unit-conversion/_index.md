@@ -105,4 +105,5 @@ Pipeline order: **measurement** (resolve names) → **evaluate** → **scale** (
 - **Complete example:** [Measurement Conventions](/docs/examples/) — inline qualifiers, imperial volume, troy mass
 - **Formal spec:** [Measurement Conventions](/docs/language-reference/#measurement-conventions) — full axis table, precedence rules, strict annotation
 - **User guide:** [Units & Measurement](/docs/user-guide/units/) — quick reference for unit conversion and measurement
+- **Measurement fundamentals:** [Understanding Measurements](/guides/understanding-measurements/) — progressive walkthrough of quantities, fractions, napkin math, and JSON output semantics
 - **Recipe guide:** [Recipe Scaling](/guides/recipe-scaling/) — measurement conventions in a cooking context

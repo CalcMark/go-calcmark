@@ -11,5 +11,7 @@
   {{ partial "footer.html" . }}
   {{ $js := resources.Get "js/theme.js" | fingerprint }}
   <script src="{{ $js.RelPermalink }}"></script>
+  {{ $tabs := resources.Get "js/tabs.js" | fingerprint }}
+  <script src="{{ $tabs.RelPermalink }}"></script>
 </body>
 </html>

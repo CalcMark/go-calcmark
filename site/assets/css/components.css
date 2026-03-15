@@ -730,6 +730,78 @@ h6:hover .heading-anchor {
   }
 }
 
+/* Tabs (CSS-only switching via radio buttons) */
+.tabs {
+  margin: var(--space-4) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.tabs-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tabs-nav {
+  display: flex;
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.tabs-label {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  user-select: none;
+}
+
+.tabs-label:hover {
+  color: var(--color-text);
+}
+
+.tabs-panels {
+  background: var(--color-bg);
+}
+
+.tabs-panel {
+  display: none;
+  padding: var(--space-4);
+}
+
+/* Remove margins from first/last children inside tab panels */
+.tabs-panel > *:first-child {
+  margin-top: 0;
+}
+
+.tabs-panel > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Show active panel — CSS-only via :checked + general sibling combinator */
+.tabs-radio:nth-of-type(1):checked ~ .tabs-nav > .tabs-label:nth-child(1),
+.tabs-radio:nth-of-type(2):checked ~ .tabs-nav > .tabs-label:nth-child(2),
+.tabs-radio:nth-of-type(3):checked ~ .tabs-nav > .tabs-label:nth-child(3),
+.tabs-radio:nth-of-type(4):checked ~ .tabs-nav > .tabs-label:nth-child(4) {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.tabs-radio:nth-of-type(1):checked ~ .tabs-panels > .tabs-panel:nth-child(1),
+.tabs-radio:nth-of-type(2):checked ~ .tabs-panels > .tabs-panel:nth-child(2),
+.tabs-radio:nth-of-type(3):checked ~ .tabs-panels > .tabs-panel:nth-child(3),
+.tabs-radio:nth-of-type(4):checked ~ .tabs-panels > .tabs-panel:nth-child(4) {
+  display: block;
+}
+
 /* Page Table of Contents */
 .page-toc {
   margin-bottom: var(--space-6);

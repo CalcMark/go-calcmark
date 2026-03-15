@@ -6,6 +6,10 @@ weight: 30
 
 # Recipe Scaling & Cooking
 
+{{< callout "note" >}}
+**New to CalcMark measurements?** Start with [Understanding Measurements](/guides/understanding-measurements/) for a progressive walkthrough of quantities, unit conversions, fractions, and napkin math.
+{{< /callout >}}
+
 A recipe is a CalcMark document waiting to happen — quantities with units, scaling by servings, cost per portion. CalcMark handles fractions (`2/3 cup`), measurement conventions (US vs Imperial), and document-wide scaling with a single frontmatter directive.
 
 **Try it now:** Open the [Recipe Scaling example in Lark](https://lark.calcmark.org) or run `cm remote recipe-scaling` in the editor.

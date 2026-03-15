@@ -1,0 +1,18 @@
+{{- $group := .Get "group" | default "default" -}}
+{{- $id := printf "tabs-%s-%d" $group .Ordinal -}}
+{{- $inner := .Inner -}}
+{{- $matches := findRE `data-tab-name="([^"]+)"` $inner -}}
+<div class="tabs" data-tab-group="{{ $group }}">
+  {{- range $i, $m := $matches -}}
+    <input type="radio" class="tabs-radio" name="{{ $id }}" id="{{ $id }}-{{ $i }}"{{ if eq $i 0 }} checked{{ end }}>
+  {{- end -}}
+  <div class="tabs-nav">
+    {{- range $i, $m := $matches -}}
+      {{- $name := replaceRE `data-tab-name="(.+?)"` "$1" $m -}}
+      <label class="tabs-label" for="{{ $id }}-{{ $i }}" role="tab">{{ $name }}</label>
+    {{- end -}}
+  </div>
+  <div class="tabs-panels">
+    {{ $inner }}
+  </div>
+</div>

@@ -17,6 +17,10 @@ Model server fleets, bandwidth requirements, storage capacity, and SLA budgets. 
 
 Build P&L statements, budgets, and financial projections. Uses currency arithmetic, `number()` for ratios, `sum of`, and template interpolation.
 
+### [Understanding Measurements](/guides/understanding-measurements/)
+
+Learn how CalcMark handles quantities, unit conversions, fractions, and napkin math — and how each affects your data in the editor and JSON output.
+
 ### [Recipe Scaling & Cooking](/guides/recipe-scaling/)
 
 Scale recipes with fractions, measurement conventions (US vs Imperial), and the `scale` directive. Uses `measurement:` frontmatter for UK/US unit handling.
