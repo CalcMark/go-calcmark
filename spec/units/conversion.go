@@ -438,20 +438,32 @@ func addSpeedConversions(r map[string]ConversionInfo) {
 
 	// km/h
 	registerUnit(r, ConversionInfo{cat,
-		func(v float64) float64 { return v * 0.277778 },
-		func(v float64) float64 { return v / 0.277778 },
+		func(v float64) float64 {
+			return (martinlindhe.Speed(v) * martinlindhe.KilometersPerHour).MetersPerSecond()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Speed(v) * martinlindhe.MetersPerSecond).KilometersPerHour()
+		},
 	}, "km/h", "kph", "kmh", "kilometers per hour")
 
 	// mph
 	registerUnit(r, ConversionInfo{cat,
-		func(v float64) float64 { return v * 0.44704 },
-		func(v float64) float64 { return v / 0.44704 },
+		func(v float64) float64 {
+			return (martinlindhe.Speed(v) * martinlindhe.MilesPerHour).MetersPerSecond()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Speed(v) * martinlindhe.MetersPerSecond).MilesPerHour()
+		},
 	}, "mph", "miles per hour")
 
 	// Knots
 	registerUnit(r, ConversionInfo{cat,
-		func(v float64) float64 { return v * 0.514444 },
-		func(v float64) float64 { return v / 0.514444 },
+		func(v float64) float64 {
+			return (martinlindhe.Speed(v) * martinlindhe.Knot).MetersPerSecond()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Speed(v) * martinlindhe.MetersPerSecond).Knots()
+		},
 	}, "knot", "knots")
 }
 
