@@ -683,19 +683,39 @@ h6:hover .heading-anchor {
 }
 
 /* Full document link */
-.full-doc-link {
-  font-size: var(--font-size-sm);
+.example-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
   margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
 }
 
-.full-doc-link a {
+.example-actions-or {
+  color: var(--color-text-muted);
+}
+
+.example-actions-or a {
   color: var(--color-primary);
   text-decoration: none;
   font-weight: 500;
 }
 
-.full-doc-link a:hover {
+.example-actions-or a:hover {
   text-decoration: underline;
+}
+
+.btn-lark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-lark-icon {
+  width: 1.2em;
+  height: 1.2em;
+  /* Invert the purple lark to white so it's visible on the purple button */
+  filter: brightness(0) invert(1);
 }
 
 /* Responsive */
