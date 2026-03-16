@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -83,6 +84,12 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	}{}
 
 	df := opts.getFormatter()
+	// HTML output should use Unicode fractions (½, ⅓, ¾) for readability.
+	cfg := df.Config()
+	if !cfg.UnicodeFractions {
+		cfg.UnicodeFractions = true
+		df = display.NewFormatter(cfg)
+	}
 
 	// Build frontmatter data if present
 	if fm := doc.GetFrontmatter(); fm != nil {

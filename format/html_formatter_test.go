@@ -43,6 +43,38 @@ func TestHTMLFormatterSimple(t *testing.T) {
 	}
 }
 
+// TestHTMLFormatterFractionWithCustomUnit tests that fractions with custom units
+// render using Unicode symbols in HTML output (e.g., "1/2 tomato" → "½ tomato").
+func TestHTMLFormatterFractionWithCustomUnit(t *testing.T) {
+	source := "half = 1/2 tomato\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{}
+
+	err = formatter.Format(&buf, doc, opts)
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "½ tomato") {
+		t.Errorf("Expected HTML to contain '½ tomato', got: %s", output)
+	}
+	if strings.Contains(output, "0.5 tomato") {
+		t.Errorf("HTML should not contain '0.5 tomato' (decimal fallback)")
+	}
+}
+
 // TestHTMLFormatterWithError tests error display in HTML
 func TestHTMLFormatterWithError(t *testing.T) {
 	source := "y = x + 1\n"

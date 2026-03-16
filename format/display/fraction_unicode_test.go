@@ -98,6 +98,37 @@ func TestFormatterUnicodeFlagRouting(t *testing.T) {
 	}
 }
 
+func TestFractionWithCustomUnitUnicode(t *testing.T) {
+	// Custom units (not known to NormalizeForDisplay) should use Unicode
+	// fractions when UnicodeFractions is enabled: "1/2 tomato" → "½ tomato".
+	cfg := DefaultConfig()
+	cfg.UnicodeFractions = true
+	formatter := NewFormatter(cfg)
+
+	tests := []struct {
+		name  string
+		num   int64
+		denom int64
+		unit  string
+		want  string
+	}{
+		{"half tomato", 1, 2, "tomato", "½ tomato"},
+		{"third cup (known unit, normalizes to tbsp)", 1, 3, "cup", "5.33 tbsp"},
+		{"two-thirds cookie", 2, 3, "cookie", "⅔ cookie"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, _ := types.NewFraction(tt.num, tt.denom)
+			f.Unit = tt.unit
+			got := formatter.Format(f)
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFractionWithUnitNormalization(t *testing.T) {
 	// Fractions with units must go through the same display normalization
 	// as Quantities. Large values should auto-convert to appropriate units
