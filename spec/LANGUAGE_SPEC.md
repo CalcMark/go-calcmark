@@ -1,35 +1,37 @@
 # CalcMark Language Specification
 
-**Version:** 1.0.0
-**Status:** Draft - Implementation in Progress
+**Version:** 2.0.0
+**Status:** Current
 
-This is the **complete and authoritative** specification for the CalcMark language.
+This is the **complete and authoritative** specification for the CalcMark language. The implementation in `spec/` and `impl/` is the source of truth; this document describes the language as implemented.
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Philosophy](#philosophy)
-3. [Document Model](#document-model)
-4. [Line Classification](#line-classification)
-5. [Syntax & Grammar](#syntax--grammar)
-6. [Type System](#type-system)
-7. [Operators](#operators)
-8. [Reserved Keywords](#reserved-keywords)
+2. [Document Model](#document-model)
+3. [Syntax & Grammar](#syntax--grammar)
+4. [Type System](#type-system)
+5. [Operators](#operators)
+6. [Units & Measurement](#units--measurement)
+7. [Rates](#rates)
+8. [Dates & Durations](#dates--durations)
 9. [Functions](#functions)
-10. [Validation & Diagnostics](#validation--diagnostics)
-11. [Examples](#examples)
+10. [Keywords](#keywords)
+11. [Frontmatter](#frontmatter)
+12. [Display & Formatting](#display--formatting)
+13. [Validation & Diagnostics](#validation--diagnostics)
 
 ---
 
 ## Overview
 
-CalcMark is a calculation language that blends seamlessly with markdown. It allows calculations to live naturally within prose documents.
+CalcMark is a calculation language that blends with CommonMark markdown. Calculations and prose coexist in a single document. Each line is independently classified as markdown or calculation — no mode switching, no special blocks.
 
 ### Design Goals
 
-- **Familiar**: Syntax feels like calculator/spreadsheet usage
+- **Familiar**: Syntax resembles calculator and spreadsheet usage
 - **Minimal**: Only essential features, no unnecessary complexity
 - **Unambiguous**: One way to do things, clear error messages
 - **Unicode-aware**: Full international character support
@@ -38,136 +40,165 @@ CalcMark is a calculation language that blends seamlessly with markdown. It allo
 ### Key Characteristics
 
 - **Line-based**: Each line is classified independently
-- **Context-aware**: Variables must be defined before use
+- **Context-aware**: Variables must be defined before use (no forward references)
 - **Strongly typed**: Minimal type coercion, clear type errors
-- **Arbitrary precision**: Decimal math using `github.com/shopspring/decimal`
-
----
-
-## Philosophy
-
-### Calculation by Exclusion
-
-CalcMark uses **"calculation by exclusion"** - if a line looks like markdown, it's markdown. Only unambiguous calculations are treated as calculations.
-
-**Examples:**
-```
-# My Budget          → MARKDOWN (header prefix)
-salary = $5000       → CALCULATION (assignment)
-This is text         → MARKDOWN (natural language)
-5 + 3                → CALCULATION (arithmetic)
-- List item          → MARKDOWN (bullet prefix)
--5 + 3               → CALCULATION (negative number)
-$100 budget          → MARKDOWN (trailing text)
-```
-
-### Explicit Over Implicit
-
-- Spaces NOT allowed in identifiers (`my_budget`, not `my budget`)
-- Forward references not allowed (define before use)
-- Type mismatches are errors (no silent coercion)
-- Reserved keywords cannot be variable names
+- **Arbitrary precision**: Decimal math via `github.com/shopspring/decimal`, exact fractions via `math/big.Rat`
 
 ---
 
 ## Document Model
 
-A CalcMark document is a sequence of **lines**. Each line is independently:
+A CalcMark document is a sequence of lines. Each line is independently:
 
 1. **Classified** as BLANK, MARKDOWN, or CALCULATION
 2. **Parsed** (if CALCULATION)
-3. **Validated** (optional, produces diagnostics)
-4. **Evaluated** (if CALCULATION and valid)
+3. **Evaluated** (if CALCULATION and valid)
+4. **Transformed** (if frontmatter directives apply: scale, convert_to)
 
-### Three Line Types
+### Line Classification
 
-| Type | Description | Examples |
-|------|-------------|----------|
-| **BLANK** | Empty or whitespace-only | `""`, `"   "`, `"\t"` |
-| **MARKDOWN** | Prose, headers, lists, or invalid calculations | `"# Header"`, `"Some text"`, `"- Item"` |
-| **CALCULATION** | Valid CalcMark expression or assignment | `"x = 5"`, `"10 + 20"`, `"salary * 12"` |
+Lines are classified by exclusion — if a line looks like markdown, it's markdown. Only unambiguous calculations are treated as calculations.
 
-### Processing Model
+**Classification rules (in order):**
 
-```
-Input Line
-    ↓
-Classify (classifier/classifier.go)
-    ↓
-BLANK → Skip
-MARKDOWN → Preserve
-CALCULATION → Tokenize → Parse → Validate → Evaluate
-    ↓
-Result + Diagnostics
-```
-
----
-
-## Line Classification
-
-### Classification Rules
-
-Lines are classified in this order:
-
-1. **BLANK** - Empty or only whitespace
-2. **MARKDOWN** - Has markdown prefix (`#`, `>`, `-`, `*`, `digit.`)
-3. **CALCULATION** - Attempt to parse/validate:
-   - Starts with literal (number, currency, boolean)
-   - Contains assignment (`=`)
-   - Is valid expression
-   - All variables are defined (context-aware)
-4. **MARKDOWN** (fallback) - Anything else
-
-### Context-Aware Classification
+1. **BLANK** — Empty or only whitespace
+2. **MARKDOWN** — Has markdown prefix (`#`, `>`, `-`, `*`, `digit.`)
+3. **CALCULATION** — Starts with a number, currency, boolean, `(`, `-number`, or assignment; all referenced variables are defined
+4. **MARKDOWN** (fallback) — Anything else
 
 ```
-x = 5               → CALCULATION (assignment)
-y = x + 10          → CALCULATION (x is defined)
-z = unknown * 2     → MARKDOWN (unknown is undefined)
+# My Budget          -> MARKDOWN (header prefix)
+salary = $5000       -> CALCULATION (assignment)
+This is text         -> MARKDOWN (natural language)
+5 + 3                -> CALCULATION (arithmetic)
+- List item          -> MARKDOWN (bullet prefix)
+-5 + 3               -> CALCULATION (negative number)
+z = unknown * 2      -> MARKDOWN (unknown is undefined)
 ```
-
-### Edge Cases
-
-| Input | Classification | Reason |
-|-------|----------------|--------|
-| `$100 budget` | MARKDOWN | Trailing text after valid token |
-| `-5 + 3` | CALCULATION | Negative number (no space after `-`) |
-| `- 5` | MARKDOWN | Bullet list (space after `-`) |
-| `x *` | MARKDOWN | Incomplete expression |
-| `average` | MARKDOWN | Not reserved, not in context |
-| `avg` | MARKDOWN | Reserved keyword alone (not a valid expression) |
-
-**Implementation:** `classifier/classifier.go`
 
 ---
 
 ## Syntax & Grammar
 
-### EBNF Grammar
+### EBNF Grammar (Simplified)
 
 ```ebnf
 Statement       ::= Assignment | Expression
 Assignment      ::= IDENTIFIER "=" Expression
-Expression      ::= Comparison
+Expression      ::= LogicalOr
+LogicalOr       ::= LogicalAnd ("or" LogicalAnd)*
+LogicalAnd      ::= Comparison ("and" Comparison)*
 Comparison      ::= Additive (ComparisonOp Additive)?
-ComparisonOp    ::= ">" | "<" | ">=" | "<=" | "==" | "!="
 Additive        ::= Multiplicative (("+"|"-") Multiplicative)*
 Multiplicative  ::= Exponent (("*"|"/"|"%") Exponent)*
 Exponent        ::= Unary ("^" Unary)*
-Unary           ::= ("-"|"+")? Primary
-Primary         ::= Number | Currency | Boolean | Identifier | "(" Expression ")"
+Unary           ::= ("-"|"+"|"not")? Postfix
+Postfix         ::= Primary PostfixOp*
+PostfixOp       ::= "in" Unit | "as" Format | "over" Duration | "per" TimeUnit
+                   | "at" CapacityExpr | "%" | "of" Expression
+Primary         ::= Number | Fraction | Currency | Quantity | Duration
+                   | Date | Boolean | Percentage | RateLiteral
+                   | FunctionCall | Identifier | "(" Expression ")"
+RateLiteral     ::= Quantity "/" TimeUnit | Quantity "per" TimeUnit
+FunctionCall    ::= IDENTIFIER "(" ArgList ")"
 ```
 
 ### Operator Precedence
 
-From **highest** to **lowest**:
+From **lowest** to **highest**:
 
-1. Parentheses `()`
-2. Exponentiation `^` (right-associative)
-3. Unary `-`, `+` (prefix)
-4. Multiplicative `*`, `/`, `%` (left-associative)
-5. Additive `+`, `-` (left-associative)
-6. Comparison `>`, `<`, `>=`, `<=`, `==`, `!=` (non-associative)
+1. Assignment `=`
+2. Logical OR `or`
+3. Logical AND `and`
+4. Comparison `==`, `!=`, `<`, `>`, `<=`, `>=`
+5. Addition/Subtraction `+`, `-`
+6. Multiplication/Division/Modulo `*`, `/`, `%`
+7. Exponentiation `^` or `**` (right-associative)
+8. Unary `+`, `-`, `not`
+9. Postfix `in`, `as`, `over`, `per`, `at`, `of`
+10. Primary (literals, identifiers, parentheses)
+
+### Literals
+
+#### Numbers
+
+```
+42              integer
+3.14            decimal
+1,000           thousands separator (comma)
+1_000_000       thousands separator (underscore)
+.5              leading zero optional
+5K              5,000 (multiplier suffix)
+2.5M            2,500,000
+1B              1,000,000,000
+3T              3,000,000,000,000
+1.2e10          scientific notation
+4.5e-7          negative exponent
+```
+
+Multiplier suffixes: `K`/`k` (thousand), `M` (million), `B`/`b` (billion), `T`/`t` (trillion).
+
+#### Fractions
+
+Write numerator/denominator **without spaces** around the `/`:
+
+```
+1/2             simple fraction
+3/4             simple fraction
+11 3/8          mixed number (integer + fraction)
+```
+
+Fractions are exact rational numbers (arbitrary-precision `big.Rat`). Arithmetic results are automatically simplified to lowest terms.
+
+Fractions with denominators exceeding 10^9 or numerators exceeding 10^18 are automatically converted to decimal for safety.
+
+#### Currency
+
+```
+$100            prefix symbol
+$1,000.50       with separators
+EUR100          ISO 4217 code prefix
+100 USD         code suffix
+```
+
+Supported symbols: `$`, `€`, `£`, `¥`. Any 3-letter uppercase code is accepted as a currency code.
+
+#### Percentages
+
+```
+50%             percentage literal (stored as 0.5 internally)
+8.25%           decimal percentage
+```
+
+#### Booleans
+
+Case-insensitive: `true`, `false`, `yes`, `no`, `t`, `f`, `y`, `n`.
+
+#### Identifiers
+
+- Must start with letter, underscore, or Unicode character (not digit)
+- Can contain letters, digits, underscores, Unicode, emoji
+- **No spaces** in identifiers (use underscores: `my_budget`, not `my budget`)
+- Cannot shadow reserved keywords or constants
+
+```
+x               valid
+tax_rate        valid
+給料            valid (Japanese)
+💰              valid (emoji)
+123abc          invalid (starts with digit)
+avg             invalid (reserved function name)
+PI              invalid (reserved constant)
+```
+
+### Mathematical Constants
+
+| Constant | Value |
+|----------|-------|
+| `PI`, `pi` | 3.141592653589793 |
+| `E`, `e` | 2.718281828459045 |
+
+Constants are read-only and cannot be assigned to.
 
 ---
 
@@ -175,271 +206,429 @@ From **highest** to **lowest**:
 
 ### Data Types
 
-| Type | Example | Internal Representation |
-|------|---------|------------------------|
-| **Number** | `42`, `3.14`, `1,000` | `decimal.Decimal` |
-| **Currency** | `$100`, `€50.99` | `Currency{Symbol, decimal.Decimal}` |
-| **Boolean** | `true`, `false`, `yes`, `no` | `bool` |
+| Type | Example | Internal |
+|------|---------|----------|
+| **Number** | `42`, `3.14`, `5K` | `decimal.Decimal` |
+| **Fraction** | `1/3`, `11 3/8` | `big.Rat` (exact) |
+| **Percentage** | `50%`, `8.25%` | Fractional decimal (0.5) |
+| **Currency** | `$100`, `EUR50` | Symbol + decimal |
+| **Quantity** | `10 meters`, `5 kg` | Value + unit string |
+| **Duration** | `5 days`, `2 weeks` | Value + time unit |
+| **Rate** | `100 MB/s`, `$50/hour` | Quantity / time unit |
+| **Date** | `today`, `Jan 15 2025` | Calendar date |
+| **Boolean** | `true`, `false` | Boolean |
 
-### Type Compatibility
+### Type Compatibility Matrix
 
-**Binary operations (preserve units):**
+| Left | Right | `+` / `-` | `*` | `/` | Notes |
+|------|-------|-----------|-----|-----|-------|
+| Number | Number | Number | Number | Number | Standard arithmetic |
+| Fraction | Fraction | Fraction | Fraction | Fraction | Exact rational, auto-simplified |
+| Number | Fraction | Fraction | Fraction | Fraction | Number promoted to Fraction |
+| Number | Currency | Currency | Currency | — | Right symbol preserved |
+| Currency | Number | Currency | Currency | Currency | Left symbol preserved |
+| Currency | Currency | Currency | — | — | Same ISO code required |
+| Number | Quantity | Quantity | Quantity | — | Right unit preserved |
+| Quantity | Number | Quantity | Quantity | Quantity | Left unit preserved |
+| Quantity | Quantity | Quantity | — | — | Same-category; left unit wins |
+| Duration | Duration | Duration | — | — | Converted to left's unit |
+| Duration | Number | — | Duration | Duration | Left unit preserved |
+| Date | Duration | Date | — | — | Add/subtract days |
+| Date | Date | Duration | — | — | Subtraction only: days between |
+| Rate | Number | — | Rate | Rate | Scales the amount |
+| Speed | Duration | — | Distance | — | Bridge: 60 mph * 2 hours = 120 mi |
+| *any* | Percentage | Widened | Extract | Extract | See percentage rules below |
+| Percentage | Percentage | Percentage | — | — | Decimal addition |
+| Boolean | Boolean | — | — | — | `and`, `or` only |
 
-```
-Number + Number → Number
-Currency + Number → Currency  (unit preserved)
-Number + Currency → Currency  (unit preserved)
-Currency + Currency (same symbol) → Currency
-Currency + Currency (different symbols) → Number  (units dropped)
+### Percentage Widening
 
-$200 + 0.1 → $200.10
-$200 * 0.1 → $20.00  (like 10% discount)
-€500 + 25 → €525.00
-$100 + €50 → 150  (Number, mixed units)
-```
-
-**Functions (drop units when mixed):**
-
-```
-avg($100, $200) → $150.00  (same unit preserved)
-avg($100, €200) → 150  (Number, mixed units)
-avg($100, 200, €300) → 200  (Number, mixed units)
-sqrt($100) → $10.00  (single unit preserved)
-```
-
-**Type errors:**
-
-```
-Boolean + Number → ERROR (no boolean arithmetic)
-```
-
-### Literals
-
-#### Numbers
+When a percentage appears as the **right** operand of `+` or `-`, it applies proportionally:
 
 ```
-42              ✓ Integer
-3.14            ✓ Decimal
-1,000           ✓ Thousands separator (comma)
-1_000_000       ✓ Thousands separator (underscore)
-0.5             ✓ Leading zero
-.5              ✓ Leading zero optional
-1.2.3           ✗ Multiple decimal points
+$100 + 10%     -> $110    (100 * 1.10)
+$100 - 20%     -> $80     (100 * 0.80)
+200 + 50%      -> 300     (200 * 1.50)
 ```
 
-#### Currency
+For `*` and `/`, the percentage is extracted as its decimal value:
 
 ```
-$100            ✓ USD
-$1,000.50       ✓ With separators
-€50             ✓ EUR
-£25.99          ✓ GBP
-¥1000           ✓ JPY
-100$            ✗ Symbol must be prefix
-$ 100           ✗ No space between symbol and number
+$100 * 50%     -> $50     (100 * 0.50)
 ```
 
-**Supported symbols:** `$`, `€`, `£`, `¥`
+### Rate Widening
 
-**Thousands separators:**
-- Commas are valid thousands separators when followed by exactly 3 digits
-- `1,000` → valid thousands separator
-- `1,2,3` → three separate numbers (comma-separated list)
-- `avg(1,2,3)` and `avg(1, 2, 3)` both work correctly
-
-#### Booleans
-
-Case-insensitive keywords:
+When a rate appears as the **right** operand of `*` or `/`, its time denominator is dropped:
 
 ```
-true, false     ✓ Standard
-yes, no         ✓ Natural language
-t, f            ✓ Single letter
-y, n            ✓ Single letter
-True, FALSE     ✓ Any case
+3 * (2 posts/week)     -> 6 posts     (amount extracted, time dropped)
 ```
 
-#### Identifiers
-
-**Rules:**
-- **BREAKING CHANGE (v1.0.0):** Spaces NOT allowed in identifiers
-- Must start with letter, underscore, or Unicode character (not digit)
-- Can contain letters, digits, underscores, Unicode, emoji
-- Cannot be reserved keywords or constants
+When a rate is the **left** operand, it stays a rate:
 
 ```
-x               ✓
-salary          ✓
-tax_rate        ✓ Use underscores (not spaces)
-給料            ✓ Unicode (Japanese)
-💰              ✓ Emoji
-_private        ✓ Underscore prefix
-my_var_123      ✓ Mixed
-123abc          ✗ Cannot start with digit
-my budget       ✗ Spaces not allowed (use my_budget)
-avg             ✗ Reserved keyword
-PI              ✗ Reserved constant
-E               ✗ Reserved constant
-```
-
-### Mathematical Constants
-
-**Built-in constants** (read-only, case-insensitive):
-
-| Constant | Value | Example |
-|----------|-------|---------|
-| `PI`, `pi` | `3.141592653589793` | `2 * PI` → `6.283185307179586` |
-| `E`, `e` | `2.718281828459045` | `E * 2` → `5.43656365691809` |
-
-Constants cannot be assigned:
-```
-PI = 3          ✗ ERROR: Cannot assign to constant 'PI'
-radius = 5      ✓
-area = PI * radius ^ 2  ✓ → 78.53981633974483
+(100 MB/s) * 2         -> 200 MB/s    (rate scaled)
 ```
 
 ---
 
-## Operators
+## Units & Measurement
 
-### Arithmetic
+### Unit Categories
 
-| Operator | Name | Example | Result | Associativity |
-|----------|------|---------|--------|---------------|
-| `^` | Exponent | `2 ^ 3` | `8` | Right |
-| `*` | Multiply | `3 * 4` | `12` | Left |
-| `/` | Divide | `10 / 2` | `5` | Left |
-| `%` | Modulus | `10 % 3` | `1` | Left |
-| `+` | Add | `5 + 3` | `8` | Left |
-| `-` | Subtract | `5 - 3` | `2` | Left |
+CalcMark supports 14 unit categories. Units within the same category can be converted with `in`.
 
-**Multiply aliases:** `*`, `×`, `x`, `X` (when following a number)
+| Category | Units | Example Conversion |
+|----------|-------|-------------------|
+| **Acceleration** | standard-gravity, m/s^2, cm/s^2, ft/s^2 | `1 standard-gravity in ft/s^2` |
+| **Area** | m², km², ha, ft², in², yd², mi², acre | `5 acres in hectares` |
+| **DataSize** | byte, KB, MB, GB, TB, PB (+ binary: KiB, MiB, etc.) | `1.5 GB in MB` |
+| **Energy** | joule, kilojoule, calorie, kilocalorie, kWh | `1 kwh in joules` |
+| **Force** | newton, kilonewton, dyne, kilogram-force, pound-force, poundal | `10 newtons in pound-force` |
+| **Frequency** | hertz, kilohertz, megahertz, gigahertz, terahertz | `2.4 gigahertz in megahertz` |
+| **Impulse** | newton-second, pound-force-second | `110 pound-force-seconds in newton-seconds` |
+| **Length** | m, cm, mm, km, in, ft, yd, mi, nmi | `26.2 miles in km` |
+| **Mass** | mg, g, kg, tonne, oz, lb, troy oz, troy lb | `80 kg in pounds` |
+| **Power** | watt, kilowatt, megawatt, horsepower | `300 hp in kilowatts` |
+| **Pressure** | pascal, kilopascal, megapascal, bar, millibar, atmosphere, torr, psi, inch of mercury | `1 atmosphere in psi` |
+| **Speed** | m/s, km/h, mph, knot | `100 kph in mph` |
+| **Temperature** | celsius, fahrenheit, kelvin | `100 celsius in fahrenheit` |
+| **Volume** | mL, L, tsp, tbsp, cup, fl oz, pt, qt, gal (+ imperial variants) | `2 cups in ml` |
 
-### Comparison
+Additionally: **Currency**, **Custom**, **Number** are virtual categories used by frontmatter directives.
 
-| Operator | Name | Example | Result |
-|----------|------|---------|--------|
-| `>` | Greater than | `5 > 3` | `true` |
-| `<` | Less than | `5 < 3` | `false` |
-| `>=` | Greater or equal | `5 >= 5` | `true` |
-| `<=` | Less or equal | `5 <= 3` | `false` |
-| `==` | Equal | `5 == 5` | `true` |
-| `!=` | Not equal | `5 != 3` | `true` |
+Run `cm help constants` for the complete list with aliases.
 
-### Unary
+### Unit Conversion
 
-| Operator | Name | Example | Result |
-|----------|------|---------|--------|
-| `-` | Negation | `-5` | `-5` |
-| `+` | Plus | `+5` | `5` |
+```
+10 meters in feet       -> 32.81 feet
+100 celsius in fahrenheit -> 212 fahrenheit
+1.5 GB in MB            -> 1536 MB
+```
 
-### Assignment
+Conversions are only valid within the same category. `10 meters in kilograms` produces an error.
 
-| Operator | Name | Example | Effect |
-|----------|------|---------|--------|
-| `=` | Assign | `x = 5` | Stores 5 in variable x |
+### Hyphenated Units
+
+Some units have hyphenated names. Write them with hyphens in both expressions and `in` targets:
+
+```
+50 pound-force
+110 pound-force-seconds in newton-seconds
+1 kilogram-force in newtons
+```
+
+### Custom Units
+
+Any identifier can be a unit. Custom units like `cookies`, `servers`, or `widgets` work in arithmetic but cannot be converted to standard units and are unaffected by `convert_to`.
+
+```
+yield = 24 cookies
+double = yield * 2      -> 48 cookies
+```
+
+### Measurement Conventions
+
+Some unit names are ambiguous (US gallon vs UK gallon, avoirdupois vs troy ounce). Configure via the `measurement` frontmatter directive. See [Frontmatter](#frontmatter).
+
+### Speed-Rate Bridge
+
+Speed units (`mph`, `kph`, `mps`, `knots`) are quantities, but CalcMark bridges them to rates when needed:
+
+```
+60 mph over 2 hours     -> 120 mi       (speed -> rate -> accumulate)
+60 kph * 2 hours        -> 120 km       (speed * duration -> distance)
+60 kph in m/s           -> 16.67 m/s    (speed -> rate conversion)
+60 km/h in mph          -> 37.28 mph    (rate -> speed conversion)
+```
+
+The bridge only fires for Speed-category units. Other quantities multiplied by durations produce an error.
 
 ---
 
-## Reserved Keywords
+## Rates
 
-**IMPORTANT:** These words **cannot** be used as variable names.
+Rates represent a quantity per unit of time. They are first-class types.
 
-### Logical Operators (Implemented in Phase 1)
-
-```
-and, or, not
-```
-
-Case-insensitive: `AND`, `and`, `And` all work.
-
-**Note:** Tokens exist but parser/evaluator support coming in Phase 3.
-
-### Control Flow (Reserved for Future)
+### Rate Syntax
 
 ```
-if, then, else, elif, end
-for, in, while
-return, break, continue
-let, const
+100 MB/s                slash notation
+100 MB per second       word notation
+$50/hour                currency rate
+1000 req/s              custom unit rate
 ```
 
-**Status:** Reserved but not yet implemented.
+The denominator must be a time unit (second, minute, hour, day, week, month, quarter, year).
 
-### Function Names (Implemented in Phase 1)
-
-```
-avg, sqrt
-```
-
-**Status:** Tokens exist, implementation coming in Phases 6-7.
-
-### Multi-Token Function Keywords
-
-These sequences are combined during tokenization:
+### Rate Operations
 
 ```
-average of      → FUNC_AVERAGE_OF (maps to "avg")
-square root of  → FUNC_SQUARE_ROOT_OF (maps to "sqrt")
+rate = 100 MB/s
+doubled = rate * 2              -> 200 MB/s       (scaling)
+total = rate over 1 day         -> 8,640,000 MB   (accumulation)
+total = accumulate(rate, 1 day) -> 8,640,000 MB   (function form)
+converted = 100 MB/s in GB/min  -> rate conversion
 ```
 
-**Examples:**
+### Rate Accumulation
+
+The `over` keyword (or `accumulate()` function) multiplies a rate by a duration to produce a total quantity:
+
 ```
-avg(1, 2, 3)            → Function call (Phase 7)
-average of 1, 2, 3      → Same as avg (natural syntax)
-sqrt(16)                → Function call (Phase 6)
-square root of 16       → Same as sqrt (natural syntax)
+100 MB/s over 1 hour    -> 360,000 MB
+$0.10/hour over 30 days -> $72
+5 GB/day over 1 year    -> 1,825 GB
 ```
 
-**Note:** The words `average`, `square`, `root`, `of` are **not** individually reserved. Only the multi-token sequences are special.
+---
+
+## Dates & Durations
+
+### Date Literals
+
+```
+today                   current date
+tomorrow                next day
+yesterday               previous day
+Jan 15 2025             explicit date
+December 25             month + day (current year)
+```
+
+### Relative Dates
+
+```
+this week               Monday of current week
+next month              1st of next month
+last year               Jan 1 of last year
+```
+
+### Duration Units
+
+| Unit | Aliases |
+|------|---------|
+| millisecond | ms |
+| second | s, sec |
+| minute | m, min |
+| hour | h, hr |
+| day | d |
+| week | w, wk |
+| month | mo |
+| quarter | — |
+| year | y, yr |
+
+### Date Arithmetic
+
+```
+today + 7 days          date + duration -> date
+tomorrow + 1 week       date + duration -> date
+today - yesterday       date - date -> duration
+7 days from today       duration from date -> date
+```
 
 ---
 
 ## Functions
 
-### Implemented Functions
+All functions have both a traditional `fn(args)` form and a natural language form. Run `cm help functions` for the complete list.
 
-| Function | Aliases | Signature | Description |
-|----------|---------|-----------|-------------|
-| `avg()` | `average of` | `avg(x, y, ...)` | Average of numbers (variadic) |
-| `sqrt()` | `square root of` | `sqrt(x)` | Square root (single argument) |
+### Math
 
-### Function Syntax
+| Function | Signature | NL Form | Description |
+|----------|-----------|---------|-------------|
+| `avg` | `avg(a, b, ...)` | `average of a, b, c` | Average of values |
+| `sum` | `sum(a, b, ...)` | `sum of a, b, c` | Sum of values |
+| `sqrt` | `sqrt(x)` | `square root of x` | Square root |
+| `number` | `number(x)` | — | Strip units, return plain number |
 
-**Traditional (parentheses):**
-```
-avg(1, 2, 3, 4, 5)
-avg(1,2,3)  // Works with or without spaces
-sqrt(16)
-```
+### Rate & Capacity
 
-**Natural language:**
-```
-average of 1, 2, 3, 4, 5
-square root of 16
-```
+| Function | Signature | NL Form | Description |
+|----------|-----------|---------|-------------|
+| `accumulate` | `accumulate(rate, time)` | `{rate} over {time}` | Total from rate over duration |
+| `convert_rate` | `convert_rate(rate, unit)` | — | Convert rate to different time unit |
+| `capacity` | `capacity(demand, cap, unit)` | `{demand} at {cap} per {unit}` | Calculate units needed for load |
 
-Both forms produce the same AST node and behavior.
+### Network & Storage
+
+| Function | Signature | NL Form | Description |
+|----------|-----------|---------|-------------|
+| `rtt` | `rtt(scope)` | — | Round-trip time (local, regional, continental, global) |
+| `throughput` | `throughput(type)` | — | Network bandwidth |
+| `transfer_time` | `transfer_time(size, scope, net)` | `transfer {size} across {scope} {net}` | Data transfer time |
+| `read` | `read(size, storage)` | `read {size} from {storage}` | Storage read time (ssd, nvme, hdd) |
+| `seek` | `seek(storage)` | — | Storage access latency |
+| `compress` | `compress(size, algo)` | `compress {size} using {algo}` | Compressed size estimate |
+| `downtime` | `downtime(avail, period)` | — | Downtime from availability percentage |
+
+### Growth
+
+| Function | Signature | NL Form | Description |
+|----------|-----------|---------|-------------|
+| `compound` | `compound(P, rate, periods)` | `compound {P} by {rate} over {periods}` | Compound growth |
+| `grow` | `grow(amount, incr, periods)` | `grow {amount} by {incr} over {periods}` | Linear growth |
+| `depreciate` | `depreciate(val, rate, periods)` | `depreciate {val} by {rate} over {periods}` | Declining balance depreciation |
 
 ### Unit Handling in Functions
 
-Functions handle units intelligently:
+Same units are preserved. Mixed units drop to Number:
 
-**Same units → preserve:**
 ```
-avg($100, $200, $300) → $200.00
-avg(€100, €200) → €150.00
-sqrt($100) → $10.00
-```
-
-**Mixed units → drop to Number:**
-```
-avg($100, €200) → 150  (no units)
-avg($100, 200, €300) → 200  (no units)
-average of $50, €100, £150 → 100  (no units)
+avg($100, $200, $300)           -> $200.00  (same unit)
+avg($100, €200)                 -> 150      (mixed -> Number)
+sqrt($100)                      -> $10.00   (single unit preserved)
 ```
 
-**Rationale:** Functions aggregate/transform values. When units are mixed, the result becomes dimensionless.
+---
+
+## Keywords
+
+### Reserved Keywords
+
+These cannot be used as variable names.
+
+**Conversion & Formatting:** `in`, `as`, `napkin`, `precise`
+**Rate & Capacity:** `per`, `over`, `at`, `with`, `of`
+**Date:** `from`, `today`, `tomorrow`, `yesterday`
+**Logical:** `and`, `or`, `not`
+**Functions:** `avg`, `sum`, `sqrt`, `number` (and their NL forms)
+**Future:** `if`, `then`, `else`, `elif`, `end`, `for`, `while`, `return`, `break`, `continue`, `let`, `const`
+
+### Contextual Keywords
+
+Not reserved (can be variable names) but consumed in natural language contexts:
+
+`by`, `compounded`, `to`, `using`, `across`
+
+---
+
+## Frontmatter
+
+YAML frontmatter between `---` delimiters at the start of a document. All directives are optional.
+
+### exchange
+
+Define currency conversion rates. Keys use `FROM_TO` format with 3-letter ISO 4217 codes.
+
+```yaml
+exchange:
+  USD_EUR: 0.92
+  GBP_USD: 1.27
+```
+
+### globals
+
+User-defined variables available to the document body. Values are CalcMark expressions.
+
+```yaml
+globals:
+  tax_rate: 0.32
+  base_price: $100
+```
+
+Referenced in expressions with `@globals.name`:
+
+```
+tax = income * @globals.tax_rate
+```
+
+### scale
+
+Multiply quantity results by a factor. Requires `unit_categories` to specify which categories are affected.
+
+```yaml
+scale:
+  factor: 2
+  unit_categories: [Mass, Volume]
+```
+
+A bare `scale: 2` sets the factor (accessible via `@scale`) but scales nothing unless `unit_categories` is specified.
+
+Valid categories: `Acceleration`, `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Force`, `Frequency`, `Impulse`, `Length`, `Mass`, `Number`, `Power`, `Pressure`, `Speed`, `Temperature`, `Volume`.
+
+### convert_to
+
+Convert quantity results to a target measurement system. Applied after scale.
+
+```yaml
+convert_to: si          # or imperial
+```
+
+Map form with category filtering:
+
+```yaml
+convert_to:
+  system: imperial
+  unit_categories: [Length, Volume]
+```
+
+Rules:
+- Quantities already in the target system are unchanged
+- Explicit `in` conversions override `convert_to`
+- Custom units are unaffected
+- Frequency is unaffected (hertz is universal)
+- Rates have their amount converted, time denominator unchanged
+
+### measurement
+
+Configure how ambiguous unit names are interpreted. All axes are independent.
+
+```yaml
+measurement:
+  volume: imperial      # us (default) or imperial
+  mass: troy            # standard (default) or troy
+  ton: long             # short (default), long, or metric
+  strict: false         # annotate ambiguous units in output (default true)
+```
+
+### @Directive References
+
+```
+per_unit = total / @scale           # scale factor
+tax = income * @globals.tax_rate    # named global
+```
+
+### Template Variables
+
+Embed calculated values in markdown prose:
+
+```
+Total revenue: {{revenue}}
+```
+
+After evaluation, `{{variable}}` is replaced with the formatted value.
+
+---
+
+## Display & Formatting
+
+### as napkin
+
+Round to 2 significant figures and normalize to a human-friendly unit. Prefixed with `~`.
+
+```
+bulk_flour = 20 cups as napkin      -> ~1.25 gal
+```
+
+Sets `is_approximate: true` in JSON output.
+
+### as precise
+
+Show full decimal precision, skip display rounding.
+
+```
+third = 1 / 3 as precise           -> 0.333333333333333
+```
+
+### as % of
+
+Calculate what percentage one value is of another:
+
+```
+$100 as % of $500                   -> 20%
+```
 
 ---
 
@@ -449,201 +638,30 @@ average of $50, €100, £150 → 100  (no units)
 
 | Code | Severity | Description |
 |------|----------|-------------|
-| `SyntaxError` | Error | Invalid syntax (lexer/parser error) |
-| `UndefinedVariable` | Warning | Variable used before definition |
-| `TypeMismatch` | Error | Incompatible types in operation |
-| `DivisionByZero` | Error | Division or modulus by zero |
+| `syntax_error` | Error | Invalid syntax |
+| `undefined_variable` | Error | Variable used before definition |
+| `type_mismatch` | Error | Incompatible types in operation |
+| `division_by_zero` | Error | Division or modulus by zero |
+| `incompatible_units` | Error | Cannot convert between different unit categories |
 
-### Diagnostic Levels
+### Security Limits
 
-| Severity | Meaning |
-|----------|---------|
-| **Error** | Prevents evaluation, line becomes MARKDOWN |
-| **Warning** | Line stays CALCULATION but evaluation may fail |
-| **Info** | Informational, doesn't affect classification |
-| **Hint** | Suggestions for improvement |
-
-### Example Diagnostics
-
-```go
-{
-    Code: "UndefinedVariable",
-    Severity: "warning",
-    Message: "Variable 'x' is not defined",
-    Line: 5,
-    Column: 10,
-    Suggestion: "Define 'x' before using it"
-}
-```
-
-**Implementation:** `validator/diagnostics.go`
-
----
-
-## Examples
-
-### Basic Calculations
-
-```calcmark
-# Simple Math
-
-5 + 3
-10 - 2
-4 * 5
-20 / 4
-2 ^ 3
-10 % 3
-```
-
-### Variables
-
-```calcmark
-# Budget
-
-salary = $5000
-bonus = $500
-expenses = $3000
-
-net = salary + bonus - expenses
-```
-
-### Comparisons
-
-```calcmark
-# Checks
-
-salary = $50000
-threshold = $60000
-
-is_high_earner = salary > threshold
-needs_raise = salary < $40000
-meets_target = salary >= $50000
-```
-
-### Complex Expressions
-
-```calcmark
-# Mortgage
-
-principal = $200000
-rate = 0.04
-years = 30
-months = years * 12
-
-monthly_rate = rate / 12
-payment = principal * (monthly_rate * (1 + monthly_rate) ^ months) / ((1 + monthly_rate) ^ months - 1)
-```
-
-### Mixed Markdown
-
-```calcmark
-# My Monthly Budget
-
-I earn a salary and get bonuses.
-
-## Income
-
-monthly_salary = $5000
-annual_bonus = $3000
-monthly_bonus = annual_bonus / 12
-
-Total monthly income:
-total_income = monthly_salary + monthly_bonus
-
-## Expenses
-
-- Rent: $1500
-- Food: $600
-- Utilities: $200
-
-rent = $1500
-food = $600
-utilities = $200
-total_expenses = rent + food + utilities
-
-## Summary
-
-Monthly surplus:
-surplus = total_income - total_expenses
-
-Can I save 20%?
-savings_goal = total_income * 0.20
-can_save = surplus >= savings_goal
-```
-
----
-
-## Implementation Status
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Basic arithmetic | ✅ Complete | All operators working |
-| Variables & assignment | ✅ Complete | Context-aware |
-| Comparison operators | ✅ Complete | All comparison ops |
-| Unary operators | ✅ Complete | Negation and plus |
-| Parentheses | ✅ Complete | Full expression support |
-| Currency type | ✅ Complete | `$`, `€`, `£`, `¥` |
-| Boolean type | ✅ Complete | Case-insensitive keywords |
-| Unicode identifiers | ✅ Complete | Full Unicode support |
-| Mathematical constants | ✅ Complete | PI and E (read-only) |
-| Thousands separators | ✅ Complete | Smart comma detection |
-| Reserved keywords | ✅ Complete | Tokens and validation |
-| Multi-token functions | ✅ Complete | `average of`, `square root of` |
-| Function: avg() | ✅ Complete | Variadic, unit-aware |
-| Function: sqrt() | ✅ Complete | Single arg, unit-preserving |
-| Mixed unit handling | ✅ Complete | Binary ops vs functions |
-| Statement/Expression distinction | ⏳ Planned | Phase 2 |
-| Logical operators (and/or/not) | ⏳ Planned | Phase 3 |
-
----
-
-## Future Features
-
-Features being considered for future versions:
-
-### Localized Number Formatting
-
-**Goal**: Support locale-specific thousands and decimal separators
-
-**Current behavior** (US-centric):
-- Thousands separator: `,` (comma)
-- Decimal separator: `.` (period)
-- Example: `1,234.56`
-
-**Future support** (locale-aware):
-- German (de-DE): `1.234,56` (period for thousands, comma for decimal)
-- French (fr-FR): `1 234,56` (space for thousands, comma for decimal)
-- Swiss (de-CH): `1'234.56` (apostrophe for thousands, period for decimal)
-
-**Implementation requirements**:
-- Add locale configuration/metadata to lexer context
-- Support period (`.`) as thousands separator in some locales
-- Support comma (`,`) as decimal separator in some locales
-- Handle ambiguity: distinguish thousands vs decimal based on locale
-- Comprehensive test coverage for multiple locales
-
-**Status**: Not yet implemented (non-trivial architectural change required)
-
----
-
-## Breaking Changes
-
-### Version 1.0.0
-
-**Spaces removed from identifiers**
-
-- **Before:** `my budget = 1000` ✓
-- **After:** `my_budget = 1000` ✓
-- **Rationale:** Required for multi-token function support
-- **Migration:** Replace spaces with underscores in all identifier names
+- Maximum identifier length: 256 characters
+- Maximum nesting depth: 50 levels
+- Maximum token count per line: configurable
+- Fraction denominator limit: 10^9 (auto-converts to decimal)
+- Fraction numerator limit: 10^18 (auto-converts to decimal)
 
 ---
 
 ## References
 
 - Implementation: `github.com/CalcMark/go-calcmark`
-- Syntax Highlighter Spec: `SYNTAX_HIGHLIGHTER_SPEC.json`
-- Test Suites: `*_test.go` files in each package
+- Spec directory: `spec/` (types, units, lexer, parser, features)
+- Implementation: `impl/` (interpreter, formatters)
+- Golden tests: `testdata/` (`.cm` files with expected behavior)
+- Feature registry: `spec/features/registry.go`
+- Canonical units: `spec/units/canonical.go`
 
 ---
 
