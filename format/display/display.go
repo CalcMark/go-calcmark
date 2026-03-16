@@ -105,6 +105,17 @@ func FormatDuration(d *types.Duration) string {
 	return defaultFormatter.FormatDuration(d)
 }
 
+// FormatPercentage formats a percentage in human-readable form.
+// Applies magnitude-based rounding to the display value (e.g., 62.166…% → 62.2%).
+//
+// Examples:
+//
+//	FormatPercentage(0.32) → "32%"
+//	FormatPercentage(0.6217) → "62.2%"
+func FormatPercentage(p *types.Percentage) string {
+	return defaultFormatter.FormatPercentage(p)
+}
+
 // getCurrencyDecimals returns the number of decimal places for a currency.
 // Most currencies use 2 decimals, but some like JPY use 0.
 func getCurrencyDecimals(code string) int {

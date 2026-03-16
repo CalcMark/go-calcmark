@@ -7,9 +7,9 @@ Uses averages, square roots, constants, booleans, and rate conversions.
 
 Three contractor quotes for the full kitchen:
 
-quote_a = 8500
-quote_b = 9200
-quote_c = 7800
+quote_a = $8500
+quote_b = $9200
+quote_c = $7800
 
 average_quote = average of quote_a, quote_b, quote_c
 
