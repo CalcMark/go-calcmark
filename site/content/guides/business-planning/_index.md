@@ -2,9 +2,8 @@
 title: "Business Planning & Financial Modeling"
 summary: "Build P&L statements, budgets, and financial projections with CalcMark."
 weight: 20
+calcmark_build: progressive
 ---
-
-# Business Planning & Financial Modeling
 
 Revenue forecasts, cost breakdowns, margin analysis, budget health checks — financial models are just calculations embedded in narrative. CalcMark makes the narrative and the math live in one document.
 

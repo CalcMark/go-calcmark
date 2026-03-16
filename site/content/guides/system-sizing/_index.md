@@ -2,9 +2,8 @@
 title: "System Sizing & Capacity Planning"
 summary: "Model server fleets, bandwidth, storage, and SLA budgets with CalcMark."
 weight: 10
+calcmark_build: progressive
 ---
-
-# System Sizing & Capacity Planning
 
 How many servers do you need? How much bandwidth? What's the storage budget for the next quarter? These are napkin-math problems — you need rough answers fast, not exact answers slow.
 
@@ -35,7 +34,7 @@ CalcMark is built for this. Write your assumptions in plain text, let the math f
 Start with what you know — expected requests per second and growth rate:
 
 ```calcmark
-peak_rps = 10K
+peak_rps = 10K/s
 avg_rps = peak_rps * 0.4
 daily_requests = avg_rps over 1 day
 growth_rate = 25%
