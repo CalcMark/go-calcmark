@@ -3,18 +3,23 @@ title: "Units & Measurement"
 weight: 1
 ---
 
-CalcMark has built-in support for physical units, data sizes, and unit conversion. This page covers supported units, conversion syntax, and measurement conventions for ambiguous units.
+CalcMark has built-in support for physical units, data sizes, and unit conversion. This page covers supported units, conversion syntax, measurement conventions, and the speed-rate bridge.
 
 ### Supported Units {#units}
 
-CalcMark supports a wide range of units across categories:
+CalcMark supports units across 14 categories:
 
+- **Acceleration**: standard-gravity, m/s^2, cm/s^2, ft/s^2
 - **Area**: cm², m², km², ha, in², ft², yd², mi², acre
 - **DataSize**: byte, KB, MB, GB, TB, PB (and binary: KiB, MiB, GiB, TiB)
 - **Energy**: J, kJ, cal, kcal, kWh
+- **Force**: newton, kilonewton, dyne, kilogram-force, pound-force, poundal
+- **Frequency**: hertz, kilohertz, megahertz, gigahertz, terahertz
+- **Impulse**: newton-second, pound-force-second
 - **Length**: m, cm, mm, km, in, ft, yd, mi, nmi (nautical mile)
 - **Mass**: mg, g, kg, metric ton (t), oz, lb
 - **Power**: W, kW, MW, hp
+- **Pressure**: pascal, kilopascal, megapascal, bar, millibar, atmosphere, torr, psi
 - **Speed**: m/s, km/h, mph, knot
 - **Temperature**: C, F, K
 - **Volume**: mL, L, tsp, tbsp, cup, pt, qt, gal
@@ -22,6 +27,15 @@ CalcMark supports a wide range of units across categories:
 Time units (`second`, `minute`, `hour`, `day`, `week`, `month`, `year`) are used in durations and rates but are not a conversion category.
 
 Run `cm help constants` for the complete list with aliases and descriptions.
+
+#### Hyphenated Units
+
+Some units have hyphenated names: `pound-force`, `kilogram-force`, `newton-second`, `pound-force-second`, `standard-gravity`, and `kilowatt-hour`. Write them with hyphens in both expressions and conversion targets:
+
+```calcmark
+thrust = 50 pound-force
+impulse = 110 pound-force-seconds in newton-seconds
+```
 
 ### Unit Conversion {#unit-conversion}
 
@@ -36,7 +50,33 @@ temp_f = temp_c in fahrenheit
 
 file_size = 1.5 GB
 file_size_mb = file_size in MB
+
+thrust = 10 newtons in pound-force
+
+wifi = 2.4 gigahertz in megahertz
 ```
+
+### Speed-Rate Bridge {#speed-rate-bridge}
+
+Speed units like `mph` and `kph` are quantities — they work in arithmetic just like meters or kilograms. But sometimes you want to treat speed as a rate: "if I drive 60 mph for 2 hours, how far do I go?"
+
+CalcMark bridges between speed quantities and rates automatically:
+
+```calcmark
+trip = 60 mph over 2 hours
+
+commute = 100 kph * 30 minutes
+```
+
+You can also convert between speed units and rate notation:
+
+```calcmark
+highway = 60 kph in m/s
+
+cruise = 60 km/h in mph
+```
+
+The bridge only fires for Speed-category units. Other quantities multiplied by durations still produce an error — `10 kg * 5 hours` won't silently succeed.
 
 ### Measurement Conventions {#measurement-conventions}
 

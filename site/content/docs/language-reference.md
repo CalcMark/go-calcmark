@@ -165,7 +165,7 @@ scale:
 - The special keyword `All` matches every category: `unit_categories: [All]`
 - Expressions containing `@scale` are exempt from scaling to prevent double-scaling
 
-Valid categories: `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`.
+Valid categories: `Acceleration`, `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Force`, `Frequency`, `Impulse`, `Length`, `Mass`, `Number`, `Power`, `Pressure`, `Speed`, `Temperature`, `Volume`.
 
 ### @Directive References {#directive-references}
 
@@ -219,8 +219,9 @@ convert_to:
 - Custom units (e.g., `eggs`, `servers`) have no system mapping and are not converted
 - Currency, numbers, and other non-quantity types are unaffected
 - Rates have their amount converted, leaving the time denominator unchanged
+- Frequency units are unaffected by `convert_to` — hertz is universal across measurement systems
 
-Valid categories: `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`.
+Valid categories: `Acceleration`, `All`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Force`, `Frequency`, `Impulse`, `Length`, `Mass`, `Number`, `Power`, `Pressure`, `Speed`, `Temperature`, `Volume`.
 
 ### Measurement Conventions {#measurement-conventions}
 
@@ -508,6 +509,7 @@ Quantity + Quantity (same unit) -> Quantity
 Date + Duration -> Date
 Date - Date -> Duration
 Rate * Duration -> Quantity  (via "over" keyword)
+Speed * Duration -> Quantity  (bridge: 60 mph * 2 hours = 120 mi)
 Number * Rate -> Rate        (scaling: 3 * 10 MB/s = 30 MB/s)
 Rate * Number -> Rate        (commutative)
 Rate * Quantity -> Quantity   (e.g., 10 MB/s * 500 MB = 5000 MB)

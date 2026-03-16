@@ -22,6 +22,7 @@ Each example has three views. **CalcMark** shows what you write. **Editor** show
 | `as napkin` | Round to human-friendly estimates | [Formatting](/docs/user-guide/formatting/#napkin-math) |
 | Custom units (`24 cookies`) | Domain-specific units unaffected by conversion directives | [Language Reference](/docs/language-reference/#type-system) |
 | `measurement:` | Declare US vs Imperial conventions | [Units](/docs/user-guide/units/#measurement-conventions) |
+| Force & Impulse units | Physical units like `newton`, `pound-force`, `newton-second` | [Units](/docs/user-guide/units/#units) |
 
 
 ## Quantities: Numbers with Units
