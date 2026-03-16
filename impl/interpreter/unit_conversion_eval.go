@@ -35,6 +35,14 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 
 	// Check if this is a rate-to-rate conversion
 	if u.TargetTimeUnit != "" {
+		// Bridge: Speed quantity -> Rate (e.g., "60 kph in m/s")
+		if qty, ok := result.(*types.Quantity); ok && units.IsSpeedUnit(qty.Unit) {
+			coerced, err := interp.coerceSpeedToRate(qty)
+			if err != nil {
+				return nil, err
+			}
+			return interp.evalRateUnitConversion(coerced, targetUnit, u.TargetTimeUnit)
+		}
 		return interp.evalRateUnitConversion(result, targetUnit, u.TargetTimeUnit)
 	}
 
@@ -43,6 +51,10 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 	if rate, ok := result.(*types.Rate); ok {
 		if types.IsTimeUnit(targetUnit) {
 			return interp.evalRateUnitConversion(result, rate.Amount.Unit, targetUnit)
+		}
+		// Bridge: Rate -> Speed quantity (e.g., "60 km/h in mph")
+		if units.IsSpeedUnit(targetUnit) {
+			return interp.coerceRateToSpeed(rate, targetUnit)
 		}
 		return nil, fmt.Errorf("rate conversion requires a rate target (e.g., 'MB/s'), got '%s'; use '%s in %s/%s' or '%s per %s'",
 			targetUnit, rate.String(), rate.Amount.Unit, targetUnit, rate.String(), targetUnit)

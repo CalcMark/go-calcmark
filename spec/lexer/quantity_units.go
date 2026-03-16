@@ -84,10 +84,58 @@ func IsQuantityUnit(unit string) bool {
 		"hp": true, "horsepower": true,
 	}
 
+	// Force units
+	forceUnits := map[string]bool{
+		"newton": true, "newtons": true,
+		"kilonewton": true, "kilonewtons": true,
+		"dyne": true, "dynes": true,
+		"kilogram-force": true, "kilopond": true, "kiloponds": true, "kgf": true,
+		"pound-force": true, "pound-forces": true, "lbf": true,
+		"poundal": true, "poundals": true, "pdl": true,
+	}
+
+	// Impulse units
+	impulseUnits := map[string]bool{
+		"newton-second": true, "newton-seconds": true,
+		"pound-force-second": true, "pound-force-seconds": true,
+	}
+
+	// Pressure units
+	pressureUnits := map[string]bool{
+		"pascal": true, "pascals": true, "pa": true,
+		"kilopascal": true, "kilopascals": true, "kpa": true,
+		"megapascal": true, "megapascals": true, "mpa": true,
+		"bar": true, "bars": true,
+		"millibar": true, "millibars": true, "mbar": true,
+		"atmosphere": true, "atmospheres": true, "atm": true,
+		"torr": true, "torrs": true,
+		"psi": true, "pounds per square inch": true,
+		"inch of mercury": true, "inches of mercury": true, "inhg": true,
+	}
+
+	// Acceleration units
+	accelerationUnits := map[string]bool{
+		"m/s^2": true, "meters per second squared": true,
+		"cm/s^2": true, "centimeters per second squared": true,
+		"ft/s^2": true, "feet per second squared": true,
+		"standard-gravity": true, "standard gravity": true, "standard gravities": true,
+	}
+
+	// Frequency units
+	frequencyUnits := map[string]bool{
+		"hertz": true, "hz": true,
+		"kilohertz": true, "khz": true,
+		"megahertz": true, "mhz": true,
+		"gigahertz": true, "ghz": true,
+		"terahertz": true, "thz": true,
+	}
+
 	// Check all unit categories
 	if lengthUnits[unit] || massUnits[unit] || volumeUnits[unit] ||
 		temperatureUnits[unit] || speedUnits[unit] ||
-		energyUnits[unit] || powerUnits[unit] {
+		energyUnits[unit] || powerUnits[unit] ||
+		forceUnits[unit] || impulseUnits[unit] || pressureUnits[unit] ||
+		accelerationUnits[unit] || frequencyUnits[unit] {
 		return true
 	}
 

@@ -678,12 +678,64 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		targetUnit := p.previous()
 		targetUnitName := string(targetUnit.Value)
 
-		// Check for multi-word target unit: "in nautical miles"
+		// Check for multi-word target unit: "in nautical miles", "in meters per second squared"
 		if p.check(lexer.IDENTIFIER) {
 			nextWord := string(p.peek().Value)
 			if multiWordUnit := units.IsMultiWordUnit(targetUnitName, nextWord); multiWordUnit != "" {
 				p.advance() // Consume the second word
 				targetUnitName = multiWordUnit
+
+				// Check for 3rd word: "in meters per second"
+				if p.check(lexer.IDENTIFIER) {
+					thirdWord := string(p.peek().Value)
+					if multiWordUnit3 := units.IsMultiWordUnit(targetUnitName, thirdWord); multiWordUnit3 != "" {
+						p.advance() // Consume the third word
+						targetUnitName = multiWordUnit3
+
+						// Check for 4th word: "in meters per second squared"
+						if p.check(lexer.IDENTIFIER) {
+							fourthWord := string(p.peek().Value)
+							if multiWordUnit4 := units.IsMultiWordUnit(targetUnitName, fourthWord); multiWordUnit4 != "" {
+								p.advance() // Consume the fourth word
+								targetUnitName = multiWordUnit4
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Check for hyphenated target unit: "in pound-force", "in newton-seconds"
+		if p.check(lexer.MINUS) {
+			savedPos := p.current
+			p.advance() // Consume MINUS
+			if p.check(lexer.IDENTIFIER) {
+				nextWord := string(p.peek().Value)
+				if hyphenUnit := units.IsHyphenatedUnit(targetUnitName, nextWord); hyphenUnit != "" {
+					p.advance() // Consume the second word
+					targetUnitName = hyphenUnit
+
+					// Check for triple-hyphenated: "in pound-force-seconds"
+					if p.check(lexer.MINUS) {
+						savedPos3 := p.current
+						p.advance() // Consume second MINUS
+						if p.check(lexer.IDENTIFIER) {
+							thirdWord := string(p.peek().Value)
+							if tripleUnit := units.IsHyphenatedTripleUnit(targetUnitName, thirdWord); tripleUnit != "" {
+								p.advance() // Consume the third word
+								targetUnitName = tripleUnit
+							} else {
+								p.current = savedPos3
+							}
+						} else {
+							p.current = savedPos3
+						}
+					}
+				} else {
+					p.current = savedPos
+				}
+			} else {
+				p.current = savedPos
 			}
 		}
 

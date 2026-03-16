@@ -110,7 +110,7 @@ the relationship between Document, CalcBlock, Evaluator, and Environment, see
 2. **Parser**: Add parsing logic in `spec/parser/recursive_descent.go`
 3. **Interpreter**: Implement evaluation in `impl/interpreter/operators.go`
 4. **Tests**: Add tests at each layer
-5. **Docs**: Update `spec/LANGUAGE_SPEC.md`
+5. **Docs**: Update `site/content/docs/language-reference.md`
 
 ### Adding a New Function
 
@@ -118,7 +118,7 @@ the relationship between Document, CalcBlock, Evaluator, and Environment, see
 2. **Parser**: Handle in function call parsing
 3. **Interpreter**: Implement in `impl/interpreter/functions.go`
 4. **Tests**: Comprehensive test coverage
-5. **Docs**: Update `spec/LANGUAGE_SPEC.md`
+5. **Docs**: Update `site/content/docs/language-reference.md`
 
 ## Testing Guidelines
 
@@ -181,6 +181,6 @@ return fmt.Errorf("syntax error")
 ## Questions?
 
 - See the [Architecture Overview](#architecture-overview) section above for system design
-- See [LANGUAGE_SPEC.md](spec/LANGUAGE_SPEC.md) for language details
+- See the [Language Reference](https://calcmark.org/docs/language-reference/) for language details
 - See [Output Formatters Design](docs/plans/2026-02-22-design-output-formatters.md) for output format details
 - Review existing code for patterns

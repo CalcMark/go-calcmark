@@ -9,6 +9,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 )
 
@@ -512,7 +513,18 @@ func evalAccumulate(args []types.Type) (types.Type, error) {
 
 	rate, ok := args[0].(*types.Rate)
 	if !ok {
-		return nil, fmt.Errorf("accumulate() first argument must be a rate, got %T", args[0])
+		// Bridge: Speed quantity -> Rate (e.g., "60 mph over 2 hours")
+		if qty, qtyOk := args[0].(*types.Quantity); qtyOk && units.IsSpeedUnit(qty.Unit) {
+			numUnit, timeUnit, decomposed := units.DecomposeSpeedUnit(qty.Unit)
+			if decomposed {
+				amount := &types.Quantity{Value: qty.Value, Unit: numUnit}
+				rate = types.NewRate(amount, timeUnit)
+				ok = true
+			}
+		}
+		if !ok {
+			return nil, fmt.Errorf("accumulate() first argument must be a rate, got %T", args[0])
+		}
 	}
 
 	// Second argument can be Duration or Quantity (number with time unit)

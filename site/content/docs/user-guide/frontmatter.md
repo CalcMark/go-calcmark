@@ -179,7 +179,7 @@ convert_to:
 ---
 ```
 
-Valid categories: `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Length`, `Mass`, `Number`, `Power`, `Speed`, `Temperature`, `Volume`. `Custom` matches units not in the standard library (e.g., `bananas`, `eggs`). These are derived from the unit definitions -- run `cm help frontmatter` for the current list. Use `unit_categories: [All]` to scale every category.
+Valid categories: `Acceleration`, `Area`, `Currency`, `Custom`, `DataSize`, `Energy`, `Force`, `Frequency`, `Impulse`, `Length`, `Mass`, `Number`, `Power`, `Pressure`, `Speed`, `Temperature`, `Volume`. `Custom` matches units not in the standard library (e.g., `bananas`, `eggs`). These are derived from the unit definitions -- run `cm help frontmatter` for the current list. Use `unit_categories: [All]` to scale every category.
 
 See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete walkthrough, and the [Language Reference — Frontmatter](/docs/language-reference/#frontmatter) for the full specification.
 

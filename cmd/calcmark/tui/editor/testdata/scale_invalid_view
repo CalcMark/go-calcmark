@@ -41,6 +41,6 @@ key down
 key down
 ----
 -- results:
-Line 6 (---): value=, error="frontmatter: frontmatter: invalid unit category \"Weight\" in scale.unit_categories; valid categories: All, Area, Currency, Custom, DataSize, Energy, Length, Mass, Number, Power, Speed, Temperature, Volume"
+Line 6 (---): value=, error="frontmatter: frontmatter: invalid unit category \"Weight\" in scale.unit_categories; valid categories: Acceleration, All, Area, Currency, Custom, DataSize, Energy, Force, Frequency, Impulse, Length, Mass, Number, Power, Pressure, Speed, Temperature, Volume"
 Line 8 (yield = 2 buns): value=4 buns, error=""
-frontmatterErr: frontmatter: frontmatter: invalid unit category "Weight" in scale.unit_categories; valid categories: All, Area, Currency, Custom, DataSize, Energy, Length, Mass, Number, Power, Speed, Temperature, Volume
+frontmatterErr: frontmatter: frontmatter: invalid unit category "Weight" in scale.unit_categories; valid categories: Acceleration, All, Area, Currency, Custom, DataSize, Energy, Force, Frequency, Impulse, Length, Mass, Number, Power, Pressure, Speed, Temperature, Volume

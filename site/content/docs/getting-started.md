@@ -59,6 +59,7 @@ Quick calculations from the command line:
 echo "price = 100 USD" | cm
 echo "24 celsius in fahrenheit" | cm
 echo "500 gram in oz" | cm
+echo "1 atmosphere in psi" | cm
 echo "1 + 1" | cm --format json    # JSON output for scripting
 ```
 

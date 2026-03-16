@@ -1,0 +1,18 @@
+# Speed-Rate Bridge Tests
+# Tests bidirectional coercion between Speed quantities and Rates.
+
+## Speed to Rate conversion (Speed quantity -> Rate target with time denominator)
+bridge1 = 60 kph in m/s
+# Expected: 16.66
+
+## Rate to Speed conversion (Rate -> Speed quantity target)
+bridge2 = 60 km/h in mph
+# Expected: 37.28
+
+## Speed accumulation via over (Speed quantity * duration)
+distance1 = 60 mph over 2 hours
+# Expected: 120 mi
+
+## Speed x Duration arithmetic
+distance2 = 60 kph * 2 hours
+# Expected: 120 km

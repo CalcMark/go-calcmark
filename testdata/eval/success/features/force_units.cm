@@ -1,0 +1,28 @@
+# Force Unit Tests
+
+## Basic force values
+force1 = 10 newtons
+# Expected: 10 newtons
+
+force2 = 5 pound-force
+# Expected: 5 pound-force
+
+## Force conversions
+converted1 = 10 newtons in pound-force
+# Expected: 2.248
+
+converted2 = 1 kilonewton in newtons
+# Expected: 1000 newtons
+
+converted3 = 1 pound-force in newtons
+# Expected: 4.448
+
+converted4 = 100 dynes in newtons
+# Expected: 0.001
+
+converted5 = 1 kilogram-force in newtons
+# Expected: 9.80665
+
+## Force arithmetic
+total = 5 newtons + 5 newtons
+# Expected: 10 newtons

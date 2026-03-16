@@ -39,6 +39,7 @@ type Alias struct {
 type Feature struct {
 	Name        string   // Primary name (e.g., "avg", "meter", "today")
 	Category    Category // Type of feature
+	Quantity    string   // Unit category for units (e.g., "Force", "Length"); empty for non-unit features
 	Syntax      string   // Usage syntax (e.g., "avg(a, b, c)")
 	Description string   // Human-readable description
 	Aliases     []Alias  // Alternative names/spellings
@@ -270,6 +271,108 @@ func getFunctions() []Feature {
 	}
 }
 
+// unitExamples provides realistic conversion examples for each unit quantity.
+// These are more useful than generic "10 <symbol>" examples.
+var unitExamples = map[string]string{
+	// Acceleration
+	"m/s^2":           "1 standard-gravity in m/s^2",
+	"cm/s^2":          "100 cm/s^2",
+	"ft/s^2":          "32.17 ft/s^2",
+	"standard-gravity": "1 standard-gravity",
+	// Area
+	"acre":             "5 acres in hectares",
+	"hectare":          "100 hectares in acres",
+	"square meter":     "200 sq m",
+	"square kilometer": "1 sq km in acres",
+	"square centimeter": "500 sq cm",
+	"square foot":      "1500 sq ft in sq m",
+	"square inch":      "144 sq in",
+	"square yard":      "100 sq yd",
+	"square mile":      "1 sq mi in sq km",
+	// Energy
+	"joule":      "1000 joules in kj",
+	"kilojoule":  "500 kj in kcal",
+	"calorie":    "100 calories in joules",
+	"kilocalorie": "2000 kcal",
+	"kwh":        "1 kwh in joules",
+	// Force
+	"newton":         "10 newtons in pound-force",
+	"kilonewton":     "1 kilonewton in newtons",
+	"dyne":           "100000 dynes in newtons",
+	"kilogram-force": "1 kilogram-force in newtons",
+	"pound-force":    "5 pound-force in newtons",
+	"poundal":        "10 poundals in newtons",
+	// Frequency
+	"hertz":     "440 hertz",
+	"kilohertz": "100 kilohertz in megahertz",
+	"megahertz": "2.4 megahertz",
+	"gigahertz": "2.4 gigahertz in megahertz",
+	"terahertz": "1 terahertz in gigahertz",
+	// Impulse
+	"newton-second":      "110 pound-force-seconds in newton-seconds",
+	"pound-force-second": "110 pound-force-seconds in newton-seconds",
+	// Length
+	"meter":         "100 meters in feet",
+	"millimeter":    "10 mm in inches",
+	"centimeter":    "30 cm in inches",
+	"kilometer":     "5 km in miles",
+	"inch":          "12 inches in cm",
+	"foot":          "6 feet in meters",
+	"yard":          "100 yards in meters",
+	"mile":          "26.2 miles in km",
+	"nautical mile": "1 nautical mile in km",
+	// Mass
+	"gram":       "500 grams in ounces",
+	"milligram":  "200 mg",
+	"kilogram":   "80 kg in pounds",
+	"metric ton": "1 tonne in pounds",
+	"ounce":      "8 oz in grams",
+	"pound":      "150 pounds in kg",
+	"troy ounce": "1 troy oz in grams",
+	"troy pound": "1 troy lb in grams",
+	"short ton":  "1 short ton in kg",
+	"long ton":   "1 long ton in kg",
+	// Power
+	"watt":       "100 watts in horsepower",
+	"kilowatt":   "1.5 kw in watts",
+	"megawatt":   "1 mw in kilowatts",
+	"horsepower": "300 hp in kilowatts",
+	// Pressure
+	"pascal":     "101325 pascals in atmospheres",
+	"kilopascal": "100 kpa in bar",
+	"megapascal": "1 mpa in psi",
+	"bar":        "1 bar in psi",
+	"millibar":   "1013 millibars in atmospheres",
+	"atmosphere": "1 atmosphere in psi",
+	"torr":       "760 torr in atmospheres",
+	"psi":        "14.7 psi in atmospheres",
+	"inch of mercury": "30 inhg in atmospheres",
+	// Speed
+	"m/s":  "100 kph in mps",
+	"km/h": "100 kph in mph",
+	"mph":  "60 mph in kph",
+	"knot": "30 knots in kph",
+	// Temperature
+	"celsius":    "100 celsius in fahrenheit",
+	"fahrenheit": "72 fahrenheit in celsius",
+	"kelvin":     "273 kelvin in celsius",
+	// Volume
+	"milliliter":            "500 ml in cups",
+	"liter":                 "2 liters in gallons",
+	"teaspoon":              "3 tsp in tbsp",
+	"tablespoon":            "2 tbsp in ml",
+	"cup":                   "2 cups in ml",
+	"fluid ounce":           "8 fl oz in ml",
+	"pint":                  "1 pint in ml",
+	"quart":                 "1 quart in liters",
+	"gallon":                "1 gallon in liters",
+	"imperial gallon":       "1 imp gal in liters",
+	"imperial quart":        "1 imp qt in ml",
+	"imperial pint":         "1 imp pt in ml",
+	"imperial cup":          "1 imp cup in ml",
+	"imperial fluid ounce":  "1 imp fl oz in ml",
+}
+
 // getUnits returns unit features from the canonical units registry.
 func getUnits() []Feature {
 	// Deduplicate by canonical name
@@ -286,13 +389,20 @@ func getUnits() []Feature {
 		for i, a := range unit.Aliases {
 			aliases[i] = Alias{Name: a, Parseable: true}
 		}
+
+		example := "10 " + unit.Symbol
+		if ex, ok := unitExamples[unit.Canonical]; ok {
+			example = ex
+		}
+
 		features = append(features, Feature{
 			Name:        unit.Canonical,
 			Category:    CategoryUnit,
+			Quantity:    unit.Quantity,
 			Syntax:      unit.Symbol,
 			Description: unit.Description,
 			Aliases:     aliases,
-			Example:     "10 " + unit.Symbol,
+			Example:     example,
 		})
 	}
 	return features
