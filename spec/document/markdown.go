@@ -43,8 +43,8 @@ func renderMarkdown(source string) string {
 		source += "\n"
 	}
 
-	// CommonMark-only parser extensions (no GFM: Tables, Strikethrough, DefinitionLists excluded)
-	extensions := parser.NoIntraEmphasis | parser.FencedCode | parser.Autolink |
+	// CommonMark + GFM tables parser extensions
+	extensions := parser.NoIntraEmphasis | parser.Tables | parser.FencedCode | parser.Autolink |
 		parser.SpaceHeadings | parser.HeadingIDs | parser.BackslashLineBreak |
 		parser.AutoHeadingIDs
 	p := parser.NewWithExtensions(extensions)
