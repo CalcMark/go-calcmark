@@ -3,14 +3,6 @@ name: Deploy Site
 on:
   push:
     branches: [main]
-    paths:
-      - "site/**"
-      - "spec/**"
-      - "impl/**"
-      - "cmd/doceval/**"
-      - "cmd/docgen/**"
-      - "Taskfile.yml"
-      - ".github/workflows/site.yml"
     tags:
       - "v*.*.*"
 
