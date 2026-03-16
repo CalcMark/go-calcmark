@@ -98,7 +98,7 @@ func (f Formatter) Format(t types.Type) string {
 		}
 		return v.String()
 	case *types.Percentage:
-		return v.String()
+		return f.FormatPercentage(v)
 	case *types.Time:
 		return v.String()
 	default:
@@ -107,8 +107,10 @@ func (f Formatter) Format(t types.Type) string {
 }
 
 // FormatNumber formats a decimal number in human-readable form.
+// Applies magnitude-based rounding to keep computed results readable
+// (e.g., 113.097… → 113, 19.209… → 19.2).
 func (f Formatter) FormatNumber(value decimal.Decimal) string {
-	return f.formatWithSuffix(value, "")
+	return f.formatWithSuffix(roundForDisplay(value), "")
 }
 
 // FormatQuantity formats a quantity (value + unit) in human-readable form.
@@ -247,6 +249,21 @@ func (f Formatter) FormatDuration(d *types.Duration) string {
 	}
 	rounded := roundForDisplay(d.Value)
 	return fmt.Sprintf("%s %s", rounded, d.Unit)
+}
+
+// FormatPercentage formats a percentage in human-readable form.
+// Applies magnitude-based rounding to the display value (e.g., 62.166…% → 62.2%).
+func (f Formatter) FormatPercentage(p *types.Percentage) string {
+	hundred := decimal.NewFromInt(100)
+	displayValue := roundForDisplay(p.Value.Mul(hundred))
+
+	s := displayValue.String()
+	if strings.Contains(s, ".") {
+		s = strings.TrimRight(s, "0")
+		s = strings.TrimRight(s, ".")
+	}
+
+	return f.localizeDecimal(s) + "%"
 }
 
 // formatExplicitNumber formats a number with comma separators but without K/M/B/T suffixes.

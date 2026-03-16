@@ -46,6 +46,16 @@ func TestFormatNumber(t *testing.T) {
 		// Negative large numbers
 		{"negative 100K", "-100000", "-100K"},
 		{"negative 1.5M", "-1500000", "-1.5M"},
+
+		// Computed results: roundForDisplay should clean up long decimals
+		// >= 100: no decimals
+		{"pi*36 rounds to integer", "113.09733552923255", "113"},
+		// >= 10: 1 decimal
+		{"computed mid-range", "19.209372712298546", "19.2"},
+		// >= 1: 2 decimals
+		{"computed small", "3.141592653589793", "3.14"},
+		// < 1: 4 decimals
+		{"computed tiny", "0.314159265358979", "0.3142"},
 	}
 
 	for _, tt := range tests {
@@ -281,6 +291,41 @@ func TestUnifiedCurrencyFormat(t *testing.T) {
 			got := FormatCurrency(c)
 			if got != tt.expected {
 				t.Errorf("FormatCurrency(%s%s) = %q, want %q", tt.symbol, tt.value, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatPercentage(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string // fractional value (0.32 = 32%)
+		expected string
+	}{
+		// Exact percentages — no rounding needed
+		{"exact 32%", "0.32", "32%"},
+		{"exact 100%", "1", "100%"},
+		{"exact 15%", "0.15", "15%"},
+		{"exact 0%", "0", "0%"},
+
+		// Computed percentages — should round for readability
+		// Display value 62.166… (>= 10) → 1 decimal → 62.2%
+		{"computed gross margin", "0.6216655172413793", "62.2%"},
+		// Display value 56.161… (>= 10) → 1 decimal → 56.2%
+		{"computed challenged margin", "0.561619089900111", "56.2%"},
+		// Display value 7.345… (>= 1) → 2 decimals → 7.35%
+		{"computed small pct", "0.07345678", "7.35%"},
+		// Display value 0.1234… (< 1) → 4 decimals → 0.1235%
+		{"computed tiny pct", "0.00123456", "0.1235%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value, _ := decimal.NewFromString(tt.value)
+			p := types.NewPercentage(value)
+			result := Format(p)
+			if result != tt.expected {
+				t.Errorf("Format(Percentage(%s)) = %q, want %q", tt.value, result, tt.expected)
 			}
 		})
 	}

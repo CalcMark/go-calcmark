@@ -17,14 +17,14 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 You've collected three quotes for the kitchen remodel. The `avg` function takes any number of values and returns their mean:
 
 ```calcmark
-quote_a = 8500
-quote_b = 9200
-quote_c = 7800
+quote_a = $8500
+quote_b = $9200
+quote_c = $7800
 
 average_quote = average of quote_a, quote_b, quote_c
 ```
 
-The average comes out to 8,500. The `average of` syntax is the natural language form — you can also write `avg(quote_a, quote_b, quote_c)` using function-call syntax.
+The `average of` syntax is the natural language form — you can also write `avg(quote_a, quote_b, quote_c)` using function-call syntax.
 
 **CalcMark features:** `average of` (NL form of `avg()`); variable references.
 
@@ -41,7 +41,7 @@ kitchen_sqft = kitchen_length * kitchen_width
 diagonal = sqrt(kitchen_length ^ 2 + kitchen_width ^ 2)
 ```
 
-The kitchen is 180 sqft with a 19.2-foot diagonal. The `^` operator handles exponentiation, and `sqrt` returns the square root.
+The `^` operator handles exponentiation, and `sqrt` returns the square root.
 
 **CalcMark features:** `sqrt()` function; exponentiation (`^`); derived calculations.
 
@@ -56,7 +56,7 @@ patio_radius = 6
 patio_area = PI * patio_radius ^ 2
 ```
 
-The area is approximately 113.1 square feet. `PI` is read-only — you can't reassign it. `E` (Euler's number) is also available.
+`PI` is read-only — you can't reassign it. `E` (Euler's number) is also available.
 
 **CalcMark features:** `PI` constant; exponentiation with constants.
 
@@ -70,7 +70,7 @@ Concrete is sold per square foot, so you need the exact area for your order. The
 patio_area as precise
 ```
 
-This shows 113.097336 instead of a rounded value. Useful when you need exact quantities for materials ordering. It's the opposite of `as napkin`.
+This shows the full decimal expansion instead of a rounded value. Useful when you need exact quantities for materials ordering. It's the opposite of `as napkin`.
 
 **CalcMark features:** `as precise` modifier.
 
@@ -96,7 +96,7 @@ tile_per_sqft = $12
 flooring = kitchen_sqft * tile_per_sqft
 ```
 
-Countertops come to $3,375, patio concrete $904.78, and kitchen flooring $2,160. CalcMark preserves currency types through arithmetic — the result of `45 * $75` is `$3,375`, not a plain number.
+CalcMark preserves currency types through arithmetic — multiplying a count by a currency produces a currency, not a plain number.
 
 **CalcMark features:** Currency literals (`$`); currency arithmetic; markdown prose between calculations.
 
@@ -111,7 +111,7 @@ daily_rate = $800/day
 weekly_rate = convert_rate(daily_rate, week)
 ```
 
-The weekly rate is $5,600/week. This is different from `$800/day over 1 week`, which would *accumulate* the rate into a total ($5,600 flat). `convert_rate` keeps it as a rate.
+This is different from `$800/day over 1 week`, which would *accumulate* the rate into a total. `convert_rate` keeps it as a rate.
 
 **CalcMark features:** `convert_rate()` function; rate literals (`$800/day`).
 
@@ -125,7 +125,7 @@ Lumber arrives at 2 pallets per day over the 3-week build. The `accumulate` func
 total_deliveries = 2 pallets/day over 3 weeks
 ```
 
-That's 42 pallets total. CalcMark handles the unit conversion (days to weeks) automatically. The `over` keyword is the natural language form — you can also write `accumulate(2 pallets/day, 3 weeks)` using function-call syntax.
+CalcMark handles the unit conversion (days to weeks) automatically. The `over` keyword is the natural language form — you can also write `accumulate(2 pallets/day, 3 weeks)` using function-call syntax.
 
 **CalcMark features:** rate accumulation with `over`; rate with custom units (`pallets/day`); automatic time unit conversion.
 
@@ -141,8 +141,6 @@ contingency = 15% of subtotal
 total = subtotal + contingency
 ```
 
-Subtotal is $12,640, plus a 15% contingency of $1,896, for a total of $14,536.
-
 **CalcMark features:** `X% of value` syntax; currency addition across sections.
 
 ---
@@ -156,7 +154,7 @@ budget_ok = total < $50000 and contingency > $1500
 under_budget = not (total > $50000)
 ```
 
-Both evaluate to `true`. The `and` operator requires both comparisons to be true. The `not` operator inverts a boolean. You can also use `or` to check if *either* condition is true.
+The `and` operator requires both comparisons to be true. The `not` operator inverts a boolean. You can also use `or` to check if *either* condition is true.
 
 **CalcMark features:** Boolean operators (`and`, `not`); comparison operators (`<`, `>`); parentheses for grouping.
 
@@ -170,7 +168,7 @@ The `as napkin` modifier rounds to 2 significant figures with a human-readable s
 total as napkin
 ```
 
-The total rounds from $14,536 to ~$15K — a quick number for conversation.
+The total rounds to a quick number for conversation — useful for ballpark estimates.
 
 **CalcMark features:** `as napkin` modifier.
 

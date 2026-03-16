@@ -735,6 +735,8 @@ func unitOf(v types.Type) string {
 		if t.Amount != nil {
 			return t.Amount.Unit
 		}
+	case *types.Fraction:
+		return t.Unit
 	}
 	return ""
 }
