@@ -6,6 +6,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 )
 
@@ -357,6 +358,21 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 				return types.NewPercentage(leftPct.Value.Add(rightPct.Value)), nil
 			case "-":
 				return types.NewPercentage(leftPct.Value.Sub(rightPct.Value)), nil
+			}
+		}
+	}
+
+	// Bridge: Speed quantity * Duration → distance (e.g., "60 mph * 2 hours")
+	// Only fires for Speed-category quantities, not all quantities.
+	if operator == "*" {
+		if leftQty, ok := left.(*types.Quantity); ok && units.IsSpeedUnit(leftQty.Unit) {
+			if rightDur, ok := right.(*types.Duration); ok {
+				return speedTimesDuration(leftQty, rightDur)
+			}
+		}
+		if rightQty, ok := right.(*types.Quantity); ok && units.IsSpeedUnit(rightQty.Unit) {
+			if leftDur, ok := left.(*types.Duration); ok {
+				return speedTimesDuration(rightQty, leftDur)
 			}
 		}
 	}
