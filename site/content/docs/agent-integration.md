@@ -245,6 +245,7 @@ Reference globals with `@globals.name`:
 globals:
   headcount: 15
 ---
+salary = $120000
 team_cost = salary * @globals.headcount
 ```
 

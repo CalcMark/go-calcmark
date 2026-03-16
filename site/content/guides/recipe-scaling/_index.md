@@ -2,9 +2,8 @@
 title: "Recipe Scaling & Cooking"
 summary: "Scale recipes with fractions, measurement conventions, and the scale directive."
 weight: 30
+calcmark_build: progressive
 ---
-
-# Recipe Scaling & Cooking
 
 {{< callout "note" >}}
 **New to CalcMark measurements?** Start with [Understanding Measurements](/guides/understanding-measurements/) for a progressive walkthrough of quantities, unit conversions, fractions, and napkin math.
@@ -73,7 +72,7 @@ per_scone = total_cost / (8 * @scale)
 
 Add `convert_to: si` to see everything in metric:
 
-```yaml
+```text
 ---
 measurement:
   volume: imperial
