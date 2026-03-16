@@ -706,30 +706,36 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	return fm, remaining, nil
 }
 
-// extractYAMLKeyOrder extracts the key ordering for a nested map under a
-// top-level key from YAML content. Uses yaml.v3's Node API which preserves
-// document order. Returns keys in the order they appear in the YAML source.
-func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
+// parseYAMLMapping parses YAML content and returns the root mapping node.
+// Returns nil if the content is empty, invalid, or not a mapping.
+func parseYAMLMapping(yamlContent string) *yaml.Node {
 	var root yaml.Node
 	if err := yaml.Unmarshal([]byte(yamlContent), &root); err != nil {
 		return nil
 	}
-
-	// root is a Document node containing a Mapping node
 	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
 		return nil
 	}
-	mapping := root.Content[0]
-	if mapping.Kind != yaml.MappingNode {
+	m := root.Content[0]
+	if m.Kind != yaml.MappingNode {
+		return nil
+	}
+	return m
+}
+
+// extractYAMLKeyOrder extracts the key ordering for a nested map under a
+// top-level key from YAML content. Uses yaml.v3's Node API which preserves
+// document order. Returns keys in the order they appear in the YAML source.
+func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
+	mapping := parseYAMLMapping(yamlContent)
+	if mapping == nil {
 		return nil
 	}
 
-	// Find the top-level key (e.g., "exchange" or "globals")
 	for i := 0; i < len(mapping.Content)-1; i += 2 {
 		keyNode := mapping.Content[i]
 		valueNode := mapping.Content[i+1]
 		if keyNode.Value == topKey && valueNode.Kind == yaml.MappingNode {
-			// Extract keys in document order
 			var keys []string
 			for j := 0; j < len(valueNode.Content)-1; j += 2 {
 				keys = append(keys, valueNode.Content[j].Value)
@@ -742,15 +748,8 @@ func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
 
 // extractYAMLTopLevelKeyOrder returns all top-level YAML keys in document order.
 func extractYAMLTopLevelKeyOrder(yamlContent string) []string {
-	var root yaml.Node
-	if err := yaml.Unmarshal([]byte(yamlContent), &root); err != nil {
-		return nil
-	}
-	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
-		return nil
-	}
-	mapping := root.Content[0]
-	if mapping.Kind != yaml.MappingNode {
+	mapping := parseYAMLMapping(yamlContent)
+	if mapping == nil {
 		return nil
 	}
 	var keys []string

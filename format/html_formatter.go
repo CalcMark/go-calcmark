@@ -209,12 +209,6 @@ func formatExtraValue(v any) string {
 	switch val := v.(type) {
 	case string:
 		return val
-	case int:
-		return fmt.Sprintf("%d", val)
-	case float64:
-		return fmt.Sprintf("%g", val)
-	case bool:
-		return fmt.Sprintf("%t", val)
 	case []any:
 		parts := make([]string, len(val))
 		for i, item := range val {
