@@ -3,6 +3,7 @@ package lsp
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/features"
@@ -237,41 +238,33 @@ func (s *Server) textDocumentDocumentSymbol(_ *glsp.Context, params *protocol.Do
 }
 
 // extractWordAt extracts the word at the given column position in a line.
+// Uses rune-aware indexing for UTF-8 safety (CalcMark supports Unicode identifiers).
 func extractWordAt(lineText string, col int) string {
-	if col > len(lineText) {
-		col = len(lineText)
+	runes := []rune(lineText)
+	if col > len(runes) {
+		col = len(runes)
 	}
 
-	// Find word boundaries
 	start := col
-	for start > 0 {
-		ch := lineText[start-1]
-		if isIdentChar(ch) {
-			start--
-		} else {
-			break
-		}
+	for start > 0 && isIdentRune(runes[start-1]) {
+		start--
 	}
 
 	end := col
-	for end < len(lineText) {
-		ch := lineText[end]
-		if isIdentChar(ch) {
-			end++
-		} else {
-			break
-		}
+	for end < len(runes) && isIdentRune(runes[end]) {
+		end++
 	}
 
 	if start == end {
 		return ""
 	}
-	return lineText[start:end]
+	return string(runes[start:end])
 }
 
-// isIdentChar returns true if the character can be part of an identifier.
-func isIdentChar(ch byte) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_'
+// isIdentRune returns true if the rune can be part of a CalcMark identifier.
+// Matches the lexer's rules: Unicode letters, digits, and underscore.
+func isIdentRune(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
 }
 
 // findNLExample returns the NL example for a function name from the registry, or "".
@@ -285,19 +278,19 @@ func findNLExample(funcName string) string {
 	return ""
 }
 
-// isIdentifier returns true if the string is a valid simple identifier.
+// isIdentifier returns true if the string is a valid CalcMark identifier.
+// Uses Unicode-aware character classification matching the lexer's rules.
 func isIdentifier(s string) bool {
 	if s == "" {
 		return false
 	}
-	for i := range len(s) {
-		ch := s[i]
+	for i, r := range s {
 		if i == 0 {
-			if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_') {
+			if !unicode.IsLetter(r) && r != '_' {
 				return false
 			}
 		} else {
-			if !isIdentChar(ch) {
+			if !isIdentRune(r) {
 				return false
 			}
 		}

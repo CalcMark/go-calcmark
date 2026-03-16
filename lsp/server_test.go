@@ -266,6 +266,9 @@ func TestExtractWordAt(t *testing.T) {
 		{"at operator", "a = b", 2, ""},
 		{"empty line", "", 0, ""},
 		{"underscore identifier", "my_var = 1", 3, "my_var"},
+		// UTF-8: col is in rune positions, not bytes
+		{"unicode identifier", "café = 1", 2, "café"},
+		{"after unicode", "café = 1", 7, "1"},
 	}
 
 	for _, tt := range tests {
@@ -291,6 +294,10 @@ func TestIsIdentifier(t *testing.T) {
 		{"", false},
 		{"a b", false},
 		{"a=b", false},
+		// Unicode identifiers (CalcMark supports these)
+		{"café", true},
+		{"日本語", true},
+		{"π", true},
 	}
 
 	for _, tt := range tests {

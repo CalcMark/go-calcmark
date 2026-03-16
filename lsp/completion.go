@@ -3,6 +3,7 @@ package lsp
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/features"
@@ -209,21 +210,18 @@ func getLineText(source string, line int) string {
 }
 
 // extractPrefix extracts the identifier prefix before the cursor position.
+// Uses rune-aware indexing for UTF-8 safety (CalcMark supports Unicode identifiers).
 func extractPrefix(lineText string, col int) string {
-	if col > len(lineText) {
-		col = len(lineText)
+	runes := []rune(lineText)
+	if col > len(runes) {
+		col = len(runes)
 	}
 	// Walk backward from cursor to find start of identifier
 	start := col
-	for start > 0 {
-		ch := lineText[start-1]
-		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
-			start--
-		} else {
-			break
-		}
+	for start > 0 && (unicode.IsLetter(runes[start-1]) || unicode.IsDigit(runes[start-1]) || runes[start-1] == '_') {
+		start--
 	}
-	return lineText[start:col]
+	return string(runes[start:col])
 }
 
 // isMarkdownLine returns true if the line appears to be markdown (not a calculation).
