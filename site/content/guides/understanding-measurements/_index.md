@@ -359,6 +359,44 @@ The key distinctions:
 When you pipe CalcMark to another tool via `--format json`, `convert_to` and `in` give you precisely converted data — safe for further computation. Napkin math gives you a rounded estimate flagged with `is_approximate: true`, so your downstream tool knows to treat it accordingly.
 
 
+## The Mars Climate Orbiter: A Worked Example
+
+Remember the spacecraft from the opening? Let's use CalcMark to see exactly what went wrong.
+
+The Mars Climate Orbiter's thrusters reported impulse in pound-force-seconds. The navigation software expected newton-seconds. Here's the mismatch:
+
+{{< tabs group="output" >}}
+{{< tab name="CalcMark" >}}
+```text
+thruster_impulse = 110 pound-force-seconds
+expected_impulse = thruster_impulse in newton-seconds
+```
+{{< /tab >}}
+{{< tab name="Editor" >}}
+```text
+thruster_impulse = 110 pound-force-seconds    110 pound-force-seconds
+expected_impulse = ... in newton-seconds       489 newton-seconds
+```
+{{< /tab >}}
+{{< tab name="JSON" >}}
+```json
+{
+  "source": "expected_impulse = thruster_impulse in newton-seconds",
+  "value": "489 newton-seconds",
+  "type": "quantity",
+  "numeric_value": 489.30442,
+  "unit": "newton-seconds",
+  "is_explicit": true
+}
+```
+{{< /tab >}}
+{{< /tabs >}}
+
+The navigation software received `110` and treated it as newton-seconds — but the actual value was `489` newton-seconds. The software underestimated the thruster force by a factor of 4.45, sending the orbiter too close to Mars.
+
+One conversion. $327 million. That's why units matter.
+
+
 ## What to Read Next
 
 - **Scale a recipe:** [Recipe Scaling & Cooking](/guides/recipe-scaling/) — use the `scale` directive to multiply quantities, with `@scale` for per-batch calculations
