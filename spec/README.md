@@ -58,7 +58,7 @@ Context-aware: whether `total` is a calculation depends on if `total` is defined
 ## Specification Documents
 
 ### `LANGUAGE_SPEC.md`
-Complete language specification defining syntax, semantics, type system, and operator precedence.
+Pointer to the canonical [Language Reference](https://calcmark.org/docs/language-reference/) on the CalcMark website (source: `site/content/docs/language-reference.md`).
 
 ### `UNITS_DESIGN.md`
 Design document for units and quantities system (currency, measurements, etc.).
@@ -82,7 +82,7 @@ If you're implementing CalcMark in another language:
 
 1. **Study the spec packages** - They define the authoritative behavior
 2. **Run the tests** - They document expected behavior comprehensively
-3. **Review `LANGUAGE_SPEC.md`** - Contains the formal grammar specification
+3. **Review the [Language Reference](https://calcmark.org/docs/language-reference/)** - Contains the formal grammar specification
 4. **Don't depend on `/impl`** - Those are Go-specific implementation details
 
 The Go implementation in `/impl` is just one possible way to evaluate CalcMark. Your implementation might:
@@ -98,7 +98,7 @@ As long as it conforms to the spec defined here, it's a valid CalcMark implement
 ```
 /spec/                     ← Language specification (implementation-agnostic)
   /lexer, /parser, /ast   ← Core language packages
-  LANGUAGE_SPEC.md        ← What CalcMark means
+  LANGUAGE_SPEC.md        ← Pointer to site language reference
 
 /impl/                     ← Go implementation (one possible implementation)
   /evaluator              ← How we evaluate in Go

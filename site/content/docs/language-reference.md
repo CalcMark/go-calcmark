@@ -4,31 +4,7 @@ summary: "Formal specification for the CalcMark language."
 weight: 30
 ---
 
-**Version:** 1.0.0
-
-This is the complete and authoritative specification for the CalcMark language.
-
----
-
-- [Overview](#overview)
-- [Philosophy](#philosophy)
-- [Document Model](#document-model)
-- [Frontmatter](#frontmatter) — [@Directive References](#directive-references) — [Template Interpolation](#template-interpolation)
-- [Line Classification](#line-classification)
-- [Syntax & Grammar](#syntax--grammar)
-- [Type System](#type-system)
-- [Operators](#operators)
-- [Reserved Keywords](#reserved-keywords)
-- [Functions](#functions)
-- [Natural Language Syntax](#natural-language-syntax)
-- [Napkin Math](#as-napkin)
-- [Precise Display](#as-precise)
-- [Rates](#rates) — [Rate Arithmetic Widening](#rate-arithmetic-widening)
-- [Date Arithmetic](#dates)
-- [Network Functions](#network)
-- [Storage Functions](#storage)
-- [Growth Functions](#growth)
-- [Validation & Diagnostics](#validation--diagnostics)
+This is the complete and authoritative specification for the CalcMark language. The sidebar table of contents is generated automatically from headings.
 
 ---
 
