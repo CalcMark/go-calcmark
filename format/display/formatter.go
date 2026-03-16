@@ -82,9 +82,15 @@ func (f Formatter) Format(t types.Type) string {
 	case *types.Boolean:
 		return v.String()
 	case *types.Fraction:
-		// Fractions with units delegate to Quantity formatting for unit normalization
-		// (e.g., 287 1/2 pint → ~36 gal). Dimensionless fractions format directly.
+		// Fractions with units: use Unicode fraction if normalization won't change the unit
+		// (e.g., "1/2 tomato" → "½ tomato"). For known physical units where normalization
+		// selects a better display unit (e.g., 287/2 pint → ~18 gal), delegate to
+		// FormatQuantity which handles auto-scaling.
 		if v.Unit != "" {
+			_, normUnit := NormalizeForDisplay(v.ToDecimal(), v.Unit)
+			if f.cfg.UnicodeFractions && normUnit == v.Unit {
+				return FormatFractionUnicode(v)
+			}
 			return f.FormatQuantity(&types.Quantity{Value: v.ToDecimal(), Unit: v.Unit})
 		}
 		if f.cfg.UnicodeFractions {
