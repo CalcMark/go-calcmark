@@ -18,14 +18,11 @@ func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, params *protocol.Sig
 		return nil, nil
 	}
 
-	snap := ds.getSnapshot()
-	if snap == nil {
-		return nil, nil
-	}
+	source := ds.getSource()
 
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)
-	lineText := getLineText(snap.Source, line)
+	lineText := getLineText(source, line)
 
 	funcName, paramIdx := extractFunctionContext(lineText, col)
 	if funcName == "" {

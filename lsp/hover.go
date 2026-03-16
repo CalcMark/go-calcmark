@@ -24,9 +24,10 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 		return nil, nil
 	}
 
+	source := ds.getSource()
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)
-	lineText := getLineText(snap.Source, line)
+	lineText := getLineText(source, line)
 
 	// Extract the word under the cursor
 	word := extractWordAt(lineText, col)
@@ -116,21 +117,18 @@ func (s *Server) textDocumentDefinition(_ *glsp.Context, params *protocol.Defini
 		return nil, nil
 	}
 
-	snap := ds.getSnapshot()
-	if snap == nil || snap.Document == nil {
-		return nil, nil
-	}
+	source := ds.getSource()
 
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)
-	lineText := getLineText(snap.Source, line)
+	lineText := getLineText(source, line)
 	word := extractWordAt(lineText, col)
 	if word == "" {
 		return nil, nil
 	}
 
 	// Search for the assignment line where this variable is defined
-	lines := strings.Split(snap.Source, "\n")
+	lines := strings.Split(source, "\n")
 	for i, l := range lines {
 		trimmed := strings.TrimSpace(l)
 		// Check if line is an assignment: varName = ...
@@ -159,12 +157,10 @@ func (s *Server) textDocumentDocumentSymbol(_ *glsp.Context, params *protocol.Do
 	}
 
 	snap := ds.getSnapshot()
-	if snap == nil {
-		return nil, nil
-	}
+	source := ds.getSource()
 
 	var symbols []protocol.DocumentSymbol
-	lines := strings.Split(snap.Source, "\n")
+	lines := strings.Split(source, "\n")
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)

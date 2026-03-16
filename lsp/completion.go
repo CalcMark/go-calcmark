@@ -20,14 +20,14 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	}
 
 	snap := ds.getSnapshot()
-	if snap == nil {
-		return nil, nil
-	}
+
+	// Use latest source text (not snapshot — snapshot may be stale during debounce)
+	source := ds.getSource()
 
 	// Get the current line text for context-sensitive filtering
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)
-	lineText := getLineText(snap.Source, line)
+	lineText := getLineText(source, line)
 
 	// Determine prefix (text before cursor on this line, back to last non-identifier char)
 	prefix := extractPrefix(lineText, col)

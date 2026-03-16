@@ -44,6 +44,7 @@ type DocumentSnapshot struct {
 type documentState struct {
 	mu       sync.RWMutex
 	snapshot *DocumentSnapshot
+	source   string             // latest source text (updated immediately, not debounced)
 	cancel   context.CancelFunc // cancel in-flight evaluation
 	timer    *time.Timer        // debounce timer
 }
@@ -58,6 +59,19 @@ func (ds *documentState) setSnapshot(snap *DocumentSnapshot) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	ds.snapshot = snap
+}
+
+// getSource returns the latest source text (always up-to-date, even during debounce).
+func (ds *documentState) getSource() string {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	return ds.source
+}
+
+func (ds *documentState) setSource(src string) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	ds.source = src
 }
 
 // Server is the CalcMark LSP server.

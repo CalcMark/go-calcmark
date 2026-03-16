@@ -36,6 +36,7 @@ func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpen
 	debugLog("didOpen: evaluated, diagnostics=%d", len(snap.Diagnostics))
 
 	ds := &documentState{}
+	ds.setSource(source)
 	ds.setSnapshot(snap)
 
 	s.mu.Lock()
@@ -67,13 +68,17 @@ func (s *Server) textDocumentDidChange(ctx *glsp.Context, params *protocol.DidCh
 		return nil
 	}
 
+	// Store source immediately so read-only requests (completion, hover,
+	// signature help) always see the latest text — even during debounce.
+	ds.setSource(source)
+
 	// Cancel any in-flight evaluation
 	ds.mu.Lock()
 	if ds.cancel != nil {
 		ds.cancel()
 	}
 
-	// Debounce: reset timer
+	// Debounce: reset timer for evaluation (parsing, diagnostics, variable state)
 	if ds.timer != nil {
 		ds.timer.Stop()
 	}
