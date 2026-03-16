@@ -103,12 +103,23 @@ type Frontmatter struct {
 	// globalKeys preserves insertion order of global variable keys.
 	globalKeys []string
 
+	// Extra contains non-CalcMark frontmatter keys (e.g., title, author)
+	// preserved in document order. Values are the raw YAML-parsed types
+	// (string, int, float64, []any, map[string]any).
+	Extra []ExtraField
+
 	// rawSource preserves the exact frontmatter text (including --- delimiters)
 	// as it appeared in the original document. This allows Serialize() to return
 	// the user's formatting rather than reconstructed YAML, enabling natural
 	// editing of frontmatter lines (Enter, whitespace, etc.) in the TUI editor.
 	// Cleared on programmatic modification (SetGlobal, SetExchangeRate).
 	rawSource string
+}
+
+// ExtraField holds a non-CalcMark frontmatter key-value pair.
+type ExtraField struct {
+	Key   string
+	Value any // string, int, float64, []any, map[string]any
 }
 
 // validUnitCategories maps lowercase category names to their canonical form.
@@ -669,6 +680,23 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.Measurement = mc
 	}
 
+	// Capture non-CalcMark frontmatter keys in document order.
+	knownKeys := map[string]bool{
+		"exchange": true, "globals": true, "scale": true,
+		"convert_to": true, "measurement": true,
+	}
+	extraOrder := extractYAMLTopLevelKeyOrder(yamlContent)
+	var rawMap map[string]any
+	_ = yaml.Unmarshal([]byte(yamlContent), &rawMap)
+	for _, key := range extraOrder {
+		if knownKeys[key] {
+			continue
+		}
+		if val, ok := rawMap[key]; ok {
+			fm.Extra = append(fm.Extra, ExtraField{Key: key, Value: val})
+		}
+	}
+
 	// Calculate remaining source (after closing delimiter)
 	remaining := ""
 	if closeIdx+1 < len(lines) {
@@ -678,30 +706,36 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	return fm, remaining, nil
 }
 
-// extractYAMLKeyOrder extracts the key ordering for a nested map under a
-// top-level key from YAML content. Uses yaml.v3's Node API which preserves
-// document order. Returns keys in the order they appear in the YAML source.
-func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
+// parseYAMLMapping parses YAML content and returns the root mapping node.
+// Returns nil if the content is empty, invalid, or not a mapping.
+func parseYAMLMapping(yamlContent string) *yaml.Node {
 	var root yaml.Node
 	if err := yaml.Unmarshal([]byte(yamlContent), &root); err != nil {
 		return nil
 	}
-
-	// root is a Document node containing a Mapping node
 	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
 		return nil
 	}
-	mapping := root.Content[0]
-	if mapping.Kind != yaml.MappingNode {
+	m := root.Content[0]
+	if m.Kind != yaml.MappingNode {
+		return nil
+	}
+	return m
+}
+
+// extractYAMLKeyOrder extracts the key ordering for a nested map under a
+// top-level key from YAML content. Uses yaml.v3's Node API which preserves
+// document order. Returns keys in the order they appear in the YAML source.
+func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
+	mapping := parseYAMLMapping(yamlContent)
+	if mapping == nil {
 		return nil
 	}
 
-	// Find the top-level key (e.g., "exchange" or "globals")
 	for i := 0; i < len(mapping.Content)-1; i += 2 {
 		keyNode := mapping.Content[i]
 		valueNode := mapping.Content[i+1]
 		if keyNode.Value == topKey && valueNode.Kind == yaml.MappingNode {
-			// Extract keys in document order
 			var keys []string
 			for j := 0; j < len(valueNode.Content)-1; j += 2 {
 				keys = append(keys, valueNode.Content[j].Value)
@@ -710,6 +744,19 @@ func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
 		}
 	}
 	return nil
+}
+
+// extractYAMLTopLevelKeyOrder returns all top-level YAML keys in document order.
+func extractYAMLTopLevelKeyOrder(yamlContent string) []string {
+	mapping := parseYAMLMapping(yamlContent)
+	if mapping == nil {
+		return nil
+	}
+	var keys []string
+	for i := 0; i < len(mapping.Content)-1; i += 2 {
+		keys = append(keys, mapping.Content[i].Value)
+	}
+	return keys
 }
 
 // isValidIdentifier checks if a string is a valid CalcMark identifier.

@@ -616,3 +616,43 @@ y = x * 2
 		t.Error("Heading should appear before first calcmark fence, not inside it")
 	}
 }
+
+// TestMarkdownFormatterFrontmatterPreservesExtraFields tests that non-CalcMark
+// frontmatter fields (title, tags) are preserved in markdown output.
+func TestMarkdownFormatterFrontmatterPreservesExtraFields(t *testing.T) {
+	source := `---
+title: Guacamole Recipe
+scale: 4
+globals:
+  servings: 4
+---
+avocados = 3
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &MarkdownFormatter{}
+	opts := Options{FrontmatterAsCodeFence: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// The frontmatter should preserve the title field
+	if !strings.Contains(output, "title") {
+		t.Error("Expected markdown output to preserve 'title' frontmatter field")
+	}
+	if !strings.Contains(output, "Guacamole Recipe") {
+		t.Error("Expected markdown output to preserve title value")
+	}
+}
