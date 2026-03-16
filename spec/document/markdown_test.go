@@ -113,8 +113,7 @@ func TestMarkdownRawHTMLBlocks(t *testing.T) {
 	}
 }
 
-func TestMarkdownGFMTableNotRendered(t *testing.T) {
-	// GFM tables should not render as HTML tables (CommonMark only)
+func TestMarkdownGFMTableRendered(t *testing.T) {
 	source := []string{
 		"| Header | Value |",
 		"|--------|-------|",
@@ -124,11 +123,40 @@ func TestMarkdownGFMTableNotRendered(t *testing.T) {
 	block := NewTextBlock(source)
 	html := block.Render()
 
-	if strings.Contains(html, "<table") {
-		t.Error("GFM tables must not render as <table> (CommonMark only)")
+	if !strings.Contains(html, "<table") {
+		t.Error("GFM tables must render as <table>")
 	}
-	if strings.Contains(html, "<th") {
-		t.Error("GFM tables must not render <th> elements")
+	if !strings.Contains(html, "<th") {
+		t.Error("GFM tables must render <th> elements for header row")
+	}
+	if !strings.Contains(html, "<td") {
+		t.Error("GFM tables must render <td> elements for data rows")
+	}
+	if !strings.Contains(html, "Header") {
+		t.Error("Table header content must be preserved")
+	}
+	if !strings.Contains(html, "A") || !strings.Contains(html, "1") {
+		t.Error("Table cell content must be preserved")
+	}
+}
+
+func TestMarkdownGFMTableWithInterpolation(t *testing.T) {
+	// Tables with {{variable}} interpolation must render as HTML tables
+	source := []string{
+		"| Metric | Value |",
+		"|--------|-------|",
+		"| Revenue | $1M |",
+		"| Cost | $500K |",
+	}
+
+	block := NewTextBlock(source)
+	html := block.Render()
+
+	if !strings.Contains(html, "<table") {
+		t.Error("Table with data must render as <table>")
+	}
+	if !strings.Contains(html, "Revenue") {
+		t.Error("Table must contain Revenue cell")
 	}
 }
 
