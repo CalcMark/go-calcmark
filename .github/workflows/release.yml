@@ -33,10 +33,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
       - name: Notify calcmark-lark
-      if: "!contains(github.ref_name, '-')"
-      uses: peter-evans/repository-dispatch@v3
-      with:
-        token: ${{ secrets.LARK_DISPATCH_TOKEN }}
-        repository: CalcMark/calcmark-lark
-        event-type: go-calcmark-release
-        client-payload: '{"tag": "${{ github.ref_name }}"}'
+        if: "!contains(github.ref_name, '-')"
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.LARK_DISPATCH_TOKEN }}
+          repository: CalcMark/calcmark-lark
+          event-type: go-calcmark-release
+          client-payload: '{"tag": "${{ github.ref_name }}"}'
