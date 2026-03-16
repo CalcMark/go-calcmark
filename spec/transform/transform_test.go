@@ -620,3 +620,195 @@ func TestWouldConvert_Number(t *testing.T) {
 		t.Error("expected number to skip conversion")
 	}
 }
+
+// --- Fraction scaling tests ---
+
+func newFraction(t *testing.T, num, denom int64, unit string) *types.Fraction {
+	t.Helper()
+	f, err := types.NewFraction(num, denom)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Unit = unit
+	return f
+}
+
+func TestApply_ScaleFractionWithCustomUnit(t *testing.T) {
+	// 1/2 tomato × 4 = 2 tomato
+	f := newFraction(t, 1, 2, "tomato")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4), UnitCategories: []string{"Custom"}}
+
+	result := Apply(f, scale, nil)
+	frac, ok := result.(*types.Fraction)
+	if !ok {
+		t.Fatalf("expected *types.Fraction, got %T", result)
+	}
+	if frac.String() != "2 tomato" {
+		t.Errorf("expected '2 tomato', got %q", frac.String())
+	}
+}
+
+func TestApply_ScaleFractionWithKnownUnit(t *testing.T) {
+	// 1/3 cup × 4 = 4/3 cup = "1 1/3 cup"
+	f := newFraction(t, 1, 3, "cup")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4), UnitCategories: []string{"Volume"}}
+
+	result := Apply(f, scale, nil)
+	frac, ok := result.(*types.Fraction)
+	if !ok {
+		t.Fatalf("expected *types.Fraction, got %T", result)
+	}
+	if frac.String() != "1 1/3 cup" {
+		t.Errorf("expected '1 1/3 cup', got %q", frac.String())
+	}
+}
+
+func TestApply_FractionNotScaledWithoutCategory(t *testing.T) {
+	// 1/2 cup should NOT scale when only Mass is in categories
+	f := newFraction(t, 1, 2, "cup")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4), UnitCategories: []string{"Mass"}}
+
+	result := Apply(f, scale, nil)
+	frac := result.(*types.Fraction)
+	if frac.String() != "1/2 cup" {
+		t.Errorf("expected '1/2 cup' unchanged, got %q", frac.String())
+	}
+}
+
+func TestApply_DimensionlessFractionScaledWithNumber(t *testing.T) {
+	// 1/4 × 4 = 1 when Number in categories
+	f := newFraction(t, 1, 4, "")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4), UnitCategories: []string{"Number"}}
+
+	result := Apply(f, scale, nil)
+	frac, ok := result.(*types.Fraction)
+	if !ok {
+		t.Fatalf("expected *types.Fraction, got %T", result)
+	}
+	if frac.String() != "1" {
+		t.Errorf("expected '1', got %q", frac.String())
+	}
+}
+
+func TestApply_DimensionlessFractionImmuneByDefault(t *testing.T) {
+	// 1/4 should NOT scale without Number category
+	f := newFraction(t, 1, 4, "")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4), UnitCategories: []string{"Mass"}}
+
+	result := Apply(f, scale, nil)
+	frac := result.(*types.Fraction)
+	if frac.String() != "1/4" {
+		t.Errorf("expected '1/4' unchanged, got %q", frac.String())
+	}
+}
+
+func TestApply_FractionDoesNotMutateOriginal(t *testing.T) {
+	original := newFraction(t, 1, 2, "tomato")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(4), UnitCategories: []string{"Custom"}}
+
+	Apply(original, scale, nil)
+
+	if original.String() != "1/2 tomato" {
+		t.Errorf("original should not be mutated, got %q", original.String())
+	}
+}
+
+func TestApply_FractionAllCategory(t *testing.T) {
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(3), UnitCategories: []string{"All"}}
+
+	// Fraction with custom unit
+	f := newFraction(t, 1, 2, "bananas")
+	result := Apply(f, scale, nil)
+	frac := result.(*types.Fraction)
+	if frac.String() != "1 1/2 bananas" {
+		t.Errorf("expected '1 1/2 bananas', got %q", frac.String())
+	}
+}
+
+func TestApply_FractionConvertTo(t *testing.T) {
+	// 1/2 cups with convert_to: si should become ~0.118 liter as a Quantity
+	f := newFraction(t, 1, 2, "cups")
+	convertTo := &document.ConvertToConfig{System: "si"}
+
+	result := Apply(f, nil, convertTo)
+	qty, ok := result.(*types.Quantity)
+	if !ok {
+		t.Fatalf("expected *types.Quantity after convert_to, got %T", result)
+	}
+	got, _ := qty.Value.Float64()
+	if math.Abs(got-0.118) > 0.01 {
+		t.Errorf("expected ~0.118 liter, got %f", got)
+	}
+	if qty.Unit != "liter" {
+		t.Errorf("expected unit 'liter', got %q", qty.Unit)
+	}
+}
+
+func TestApply_FractionCustomUnitNoConvert(t *testing.T) {
+	// Custom units like "tomato" cannot be converted
+	f := newFraction(t, 1, 2, "tomato")
+	convertTo := &document.ConvertToConfig{System: "si"}
+
+	result := Apply(f, nil, convertTo)
+	// Should remain a Fraction since custom units can't convert
+	frac, ok := result.(*types.Fraction)
+	if !ok {
+		t.Fatalf("expected *types.Fraction for custom unit, got %T", result)
+	}
+	if frac.String() != "1/2 tomato" {
+		t.Errorf("expected '1/2 tomato' unchanged, got %q", frac.String())
+	}
+}
+
+func TestWouldScale_FractionWithCategory(t *testing.T) {
+	f := newFraction(t, 1, 3, "cup")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(2), UnitCategories: []string{"Volume"}}
+	if !WouldScale(f, scale) {
+		t.Error("expected WouldScale=true for fraction with matching category")
+	}
+}
+
+func TestWouldScale_FractionWithoutCategory(t *testing.T) {
+	f := newFraction(t, 1, 3, "cup")
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(2), UnitCategories: []string{"Mass"}}
+	if WouldScale(f, scale) {
+		t.Error("expected WouldScale=false for fraction without matching category")
+	}
+}
+
+func TestWouldScale_DimensionlessFraction(t *testing.T) {
+	f := newFraction(t, 1, 4, "")
+
+	// Without Number category
+	scale := &document.ScaleConfig{Factor: decimal.NewFromInt(2), UnitCategories: []string{"Mass"}}
+	if WouldScale(f, scale) {
+		t.Error("expected WouldScale=false for dimensionless fraction without Number")
+	}
+
+	// With Number category
+	scale = &document.ScaleConfig{Factor: decimal.NewFromInt(2), UnitCategories: []string{"Number"}}
+	if !WouldScale(f, scale) {
+		t.Error("expected WouldScale=true for dimensionless fraction with Number")
+	}
+}
+
+func TestWouldConvert_Fraction(t *testing.T) {
+	// Known unit should report would convert
+	f := newFraction(t, 1, 2, "cups")
+	convertTo := &document.ConvertToConfig{System: "si"}
+	if !WouldConvert(f, convertTo) {
+		t.Error("expected WouldConvert=true for fraction with convertible unit")
+	}
+
+	// Custom unit should not convert
+	custom := newFraction(t, 1, 2, "tomato")
+	if WouldConvert(custom, convertTo) {
+		t.Error("expected WouldConvert=false for fraction with custom unit")
+	}
+
+	// Dimensionless should not convert
+	bare := newFraction(t, 1, 4, "")
+	if WouldConvert(bare, convertTo) {
+		t.Error("expected WouldConvert=false for dimensionless fraction")
+	}
+}

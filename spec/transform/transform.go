@@ -3,6 +3,7 @@
 package transform
 
 import (
+	"math/big"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -50,6 +51,30 @@ func Apply(result types.Type, scale *document.ScaleConfig, convertTo *document.C
 		}
 		return result
 
+	case *types.Fraction:
+		// Fractions support scaling. convert_to requires decimal precision,
+		// so convert to Quantity for unit conversion when needed.
+		out := applyScaleFraction(cloneFraction(v), scale)
+		if convertTo != nil {
+			switch scaled := out.(type) {
+			case *types.Fraction:
+				if scaled.Unit != "" {
+					qty := &types.Quantity{Value: scaled.ToDecimal(), Unit: scaled.Unit, IsNapkin: scaled.IsNapkin}
+					// Guard: only degrade Fraction to Quantity if conversion will
+					// actually change the unit. Without this, fractions already in
+					// the target system would lose exact representation.
+					if wouldConvertQuantity(qty, convertTo) {
+						return applyConvertToQuantity(qty, convertTo)
+					}
+				}
+			case *types.Quantity:
+				// Scaling exceeded computation limits and degraded to Quantity.
+				// Still apply convert_to so the unit is properly converted.
+				return applyConvertToQuantity(scaled, convertTo)
+			}
+		}
+		return out
+
 	default:
 		// Duration, Boolean, Date, Time, Percentage — unchanged
 		return result
@@ -71,6 +96,12 @@ func WouldScale(result types.Type, scale *document.ScaleConfig) bool {
 		return categoryMatches("Currency", scale.UnitCategories)
 	case *types.Number:
 		return categoryMatches("Number", scale.UnitCategories)
+	case *types.Fraction:
+		if v.Unit != "" {
+			category := units.CategoryForUnit(v.Unit)
+			return categoryMatches(category, scale.UnitCategories)
+		}
+		return categoryMatches("Number", scale.UnitCategories)
 	default:
 		return false
 	}
@@ -91,6 +122,47 @@ func applyScaleQuantity(q *types.Quantity, scale *document.ScaleConfig) *types.Q
 
 	q.Value = q.Value.Mul(scale.Factor)
 	return q
+}
+
+// applyScaleFraction multiplies a fraction's value by the scale factor.
+// Returns types.Type because the result may degrade to Quantity/Number
+// if the scaled value exceeds computation limits.
+func applyScaleFraction(f *types.Fraction, scale *document.ScaleConfig) types.Type {
+	if scale == nil || len(scale.UnitCategories) == 0 {
+		return f
+	}
+
+	var category string
+	if f.Unit != "" {
+		category = units.CategoryForUnit(f.Unit)
+	} else {
+		category = "Number"
+	}
+	if !categoryMatches(category, scale.UnitCategories) {
+		return f
+	}
+
+	factorRat := scale.Factor.Rat()
+	f.Value = new(big.Rat).Mul(f.Value, factorRat)
+
+	// Safety: if scaling exceeded computation limits, fall back to decimal.
+	if f.ExceedsComputationLimit() {
+		d := f.ToDecimal()
+		if f.Unit != "" {
+			return &types.Quantity{Value: d, Unit: f.Unit, IsNapkin: f.IsNapkin}
+		}
+		return types.NewNumber(d)
+	}
+	return f
+}
+
+// cloneFraction creates a deep copy of a Fraction so transforms don't mutate the original.
+func cloneFraction(f *types.Fraction) *types.Fraction {
+	return &types.Fraction{
+		Value:    new(big.Rat).Set(f.Value),
+		IsNapkin: f.IsNapkin,
+		Unit:     f.Unit,
+	}
 }
 
 // applyConvertToQuantity converts a quantity to the target measurement system.
@@ -212,6 +284,12 @@ func WouldConvert(result types.Type, convertTo *document.ConvertToConfig) bool {
 			return false
 		}
 		return wouldConvertQuantity(v.Amount, convertTo)
+	case *types.Fraction:
+		if v.Unit == "" {
+			return false
+		}
+		qty := &types.Quantity{Value: v.ToDecimal(), Unit: v.Unit}
+		return wouldConvertQuantity(qty, convertTo)
 	default:
 		return false
 	}
