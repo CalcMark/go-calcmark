@@ -6,23 +6,14 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/spec/features"
 )
 
-// Suggestion represents an autocompletion suggestion.
-type Suggestion struct {
-	Name         string // Display name (may include synonyms for display)
-	Category     string // Category (function, unit, variable, etc.)
-	Description  string // Brief description
-	Syntax       string // Syntax example
-	InsertText   string // Actual text to insert (without synonyms/formatting)
-	SortCategory string // Override category for sorting (e.g., NL rows use parent fn category)
-}
+// Suggestion is an alias for the shared suggestion type in spec/features.
+type Suggestion = features.Suggestion
 
-// SuggestionSource provides suggestions for a given prefix.
-type SuggestionSource interface {
-	// GetSuggestions returns suggestions matching the given prefix.
-	GetSuggestions(prefix string) []Suggestion
-}
+// SuggestionSource is an alias for the shared interface in spec/features.
+type SuggestionSource = features.SuggestionSource
 
 // AutosuggestState holds the state for the autosuggestion component.
 type AutosuggestState struct {
@@ -144,39 +135,5 @@ func RenderDropdownSuggestions(state AutosuggestState, maxItems int, style Autos
 	return b.String()
 }
 
-// FilterSuggestions returns suggestions that match the given prefix.
-// This is a pure helper function for suggestion sources.
-func FilterSuggestions(suggestions []Suggestion, prefix string) []Suggestion {
-	if prefix == "" {
-		return suggestions
-	}
-
-	prefix = strings.ToLower(prefix)
-	var matches []Suggestion
-
-	for _, s := range suggestions {
-		if strings.HasPrefix(strings.ToLower(s.Name), prefix) {
-			matches = append(matches, s)
-		}
-	}
-
-	return matches
-}
-
-// VariableSuggestionSource provides variable name suggestions.
-type VariableSuggestionSource struct {
-	Variables map[string]string // variable name -> formatted value
-}
-
-// GetSuggestions implements SuggestionSource for variables.
-func (v *VariableSuggestionSource) GetSuggestions(prefix string) []Suggestion {
-	var suggestions []Suggestion
-	for name, value := range v.Variables {
-		suggestions = append(suggestions, Suggestion{
-			Name:        name,
-			Category:    "variable",
-			Description: value,
-		})
-	}
-	return FilterSuggestions(suggestions, prefix)
-}
+// FilterSuggestions delegates to the shared implementation in spec/features.
+var FilterSuggestions = features.FilterSuggestions

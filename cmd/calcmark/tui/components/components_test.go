@@ -324,28 +324,6 @@ func TestRenderPinnedPanelScrolling(t *testing.T) {
 	}
 }
 
-func TestVariableSuggestionSource(t *testing.T) {
-	source := &VariableSuggestionSource{
-		Variables: map[string]string{
-			"alpha":   "1",
-			"beta":    "2",
-			"average": "50",
-		},
-	}
-
-	// All suggestions
-	all := source.GetSuggestions("")
-	if len(all) != 3 {
-		t.Errorf("Expected 3 suggestions, got %d", len(all))
-	}
-
-	// Filtered
-	filtered := source.GetSuggestions("a")
-	if len(filtered) != 2 { // alpha, average
-		t.Errorf("Expected 2 suggestions for 'a', got %d", len(filtered))
-	}
-}
-
 func TestCleanErrorMessage(t *testing.T) {
 	tests := []struct {
 		name  string
