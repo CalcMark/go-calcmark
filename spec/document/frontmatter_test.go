@@ -495,6 +495,88 @@ description: Monthly budget
 	}
 }
 
+func TestParseFrontmatter_ExtraFieldsCaptured(t *testing.T) {
+	source := `---
+title: Budget Report
+exchange:
+  USD_EUR: 0.92
+date: 2026-03-09
+globals:
+  tax: "0.08"
+description: Monthly budget
+tags:
+  - finance
+  - planning
+---`
+
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// CalcMark keys should still be parsed correctly
+	if len(fm.Exchange) != 1 {
+		t.Errorf("expected 1 exchange rate, got %d", len(fm.Exchange))
+	}
+	if len(fm.Globals) != 1 {
+		t.Errorf("expected 1 global, got %d", len(fm.Globals))
+	}
+
+	// Extra fields should capture non-CalcMark keys in document order
+	if len(fm.Extra) != 4 {
+		t.Fatalf("expected 4 extra fields, got %d: %+v", len(fm.Extra), fm.Extra)
+	}
+
+	if fm.Extra[0].Key != "title" {
+		t.Errorf("extra[0] key = %q, want \"title\"", fm.Extra[0].Key)
+	}
+	if fm.Extra[0].Value != "Budget Report" {
+		t.Errorf("extra[0] value = %v, want \"Budget Report\"", fm.Extra[0].Value)
+	}
+
+	if fm.Extra[1].Key != "date" {
+		t.Errorf("extra[1] key = %q, want \"date\"", fm.Extra[1].Key)
+	}
+
+	if fm.Extra[2].Key != "description" {
+		t.Errorf("extra[2] key = %q, want \"description\"", fm.Extra[2].Key)
+	}
+
+	if fm.Extra[3].Key != "tags" {
+		t.Errorf("extra[3] key = %q, want \"tags\"", fm.Extra[3].Key)
+	}
+}
+
+func TestParseFrontmatter_ExtraFieldsList(t *testing.T) {
+	source := `---
+title: Hello
+items:
+  - one
+  - two
+---`
+
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(fm.Extra) != 2 {
+		t.Fatalf("expected 2 extra fields, got %d", len(fm.Extra))
+	}
+
+	if fm.Extra[0].Key != "title" || fm.Extra[0].Value != "Hello" {
+		t.Errorf("extra[0] = {%q, %v}, want {\"title\", \"Hello\"}", fm.Extra[0].Key, fm.Extra[0].Value)
+	}
+
+	items, ok := fm.Extra[1].Value.([]any)
+	if !ok {
+		t.Fatalf("extra[1] value should be []any, got %T", fm.Extra[1].Value)
+	}
+	if len(items) != 2 {
+		t.Errorf("expected 2 items, got %d", len(items))
+	}
+}
+
 func TestParseFrontmatter_InvalidGlobalName(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -50,6 +50,13 @@ type TemplateFrontmatter struct {
 	Exchange  []TemplateExchange
 	Scale     string // e.g. "2x" or "0.5x [Length, Mass]"
 	ConvertTo string // e.g. "imperial" or "si [Length]"
+	Extra     []TemplateExtra
+}
+
+// TemplateExtra represents a non-CalcMark frontmatter field
+type TemplateExtra struct {
+	Key   string
+	Value string // formatted for display
 }
 
 // TemplateGlobal represents a global variable for template rendering
@@ -136,8 +143,16 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			tfm.ConvertTo = s
 		}
 
+		// Add extra (non-CalcMark) frontmatter fields
+		for _, ef := range fm.Extra {
+			tfm.Extra = append(tfm.Extra, TemplateExtra{
+				Key:   ef.Key,
+				Value: formatExtraValue(ef.Value),
+			})
+		}
+
 		// Only set if there's content
-		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 || tfm.Scale != "" || tfm.ConvertTo != "" {
+		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 || tfm.Scale != "" || tfm.ConvertTo != "" || len(tfm.Extra) > 0 {
 			data.Frontmatter = tfm
 		}
 	}
@@ -187,4 +202,26 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	}
 
 	return tmpl.Execute(w, data)
+}
+
+// formatExtraValue converts an arbitrary YAML value to a display string.
+func formatExtraValue(v any) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case int:
+		return fmt.Sprintf("%d", val)
+	case float64:
+		return fmt.Sprintf("%g", val)
+	case bool:
+		return fmt.Sprintf("%t", val)
+	case []any:
+		parts := make([]string, len(val))
+		for i, item := range val {
+			parts[i] = fmt.Sprintf("%v", item)
+		}
+		return strings.Join(parts, ", ")
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }

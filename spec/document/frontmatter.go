@@ -103,12 +103,23 @@ type Frontmatter struct {
 	// globalKeys preserves insertion order of global variable keys.
 	globalKeys []string
 
+	// Extra contains non-CalcMark frontmatter keys (e.g., title, author)
+	// preserved in document order. Values are the raw YAML-parsed types
+	// (string, int, float64, []any, map[string]any).
+	Extra []ExtraField
+
 	// rawSource preserves the exact frontmatter text (including --- delimiters)
 	// as it appeared in the original document. This allows Serialize() to return
 	// the user's formatting rather than reconstructed YAML, enabling natural
 	// editing of frontmatter lines (Enter, whitespace, etc.) in the TUI editor.
 	// Cleared on programmatic modification (SetGlobal, SetExchangeRate).
 	rawSource string
+}
+
+// ExtraField holds a non-CalcMark frontmatter key-value pair.
+type ExtraField struct {
+	Key   string
+	Value any // string, int, float64, []any, map[string]any
 }
 
 // validUnitCategories maps lowercase category names to their canonical form.
@@ -669,6 +680,23 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.Measurement = mc
 	}
 
+	// Capture non-CalcMark frontmatter keys in document order.
+	knownKeys := map[string]bool{
+		"exchange": true, "globals": true, "scale": true,
+		"convert_to": true, "measurement": true,
+	}
+	extraOrder := extractYAMLTopLevelKeyOrder(yamlContent)
+	var rawMap map[string]any
+	_ = yaml.Unmarshal([]byte(yamlContent), &rawMap)
+	for _, key := range extraOrder {
+		if knownKeys[key] {
+			continue
+		}
+		if val, ok := rawMap[key]; ok {
+			fm.Extra = append(fm.Extra, ExtraField{Key: key, Value: val})
+		}
+	}
+
 	// Calculate remaining source (after closing delimiter)
 	remaining := ""
 	if closeIdx+1 < len(lines) {
@@ -710,6 +738,26 @@ func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
 		}
 	}
 	return nil
+}
+
+// extractYAMLTopLevelKeyOrder returns all top-level YAML keys in document order.
+func extractYAMLTopLevelKeyOrder(yamlContent string) []string {
+	var root yaml.Node
+	if err := yaml.Unmarshal([]byte(yamlContent), &root); err != nil {
+		return nil
+	}
+	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
+		return nil
+	}
+	mapping := root.Content[0]
+	if mapping.Kind != yaml.MappingNode {
+		return nil
+	}
+	var keys []string
+	for i := 0; i < len(mapping.Content)-1; i += 2 {
+		keys = append(keys, mapping.Content[i].Value)
+	}
+	return keys
 }
 
 // isValidIdentifier checks if a string is a valid CalcMark identifier.

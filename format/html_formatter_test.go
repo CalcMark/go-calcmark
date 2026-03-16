@@ -370,6 +370,97 @@ price = @globals.base_price * (1 + @globals.tax_rate)
 	}
 }
 
+// TestHTMLFormatterScaleAndConvertTo tests that scale and convert_to
+// frontmatter directives are rendered in the HTML output.
+func TestHTMLFormatterScaleAndConvertTo(t *testing.T) {
+	source := `---
+scale:
+  factor: 4
+  unit_categories: [Mass, Volume]
+convert_to: si
+---
+flour = 2 cups
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	if err := formatter.Format(&buf, doc, Options{}); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	if !strings.Contains(output, "Scale") {
+		t.Error("Expected HTML to contain Scale heading")
+	}
+	if !strings.Contains(output, "4x") {
+		t.Error("Expected HTML to contain scale factor '4x'")
+	}
+	if !strings.Contains(output, "Convert To") {
+		t.Error("Expected HTML to contain Convert To heading")
+	}
+	if !strings.Contains(output, "si") {
+		t.Error("Expected HTML to contain convert_to value 'si'")
+	}
+}
+
+// TestHTMLFormatterExtraFrontmatter tests that non-CalcMark frontmatter
+// fields (title, tags, etc.) are rendered in the HTML output.
+func TestHTMLFormatterExtraFrontmatter(t *testing.T) {
+	source := `---
+title: Guacamole Recipe
+author: Chef
+globals:
+  servings: 4
+---
+avocados = 3
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	if err := formatter.Format(&buf, doc, Options{}); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Extra fields should appear in the frontmatter section
+	if !strings.Contains(output, "title") {
+		t.Error("Expected HTML to contain 'title' extra field")
+	}
+	if !strings.Contains(output, "Guacamole Recipe") {
+		t.Error("Expected HTML to contain extra field value 'Guacamole Recipe'")
+	}
+	if !strings.Contains(output, "author") {
+		t.Error("Expected HTML to contain 'author' extra field")
+	}
+	if !strings.Contains(output, "Chef") {
+		t.Error("Expected HTML to contain extra field value 'Chef'")
+	}
+	// CalcMark fields should still render
+	if !strings.Contains(output, "Globals") {
+		t.Error("Expected HTML to contain Globals heading")
+	}
+}
+
 // --- Phase 4: Realistic document integration tests (HTML formatter) ---
 
 // renderHTMLFromFile loads a .cm file and renders it through the HTML formatter.
