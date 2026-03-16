@@ -383,6 +383,62 @@ func TestCompletionItems_NLFunctionsIncluded(t *testing.T) {
 	}
 }
 
+// --- Signature help tests ---
+
+func TestExtractFunctionContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		col      int
+		wantFunc string
+		wantIdx  int
+	}{
+		{"after open paren", "accumulate(", 11, "accumulate", 0},
+		{"first param", "accumulate(5%", 13, "accumulate", 0},
+		{"after comma", "accumulate(5%, ", 15, "accumulate", 1},
+		{"second param typing", "accumulate(5%, 2 ye", 19, "accumulate", 1},
+		{"nested deeper", "avg(1, 2, ", 10, "avg", 2},
+		{"no function context", "a = 1 + 1", 9, "", -1},
+		{"empty line", "", 0, "", -1},
+		{"just identifier", "abc", 3, "", -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fn, idx := extractFunctionContext(tt.line, tt.col)
+			if fn != tt.wantFunc {
+				t.Errorf("extractFunctionContext(%q, %d) func = %q, want %q", tt.line, tt.col, fn, tt.wantFunc)
+			}
+			if idx != tt.wantIdx {
+				t.Errorf("extractFunctionContext(%q, %d) paramIdx = %d, want %d", tt.line, tt.col, idx, tt.wantIdx)
+			}
+		})
+	}
+}
+
+func TestSignatureHelpForFunction(t *testing.T) {
+	help := signatureHelpForFunction("avg", 0)
+	if help == nil {
+		t.Fatal("expected signature help for avg, got nil")
+	}
+	if len(help.Signatures) == 0 {
+		t.Fatal("expected at least one signature")
+	}
+	if len(help.Signatures[0].Parameters) == 0 {
+		t.Fatal("expected parameters in signature")
+	}
+	if help.ActiveParameter == nil {
+		t.Fatal("expected active parameter to be set")
+	}
+}
+
+func TestSignatureHelpForUnknownFunction(t *testing.T) {
+	help := signatureHelpForFunction("not_a_function", 0)
+	if help != nil {
+		t.Error("expected nil for unknown function")
+	}
+}
+
 // --- Document symbol tests ---
 
 func TestGetLineText(t *testing.T) {

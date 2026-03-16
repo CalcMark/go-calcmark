@@ -1,6 +1,8 @@
 package lsp
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -9,10 +11,15 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+func debugLog(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "[calcmark-lsp] "+format+"\n", args...)
+}
+
 // textDocumentDidOpen handles the textDocument/didOpen notification.
 func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
 	uri := params.TextDocument.URI
 	source := params.TextDocument.Text
+	debugLog("didOpen: uri=%s len=%d", uri, len(source))
 
 	// Enforce document size limit
 	if len(source) > maxDocumentSize {
@@ -26,6 +33,7 @@ func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpen
 	}
 
 	snap := s.evaluate(source)
+	debugLog("didOpen: evaluated, diagnostics=%d", len(snap.Diagnostics))
 
 	ds := &documentState{}
 	ds.setSnapshot(snap)
@@ -35,6 +43,7 @@ func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpen
 	s.mu.Unlock()
 
 	s.publishDiagnostics(ctx, uri, snap)
+	debugLog("didOpen: published diagnostics")
 	return nil
 }
 

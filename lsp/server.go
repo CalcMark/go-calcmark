@@ -88,6 +88,7 @@ func NewServer() *Server {
 		TextDocumentDidClose:  s.textDocumentDidClose,
 
 		TextDocumentCompletion:     s.textDocumentCompletion,
+		TextDocumentSignatureHelp:  s.textDocumentSignatureHelp,
 		TextDocumentHover:          s.textDocumentHover,
 		TextDocumentDefinition:     s.textDocumentDefinition,
 		TextDocumentDocumentSymbol: s.textDocumentDocumentSymbol,
@@ -119,6 +120,10 @@ func (s *Server) initialize(_ *glsp.Context, params *protocol.InitializeParams) 
 			},
 			CompletionProvider: &protocol.CompletionOptions{
 				TriggerCharacters: []string{},
+			},
+			SignatureHelpProvider: &protocol.SignatureHelpOptions{
+				TriggerCharacters:   []string{"(", ","},
+				RetriggerCharacters: []string{","},
 			},
 			HoverProvider:          &protocol.HoverOptions{},
 			DefinitionProvider:     &protocol.DefinitionOptions{},
