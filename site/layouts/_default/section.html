@@ -23,7 +23,14 @@
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
     <h1>{{ .Title }}<img src="{{ $lark.RelPermalink }}" alt="" class="page-lark" aria-hidden="true"></h1>
     {{ with .Params.summary }}<p class="text-muted">{{ . | markdownify }}</p>{{ end }}
-    {{ with .Params.calcmark_source }}<p class="full-doc-link"><a href="full/">View full document →</a></p>{{ end }}
+    {{ with .Params.calcmark_source }}
+    {{- $larkIcon := resources.Get "images/lark-color.svg" | fingerprint -}}
+    {{- $slug := path.BaseName . -}}
+    <div class="example-actions">
+      <a href="https://lark.calcmark.org/x/{{ $slug }}" class="btn btn-primary btn-lark" target="_blank" rel="noopener"><img src="{{ $larkIcon.RelPermalink }}" alt="" class="btn-lark-icon"> Edit live</a>
+      <span class="example-actions-or">or <a href="full/">view full document</a></span>
+    </div>
+    {{ end }}
     {{ .Content }}
     {{ if .GitInfo }}
     <footer class="page-meta">
