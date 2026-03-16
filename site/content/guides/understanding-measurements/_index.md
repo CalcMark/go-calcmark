@@ -375,8 +375,8 @@ expected_impulse = thruster_impulse in newton-seconds
 {{< /tab >}}
 {{< tab name="Editor" >}}
 ```text
-thruster_impulse = 110 pound-force-seconds    110 pound-force-seconds
-expected_impulse = ... in newton-seconds       489 newton-seconds
+thruster_impulse = 110 pound-force-seconds              110 pound-force-seconds
+expected_impulse = thruster_impulse in newton-seconds    489 newton-seconds
 ```
 {{< /tab >}}
 {{< tab name="JSON" >}}
