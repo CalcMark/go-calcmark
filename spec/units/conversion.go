@@ -140,15 +140,15 @@ var defaultTargetUnits = map[string]string{
 	"Area:si":        "square meter",
 
 	// New physical categories
-	"Force:si":        "newton",
-	"Force:imperial":  "pound-force",
-	"Impulse:si":      "newton-second",
-	"Impulse:imperial": "pound-force-second",
-	"Pressure:si":     "pascal",
-	"Pressure:imperial": "psi",
-	"Acceleration:si":      "m/s^2",
+	"Force:si":              "newton",
+	"Force:imperial":        "pound-force",
+	"Impulse:si":            "newton-second",
+	"Impulse:imperial":      "pound-force-second",
+	"Pressure:si":           "pascal",
+	"Pressure:imperial":     "psi",
+	"Acceleration:si":       "m/s^2",
 	"Acceleration:imperial": "ft/s^2",
-	"Frequency:si":    "hertz",
+	"Frequency:si":          "hertz",
 	// No Frequency:imperial — frequency is universal (hertz everywhere)
 
 	// Imperial/US targets (for convert_to: imperial)

@@ -10,17 +10,17 @@ type SpeedDecomposition struct {
 
 // speedDecompositions maps lowercase speed unit aliases to their Rate components.
 var speedDecompositions = map[string]SpeedDecomposition{
-	"kph":                    {NumeratorUnit: "km", TimeUnit: "hour"},
-	"kmh":                    {NumeratorUnit: "km", TimeUnit: "hour"},
-	"km/h":                   {NumeratorUnit: "km", TimeUnit: "hour"},
-	"kilometers per hour":    {NumeratorUnit: "km", TimeUnit: "hour"},
-	"mph":                    {NumeratorUnit: "mi", TimeUnit: "hour"},
-	"miles per hour":         {NumeratorUnit: "mi", TimeUnit: "hour"},
-	"mps":                    {NumeratorUnit: "m", TimeUnit: "second"},
-	"m/s":                    {NumeratorUnit: "m", TimeUnit: "second"},
-	"meters per second":      {NumeratorUnit: "m", TimeUnit: "second"},
-	"knot":                   {NumeratorUnit: "nmi", TimeUnit: "hour"},
-	"knots":                  {NumeratorUnit: "nmi", TimeUnit: "hour"},
+	"kph":                 {NumeratorUnit: "km", TimeUnit: "hour"},
+	"kmh":                 {NumeratorUnit: "km", TimeUnit: "hour"},
+	"km/h":                {NumeratorUnit: "km", TimeUnit: "hour"},
+	"kilometers per hour": {NumeratorUnit: "km", TimeUnit: "hour"},
+	"mph":                 {NumeratorUnit: "mi", TimeUnit: "hour"},
+	"miles per hour":      {NumeratorUnit: "mi", TimeUnit: "hour"},
+	"mps":                 {NumeratorUnit: "m", TimeUnit: "second"},
+	"m/s":                 {NumeratorUnit: "m", TimeUnit: "second"},
+	"meters per second":   {NumeratorUnit: "m", TimeUnit: "second"},
+	"knot":                {NumeratorUnit: "nmi", TimeUnit: "hour"},
+	"knots":               {NumeratorUnit: "nmi", TimeUnit: "hour"},
 }
 
 // DecomposeSpeedUnit returns the Rate components for a Speed unit.
