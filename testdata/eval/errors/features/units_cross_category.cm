@@ -43,3 +43,28 @@ Temperature and energy measure different properties.
 
 100 celsius + 1000 joules
 50 fahrenheit + 1 kwh
+
+## Force with Frequency
+
+Force and frequency are different physical quantities.
+
+10 newtons + 100 hertz
+5 pound-force + 1 megahertz
+
+## Force with Mass
+
+Force and mass are different dimensions.
+
+10 newtons + 5 kilograms
+
+## Pressure with Length
+
+Pressure and length are incompatible.
+
+1 atmosphere + 10 meters
+
+## Impulse with Force
+
+Impulse (force x time) and force are different categories.
+
+100 newton-seconds + 10 newtons

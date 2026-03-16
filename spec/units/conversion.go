@@ -139,6 +139,18 @@ var defaultTargetUnits = map[string]string{
 	"Power:si":       "watt",
 	"Area:si":        "square meter",
 
+	// New physical categories
+	"Force:si":        "newton",
+	"Force:imperial":  "pound-force",
+	"Impulse:si":      "newton-second",
+	"Impulse:imperial": "pound-force-second",
+	"Pressure:si":     "pascal",
+	"Pressure:imperial": "psi",
+	"Acceleration:si":      "m/s^2",
+	"Acceleration:imperial": "ft/s^2",
+	"Frequency:si":    "hertz",
+	// No Frequency:imperial — frequency is universal (hertz everywhere)
+
 	// Imperial/US targets (for convert_to: imperial)
 	"Length:imperial":      "foot",
 	"Mass:imperial":        "ounce",
@@ -166,6 +178,11 @@ func buildConversionRegistry() map[string]ConversionInfo {
 	addVolumeConversions(r)
 	addTemperatureConversions(r)
 	addSpeedConversions(r)
+	addForceConversions(r)
+	addImpulseConversions(r)
+	addPressureConversions(r)
+	addAccelerationConversions(r)
+	addFrequencyConversions(r)
 	addEnergyConversions(r)
 	addPowerConversions(r)
 	addAreaConversions(r)
@@ -695,4 +712,257 @@ func addDataSizeConversions(r map[string]ConversionInfo) {
 		func(v float64) float64 { return float64(martinlindhe.Datasize(v) * martinlindhe.Tebibit) },
 		func(v float64) float64 { return martinlindhe.Datasize(v).Tebibits() },
 	}, "tibit", "tebibit", "tebibits")
+}
+
+func addForceConversions(r map[string]ConversionInfo) {
+	cat := "Force"
+
+	// Newton (base)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	}, "newton", "newtons")
+
+	// Kilonewton
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v * 1000 },
+		func(v float64) float64 { return v / 1000 },
+	}, "kilonewton", "kilonewtons")
+
+	// Dyne
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.Dyne).Newtons()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.Newton).Dynes()
+		},
+	}, "dyne", "dynes")
+
+	// Kilogram-force (kilopond)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.KilogramForce).Newtons()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.Newton).KilogramForce()
+		},
+	}, "kilogram-force", "kilopond", "kiloponds", "kgf")
+
+	// Pound-force
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.PoundForce).Newtons()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.Newton).PoundForce()
+		},
+	}, "pound-force", "pound-forces", "lbf")
+
+	// Poundal
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.Poundal).Newtons()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Force(v) * martinlindhe.Newton).Poundals()
+		},
+	}, "poundal", "poundals", "pdl")
+}
+
+func addImpulseConversions(r map[string]ConversionInfo) {
+	cat := "Impulse"
+
+	// Newton-second (base) — no martinlindhe Impulse type, manual conversion
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	}, "newton-second", "newton-seconds")
+
+	// Pound-force-second (1 lbf·s = 4.448222 N·s, same factor as pound-force to newton)
+	lbfToNewton := (martinlindhe.Force(1) * martinlindhe.PoundForce).Newtons()
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v * lbfToNewton },
+		func(v float64) float64 { return v / lbfToNewton },
+	}, "pound-force-second", "pound-force-seconds")
+}
+
+func addPressureConversions(r map[string]ConversionInfo) {
+	cat := "Pressure"
+
+	// Pascal (base)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	}, "pascal", "pascals", "pa")
+
+	// Kilopascal
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Kilopascal).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).Kilopascals()
+		},
+	}, "kilopascal", "kilopascals", "kpa")
+
+	// Megapascal
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Megapascal).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).Megapascals()
+		},
+	}, "megapascal", "megapascals", "mpa")
+
+	// Bar
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Bar).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).Bars()
+		},
+	}, "bar", "bars")
+
+	// Millibar
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Millibar).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).Millibars()
+		},
+	}, "millibar", "millibars", "mbar")
+
+	// Atmosphere
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Atmosphere).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).Atmospheres()
+		},
+	}, "atmosphere", "atmospheres", "atm")
+
+	// Torr
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Torr).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).Torrs()
+		},
+	}, "torr", "torrs")
+
+	// PSI (Pounds per Square Inch)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.PoundsPerSquareInch).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).PoundsPerSquareInch()
+		},
+	}, "psi", "pounds per square inch")
+
+	// Inch of Mercury
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.InchOfMercury).Pascals()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Pressure(v) * martinlindhe.Pascal).InchOfMercury()
+		},
+	}, "inch of mercury", "inches of mercury", "inhg")
+}
+
+func addAccelerationConversions(r map[string]ConversionInfo) {
+	cat := "Acceleration"
+
+	// m/s^2 (base)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	}, "m/s^2", "meters per second squared")
+
+	// cm/s^2
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Acceleration(v) * martinlindhe.CentimeterPerSecondSquared).MetersPerSecondSquared()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Acceleration(v) * martinlindhe.MeterPerSecondSquared).CentimetersPerSecondSquared()
+		},
+	}, "cm/s^2", "centimeters per second squared")
+
+	// ft/s^2
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Acceleration(v) * martinlindhe.FootPerSecondSquared).MetersPerSecondSquared()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Acceleration(v) * martinlindhe.MeterPerSecondSquared).FeetPerSecondSquared()
+		},
+	}, "ft/s^2", "feet per second squared")
+
+	// Standard gravity
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Acceleration(v) * martinlindhe.StandardGravity).MetersPerSecondSquared()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Acceleration(v) * martinlindhe.MeterPerSecondSquared).StandardGravity()
+		},
+	}, "standard-gravity", "standard gravity", "standard gravities")
+}
+
+func addFrequencyConversions(r map[string]ConversionInfo) {
+	cat := "Frequency"
+
+	// Hertz (base)
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 { return v },
+		func(v float64) float64 { return v },
+	}, "hertz", "hz")
+
+	// Kilohertz
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Kilohertz).Hertz()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Hertz).Kilohertz()
+		},
+	}, "kilohertz", "khz")
+
+	// Megahertz
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Megahertz).Hertz()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Hertz).Megahertz()
+		},
+	}, "megahertz", "mhz")
+
+	// Gigahertz
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Gigahertz).Hertz()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Hertz).Gigahertz()
+		},
+	}, "gigahertz", "ghz")
+
+	// Terahertz
+	registerUnit(r, ConversionInfo{cat,
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Terahertz).Hertz()
+		},
+		func(v float64) float64 {
+			return (martinlindhe.Frequency(v) * martinlindhe.Hertz).Terahertz()
+		},
+	}, "terahertz", "thz")
 }

@@ -1,0 +1,19 @@
+# Impulse Unit Tests
+
+## Basic impulse values
+impulse1 = 100 newton-seconds
+# Expected: 100 newton-seconds
+
+impulse2 = 50 pound-force-seconds
+# Expected: 50 pound-force-seconds
+
+## Impulse conversions (the NASA Mars Climate Orbiter scenario)
+converted1 = 100 newton-seconds in pound-force-seconds
+# Expected: 22.48
+
+converted2 = 100 pound-force-seconds in newton-seconds
+# Expected: 444.82
+
+## Impulse arithmetic
+total = 50 newton-seconds + 50 newton-seconds
+# Expected: 100 newton-seconds

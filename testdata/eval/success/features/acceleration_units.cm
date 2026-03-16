@@ -1,0 +1,13 @@
+# Acceleration Unit Tests
+# NOTE: Slash-caret notation (m/s^2) and "per" multi-word forms (meters per second squared)
+# are not yet parseable as unit targets due to lexer/parser limitations.
+# Use named aliases: standard-gravity.
+# The conversion registry supports m/s^2, ft/s^2, cm/s^2 internally.
+
+## Basic acceleration values
+a1 = 9.80665 standard-gravity
+# Expected: 9.80665 standard-gravity
+
+## Acceleration arithmetic
+total = 5 standard-gravity + 5 standard-gravity
+# Expected: 10 standard-gravity

@@ -388,6 +388,44 @@ func (l *Lexer) readNumber() Token {
 				// NL syntax keyword, not a unit - backtrack
 				l.pos = savedPos
 			} else {
+				// Check for hyphenated units: "5 pound-force", "100 newton-seconds", "1 kilowatt-hour"
+				if l.currentChar() == '-' {
+					savedPosHyphen := l.pos
+					l.advance() // Skip hyphen
+
+					if l.isIdentifierChar(l.currentChar(), true) {
+						hyphenUnit := l.readIdentifier()
+						hyphenWord := string(hyphenUnit.Value)
+
+						if combined := units.IsHyphenatedUnit(unitStr, hyphenWord); combined != "" {
+							unitStr = combined
+
+							// Check for triple-hyphenated: "pound-force-second"
+							if l.currentChar() == '-' {
+								savedPosHyphen3 := l.pos
+								l.advance() // Skip second hyphen
+
+								if l.isIdentifierChar(l.currentChar(), true) {
+									hyphenUnit3 := l.readIdentifier()
+									hyphenWord3 := string(hyphenUnit3.Value)
+
+									if combined3 := units.IsHyphenatedTripleUnit(unitStr, hyphenWord3); combined3 != "" {
+										unitStr = combined3
+									} else {
+										l.pos = savedPosHyphen3
+									}
+								} else {
+									l.pos = savedPosHyphen3
+								}
+							}
+						} else {
+							l.pos = savedPosHyphen
+						}
+					} else {
+						l.pos = savedPosHyphen
+					}
+				}
+
 				// Check for multi-word units: "1 nautical mile", "5 metric tons", "10 square meters"
 				// Look ahead for a second identifier that might form a multi-word unit
 				if l.currentChar() == ' ' {

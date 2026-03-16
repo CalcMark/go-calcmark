@@ -48,6 +48,6 @@ mode=StateDefault cursorLine=7 cursorCol=0 cursorVisual=7 cursorHighlight=7 scro
 run observe=results
 ----
 -- results:
-Line 5 (---): value=, error="frontmatter: frontmatter: invalid unit category \"Cust\" in scale.unit_categories; valid categories: All, Area, Currency, Custom, DataSize, Energy, Length, Mass, Number, Power, Speed, Temperature, Volume"
+Line 5 (---): value=, error="frontmatter: frontmatter: invalid unit category \"Cust\" in scale.unit_categories; valid categories: Acceleration, All, Area, Currency, Custom, DataSize, Energy, Force, Frequency, Impulse, Length, Mass, Number, Power, Pressure, Speed, Temperature, Volume"
 Line 7 (yield = 2 buns): value=4 buns, error=""
-frontmatterErr: frontmatter: frontmatter: invalid unit category "Cust" in scale.unit_categories; valid categories: All, Area, Currency, Custom, DataSize, Energy, Length, Mass, Number, Power, Speed, Temperature, Volume
+frontmatterErr: frontmatter: frontmatter: invalid unit category "Cust" in scale.unit_categories; valid categories: Acceleration, All, Area, Currency, Custom, DataSize, Energy, Force, Frequency, Impulse, Length, Mass, Number, Power, Pressure, Speed, Temperature, Volume

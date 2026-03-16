@@ -1,0 +1,31 @@
+# Pressure Unit Tests
+
+## Basic pressure values
+p1 = 101325 pascals
+# Expected: 101325 pascals
+
+p2 = 14.7 psi
+# Expected: 14.7 psi
+
+## Pressure conversions
+converted1 = 1 atmosphere in pascals
+# Expected: 101325
+
+converted2 = 1 atmosphere in psi
+# Expected: 14.695
+
+converted3 = 1 bar in pascals
+# Expected: 100000
+
+converted4 = 1 bar in psi
+# Expected: 14.503
+
+converted5 = 760 torr in atmospheres
+# Expected: 1
+
+converted6 = 100 kilopascals in bar
+# Expected: 1
+
+## Pressure arithmetic
+total = 50 pascals + 50 pascals
+# Expected: 100 pascals

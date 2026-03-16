@@ -1,0 +1,25 @@
+# Frequency Unit Tests
+
+## Basic frequency values
+f1 = 2.4 gigahertz
+# Expected: 2.4 gigahertz
+
+f2 = 440 hertz
+# Expected: 440 hertz
+
+## Frequency conversions
+converted1 = 2.4 gigahertz in megahertz
+# Expected: 2400
+
+converted2 = 1 megahertz in kilohertz
+# Expected: 1000
+
+converted3 = 1000 kilohertz in megahertz
+# Expected: 1
+
+converted4 = 1 terahertz in gigahertz
+# Expected: 1000
+
+## Frequency arithmetic
+total = 100 hertz + 100 hertz
+# Expected: 200 hertz
