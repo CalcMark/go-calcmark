@@ -55,12 +55,8 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 		if strings.EqualFold(fn.Name, word) {
 			content := fmt.Sprintf("**%s**\n\n`%s`\n\n%s", fn.Name, fn.Signature, fn.Description)
 			// Check for NL examples in the registry
-			registry := features.NewRegistry()
-			for _, f := range registry.ByCategory(features.CategoryFunction) {
-				if f.Name == fn.Name && f.NLExample != "" {
-					content += fmt.Sprintf("\n\nNL syntax: `%s`", f.NLExample)
-					break
-				}
+			if nlExample := findNLExample(fn.Name); nlExample != "" {
+				content += fmt.Sprintf("\n\nNL syntax: `%s`", nlExample)
 			}
 			return &protocol.Hover{
 				Contents: protocol.MarkupContent{
@@ -276,6 +272,17 @@ func extractWordAt(lineText string, col int) string {
 // isIdentChar returns true if the character can be part of an identifier.
 func isIdentChar(ch byte) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_'
+}
+
+// findNLExample returns the NL example for a function name from the registry, or "".
+func findNLExample(funcName string) string {
+	registry := features.NewRegistry()
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		if f.Name == funcName && f.NLExample != "" {
+			return f.NLExample
+		}
+	}
+	return ""
 }
 
 // isIdentifier returns true if the string is a valid simple identifier.

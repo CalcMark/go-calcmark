@@ -87,9 +87,9 @@ func NewServer() *Server {
 		TextDocumentDidChange: s.textDocumentDidChange,
 		TextDocumentDidClose:  s.textDocumentDidClose,
 
-		TextDocumentCompletion:    s.textDocumentCompletion,
-		TextDocumentHover:         s.textDocumentHover,
-		TextDocumentDefinition:    s.textDocumentDefinition,
+		TextDocumentCompletion:     s.textDocumentCompletion,
+		TextDocumentHover:          s.textDocumentHover,
+		TextDocumentDefinition:     s.textDocumentDefinition,
 		TextDocumentDocumentSymbol: s.textDocumentDocumentSymbol,
 	}
 
