@@ -18,7 +18,7 @@ type JSONFeature struct {
 	Name        string      `json:"name"`
 	Category    string      `json:"category"`
 	Subcategory string      `json:"subcategory,omitempty"` // Grouping within category (e.g., "Math", "Network")
-	Quantity    string      `json:"quantity,omitempty"`     // Unit category (e.g., "Force", "Length"); empty for non-unit features
+	Quantity    string      `json:"quantity,omitempty"`    // Unit category (e.g., "Force", "Length"); empty for non-unit features
 	Syntax      string      `json:"syntax"`
 	Description string      `json:"description"`
 	Aliases     []JSONAlias `json:"aliases,omitempty"`
