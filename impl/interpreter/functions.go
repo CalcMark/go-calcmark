@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"slices"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -13,155 +12,39 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// FunctionDef contains function metadata and implementation in one place.
-// This is the single source of truth for help, autocomplete, and diagnostics.
+// FunctionDef pairs a function name with its implementation.
+// All metadata (description, syntax, params, synonyms, category) lives in
+// spec/features.Feature — the single source of truth for presentation.
 type FunctionDef struct {
-	Name        string   // Primary name (e.g., "avg")
-	Synonyms    []string // Alternative names (e.g., ["average", "mean"])
-	Description string   // Human-readable description
-	Signature   string   // Usage pattern (e.g., "avg(value1, value2, ...)")
-	Category    string   // Grouping: "Math", "Conversion", "Network", "Storage", "Capacity"
+	Name string // Primary name — must match a Feature in spec/features/registry.go
 	// Eval is the function implementation. It receives the interpreter (for evaluating
 	// arguments) and the AST node (for accessing raw arguments when needed).
 	// This field is populated in init() to avoid initialization cycles.
 	Eval func(interp *Interpreter, f *ast.FunctionCall) (types.Type, error)
 }
 
-// BuiltinFunctions is the single source of truth for all CalcMark functions.
-// Adding a function here automatically makes it available in help, autocomplete,
-// and the interpreter. Missing any field will cause a compile-time or test failure.
+// BuiltinFunctions registers all CalcMark function implementations.
+// Metadata (description, params, synonyms) comes from spec/features.Registry.
+// Adding a function here requires a matching Feature in spec/features/registry.go.
 // Note: Eval fields are populated in init() to avoid initialization cycles.
 var BuiltinFunctions = []FunctionDef{
-	// Math functions
-	{
-		Name:        "avg",
-		Synonyms:    []string{"average", "mean"},
-		Description: "Calculate the average of values",
-		Signature:   "avg(value1, value2, ...)",
-		Category:    "Math",
-	},
-	{
-		Name:        "sum",
-		Synonyms:    []string{},
-		Description: "Calculate the sum of values",
-		Signature:   "sum(value1, value2, ...)",
-		Category:    "Math",
-	},
-	{
-		Name:        "sqrt",
-		Synonyms:    []string{},
-		Description: "Calculate square root of a number",
-		Signature:   "sqrt(value)",
-		Category:    "Math",
-	},
-	{
-		Name:        "number",
-		Synonyms:    []string{},
-		Description: "Extract the numeric value from any type",
-		Signature:   "number(value)",
-		Category:    "Math",
-	},
-	{
-		Name:        "accumulate",
-		Synonyms:    []string{},
-		Description: "Accumulate a rate over time (e.g., requests/sec over 1 day)",
-		Signature:   "accumulate(rate, time_period)",
-		Category:    "Math",
-	},
-
-	// Conversion functions
-	{
-		Name:        "convert_rate",
-		Synonyms:    []string{},
-		Description: "Convert rate to different time unit",
-		Signature:   "convert_rate(rate, time_unit)",
-		Category:    "Conversion",
-	},
-
-	// Network functions
-	{
-		Name:        "downtime",
-		Synonyms:    []string{},
-		Description: "Calculate downtime from availability percentage",
-		Signature:   "downtime(availability_percent, time_period)",
-		Category:    "Network",
-	},
-	{
-		Name:        "rtt",
-		Synonyms:    []string{},
-		Description: "Get round-trip time for network scope",
-		Signature:   "rtt(scope)",
-		Category:    "Network",
-	},
-	{
-		Name:        "throughput",
-		Synonyms:    []string{},
-		Description: "Get throughput for network type",
-		Signature:   "throughput(network_type)",
-		Category:    "Network",
-	},
-	{
-		Name:        "transfer_time",
-		Synonyms:    []string{},
-		Description: "Calculate data transfer time",
-		Signature:   "transfer_time(size, scope, network_type)",
-		Category:    "Network",
-	},
-
-	// Storage functions
-	{
-		Name:        "read",
-		Synonyms:    []string{},
-		Description: "Calculate storage read time",
-		Signature:   "read(size, storage_type)",
-		Category:    "Storage",
-	},
-	{
-		Name:        "seek",
-		Synonyms:    []string{},
-		Description: "Get storage seek latency",
-		Signature:   "seek(storage_type)",
-		Category:    "Storage",
-	},
-	{
-		Name:        "compress",
-		Synonyms:    []string{},
-		Description: "Calculate compression time",
-		Signature:   "compress(size, compression_type)",
-		Category:    "Storage",
-	},
-
-	// Capacity functions
-	{
-		Name:        "capacity",
-		Synonyms:    []string{},
-		Description: "Calculate required capacity for demand",
-		Signature:   "capacity(demand, capacity_per_unit, unit, buffer?)",
-		Category:    "Capacity",
-	},
-
-	// Growth functions
-	{
-		Name:        "compound",
-		Synonyms:    []string{},
-		Description: "Compound growth: A = P(1+r)^n",
-		Signature:   "compound(principal, rate, duration, period?)",
-		Category:    "Growth",
-	},
-	{
-		Name:        "grow",
-		Synonyms:    []string{},
-		Description: "Linear growth: A = P + (increment x periods)",
-		Signature:   "grow(starting_amount, increment, duration)",
-		Category:    "Growth",
-	},
-	{
-		Name:        "depreciate",
-		Synonyms:    []string{},
-		Description: "Declining balance depreciation",
-		Signature:   "depreciate(principal, rate, duration, salvage?)",
-		Category:    "Growth",
-	},
+	{Name: "avg"},
+	{Name: "sum"},
+	{Name: "sqrt"},
+	{Name: "number"},
+	{Name: "accumulate"},
+	{Name: "convert_rate"},
+	{Name: "downtime"},
+	{Name: "rtt"},
+	{Name: "throughput"},
+	{Name: "transfer_time"},
+	{Name: "read"},
+	{Name: "seek"},
+	{Name: "compress"},
+	{Name: "capacity"},
+	{Name: "compound"},
+	{Name: "grow"},
+	{Name: "depreciate"},
 }
 
 // functionEvalMap maps function names to their Eval implementations.
@@ -199,8 +82,14 @@ func init() {
 // evalFunctionCall dispatches function calls to the appropriate implementation.
 func (interp *Interpreter) evalFunctionCall(f *ast.FunctionCall) (types.Type, error) {
 	name := strings.ToLower(f.Name)
+
+	// Resolve synonym to canonical name
+	if canonical, ok := getSynonymMap()[name]; ok {
+		name = canonical
+	}
+
 	for _, fn := range BuiltinFunctions {
-		if fn.Name == name || slices.Contains(fn.Synonyms, name) {
+		if fn.Name == name {
 			return fn.Eval(interp, f)
 		}
 	}

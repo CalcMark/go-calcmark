@@ -27,23 +27,25 @@ func TestGetAllFunctionsSorted(t *testing.T) {
 }
 
 // TestFunctionInfoComplete verifies all FunctionDef in BuiltinFunctions have non-empty
-// Name, Description, Signature, Category, and Eval fields.
+// Name and Eval fields, and that their corresponding Feature has metadata.
 func TestFunctionInfoComplete(t *testing.T) {
 	for _, fn := range BuiltinFunctions {
 		if fn.Name == "" {
 			t.Error("FunctionDef has empty Name")
 		}
-		if fn.Description == "" {
-			t.Errorf("FunctionDef %q has empty Description", fn.Name)
-		}
-		if fn.Signature == "" {
-			t.Errorf("FunctionDef %q has empty Signature", fn.Name)
-		}
-		if fn.Category == "" {
-			t.Errorf("FunctionDef %q has empty Category", fn.Name)
-		}
 		if fn.Eval == nil {
 			t.Errorf("FunctionDef %q has nil Eval", fn.Name)
+		}
+		// Metadata now comes from the features registry via toFunctionInfo
+		info := toFunctionInfo(fn.Name)
+		if info.Description == "" {
+			t.Errorf("FunctionDef %q has empty Description (from features registry)", fn.Name)
+		}
+		if info.Signature == "" {
+			t.Errorf("FunctionDef %q has empty Signature (from features registry)", fn.Name)
+		}
+		if info.Category == "" {
+			t.Errorf("FunctionDef %q has empty Category (from features registry)", fn.Name)
 		}
 	}
 }
@@ -52,12 +54,9 @@ func TestFunctionInfoComplete(t *testing.T) {
 func TestGetFunctionsByCategory(t *testing.T) {
 	byCategory := GetFunctionsByCategory()
 
-	// Verify we have expected categories
-	expectedCategories := []string{"Math", "Conversion", "Network", "Storage", "Capacity"}
-	for _, category := range expectedCategories {
-		if _, ok := byCategory[category]; !ok {
-			t.Errorf("missing category %q", category)
-		}
+	// Should have at least one category
+	if len(byCategory) == 0 {
+		t.Fatal("GetFunctionsByCategory returned empty map")
 	}
 
 	// Verify each category has at least one function

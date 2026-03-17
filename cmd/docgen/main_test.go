@@ -132,12 +132,7 @@ func TestCrossRegistryCompleteness(t *testing.T) {
 	// Check every interpreter function exists in the registry
 	for _, fn := range interpreter.BuiltinFunctions {
 		if !registryNames[fn.Name] {
-			t.Errorf("Interpreter function %q (category: %s) has no entry in features registry", fn.Name, fn.Category)
-		}
-		for _, syn := range fn.Synonyms {
-			if !registryNames[syn] {
-				t.Errorf("Interpreter synonym %q for function %q has no entry in features registry", syn, fn.Name)
-			}
+			t.Errorf("Interpreter function %q has no entry in features registry", fn.Name)
 		}
 	}
 }

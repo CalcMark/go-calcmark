@@ -39,7 +39,8 @@ type Alias struct {
 // Feature represents a single CalcMark feature that users can discover.
 type Feature struct {
 	Name        string            // Primary name (e.g., "avg", "meter", "today")
-	Category    Category          // Type of feature
+	Category    Category          // Type of feature (function, unit, keyword, etc.)
+	Subcategory string            // Grouping within category for help display (e.g., "Math", "Network", "Storage")
 	Quantity    string            // Unit category for units (e.g., "Force", "Length"); empty for non-unit features
 	Syntax      string            // Usage syntax (e.g., "avg(a, b, c)")
 	Description string            // Human-readable description
@@ -162,6 +163,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "avg",
 			Category:    CategoryFunction,
+			Subcategory: "Math",
 			Syntax:      "avg(a, b, c, ...)",
 			Description: "Calculate the average of values",
 			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "mean", Parseable: false}, {Name: "average of", Parseable: true, Example: "average of 1, 2, 3"}},
@@ -172,6 +174,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "sum",
 			Category:    CategoryFunction,
+			Subcategory: "Math",
 			Syntax:      "sum(a, b, c, ...)",
 			Description: "Calculate the sum of values",
 			Aliases:     []Alias{{Name: "sum of", Parseable: true, Example: "sum of $100, $200, $300"}, {Name: "total", Parseable: false}},
@@ -181,6 +184,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "sqrt",
 			Category:    CategoryFunction,
+			Subcategory: "Math",
 			Syntax:      "sqrt(n)",
 			Description: "Calculate the square root",
 			Aliases:     []Alias{{Name: "square root of", Parseable: true, Example: "square root of 16"}},
@@ -188,7 +192,8 @@ func getFunctions() []Feature {
 		},
 		{
 			Name:     "number",
-			Category: CategoryFunction,
+			Category:    CategoryFunction,
+			Subcategory: "Math",
 			Syntax:   "number(value)",
 			Description: "Strip the unit or currency from a typed value, returning a plain number. " +
 				"Use when you need a dimensionless ratio from two typed values: " +
@@ -202,6 +207,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "accumulate",
 			Category:    CategoryFunction,
+			Subcategory: "Math",
 			Syntax:      "accumulate(rate, time)",
 			Description: "Calculate total from a rate over time",
 			Aliases:     nil,
@@ -211,6 +217,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "convert_rate",
 			Category:    CategoryFunction,
+			Subcategory: "Conversion",
 			Syntax:      "convert_rate(rate, unit)",
 			Description: "Convert a rate to a different time unit",
 			Aliases:     nil,
@@ -220,6 +227,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "capacity",
 			Category:    CategoryFunction,
+			Subcategory: "Capacity",
 			Syntax:      "capacity(demand, capacity_per_unit, unit) or capacity(demand, capacity_per_unit, unit, buffer)",
 			Description: "Calculate how many units needed for a given load",
 			Aliases:     []Alias{{Name: "requires", Parseable: false}},
@@ -229,6 +237,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "downtime",
 			Category:    CategoryFunction,
+			Subcategory: "Network",
 			Syntax:      "downtime(availability, period)",
 			Description: "Calculate downtime from availability percentage",
 			Aliases:     nil,
@@ -238,6 +247,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "rtt",
 			Category:    CategoryFunction,
+			Subcategory: "Network",
 			Syntax:      "rtt(scope)",
 			Description: "Network round-trip time for a scope",
 			Aliases:     []Alias{{Name: "round trip time", Parseable: false}},
@@ -246,6 +256,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "throughput",
 			Category:    CategoryFunction,
+			Subcategory: "Network",
 			Syntax:      "throughput(network_type)",
 			Description: "Network bandwidth for a connection type",
 			Aliases:     nil,
@@ -254,6 +265,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "transfer_time",
 			Category:    CategoryFunction,
+			Subcategory: "Network",
 			Syntax:      "transfer_time(size, scope, network)",
 			Description: "Time to transfer data over a network",
 			Aliases:     []Alias{{Name: "transfer...across", Parseable: true, Example: "transfer 1 GB across regional gigabit"}},
@@ -262,6 +274,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "read",
 			Category:    CategoryFunction,
+			Subcategory: "Storage",
 			Syntax:      "read(size, storage_type)",
 			Description: "Time to read data from storage",
 			Aliases:     []Alias{{Name: "read...from", Parseable: true, Example: "read 100 MB from ssd"}},
@@ -270,6 +283,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "seek",
 			Category:    CategoryFunction,
+			Subcategory: "Storage",
 			Syntax:      "seek(storage_type)",
 			Description: "Access latency for storage type",
 			Aliases:     nil,
@@ -278,6 +292,7 @@ func getFunctions() []Feature {
 		{
 			Name:        "compress",
 			Category:    CategoryFunction,
+			Subcategory: "Storage",
 			Syntax:      "compress(size, algorithm)",
 			Description: "Estimate compressed data size",
 			Aliases:     []Alias{{Name: "compress...using", Parseable: true, Example: "compress 1 GB using gzip"}},
@@ -640,6 +655,7 @@ func getGrowthFeatures() []Feature {
 		{
 			Name:        "compound",
 			Category:    CategoryFunction,
+			Subcategory: "Growth",
 			Syntax:      "compound(principal, rate, periods, modifier?)",
 			Description: "Calculate compound growth over time periods",
 			Aliases: []Alias{
@@ -652,6 +668,7 @@ func getGrowthFeatures() []Feature {
 		{
 			Name:        "grow",
 			Category:    CategoryFunction,
+			Subcategory: "Growth",
 			Syntax:      "grow(amount, increment, periods)",
 			Description: "Calculate linear growth by adding a fixed amount each period",
 			Aliases: []Alias{
@@ -662,6 +679,7 @@ func getGrowthFeatures() []Feature {
 		{
 			Name:        "depreciate",
 			Category:    CategoryFunction,
+			Subcategory: "Growth",
 			Syntax:      "depreciate(value, rate, periods, salvage?)",
 			Description: "Calculate declining balance depreciation over time",
 			Aliases: []Alias{

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/tliron/glsp"
@@ -53,12 +52,13 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	}
 
 	// Try function hover
-	for _, fn := range interpreter.BuiltinFunctions {
-		if strings.EqualFold(fn.Name, word) {
-			content := fmt.Sprintf("**%s**\n\n`%s`\n\n%s", fn.Name, fn.Signature, fn.Description)
-			// Check for NL examples in the registry
-			if nlExample := findNLExample(fn.Name); nlExample != "" {
-				content += fmt.Sprintf("\n\nNL syntax: `%s`", nlExample)
+	registry := features.NewRegistry()
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		if strings.EqualFold(f.Name, word) {
+			content := fmt.Sprintf("**%s**\n\n`%s`\n\n%s", f.Name, f.Syntax, f.Description)
+			// Check for NL examples
+			if f.NLExample != "" {
+				content += fmt.Sprintf("\n\nNL syntax: `%s`", f.NLExample)
 			}
 			return &protocol.Hover{
 				Contents: protocol.MarkupContent{
@@ -67,9 +67,9 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 				},
 			}, nil
 		}
-		for _, syn := range fn.Synonyms {
+		for _, syn := range f.Synonyms {
 			if strings.EqualFold(syn, word) {
-				content := fmt.Sprintf("**%s** (synonym for **%s**)\n\n`%s`\n\n%s", syn, fn.Name, fn.Signature, fn.Description)
+				content := fmt.Sprintf("**%s** (synonym for **%s**)\n\n`%s`\n\n%s", syn, f.Name, f.Syntax, f.Description)
 				return &protocol.Hover{
 					Contents: protocol.MarkupContent{
 						Kind:  protocol.MarkupKindMarkdown,
@@ -261,17 +261,6 @@ func extractWordAt(lineText string, col int) string {
 // Matches the lexer's rules: Unicode letters, digits, and underscore.
 func isIdentRune(r rune) bool {
 	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
-}
-
-// findNLExample returns the NL example for a function name from the registry, or "".
-func findNLExample(funcName string) string {
-	registry := features.NewRegistry()
-	for _, f := range registry.ByCategory(features.CategoryFunction) {
-		if f.Name == funcName && f.NLExample != "" {
-			return f.NLExample
-		}
-	}
-	return ""
 }
 
 // isIdentifier returns true if the string is a valid CalcMark identifier.

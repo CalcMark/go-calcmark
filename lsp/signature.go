@@ -2,11 +2,10 @@ package lsp
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -41,13 +40,24 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 		return nil
 	}
 
-	// Find the builtin function for its signature string and description
+	// Find the feature for its signature string and description
 	var signature string
 	var description string
-	for _, fn := range interpreter.BuiltinFunctions {
-		if fn.Name == funcName || slices.Contains(fn.Synonyms, funcName) {
-			signature = fn.Signature
-			description = fn.Description
+	registry := features.NewRegistry()
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		if f.Name == funcName {
+			signature = f.Syntax
+			description = f.Description
+			break
+		}
+		for _, syn := range f.Synonyms {
+			if syn == funcName {
+				signature = f.Syntax
+				description = f.Description
+				break
+			}
+		}
+		if signature != "" {
 			break
 		}
 	}

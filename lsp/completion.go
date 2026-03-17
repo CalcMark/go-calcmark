@@ -5,7 +5,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -66,11 +65,12 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	prefix = strings.ToLower(prefix)
 	var items []protocol.CompletionItem
 
-	for _, fn := range interpreter.BuiltinFunctions {
-		if prefix != "" && !strings.HasPrefix(strings.ToLower(fn.Name), prefix) {
+	registry := features.NewRegistry()
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		if prefix != "" && !strings.HasPrefix(strings.ToLower(f.Name), prefix) {
 			// Check synonyms too
 			matched := false
-			for _, syn := range fn.Synonyms {
+			for _, syn := range f.Synonyms {
 				if strings.HasPrefix(strings.ToLower(syn), prefix) {
 					matched = true
 					break
@@ -82,13 +82,13 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 		}
 
 		kind := protocol.CompletionItemKindFunction
-		detail := fn.Signature
-		doc := buildFunctionDoc(fn.Name, fn.Description)
-		snippetText := buildFunctionSnippet(fn.Name)
+		detail := f.Syntax
+		doc := buildFunctionDoc(f.Name, f.Description)
+		snippetText := buildFunctionSnippet(f.Name)
 		snippetFormat := protocol.InsertTextFormatSnippet
 
 		items = append(items, protocol.CompletionItem{
-			Label:            fn.Name,
+			Label:            f.Name,
 			Kind:             &kind,
 			Detail:           &detail,
 			InsertText:       &snippetText,
@@ -101,7 +101,6 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	}
 
 	// NL function aliases from the feature registry
-	registry := features.NewRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		for _, alias := range f.Aliases {
 			if !alias.Parseable || alias.Example == "" {

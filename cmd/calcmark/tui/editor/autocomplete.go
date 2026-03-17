@@ -63,15 +63,21 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 	prefix = strings.ToLower(prefix)
 	var suggestions []components.Suggestion
 
+	reg := features.NewRegistry()
 	for _, fn := range interpreter.BuiltinFunctions {
+		// Look up feature metadata from the registry
+		feature := reg.GetByName(fn.Name)
+
 		// Match primary name or any synonym
 		fnMatched := strings.HasPrefix(strings.ToLower(fn.Name), prefix)
 		matchedSynonym := ""
-		for _, syn := range fn.Synonyms {
-			if strings.HasPrefix(strings.ToLower(syn), prefix) {
-				fnMatched = true
-				matchedSynonym = syn
-				break
+		if feature != nil {
+			for _, syn := range feature.Synonyms {
+				if strings.HasPrefix(strings.ToLower(syn), prefix) {
+					fnMatched = true
+					matchedSynonym = syn
+					break
+				}
 			}
 		}
 
@@ -92,10 +98,10 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 		}
 
 		// Emit fn row if function name or synonym matched
-		if fnMatched {
+		if fnMatched && feature != nil {
 			name := fn.Name
-			if len(fn.Synonyms) > 0 {
-				name = fmt.Sprintf("%s (%s)", fn.Name, strings.Join(fn.Synonyms, ", "))
+			if len(feature.Synonyms) > 0 {
+				name = fmt.Sprintf("%s (%s)", fn.Name, strings.Join(feature.Synonyms, ", "))
 			}
 			if matchedSynonym != "" && matchedSynonym != fn.Name {
 				name = fmt.Sprintf("%s (%s)", fn.Name, matchedSynonym)
@@ -103,21 +109,25 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 
 			suggestions = append(suggestions, components.Suggestion{
 				Name:        name,
-				Category:    fn.Category,
-				Description: fn.Description,
-				Syntax:      fn.Signature,
+				Category:    feature.Subcategory,
+				Description: feature.Description,
+				Syntax:      feature.Syntax,
 				InsertText:  fn.Name,
 			})
 		}
 
 		// Emit NL row(s) immediately after the fn row
+		category := ""
+		if feature != nil {
+			category = feature.Subcategory
+		}
 		for _, nl := range matchedNL {
 			suggestions = append(suggestions, components.Suggestion{
 				Name:         nl.aliasName,
 				Category:     "example",
 				Syntax:       nl.example,
 				InsertText:   nl.example,
-				SortCategory: fn.Category, // Sort alongside parent function
+				SortCategory: category, // Sort alongside parent function
 			})
 		}
 	}
