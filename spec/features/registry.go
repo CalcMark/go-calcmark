@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/identifiers"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
@@ -37,14 +38,16 @@ type Alias struct {
 
 // Feature represents a single CalcMark feature that users can discover.
 type Feature struct {
-	Name        string   // Primary name (e.g., "avg", "meter", "today")
-	Category    Category // Type of feature
-	Quantity    string   // Unit category for units (e.g., "Force", "Length"); empty for non-unit features
-	Syntax      string   // Usage syntax (e.g., "avg(a, b, c)")
-	Description string   // Human-readable description
-	Aliases     []Alias  // Alternative names/spellings
-	Example     string   // Example usage (function-call form for help display)
-	NLExample   string   // Natural language example for autosuggest (e.g., "100 MB/s over 1 day")
+	Name        string            // Primary name (e.g., "avg", "meter", "today")
+	Category    Category          // Type of feature
+	Quantity    string            // Unit category for units (e.g., "Force", "Length"); empty for non-unit features
+	Syntax      string            // Usage syntax (e.g., "avg(a, b, c)")
+	Description string            // Human-readable description
+	Aliases     []Alias           // Alternative names/spellings
+	Synonyms    []string          // Runtime-dispatchable alternative names (e.g., "average", "mean" for "avg")
+	Params      []types.ParamSpec // Parameter specifications for functions (empty for non-functions)
+	Example     string            // Example usage (function-call form for help display)
+	NLExample   string            // Natural language example for autosuggest (e.g., "100 MB/s over 1 day")
 }
 
 // Match checks if a query matches this feature (case-insensitive prefix match).
@@ -128,6 +131,16 @@ func (r *Registry) All() []Feature {
 	return result
 }
 
+// GetByName returns the first feature with the given name, or nil if not found.
+func (r *Registry) GetByName(name string) *Feature {
+	for i := range r.features {
+		if r.features[i].Name == name {
+			return &r.features[i]
+		}
+	}
+	return nil
+}
+
 // Categories returns all available category names.
 func (r *Registry) Categories() []Category {
 	seen := make(map[Category]bool)
@@ -143,14 +156,16 @@ func (r *Registry) Categories() []Category {
 }
 
 // getFunctions returns built-in function features.
+// Params are pulled from types.FunctionSpecs — single source of truth for parameter metadata.
 func getFunctions() []Feature {
-	return []Feature{
+	features := []Feature{
 		{
 			Name:        "avg",
 			Category:    CategoryFunction,
 			Syntax:      "avg(a, b, c, ...)",
 			Description: "Calculate the average of values",
 			Aliases:     []Alias{{Name: "average", Parseable: false}, {Name: "mean", Parseable: false}, {Name: "average of", Parseable: true, Example: "average of 1, 2, 3"}},
+			Synonyms:    []string{"average", "mean"},
 			Example:     "avg(10, 20, 30) → 20",
 			NLExample:   "average of 1 kg, 2 kg, 3 kg",
 		},
@@ -269,6 +284,14 @@ func getFunctions() []Feature {
 			Example:     "compress 1 GB using gzip",
 		},
 	}
+
+	// Populate Params from types.FunctionSpecs — single source of truth
+	for i := range features {
+		if spec, ok := types.FunctionSpecs[features[i].Name]; ok {
+			features[i].Params = spec.Params
+		}
+	}
+	return features
 }
 
 // unitExamples provides realistic conversion examples for each unit quantity.
@@ -613,7 +636,7 @@ func getCompressionFeatures() []Feature {
 
 // getGrowthFeatures returns growth and depreciation function features.
 func getGrowthFeatures() []Feature {
-	return []Feature{
+	features := []Feature{
 		{
 			Name:        "compound",
 			Category:    CategoryFunction,
@@ -647,6 +670,13 @@ func getGrowthFeatures() []Feature {
 			Example: "depreciate(10000, 20%, 5) → 3276.80",
 		},
 	}
+
+	for i := range features {
+		if spec, ok := types.FunctionSpecs[features[i].Name]; ok {
+			features[i].Params = spec.Params
+		}
+	}
+	return features
 }
 
 // getKeywords returns language keywords.

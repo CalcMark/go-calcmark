@@ -301,3 +301,37 @@ func TestRegistryCategories(t *testing.T) {
 		}
 	}
 }
+
+func TestEveryFunctionHasParams(t *testing.T) {
+	r := NewRegistry()
+	functions := r.ByCategory(CategoryFunction)
+
+	for _, f := range functions {
+		if len(f.Params) == 0 {
+			t.Errorf("Function %q has no Params — must have parameter specifications", f.Name)
+		}
+	}
+}
+
+func TestGetByName(t *testing.T) {
+	r := NewRegistry()
+
+	f := r.GetByName("avg")
+	if f == nil {
+		t.Fatal("GetByName(avg) returned nil")
+	}
+	if f.Name != "avg" {
+		t.Errorf("GetByName(avg).Name = %q, want 'avg'", f.Name)
+	}
+	if len(f.Params) == 0 {
+		t.Error("avg should have params")
+	}
+	if len(f.Synonyms) == 0 {
+		t.Error("avg should have synonyms (average, mean)")
+	}
+
+	notFound := r.GetByName("nonexistent")
+	if notFound != nil {
+		t.Error("GetByName(nonexistent) should return nil")
+	}
+}
