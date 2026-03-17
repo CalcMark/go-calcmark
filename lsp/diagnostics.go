@@ -11,6 +11,12 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+// DocumentRenderedParams is the payload for the calcmark/documentRendered notification.
+type DocumentRenderedParams struct {
+	URI  string `json:"uri"`
+	HTML string `json:"html"`
+}
+
 func debugLog(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, "[calcmark-lsp] "+format+"\n", args...)
 }
@@ -44,6 +50,11 @@ func (s *Server) textDocumentDidOpen(ctx *glsp.Context, params *protocol.DidOpen
 	s.mu.Unlock()
 
 	s.publishDiagnostics(ctx, uri, snap)
+	snap.HTML = s.renderHTML(snap)
+	ctx.Notify("calcmark/documentRendered", DocumentRenderedParams{
+		URI:  uri,
+		HTML: snap.HTML,
+	})
 	debugLog("didOpen: published diagnostics")
 	return nil
 }
@@ -86,8 +97,13 @@ func (s *Server) textDocumentDidChange(ctx *glsp.Context, params *protocol.DidCh
 	notifyCtx := ctx
 	ds.timer = time.AfterFunc(debounceDelay, func() {
 		snap := s.evaluate(source)
+		snap.HTML = s.renderHTML(snap)
 		ds.setSnapshot(snap)
 		s.publishDiagnostics(notifyCtx, uri, snap)
+		notifyCtx.Notify("calcmark/documentRendered", DocumentRenderedParams{
+			URI:  uri,
+			HTML: snap.HTML,
+		})
 	})
 	ds.mu.Unlock()
 
