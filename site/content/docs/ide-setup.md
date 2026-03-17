@@ -47,6 +47,20 @@ rm -rf ~/.local/share/zed/extensions/installed/calcmark
 
 Then restart Zed.
 
+### Enable semantic highlighting
+
+Zed disables LSP semantic tokens by default. Add this to your Zed settings (**Cmd+,**) to enable context-aware highlighting for CalcMark:
+
+```json
+{
+  "languages": {
+    "CalcMark": {
+      "semantic_tokens": "full"
+    }
+  }
+}
+```
+
 ### Useful keybindings in Zed
 
 These are Zed's built-in LSP keybindings — they work automatically with the CalcMark extension:

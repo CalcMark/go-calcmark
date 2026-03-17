@@ -3,7 +3,6 @@ package lsp
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -57,15 +56,18 @@ func SemanticTokensLegend() protocol.SemanticTokensLegend {
 func (s *Server) textDocumentSemanticTokensFull(_ *glsp.Context, params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
 	ds := s.getDocument(params.TextDocument.URI)
 	if ds == nil {
+		debugLog("semanticTokens: no document for %s", params.TextDocument.URI)
 		return nil, nil
 	}
 
 	snap := ds.getSnapshot()
 	if snap == nil {
+		debugLog("semanticTokens: no snapshot for %s", params.TextDocument.URI)
 		return nil, nil
 	}
 
 	data := encodeSemanticTokens(snap)
+	debugLog("semanticTokens: %s → %d values (source len=%d)", params.TextDocument.URI, len(data), len(snap.Source))
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -76,29 +78,16 @@ func (s *Server) textDocumentSemanticTokensFull(_ *glsp.Context, params *protoco
 }
 
 // encodeSemanticTokens produces the LSP-encoded semantic token data from a snapshot.
-// Uses the document's block structure to distinguish calc vs text lines.
+// Classifies each line independently using the same heuristic as completions:
+// markdown-prefixed lines → comment tokens, everything else → lexer tokens.
+// This avoids relying on block structure, which doesn't account for inter-block
+// blank separator lines and causes line classification to shift.
 func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
-	if snap.Document == nil {
+	if snap.Source == "" {
 		return nil
 	}
 
-	// Build a map of document line number (0-indexed) → block type.
-	// CalcBlock lines get lexer-based tokens; TextBlock lines get comment tokens.
 	lines := strings.Split(snap.Source, "\n")
-	lineTypes := make([]document.BlockType, len(lines))
-
-	// Walk blocks to classify lines.
-	docLine := 0 // 0-indexed current line in the full document
-	for _, node := range snap.Document.GetBlocks() {
-		blockLines := node.Block.Source()
-		bt := node.Block.Type()
-		for range blockLines {
-			if docLine < len(lineTypes) {
-				lineTypes[docLine] = bt
-			}
-			docLine++
-		}
-	}
 
 	var data []protocol.UInteger
 	prevLine := 0
@@ -109,19 +98,14 @@ func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
 			continue
 		}
 
-		if lineIdx < len(lineTypes) && lineTypes[lineIdx] == document.BlockText {
-			// Markdown/text line → single comment token spanning the line
+		if isMarkdownLine(lineText) {
+			// Markdown line → single comment token spanning the line
 			runeLen := len([]rune(lineText))
 			deltaLine := lineIdx - prevLine
-			deltaStart := 0
-			if deltaLine == 0 {
-				// Same line — deltaStart is relative to previous token start.
-				// Should not happen for text lines (one per line), but guard against it.
-				deltaStart = max(0-prevStart, 0)
-			}
+
 			data = append(data,
 				protocol.UInteger(deltaLine),
-				protocol.UInteger(deltaStart),
+				protocol.UInteger(0),
 				protocol.UInteger(runeLen),
 				protocol.UInteger(semComment),
 				protocol.UInteger(semModDocumentation),
@@ -134,6 +118,7 @@ func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
 		// Calc line → tokenize with the lexer
 		tokens := tokenizeLine(lineText)
 		assignMods := classifyAssignmentLHS(tokens)
+		lineBytes := []byte(lineText)
 		for i, tok := range tokens {
 			tokenType, tokenMod, ok := mapTokenType(tok)
 			if !ok {
@@ -143,13 +128,25 @@ func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
 				tokenMod |= extra
 			}
 
-			// tok.Column is 1-indexed; convert to 0-indexed rune position
-			startChar := max(tok.Column-1, 0)
-			length := len([]rune(tok.OriginalText))
-			if length == 0 {
-				length = len([]rune(tok.Value))
+			// QUANTITY tokens span "number unit" (e.g., "5 GB") — split into
+			// two semantic tokens so the number and unit get different colors.
+			if tok.Type == lexer.QUANTITY {
+				numEnd, unitStart := splitQuantityOffsets(lineBytes, tok.StartPos, tok.EndPos)
+				if numEnd > tok.StartPos && unitStart < tok.EndPos {
+					prevLine, prevStart = emitToken(&data, lineIdx, prevLine, prevStart,
+						runeCount(lineBytes, tok.StartPos), runeCount(lineBytes, numEnd),
+						semNumber, tokenMod)
+					prevLine, prevStart = emitToken(&data, lineIdx, prevLine, prevStart,
+						runeCount(lineBytes, unitStart), runeCount(lineBytes, tok.EndPos),
+						semType, 0)
+					continue
+				}
 			}
-			if length == 0 {
+
+			startChar := runeCount(lineBytes, tok.StartPos)
+			endChar := runeCount(lineBytes, tok.EndPos)
+			length := endChar - startChar
+			if length <= 0 {
 				continue
 			}
 
@@ -158,7 +155,6 @@ func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
 			if deltaLine == 0 {
 				deltaStart = startChar - prevStart
 				if deltaStart < 0 {
-					// Token columns out of order — skip to avoid corrupting the stream
 					continue
 				}
 			}
@@ -208,7 +204,11 @@ func mapTokenType(tok lexer.Token) (int, int, bool) {
 		return semNumber, 0, true
 
 	// Currency
-	case lexer.CURRENCY, lexer.CURRENCY_SYM, lexer.CURRENCY_CODE, lexer.QUANTITY:
+	case lexer.CURRENCY, lexer.CURRENCY_SYM, lexer.CURRENCY_CODE:
+		return semNumber, 0, true
+
+	// QUANTITY is handled specially in encodeSemanticTokens (split into number + unit)
+	case lexer.QUANTITY:
 		return semNumber, 0, true
 
 	// Functions
@@ -247,6 +247,56 @@ func mapTokenType(tok lexer.Token) (int, int, bool) {
 	default:
 		return 0, 0, false
 	}
+}
+
+// emitToken appends a semantic token to data and returns updated prevLine/prevStart.
+func emitToken(data *[]protocol.UInteger, lineIdx, prevLine, prevStart, startChar, endChar, tokenType, tokenMod int) (int, int) {
+	length := endChar - startChar
+	if length <= 0 {
+		return prevLine, prevStart
+	}
+	deltaLine := lineIdx - prevLine
+	deltaStart := startChar
+	if deltaLine == 0 {
+		deltaStart = startChar - prevStart
+		if deltaStart < 0 {
+			return prevLine, prevStart
+		}
+	}
+	*data = append(*data,
+		protocol.UInteger(deltaLine),
+		protocol.UInteger(deltaStart),
+		protocol.UInteger(length),
+		protocol.UInteger(tokenType),
+		protocol.UInteger(tokenMod),
+	)
+	return lineIdx, startChar
+}
+
+// splitQuantityOffsets finds the boundary between the numeric and unit parts
+// of a QUANTITY token (e.g., "5 GB" → number ends at space, unit starts after).
+// Returns (numEndByte, unitStartByte) within the line.
+func splitQuantityOffsets(lineBytes []byte, start, end int) (int, int) {
+	for i := start; i < end; i++ {
+		if lineBytes[i] == ' ' || lineBytes[i] == '\t' {
+			numEnd := i
+			unitStart := i + 1
+			for unitStart < end && (lineBytes[unitStart] == ' ' || lineBytes[unitStart] == '\t') {
+				unitStart++
+			}
+			return numEnd, unitStart
+		}
+	}
+	return end, end // no split found
+}
+
+// runeCount returns the number of runes in b[:byteOffset].
+// Converts a byte offset to a rune (character) position for LSP.
+func runeCount(b []byte, byteOffset int) int {
+	if byteOffset > len(b) {
+		byteOffset = len(b)
+	}
+	return len([]rune(string(b[:byteOffset])))
 }
 
 // classifyAssignmentLHS post-processes tokens to add declaration modifier

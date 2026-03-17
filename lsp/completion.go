@@ -7,6 +7,8 @@ import (
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/spec/semantic"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -39,9 +41,12 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 
 	var items []protocol.CompletionItem
 
-	// After "in" or "as" keywords → units only
-	if isAfterUnitKeyword(lineText, col) {
+	// After "in" or "as" keywords → units + conversion keywords.
+	// Check position before the prefix so "as nap|" is detected (not just "as |").
+	prefixStart := col - len([]rune(prefix))
+	if isAfterUnitKeyword(lineText, prefixStart) {
 		items = append(items, unitCompletionItems(prefix)...)
+		items = append(items, conversionKeywordItems(prefix)...)
 		return items, nil
 	}
 
@@ -81,7 +86,7 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 
 		kind := protocol.CompletionItemKindFunction
 		detail := fn.Signature
-		doc := fn.Description
+		doc := buildFunctionDoc(fn.Name, fn.Description)
 
 		items = append(items, protocol.CompletionItem{
 			Label:      fn.Name,
@@ -123,6 +128,84 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	}
 
 	return items
+}
+
+// conversionKeywordItems returns completion items for keywords valid after "as" or "in".
+// Derives the list from the lexer's ReservedKeywords — only includes keywords that are
+// meaningful in a conversion context (NAPKIN, PRECISE).
+func conversionKeywordItems(prefix string) []protocol.CompletionItem {
+	prefix = strings.ToLower(prefix)
+
+	// Token types that are valid conversion modifiers (after "as" or "in")
+	conversionTokens := map[lexer.TokenType]bool{
+		lexer.NAPKIN:  true,
+		lexer.PRECISE: true,
+	}
+
+	var items []protocol.CompletionItem
+	for name, tokenType := range lexer.ReservedKeywords {
+		if !conversionTokens[tokenType] {
+			continue
+		}
+		if prefix != "" && !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		kind := protocol.CompletionItemKindKeyword
+		doc := keywordDoc(tokenType)
+		items = append(items, protocol.CompletionItem{
+			Label:      name,
+			Kind:       &kind,
+			InsertText: &name,
+			Documentation: &protocol.MarkupContent{
+				Kind:  protocol.MarkupKindMarkdown,
+				Value: doc,
+			},
+		})
+	}
+	return items
+}
+
+// keywordDoc returns documentation for a keyword token type.
+func keywordDoc(tt lexer.TokenType) string {
+	switch tt {
+	case lexer.NAPKIN:
+		return "Human-readable rounded estimate (e.g., `1234567 as napkin` → ~1.2M)"
+	case lexer.PRECISE:
+		return "Full-precision display, no rounding (e.g., `1 second as hour as precise`)"
+	default:
+		return ""
+	}
+}
+
+// buildFunctionDoc creates rich markdown documentation for a function,
+// including parameter types, examples, and valid values.
+func buildFunctionDoc(funcName, description string) string {
+	var b strings.Builder
+	b.WriteString(description)
+
+	spec := semantic.GetFunctionSpec(funcName)
+	if spec == nil || len(spec.Params) == 0 {
+		return b.String()
+	}
+
+	b.WriteString("\n\n**Parameters:**\n")
+	for _, p := range spec.Params {
+		b.WriteString(fmt.Sprintf("\n- `%s`", p.Name))
+		if p.Type != "" {
+			b.WriteString(fmt.Sprintf(" (%s)", p.Type))
+		}
+		if p.Optional {
+			b.WriteString(" — optional")
+		}
+		if p.Variadic {
+			b.WriteString(" — accepts multiple values")
+		}
+		if len(p.Examples) > 0 {
+			b.WriteString(fmt.Sprintf(": %s", strings.Join(p.Examples, ", ")))
+		}
+	}
+
+	return b.String()
 }
 
 // unitCompletionItems returns completion items for units.

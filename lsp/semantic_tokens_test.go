@@ -264,11 +264,11 @@ func TestEncodeSemanticTokens_NoDeltaUnderflow(t *testing.T) {
 	}
 }
 
-func TestEncodeSemanticTokens_NilDocument(t *testing.T) {
-	snap := &DocumentSnapshot{Source: "bad input"}
+func TestEncodeSemanticTokens_EmptySource(t *testing.T) {
+	snap := &DocumentSnapshot{Source: ""}
 	data := encodeSemanticTokens(snap)
 	if len(data) != 0 {
-		t.Errorf("expected no data for nil document, got %d values", len(data))
+		t.Errorf("expected no data for empty source, got %d values", len(data))
 	}
 }
 
