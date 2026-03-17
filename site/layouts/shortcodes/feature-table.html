@@ -6,7 +6,7 @@
 {{- range $features }}
   {{- if or (not $subcategory) (eq .subcategory $subcategory) }}
   <div class="feature-entry" id="{{ .anchor }}">
-    <h4><code>{{ .name }}</code></h4>
+    <h4><code>{{ .name }}</code> <a href="#{{ .anchor }}" class="heading-anchor">#</a></h4>
     <p>{{ .description }}</p>
     <dl>
       <dt>Syntax</dt>
