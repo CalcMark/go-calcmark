@@ -5,6 +5,9 @@
   "version": "0.1.0",
   "publisher": "calcmark",
   "license": "MIT",
+  "extensionKind": [
+    "workspace"
+  ],
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -28,6 +31,13 @@
           ".calcmark"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "calcmark",
+        "scopeName": "source.calcmark",
+        "path": "./syntaxes/calcmark.tmLanguage.json"
       }
     ],
     "configuration": {
