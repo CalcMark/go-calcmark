@@ -7,7 +7,7 @@ import (
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -36,7 +36,7 @@ func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, params *protocol.Sig
 // signatureHelpForFunction returns signature help for a known function, or nil.
 func signatureHelpForFunction(funcName string, activeParam int) *protocol.SignatureHelp {
 	// Look up the function spec for parameter info
-	spec := semantic.GetFunctionSpec(funcName)
+	spec := types.GetFunctionSpec(funcName)
 	if spec == nil {
 		return nil
 	}

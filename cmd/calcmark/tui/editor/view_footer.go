@@ -5,7 +5,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // renderContextFooter renders the context footer showing errors or referenced variables.
@@ -156,7 +156,7 @@ func (m Model) getLineReferences(lineNum int, results []LineResult) []components
 // a helpful hint showing examples for each parameter type.
 // Returns empty string if the function has no parameter specs.
 func formatFunctionParamHint(funcName string) string {
-	spec := semantic.GetFunctionSpec(funcName)
+	spec := types.GetFunctionSpec(funcName)
 	if spec == nil || len(spec.Params) == 0 {
 		return ""
 	}
@@ -170,7 +170,7 @@ func formatFunctionParamHint(funcName string) string {
 			example = param.Examples[0]
 		} else {
 			// Fall back to type examples
-			typeExamples := semantic.GetExamplesForType(param.Type)
+			typeExamples := types.GetExamplesForType(param.Type)
 			if len(typeExamples) > 0 {
 				example = typeExamples[0]
 			}

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // CursorContext describes what the cursor is positioned on/in.
@@ -20,10 +20,10 @@ type CursorContext struct {
 	ArgIndex int
 
 	// ParamSpec is the parameter specification for the current argument
-	ParamSpec *semantic.ParamSpec
+	ParamSpec *types.ParamSpec
 
 	// FunctionSpec is the full function specification
-	FunctionSpec *semantic.FunctionSpec
+	FunctionSpec *types.FunctionSpec
 }
 
 // GetCursorContext analyzes the current line and cursor position to determine context.
@@ -71,7 +71,7 @@ func GetCursorContext(line string, cursorCol int) CursorContext {
 	}
 
 	// Look up the function specification
-	spec := semantic.GetFunctionSpec(funcName)
+	spec := types.GetFunctionSpec(funcName)
 	if spec == nil {
 		// Unknown function, but still inside a call
 		ctx.InFunctionCall = true
@@ -158,7 +158,7 @@ func countArgumentPosition(argsText string) int {
 
 // FormatParamHelp formats the parameter help for display.
 // Returns something like: "rate: 10 MB/s, 100 req/s, 5 GB/day"
-func FormatParamHelp(param *semantic.ParamSpec) string {
+func FormatParamHelp(param *types.ParamSpec) string {
 	if param == nil {
 		return ""
 	}
@@ -171,7 +171,7 @@ func FormatParamHelp(param *semantic.ParamSpec) string {
 		sb.WriteString(strings.Join(param.Examples, ", "))
 	} else {
 		// Fall back to type examples
-		typeExamples := semantic.GetExamplesForType(param.Type)
+		typeExamples := types.GetExamplesForType(param.Type)
 		if len(typeExamples) > 0 {
 			sb.WriteString(": ")
 			sb.WriteString(strings.Join(typeExamples, ", "))

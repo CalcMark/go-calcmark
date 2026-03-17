@@ -1,9 +1,8 @@
-package semantic
+package types
 
 import "github.com/CalcMark/go-calcmark/spec/identifiers"
 
 // quotedNames wraps each name in double quotes for ParamSpec.Examples display.
-// Computed once at package init via the var block — not called per-access.
 func quotedNames(names []string) []string {
 	quoted := make([]string, len(names))
 	for i, n := range names {
@@ -27,7 +26,6 @@ const (
 )
 
 // ParamSpec describes a function parameter with type constraints and examples.
-// This is the semantic definition - what types are valid for this parameter.
 type ParamSpec struct {
 	Name     string   // Parameter name (e.g., "rate", "duration")
 	Type     ArgType  // Expected argument type
@@ -37,14 +35,12 @@ type ParamSpec struct {
 }
 
 // FunctionSpec describes a function's type signature for semantic analysis.
-// This is separate from the implementation - it defines what's valid.
 type FunctionSpec struct {
 	Name   string      // Function name
 	Params []ParamSpec // Parameter specifications
 }
 
 // ArgTypeExamples provides example values for each argument type.
-// Used to show contextual help when user is typing function arguments.
 var ArgTypeExamples = map[ArgType][]string{
 	ArgTypeNumber:     {"42", "3.14", "1000", "1e6"},
 	ArgTypeQuantity:   {"10 meters", "5 kg", "100 MB", "2.5 liters"},
@@ -58,7 +54,6 @@ var ArgTypeExamples = map[ArgType][]string{
 // FunctionSpecs defines the type signatures for all built-in functions.
 // This is the authoritative source for parameter type information.
 var FunctionSpecs = map[string]FunctionSpec{
-	// Math functions
 	"avg": {
 		Name: "avg",
 		Params: []ParamSpec{
@@ -90,8 +85,6 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "duration", Type: ArgTypeDuration, Examples: []string{"1 hour", "30 minutes", "1 day"}},
 		},
 	},
-
-	// Conversion functions
 	"convert_rate": {
 		Name: "convert_rate",
 		Params: []ParamSpec{
@@ -99,8 +92,6 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "time_unit", Type: ArgTypeString, Examples: []string{`"per second"`, `"per hour"`, `"per day"`}},
 		},
 	},
-
-	// Network functions
 	"downtime": {
 		Name: "downtime",
 		Params: []ParamSpec{
@@ -128,8 +119,6 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes)},
 		},
 	},
-
-	// Storage functions
 	"read": {
 		Name: "read",
 		Params: []ParamSpec{
@@ -150,8 +139,6 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "compression_type", Type: ArgTypeString, Examples: quotedNames(identifiers.CompressionTypes)},
 		},
 	},
-
-	// Growth functions
 	"compound": {
 		Name: "compound",
 		Params: []ParamSpec{
@@ -178,8 +165,6 @@ var FunctionSpecs = map[string]FunctionSpec{
 			{Name: "salvage", Type: ArgTypeAny, Optional: true, Examples: []string{"$5000", "1000"}},
 		},
 	},
-
-	// Capacity functions
 	"capacity": {
 		Name: "capacity",
 		Params: []ParamSpec{
@@ -206,8 +191,6 @@ func (f *FunctionSpec) GetParamAtIndex(index int) *ParamSpec {
 	if len(f.Params) == 0 {
 		return nil
 	}
-
-	// If index is beyond params, check if last param is variadic
 	if index >= len(f.Params) {
 		lastParam := &f.Params[len(f.Params)-1]
 		if lastParam.Variadic {
@@ -215,7 +198,6 @@ func (f *FunctionSpec) GetParamAtIndex(index int) *ParamSpec {
 		}
 		return nil
 	}
-
 	return &f.Params[index]
 }
 

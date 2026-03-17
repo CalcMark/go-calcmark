@@ -8,7 +8,7 @@ import (
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -84,12 +84,15 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 		kind := protocol.CompletionItemKindFunction
 		detail := fn.Signature
 		doc := buildFunctionDoc(fn.Name, fn.Description)
+		snippetText := buildFunctionSnippet(fn.Name)
+		snippetFormat := protocol.InsertTextFormatSnippet
 
 		items = append(items, protocol.CompletionItem{
-			Label:      fn.Name,
-			Kind:       &kind,
-			Detail:     &detail,
-			InsertText: &fn.Name,
+			Label:            fn.Name,
+			Kind:             &kind,
+			Detail:           &detail,
+			InsertText:       &snippetText,
+			InsertTextFormat: &snippetFormat,
 			Documentation: &protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: doc,
@@ -256,13 +259,33 @@ func keywordDoc(tt lexer.TokenType) string {
 	}
 }
 
+// buildFunctionSnippet creates an LSP snippet string for a function.
+// E.g., accumulate → "accumulate(${1:rate}, ${2:duration})"
+// Uses parameter names from the function spec, with tab stops for each.
+func buildFunctionSnippet(funcName string) string {
+	spec := types.GetFunctionSpec(funcName)
+	if spec == nil || len(spec.Params) == 0 {
+		return funcName + "($0)"
+	}
+
+	var params []string
+	for i, p := range spec.Params {
+		placeholder := p.Name
+		if len(p.Examples) > 0 {
+			placeholder = p.Examples[0]
+		}
+		params = append(params, fmt.Sprintf("${%d:%s}", i+1, placeholder))
+	}
+	return funcName + "(" + strings.Join(params, ", ") + ")"
+}
+
 // buildFunctionDoc creates rich markdown documentation for a function,
 // including parameter types, examples, and valid values.
 func buildFunctionDoc(funcName, description string) string {
 	var b strings.Builder
 	b.WriteString(description)
 
-	spec := semantic.GetFunctionSpec(funcName)
+	spec := types.GetFunctionSpec(funcName)
 	if spec == nil || len(spec.Params) == 0 {
 		return b.String()
 	}

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 // TestFunctionSpecConsistency verifies that FunctionSpecs (spec layer) and
@@ -16,7 +16,7 @@ import (
 
 func TestEveryBuiltinFunctionHasFunctionSpec(t *testing.T) {
 	for _, fn := range BuiltinFunctions {
-		spec := semantic.GetFunctionSpec(fn.Name)
+		spec := types.GetFunctionSpec(fn.Name)
 		if spec == nil {
 			t.Errorf("BuiltinFunction %q has no corresponding FunctionSpec in spec/semantic", fn.Name)
 		}
@@ -24,7 +24,7 @@ func TestEveryBuiltinFunctionHasFunctionSpec(t *testing.T) {
 }
 
 func TestEveryFunctionSpecHasBuiltinFunction(t *testing.T) {
-	for name := range semantic.FunctionSpecs {
+	for name := range types.FunctionSpecs {
 		if _, found := GetFunctionByName(name); !found {
 			t.Errorf("FunctionSpec %q has no corresponding BuiltinFunction in interpreter", name)
 		}
@@ -41,7 +41,7 @@ func TestEveryBuiltinFunctionHasEval(t *testing.T) {
 
 func TestArgCountConsistency(t *testing.T) {
 	for _, fn := range BuiltinFunctions {
-		spec := semantic.GetFunctionSpec(fn.Name)
+		spec := types.GetFunctionSpec(fn.Name)
 		if spec == nil {
 			continue // covered by TestEveryBuiltinFunctionHasFunctionSpec
 		}
@@ -65,7 +65,7 @@ func TestArgCountConsistency(t *testing.T) {
 
 func TestSignatureParamCountMatchesFunctionSpec(t *testing.T) {
 	for _, fn := range BuiltinFunctions {
-		spec := semantic.GetFunctionSpec(fn.Name)
+		spec := types.GetFunctionSpec(fn.Name)
 		if spec == nil {
 			continue
 		}
@@ -139,7 +139,7 @@ func TestEveryBuiltinFunctionHasRequiredMetadata(t *testing.T) {
 
 func TestFunctionSpecOptionalFlagMatchesSignature(t *testing.T) {
 	for _, fn := range BuiltinFunctions {
-		spec := semantic.GetFunctionSpec(fn.Name)
+		spec := types.GetFunctionSpec(fn.Name)
 		if spec == nil {
 			continue
 		}
@@ -167,7 +167,7 @@ func TestFunctionSpecOptionalFlagMatchesSignature(t *testing.T) {
 
 // specArgRange returns (minArgs, maxArgs) derived from FunctionSpec params.
 // maxArgs is -1 for variadic functions (unbounded).
-func specArgRange(spec *semantic.FunctionSpec) (int, int) {
+func specArgRange(spec *types.FunctionSpec) (int, int) {
 	min := 0
 	max := 0
 	for _, p := range spec.Params {

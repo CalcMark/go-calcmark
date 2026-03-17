@@ -3,7 +3,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
 func TestGetCursorContext(t *testing.T) {
@@ -15,7 +15,7 @@ func TestGetCursorContext(t *testing.T) {
 		wantFuncName  string
 		wantArgIndex  int
 		wantParamName string
-		wantParamType semantic.ArgType
+		wantParamType types.ArgType
 	}{
 		{
 			name:       "not in function call",
@@ -31,7 +31,7 @@ func TestGetCursorContext(t *testing.T) {
 			wantFuncName:  "accumulate",
 			wantArgIndex:  0,
 			wantParamName: "rate",
-			wantParamType: semantic.ArgTypeRate,
+			wantParamType: types.ArgTypeRate,
 		},
 		{
 			name:          "inside accumulate second arg",
@@ -41,7 +41,7 @@ func TestGetCursorContext(t *testing.T) {
 			wantFuncName:  "accumulate",
 			wantArgIndex:  1,
 			wantParamName: "duration",
-			wantParamType: semantic.ArgTypeDuration,
+			wantParamType: types.ArgTypeDuration,
 		},
 		{
 			name:          "inside avg variadic",
@@ -51,7 +51,7 @@ func TestGetCursorContext(t *testing.T) {
 			wantFuncName:  "avg",
 			wantArgIndex:  2,
 			wantParamName: "values",
-			wantParamType: semantic.ArgTypeAny,
+			wantParamType: types.ArgTypeAny,
 		},
 		{
 			name:          "nested function - inner",
@@ -61,7 +61,7 @@ func TestGetCursorContext(t *testing.T) {
 			wantFuncName:  "sqrt",
 			wantArgIndex:  0,
 			wantParamName: "value",
-			wantParamType: semantic.ArgTypeNumber,
+			wantParamType: types.ArgTypeNumber,
 		},
 		{
 			name:       "after closed paren - not in func",
@@ -77,7 +77,7 @@ func TestGetCursorContext(t *testing.T) {
 			wantFuncName:  "downtime",
 			wantArgIndex:  1,
 			wantParamName: "duration",
-			wantParamType: semantic.ArgTypeDuration,
+			wantParamType: types.ArgTypeDuration,
 		},
 		{
 			name:         "unknown function",
@@ -124,7 +124,7 @@ func TestGetCursorContext(t *testing.T) {
 }
 
 func TestFormatParamHelp(t *testing.T) {
-	spec := semantic.GetFunctionSpec("accumulate")
+	spec := types.GetFunctionSpec("accumulate")
 	if spec == nil {
 		t.Fatal("accumulate spec not found")
 	}
