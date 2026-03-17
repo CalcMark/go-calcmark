@@ -995,25 +995,45 @@ Rate widening only applies to binary `*` and `/`. It does not affect functions l
 
 ## Date Arithmetic {#dates}
 
-CalcMark supports date literals (`Jan 15 2025`, `today`), duration arithmetic, and the `from` keyword. See the [User Guide: Date Arithmetic](/docs/user-guide/formatting/#date-arithmetic) for details.
+CalcMark supports date literals (`Jan 15 2025`, `today`), duration arithmetic, and the `from` keyword.
+
+{{< feature-table category="date" >}}
+
+See the [User Guide: Date Arithmetic](/docs/user-guide/formatting/#date-arithmetic) for details.
 
 ---
 
 ## Network Functions {#network}
 
-CalcMark provides `rtt`, `throughput`, `transfer_time`, and `downtime` for network planning. See the [User Guide: Network Functions](/docs/user-guide/functions/#network-functions) for scope tables and examples.
+CalcMark provides functions for network planning — latency estimation, throughput lookup, and transfer time calculation.
+
+{{< feature-table category="network" >}}
+
+See the [User Guide: Network Functions](/docs/user-guide/functions/#network-functions) for scope tables and examples.
 
 ---
 
 ## Storage Functions {#storage}
 
-CalcMark provides `read`, `seek`, and `compress` for storage planning. See the [User Guide: Storage Functions](/docs/user-guide/functions/#storage-functions) for device type tables and examples.
+CalcMark provides functions for storage planning — read throughput, seek latency, and compression estimation.
+
+{{< feature-table category="storage" >}}
+
+See the [User Guide: Storage Functions](/docs/user-guide/functions/#storage-functions) for device type tables and examples.
+
+---
+
+## Compression {#compression}
+
+{{< feature-table category="compression" >}}
 
 ---
 
 ## Growth Functions {#growth}
 
 CalcMark provides `compound`, `grow`, and `depreciate` for modeling growth and depreciation over time.
+
+{{< feature-table category="function" subcategory="Growth" >}}
 
 ### Compound Growth
 

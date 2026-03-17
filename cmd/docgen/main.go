@@ -17,7 +17,8 @@ import (
 type JSONFeature struct {
 	Name        string      `json:"name"`
 	Category    string      `json:"category"`
-	Quantity    string      `json:"quantity,omitempty"` // Unit category (e.g., "Force", "Length"); empty for non-unit features
+	Subcategory string      `json:"subcategory,omitempty"` // Grouping within category (e.g., "Math", "Network")
+	Quantity    string      `json:"quantity,omitempty"`     // Unit category (e.g., "Force", "Length"); empty for non-unit features
 	Syntax      string      `json:"syntax"`
 	Description string      `json:"description"`
 	Aliases     []JSONAlias `json:"aliases,omitempty"`
@@ -54,6 +55,7 @@ func run() error {
 			jf := JSONFeature{
 				Name:        f.Name,
 				Category:    string(f.Category),
+				Subcategory: f.Subcategory,
 				Quantity:    f.Quantity,
 				Syntax:      f.Syntax,
 				Description: f.Description,

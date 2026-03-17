@@ -1,8 +1,10 @@
 {{- $category := .Get "category" -}}
+{{- $subcategory := .Get "subcategory" -}}
 {{- $features := index .Site.Data.features $category -}}
 {{- if $features -}}
 <div class="feature-table">
 {{- range $features }}
+  {{- if or (not $subcategory) (eq .subcategory $subcategory) }}
   <div class="feature-entry" id="{{ .anchor }}">
     <h4><code>{{ .name }}</code></h4>
     <p>{{ .description }}</p>
@@ -21,6 +23,7 @@
       <dd><code>{{ .example }}</code></dd>
     </dl>
   </div>
+  {{- end }}
 {{- end }}
 </div>
 {{- else -}}
