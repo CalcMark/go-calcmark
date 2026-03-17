@@ -11,6 +11,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/cockroachdb/datadriven v1.0.2
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a
 	github.com/google/uuid v1.6.0
 	github.com/martinlindhe/unit v0.0.0-20230420213220-4adfd7d0a0d6
@@ -21,6 +22,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/tliron/commonlog v0.2.21
 	github.com/tliron/glsp v0.2.2
+	golang.org/x/net v0.49.0
 	golang.org/x/text v0.33.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -42,7 +44,6 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
@@ -72,7 +73,6 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.5 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.39.0 // indirect

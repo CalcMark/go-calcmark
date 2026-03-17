@@ -1,0 +1,16 @@
+[package]
+id = "calcmark"
+name = "CalcMark"
+version = "0.1.0"
+schema_version = 1
+authors = ["CalcMark <hello@calcmark.dev>"]
+description = "CalcMark language support — calculations and markdown in one document"
+repository = "https://github.com/CalcMark/go-calcmark"
+
+[grammars.calcmark]
+repository = "https://github.com/CalcMark/tree-sitter-calcmark"
+rev = "main"
+
+[language_servers.calcmark-lsp]
+name = "CalcMark LSP"
+languages = ["CalcMark"]
