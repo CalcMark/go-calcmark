@@ -34,34 +34,31 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	// Determine prefix (text before cursor on this line, back to last non-identifier char)
 	prefix := extractPrefix(lineText, col)
 
-	// Context-sensitive filtering: suppress completions in markdown-classified lines
-	if isMarkdownLine(lineText) {
+	// Tokenize the line up to the cursor to determine context.
+	// This replaces string heuristics with the real lexer.
+	ctx := classifyCompletionContext(lineText, col)
+
+	switch ctx {
+	case completionContextMarkdown:
 		return nil, nil
-	}
 
-	var items []protocol.CompletionItem
-
-	// After "in" or "as" keywords → units + conversion keywords.
-	// Check position before the prefix so "as nap|" is detected (not just "as |").
-	prefixStart := col - len([]rune(prefix))
-	if isAfterUnitKeyword(lineText, prefixStart) {
+	case completionContextAfterUnitKeyword:
+		// After "in" or "as" → units + conversion keywords (napkin, precise)
+		var items []protocol.CompletionItem
 		items = append(items, unitCompletionItems(prefix)...)
 		items = append(items, conversionKeywordItems(prefix)...)
 		return items, nil
+
+	default:
+		// General context → functions, units, variables
+		var items []protocol.CompletionItem
+		items = append(items, functionCompletionItems(prefix)...)
+		items = append(items, unitCompletionItems(prefix)...)
+		if snap.Evaluator != nil {
+			items = append(items, variableCompletionItems(snap, prefix, line)...)
+		}
+		return items, nil
 	}
-
-	// Functions
-	items = append(items, functionCompletionItems(prefix)...)
-
-	// Units
-	items = append(items, unitCompletionItems(prefix)...)
-
-	// Variables from the evaluated environment
-	if snap.Evaluator != nil {
-		items = append(items, variableCompletionItems(snap, prefix, line)...)
-	}
-
-	return items, nil
 }
 
 // functionCompletionItems returns completion items for built-in functions.
@@ -128,6 +125,88 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	}
 
 	return items
+}
+
+// completionContext describes the syntactic context at the cursor for completion.
+type completionContext int
+
+const (
+	completionContextGeneral          completionContext = iota
+	completionContextAfterUnitKeyword                   // cursor is after "in" or "as"
+	completionContextMarkdown                           // line is markdown, suppress completions
+)
+
+// classifyCompletionContext tokenizes the line up to the cursor position and
+// determines the completion context from the token stream. This uses the real
+// lexer instead of string heuristics.
+func classifyCompletionContext(lineText string, col int) completionContext {
+	// Truncate line to cursor position for tokenization
+	runes := []rune(lineText)
+	if col > len(runes) {
+		col = len(runes)
+	}
+	textBeforeCursor := string(runes[:col])
+
+	// Try to tokenize. If the lexer produces no tokens, treat as markdown.
+	l := lexer.NewLexer(textBeforeCursor)
+	tokens, _ := l.Tokenize()
+
+	// Filter to meaningful tokens (skip NEWLINE, EOF, ERROR)
+	var meaningful []lexer.Token
+	for _, tok := range tokens {
+		switch tok.Type {
+		case lexer.NEWLINE, lexer.EOF, lexer.ERROR:
+			continue
+		default:
+			meaningful = append(meaningful, tok)
+		}
+	}
+
+	if len(meaningful) == 0 {
+		// No tokens → could be blank or pure prose
+		if isMarkdownLine(lineText) {
+			return completionContextMarkdown
+		}
+		return completionContextGeneral
+	}
+
+	// Check if the line starts with a markdown prefix (headings, lists, blockquotes).
+	// The lexer won't catch these since they're not calc syntax.
+	if isMarkdownLine(lineText) {
+		return completionContextMarkdown
+	}
+
+	// Find the last complete token before the cursor.
+	// If the user is mid-typing an identifier (prefix), the last token might be
+	// the incomplete identifier itself. Look at the token before that.
+	last := meaningful[len(meaningful)-1]
+
+	// If the last token is an identifier that ends at the cursor position,
+	// it's the prefix being typed. Look at the previous token for context.
+	lastEndRune := runeCountStr(textBeforeCursor, last.EndPos)
+	if last.Type == lexer.IDENTIFIER && lastEndRune >= col {
+		if len(meaningful) >= 2 {
+			last = meaningful[len(meaningful)-2]
+		} else {
+			return completionContextGeneral
+		}
+	}
+
+	// Check if the context token is AS or IN
+	switch last.Type {
+	case lexer.AS, lexer.IN:
+		return completionContextAfterUnitKeyword
+	}
+
+	return completionContextGeneral
+}
+
+// runeCountStr returns the number of runes in s[:byteOffset].
+func runeCountStr(s string, byteOffset int) int {
+	if byteOffset > len(s) {
+		byteOffset = len(s)
+	}
+	return len([]rune(s[:byteOffset]))
 }
 
 // conversionKeywordItems returns completion items for keywords valid after "as" or "in".
@@ -325,14 +404,3 @@ func isMarkdownLine(line string) bool {
 	return false
 }
 
-// isAfterUnitKeyword returns true if the cursor is positioned after "in " or "as ".
-func isAfterUnitKeyword(lineText string, col int) bool {
-	if col > len(lineText) {
-		col = len(lineText)
-	}
-	before := strings.ToLower(strings.TrimSpace(lineText[:col]))
-	return strings.HasSuffix(before, " in ") ||
-		strings.HasSuffix(before, " as ") ||
-		strings.HasSuffix(before, " in") ||
-		strings.HasSuffix(before, " as")
-}

@@ -228,25 +228,29 @@ func TestIsMarkdownLine(t *testing.T) {
 	}
 }
 
-func TestIsAfterUnitKeyword(t *testing.T) {
+func TestClassifyCompletionContext(t *testing.T) {
 	tests := []struct {
 		name string
 		line string
 		col  int
-		want bool
+		want completionContext
 	}{
-		{"after in space", "100 meters in ", 14, true},
-		{"after in", "100 meters in", 13, true},
-		{"after as space", "price as ", 9, true},
-		{"not after keyword", "a = 1 + 1", 9, false},
-		{"in mid-word", "inside", 6, false},
+		{"after in space", "100 meters in ", 14, completionContextAfterUnitKeyword},
+		{"after in typing", "100 meters in fe", 16, completionContextAfterUnitKeyword},
+		{"after as space", "price as ", 9, completionContextAfterUnitKeyword},
+		{"after as typing napkin", "price as nap", 12, completionContextAfterUnitKeyword},
+		{"general assignment", "a = 1 + 1", 9, completionContextGeneral},
+		{"general identifier", "acc", 3, completionContextGeneral},
+		{"markdown heading", "# Heading", 9, completionContextMarkdown},
+		{"markdown list", "- item", 6, completionContextMarkdown},
+		{"empty line", "", 0, completionContextMarkdown},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := isAfterUnitKeyword(tt.line, tt.col)
+			got := classifyCompletionContext(tt.line, tt.col)
 			if got != tt.want {
-				t.Errorf("isAfterUnitKeyword(%q, %d) = %v, want %v", tt.line, tt.col, got, tt.want)
+				t.Errorf("classifyCompletionContext(%q, %d) = %v, want %v", tt.line, tt.col, got, tt.want)
 			}
 		})
 	}
