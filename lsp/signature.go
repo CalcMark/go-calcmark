@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -45,19 +46,9 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 	var description string
 	registry := features.NewRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
-		if f.Name == funcName {
+		if f.Name == funcName || slices.Contains(f.Synonyms, funcName) {
 			signature = f.Syntax
 			description = f.Description
-			break
-		}
-		for _, syn := range f.Synonyms {
-			if syn == funcName {
-				signature = f.Syntax
-				description = f.Description
-				break
-			}
-		}
-		if signature != "" {
 			break
 		}
 	}

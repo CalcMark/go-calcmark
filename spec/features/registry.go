@@ -191,10 +191,10 @@ func getFunctions() []Feature {
 			Example:     "sqrt(16) → 4",
 		},
 		{
-			Name:     "number",
+			Name:        "number",
 			Category:    CategoryFunction,
 			Subcategory: "Math",
-			Syntax:   "number(value)",
+			Syntax:      "number(value)",
 			Description: "Strip the unit or currency from a typed value, returning a plain number. " +
 				"Use when you need a dimensionless ratio from two typed values: " +
 				"number($500) / number($1000) → 0.5. " +

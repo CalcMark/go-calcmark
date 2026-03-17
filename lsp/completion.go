@@ -425,4 +425,3 @@ func isMarkdownLine(line string) bool {
 	}
 	return false
 }
-
