@@ -17,6 +17,7 @@ This guide is for developers who want to extend the CalcMark language or contrib
 
 - Go 1.21 or later
 - [Task](https://taskfile.dev/) for running development commands
+- [Node.js](https://nodejs.org/) 20+ (for building the VS Code extension)
 - (Optional) [golangci-lint](https://golangci-lint.run/) for additional strict linting
 
 ### Setup
@@ -49,7 +50,8 @@ task quality         # lint + modernize + staticcheck
 task security        # Security tests + fuzzing
 
 # Build
-task build           # Current platform
+task build           # Current platform (cm binary)
+task build:vscode    # VS Code extension
 
 # Development
 task dev             # REPL

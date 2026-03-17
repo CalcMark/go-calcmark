@@ -66,6 +66,41 @@ tasks:
       - GOOS=windows GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o dist/{{.BINARY_NAME}}-windows-amd64.exe ./cmd/calcmark
       - echo 'Built Windows binary'
 
+  build:vscode:
+    desc: Build the VS Code extension (and cm binary)
+    deps:
+      - build
+    dir: editors/vscode-calcmark
+    cmds:
+      - npm install --no-audit --no-fund
+      - npm run compile
+      - echo '✓ VS Code extension built to editors/vscode-calcmark/out/'
+
+  run:vscode:
+    desc: Build and launch VS Code with the CalcMark extension loaded
+    deps:
+      - build:vscode
+    cmds:
+      - echo 'Launching VS Code with CalcMark extension...'
+      - echo 'Open any .cm file to test.'
+      - |
+        CODE=""
+        for candidate in \
+          "$(command -v code 2>/dev/null)" \
+          "/usr/local/bin/code" \
+          "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
+          "$(command -v cursor 2>/dev/null)"; do
+          if [ -x "$candidate" ]; then
+            CODE="$candidate"
+            break
+          fi
+        done
+        if [ -z "$CODE" ]; then
+          echo "Error: VS Code not found. Install the 'code' CLI: open VS Code, Cmd+Shift+P, 'Shell Command: Install code command in PATH'"
+          exit 1
+        fi
+        PATH="$(pwd):$PATH" "$CODE" --extensionDevelopmentPath="$(pwd)/editors/vscode-calcmark"
+
   # ── Development ────────────────────────────────────────────────────
 
   dev:
