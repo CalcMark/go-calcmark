@@ -6,13 +6,9 @@ authors = ["CalcMark <hello@calcmark.dev>"]
 description = "CalcMark language support — calculations and markdown in one document"
 repository = "https://github.com/CalcMark/go-calcmark"
 
-# Tree-sitter grammar (planned): requires pushing editors/tree-sitter-calcmark/
-# to a separate CalcMark/tree-sitter-calcmark repo on GitHub.
-# Until then, semantic tokens from cm lsp provide full context-aware highlighting.
-#
-# [grammars.calcmark]
-# repository = "https://github.com/CalcMark/tree-sitter-calcmark"
-# rev = "<commit-sha>"
+[grammars.calcmark]
+repository = "https://github.com/CalcMark/tree-sitter-calcmark"
+rev = "7f802fda654a997898ed705e0d834121f2f3f1fc"
 
 [language_servers.calcmark-lsp]
 name = "CalcMark LSP"

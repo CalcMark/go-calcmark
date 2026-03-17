@@ -1,4 +1,5 @@
 name = "CalcMark"
+grammar = "calcmark"
 path_suffixes = ["cm", "calcmark"]
 tab_size = 2
 hard_tabs = false
