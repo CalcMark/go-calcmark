@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -44,17 +45,10 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 	var signature string
 	var description string
 	for _, fn := range interpreter.BuiltinFunctions {
-		if fn.Name == funcName {
+		if fn.Name == funcName || slices.Contains(fn.Synonyms, funcName) {
 			signature = fn.Signature
 			description = fn.Description
 			break
-		}
-		for _, syn := range fn.Synonyms {
-			if syn == funcName {
-				signature = fn.Signature
-				description = fn.Description
-				break
-			}
 		}
 	}
 
