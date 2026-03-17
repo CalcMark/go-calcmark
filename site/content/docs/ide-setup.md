@@ -22,13 +22,76 @@ The extension automatically finds the `cm` binary in your PATH. To use a specifi
 
 Install the **CalcMark** extension from Zed's extension marketplace.
 
-For local development, symlink or copy `editors/zed-calcmark/` to your Zed extensions directory:
+### Dev install (local development)
 
-```bash
-ln -s /path/to/go-calcmark/editors/zed-calcmark ~/.local/share/zed/extensions/installed/calcmark
-```
+Install the extension from your local checkout:
+
+1. Open Zed
+2. Open the command palette: **Cmd+Shift+P**
+3. Run **zed: install dev extension**
+4. Select the `editors/zed-calcmark/` directory
 
 The extension uses tree-sitter for syntax highlighting and `cm lsp` for language intelligence.
+
+### Uninstall dev extension
+
+1. Open the command palette: **Cmd+Shift+P**
+2. Run **zed: uninstall dev extension**
+3. Select **calcmark**
+
+Or remove it manually:
+
+```bash
+rm -rf ~/.local/share/zed/extensions/installed/calcmark
+```
+
+Then restart Zed.
+
+### Useful keybindings in Zed
+
+These are Zed's built-in LSP keybindings — they work automatically with the CalcMark extension:
+
+| Shortcut | Action |
+|----------|--------|
+| **Cmd+.** | Code actions (quick fixes for undefined variables) |
+| **Cmd+Shift+O** | Document symbols (variables and headings outline) |
+| **Cmd+click** or **F12** | Go to definition (jump to variable assignment) |
+| **Cmd+Shift+M** | Open diagnostics panel (errors and warnings) |
+| hover | Hover info (variable values, function signatures) |
+| type | Autocomplete (functions, units, variables appear automatically) |
+| **Cmd+Shift+Space** | Signature help (parameter hints inside function calls) |
+
+### Live preview from Zed
+
+Zed doesn't support webview panels, so use `cm watch` for live preview.
+
+Add a task to `.zed/tasks.json` in your project root:
+
+```json
+[
+  {
+    "label": "CalcMark: Preview",
+    "command": "cm watch \"$ZED_FILE\"",
+    "reveal": "always",
+    "hide": "on_success"
+  }
+]
+```
+
+Run it via **Cmd+Shift+P** → **task: spawn** → **CalcMark: Preview**, or bind it to a key in `~/.config/zed/keymap.json`:
+
+```json
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-shift-r": ["task::Spawn", { "task_name": "CalcMark: Preview" }]
+    }
+  }
+]
+```
+
+Now **Cmd+Shift+R** on any `.cm` file launches a live preview in your browser that auto-reloads on every save.
 
 ## Neovim
 
@@ -64,6 +127,12 @@ cm watch budget.cm
 ```
 
 This starts a local HTTP server that watches the file and auto-reloads the browser on every save. The URL is printed to stderr — it includes a random session token for security.
+
+Options:
+
+```bash
+cm watch --port 8080 budget.cm    # Custom port (default: 3141)
+```
 
 ## What the LSP Provides
 
