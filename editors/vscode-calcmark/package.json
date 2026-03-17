@@ -1,0 +1,57 @@
+{
+  "name": "vscode-calcmark",
+  "displayName": "CalcMark",
+  "description": "Language support for CalcMark — calculations and markdown in one document",
+  "version": "0.1.0",
+  "publisher": "calcmark",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:calcmark"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "calcmark",
+        "aliases": [
+          "CalcMark",
+          "calcmark"
+        ],
+        "extensions": [
+          ".cm",
+          ".calcmark"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "title": "CalcMark",
+      "properties": {
+        "calcmark.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the cm binary. If empty, searches PATH."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/vscode": "^1.82.0",
+    "typescript": "^5.0.0"
+  }
+}

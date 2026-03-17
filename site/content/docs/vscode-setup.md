@@ -33,30 +33,40 @@ If you're building CalcMark from source or want to try the LSP before the offici
 Open VS Code and install one of these extensions:
 
 - **Generic LSP Client (v2)** by zsol — search `zsol.vscode-glspc` in Extensions
-- **Generic LSP Client** by llllvvuu — search `llllvvuu.llllvvuu-glspc` in Extensions
-
-Both work. The v2 fork is more actively maintained.
 
 ### Step 2: Configure the LSP Client
 
-Add to your VS Code settings (Ctrl+Shift+P → "Preferences: Open User Settings (JSON)"):
+Open your VS Code settings JSON (Ctrl+Shift+P → "Preferences: Open User Settings (JSON)") and add these keys alongside your existing settings:
+
+```json
+"glspc.server.command": "/path/to/cm",
+"glspc.server.commandArguments": ["lsp"],
+"glspc.server.languageId": ["calcmark"]
+```
+
+For example, if your settings file already has a color theme, the result should look like:
 
 ```json
 {
-  "glspc.serverCommand": "/path/to/cm",
-  "glspc.serverArgs": ["lsp"],
-  "glspc.languages": [
-    {
-      "id": "calcmark",
-      "extensions": [".cm", ".calcmark"]
-    }
-  ]
+    "workbench.colorTheme": "Default Light Modern",
+    "glspc.server.command": "/path/to/cm",
+    "glspc.server.commandArguments": ["lsp"],
+    "glspc.server.languageId": ["calcmark"]
 }
 ```
 
 Replace `/path/to/cm` with the actual path to your `cm` binary. If you built from source, this is the path to the `cm` file in your repo root (e.g., `/Users/you/projects/go-calcmark/cm`).
 
 If `cm` is on your PATH (e.g., installed via Homebrew), you can use just `"cm"` instead of the full path.
+
+You also need to tell VS Code that `.cm` files are the `calcmark` language. Add a file association:
+
+```json
+"files.associations": {
+    "*.cm": "calcmark",
+    "*.calcmark": "calcmark"
+}
+```
 
 ### Step 3: Open a .cm File
 
@@ -90,8 +100,10 @@ The generic LSP client provides full language intelligence but not:
 
 ## Troubleshooting
 
+**First step for any issue:** Open the Output panel (Ctrl+Shift+U) and select **"CalcMark LSP"** from the dropdown on the right. This shows the server's communication log and any errors.
+
 **No diagnostics or completions:**
-- Open the Output panel (Ctrl+Shift+U) and select the LSP client channel to see server logs
+- Check the CalcMark LSP output channel for errors
 - Verify `cm lsp` starts correctly: run `cm lsp` in a terminal — it should hang waiting for input (that's normal)
 - Check that the file extension is `.cm` or `.calcmark`
 
@@ -102,6 +114,17 @@ The generic LSP client provides full language intelligence but not:
 **Completions don't auto-popup:**
 - Press Ctrl+Space to manually trigger completions
 - VS Code should auto-popup for LSP completions by default, but check that `"editor.quickSuggestions"` is enabled in your settings
+
+**Server crashes on startup (error -32097):**
+- The `cm` binary on your PATH may be an older version without `lsp` support
+- Set `calcmark.binaryPath` in settings to the full path of the correct `cm` binary
+- Check the CalcMark LSP output channel — it will show what command failed
+
+**AI autocomplete blocking CalcMark suggestions:**
+- GitHub Copilot or similar extensions can intercept completions. Disable for CalcMark files:
+  ```json
+  "github.copilot.enable": { "calcmark": false }
+  ```
 
 **Binary version mismatch:**
 - If you're developing CalcMark, rebuild with `task build` after pulling changes to keep the LSP server up to date
