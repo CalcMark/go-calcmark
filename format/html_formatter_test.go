@@ -648,3 +648,71 @@ func TestHTMLFormatterScientificDocument(t *testing.T) {
 		t.Error("Expected calc-block sections in HTML output")
 	}
 }
+
+// TestHTMLFormatterDataSourceLineAttributes verifies that data-source-line attributes
+// are present on calc-line and text-block elements for scroll sync.
+func TestHTMLFormatterDataSourceLineAttributes(t *testing.T) {
+	source := "# Budget\n\nx = 10\ny = x * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	err = formatter.Format(&buf, doc, Options{})
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Text block (heading) should have data-source-line
+	if !strings.Contains(output, `data-source-line="1"`) {
+		t.Errorf("Expected text block with data-source-line=\"1\", output:\n%s", output)
+	}
+
+	// Calc lines should have data-source-line attributes
+	// "x = 10" is on line 3, "y = x * 2" is on line 4
+	if !strings.Contains(output, `data-source-line="3"`) {
+		t.Errorf("Expected calc line with data-source-line=\"3\", output:\n%s", output)
+	}
+	if !strings.Contains(output, `data-source-line="4"`) {
+		t.Errorf("Expected calc line with data-source-line=\"4\", output:\n%s", output)
+	}
+}
+
+// TestHTMLFormatterDataSourceLineWithFrontmatter verifies that data-source-line
+// accounts for frontmatter lines.
+func TestHTMLFormatterDataSourceLineWithFrontmatter(t *testing.T) {
+	source := "---\nglobals:\n  tax: 10%\n---\n\nprice = 100\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	err = formatter.Format(&buf, doc, Options{})
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Frontmatter is 4 lines (--- through ---), plus empty line = 5
+	// "price = 100" should be on line 6
+	if !strings.Contains(output, `data-source-line="6"`) {
+		t.Errorf("Expected calc line with data-source-line=\"6\" after frontmatter, output:\n%s", output)
+	}
+}
