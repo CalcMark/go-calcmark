@@ -237,6 +237,33 @@ func TestEncodeSemanticTokens_MultiLine(t *testing.T) {
 	}
 }
 
+func TestEncodeSemanticTokens_NoDeltaUnderflow(t *testing.T) {
+	// Regression: delta encoding must never produce negative values.
+	// Negative ints cast to uint32 wrap to huge numbers, corrupting the stream.
+	s := NewServer()
+	snap := s.evaluate("# Heading\na = 1\nb = a + 1")
+
+	data := encodeSemanticTokens(snap)
+	// Every 5th value (deltaLine and deltaStart) must be non-negative when
+	// interpreted as uint32 — which they are by type, but verify the raw
+	// int arithmetic never intended a negative.
+	for i := 0; i+4 < len(data); i += 5 {
+		deltaLine := data[i]
+		deltaStart := data[i+1]
+		length := data[i+2]
+		// deltaLine and deltaStart should be reasonable (not wrapped huge values)
+		if deltaLine > 10000 {
+			t.Errorf("token %d: deltaLine=%d looks like underflow", i/5, deltaLine)
+		}
+		if deltaStart > 10000 {
+			t.Errorf("token %d: deltaStart=%d looks like underflow", i/5, deltaStart)
+		}
+		if length == 0 {
+			t.Errorf("token %d: length=0", i/5)
+		}
+	}
+}
+
 func TestEncodeSemanticTokens_NilDocument(t *testing.T) {
 	snap := &DocumentSnapshot{Source: "bad input"}
 	data := encodeSemanticTokens(snap)

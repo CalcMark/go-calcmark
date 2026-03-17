@@ -1,7 +1,4 @@
 name = "CalcMark"
-grammar = "calcmark"
 path_suffixes = ["cm", "calcmark"]
-line_comments = ["// "]
-block_comment = ["<!-- ", " -->"]
 tab_size = 2
 hard_tabs = false

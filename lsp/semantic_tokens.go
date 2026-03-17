@@ -115,7 +115,9 @@ func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
 			deltaLine := lineIdx - prevLine
 			deltaStart := 0
 			if deltaLine == 0 {
-				deltaStart = 0 - prevStart
+				// Same line — deltaStart is relative to previous token start.
+				// Should not happen for text lines (one per line), but guard against it.
+				deltaStart = max(0-prevStart, 0)
 			}
 			data = append(data,
 				protocol.UInteger(deltaLine),
@@ -155,6 +157,10 @@ func encodeSemanticTokens(snap *DocumentSnapshot) []protocol.UInteger {
 			deltaStart := startChar
 			if deltaLine == 0 {
 				deltaStart = startChar - prevStart
+				if deltaStart < 0 {
+					// Token columns out of order — skip to avoid corrupting the stream
+					continue
+				}
 			}
 
 			data = append(data,
