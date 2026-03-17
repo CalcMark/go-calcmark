@@ -396,6 +396,8 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 				blockDiag.Line = diag.Range.Start.Line
 				blockDiag.Column = diag.Range.Start.Column
 				blockDiag.DocLine = diag.Range.Start.Line + lineOff
+				blockDiag.EndLine = diag.Range.End.Line + lineOff
+				blockDiag.EndColumn = diag.Range.End.Column
 			}
 			block.AddDiagnostic(blockDiag)
 
@@ -534,6 +536,8 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 				blockDiag.Line = diag.Range.Start.Line
 				blockDiag.Column = diag.Range.Start.Column
 				blockDiag.DocLine = diag.Range.Start.Line + lineOff
+				blockDiag.EndLine = diag.Range.End.Line + lineOff
+				blockDiag.EndColumn = diag.Range.End.Column
 			}
 			block.AddDiagnostic(blockDiag)
 

@@ -95,18 +95,20 @@ func NewServer() *Server {
 		CancelRequest: s.cancelRequest,
 		Initialize:    s.initialize,
 		Initialized:   s.initialized,
-		Shutdown:       s.shutdown,
-		SetTrace:       s.setTrace,
+		Shutdown:      s.shutdown,
+		SetTrace:      s.setTrace,
 
 		TextDocumentDidOpen:   s.textDocumentDidOpen,
 		TextDocumentDidChange: s.textDocumentDidChange,
 		TextDocumentDidClose:  s.textDocumentDidClose,
 
-		TextDocumentCompletion:     s.textDocumentCompletion,
-		TextDocumentSignatureHelp:  s.textDocumentSignatureHelp,
-		TextDocumentHover:          s.textDocumentHover,
-		TextDocumentDefinition:     s.textDocumentDefinition,
-		TextDocumentDocumentSymbol: s.textDocumentDocumentSymbol,
+		TextDocumentCompletion:         s.textDocumentCompletion,
+		TextDocumentSignatureHelp:      s.textDocumentSignatureHelp,
+		TextDocumentHover:              s.textDocumentHover,
+		TextDocumentDefinition:         s.textDocumentDefinition,
+		TextDocumentDocumentSymbol:     s.textDocumentDocumentSymbol,
+		TextDocumentSemanticTokensFull: s.textDocumentSemanticTokensFull,
+		TextDocumentCodeAction:         s.textDocumentCodeAction,
 	}
 
 	s.server = glspServer.NewServer(&s.handler, serverName, false)
@@ -143,6 +145,15 @@ func (s *Server) initialize(_ *glsp.Context, params *protocol.InitializeParams) 
 			HoverProvider:          &protocol.HoverOptions{},
 			DefinitionProvider:     &protocol.DefinitionOptions{},
 			DocumentSymbolProvider: &protocol.DocumentSymbolOptions{},
+			CodeActionProvider: &protocol.CodeActionOptions{
+				CodeActionKinds: []protocol.CodeActionKind{
+					protocol.CodeActionKindQuickFix,
+				},
+			},
+			SemanticTokensProvider: &protocol.SemanticTokensOptions{
+				Legend: SemanticTokensLegend(),
+				Full:   true,
+			},
 		},
 		ServerInfo: &protocol.InitializeResultServerInfo{
 			Name:    serverName,

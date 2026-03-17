@@ -105,14 +105,16 @@ type UpdateResult struct {
 
 // Diagnostic represents a validation issue with source position info.
 type Diagnostic struct {
-	BlockID  string
-	Severity string // "error", "warning", "hint"
-	Code     string
-	Message  string
-	Detailed string // Detailed explanation with context and guidance (from semantic checker)
-	Line     int    // 1-indexed line number within the block (for block-internal lookups)
-	Column   int    // 1-indexed column number
-	DocLine  int    // 1-indexed document-absolute line number (0 if unknown)
+	BlockID   string
+	Severity  string // "error", "warning", "hint"
+	Code      string
+	Message   string
+	Detailed  string // Detailed explanation with context and guidance (from semantic checker)
+	Line      int    // 1-indexed line number within the block (for block-internal lookups)
+	Column    int    // 1-indexed column number
+	DocLine   int    // 1-indexed document-absolute line number (0 if unknown)
+	EndLine   int    // 1-indexed end line (0 if unknown — falls back to start line)
+	EndColumn int    // 1-indexed end column (0 if unknown — falls back to end-of-line)
 }
 
 // ReplaceBlockSource replaces the source of a block and propagates changes.

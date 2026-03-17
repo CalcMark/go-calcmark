@@ -145,12 +145,26 @@ func toLSPDiagnostic(d specDoc.Diagnostic) protocol.Diagnostic {
 		message = d.Message + "\n" + d.Detailed
 	}
 
-	line := max(d.DocLine-1, 0)
+	startLine := max(d.DocLine-1, 0)
+	startChar := 0
+	endLine := startLine
+	endChar := 1000 // fallback: highlight whole line
+
+	// Use precise column info when available (1-indexed → 0-indexed)
+	if d.Column > 0 {
+		startChar = d.Column - 1
+	}
+	if d.EndLine > 0 {
+		endLine = d.EndLine - 1
+	}
+	if d.EndColumn > 0 {
+		endChar = d.EndColumn - 1
+	}
 
 	return protocol.Diagnostic{
 		Range: protocol.Range{
-			Start: protocol.Position{Line: protocol.UInteger(line), Character: 0},
-			End:   protocol.Position{Line: protocol.UInteger(line), Character: 1000},
+			Start: protocol.Position{Line: protocol.UInteger(startLine), Character: protocol.UInteger(startChar)},
+			End:   protocol.Position{Line: protocol.UInteger(endLine), Character: protocol.UInteger(endChar)},
 		},
 		Severity: &severity,
 		Code:     &protocol.IntegerOrString{Value: code},
