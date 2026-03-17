@@ -92,10 +92,11 @@ func NewServer() *Server {
 	}
 
 	s.handler = protocol.Handler{
-		Initialize:  s.initialize,
-		Initialized: s.initialized,
-		Shutdown:    s.shutdown,
-		SetTrace:    s.setTrace,
+		CancelRequest: s.cancelRequest,
+		Initialize:    s.initialize,
+		Initialized:   s.initialized,
+		Shutdown:       s.shutdown,
+		SetTrace:       s.setTrace,
 
 		TextDocumentDidOpen:   s.textDocumentDidOpen,
 		TextDocumentDidChange: s.textDocumentDidChange,
@@ -165,6 +166,11 @@ func (s *Server) shutdown(_ *glsp.Context) error {
 		}
 	}
 	s.mu.RUnlock()
+	return nil
+}
+
+// cancelRequest handles the LSP $/cancelRequest notification (no-op).
+func (s *Server) cancelRequest(_ *glsp.Context, _ *protocol.CancelParams) error {
 	return nil
 }
 
