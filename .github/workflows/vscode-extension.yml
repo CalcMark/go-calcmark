@@ -42,13 +42,13 @@ jobs:
       - name: Publish (pre-release)
         if: steps.release-type.outputs.pre_release == 'true'
         working-directory: editors/vscode-calcmark
-        run: npx vsce publish --pre-release
+        run: npx vsce publish --pre-release -p "$VSCE_PAT"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Publish (stable)
         if: steps.release-type.outputs.pre_release == 'false'
         working-directory: editors/vscode-calcmark
-        run: npx vsce publish
+        run: npx vsce publish -p "$VSCE_PAT"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
