@@ -12,7 +12,7 @@ disableKinds:
 enableGitInfo: true
 
 params:
-  description: "Calculations embedded in markdown documents."
+  description: "Calculations embedded in Markdown documents."
   githubURL: "https://github.com/CalcMark/go-calcmark"
   # Version is injected at build time via HUGO_PARAMS_version environment variable.
   # Falls back to "dev" for local builds.
@@ -37,9 +37,6 @@ menus:
     - name: Docs
       url: /docs/
       weight: 10
-    - name: Examples
-      url: /docs/examples/
-      weight: 20
     - name: Larky
       url: /larky/
       weight: 25
@@ -60,9 +57,6 @@ menus:
     - name: User Guide
       url: /docs/user-guide/
       weight: 20
-    - name: Domain Recipes
-      url: /guides/
-      weight: 25
     - name: Thinking in CalcMark
       url: /guides/thinking-in-calcmark/
       weight: 24
@@ -101,6 +95,3 @@ menus:
     - name: Configuration
       url: /docs/configuration/
       weight: 43
-    - name: Examples
-      url: /docs/examples/
-      weight: 50

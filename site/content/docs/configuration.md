@@ -120,6 +120,9 @@ locale = "en-US"
 # Set to "light" if you use a light terminal background.
 color_mode = "dark"
 
+# Display fractions as Unicode characters (e.g., ½) instead of ASCII (1/2).
+unicode_fractions = true
+
 [tui.theme]
 # Color overrides (hex strings: #RGB or #RRGGBB).
 # Leave empty to use the built-in adaptive palette defaults.

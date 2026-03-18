@@ -7,12 +7,12 @@
       <img src="{{ $larkColor.RelPermalink }}" alt="Larky the CalcMark Lark" class="hero-lark">
       <img src="{{ $logoColor.RelPermalink }}" alt="cm" class="hero-cm">
     </div>
-    <h1 class="hero-headline">Calculations embedded<br>in markdown documents.</h1>
-    <p class="hero-sub">Write your thinking in plain text. Add calculations that reference each other. Watch results update as you type.</p>
+    <h1 class="hero-headline">It&rsquo;s just Markdown.<br>Until it starts calculating.</h1>
+    <p class="hero-sub">Write your document in plain Markdown. CalcMark understands variables, converts units and currencies, then shows results &mdash; all while you type.</p>
     <div class="hero-install">
       <pre class="install-cmd"><code>brew install calcmark/tap/calcmark</code></pre>
       <div class="hero-actions">
-        <a href="https://lark.calcmark.org" class="btn btn-primary">Try it live!</a>
+        <a href="https://lark.calcmark.org" class="btn btn-primary btn-lark"><img src="{{ $larkColor.RelPermalink }}" alt="" class="btn-lark-icon" aria-hidden="true">Try it live!</a>
         <a href="{{ "docs/getting-started/" | relURL }}" class="btn btn-secondary">Get Started</a>
         <a href="https://github.com/CalcMark/agent-skill" class="btn btn-secondary">Install for Your AI Agent</a>
       </div>
@@ -119,6 +119,16 @@ total_cost = headcount * rate <span class="r">$1.8M</span></code></pre>
 <span class="c">$</span> cm eval budget.cm --format json
 <span class="c">$</span> cm convert report.cm --to html</code></pre>
       <a class="feature-link" href="/docs/agent-integration/">Agent &amp; API integration &rarr;</a>
+    </div>
+
+    <div class="feature-card">
+      <h3>VS Code extension</h3>
+      <p>Syntax highlighting, live preview, and export to HTML, Markdown, or JSON &mdash; all inside your editor.</p>
+      <pre class="feature-snippet"><code><span class="c">&gt;</span> CalcMark: Open Preview
+<span class="c">&gt;</span> CalcMark: Export to HTML
+<span class="c">&gt;</span> CalcMark: Export to Markdown
+<span class="c">&gt;</span> CalcMark: Export to JSON</code></pre>
+      <a class="feature-link" href="https://marketplace.visualstudio.com/items?itemName=calcmark.vscode-calcmark">Install from Marketplace &rarr;</a>
     </div>
 
   </div>

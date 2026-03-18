@@ -46,7 +46,7 @@ net_income = total_gross - total_taxes
 
 The combined rate is 0.3065 (about 30.7%), giving `total_taxes = $3,586.05` and `net_income = $8,113.95`.
 
-**CalcMark features:** Decimal arithmetic; currency multiplication and subtraction; markdown prose between calculations.
+**CalcMark features:** Decimal arithmetic; currency multiplication and subtraction; Markdown prose between calculations.
 
 ---
 

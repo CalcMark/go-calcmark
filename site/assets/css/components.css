@@ -74,6 +74,23 @@
   color: var(--color-primary);
 }
 
+.nav-link--lark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.nav-link--lark:hover {
+  color: var(--color-primary-hover);
+}
+
+.nav-lark-icon {
+  width: 1.1em;
+  height: 1.1em;
+}
+
 /* Theme toggle */
 .theme-toggle {
   background: none;

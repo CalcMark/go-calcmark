@@ -1,12 +1,15 @@
 <header class="site-nav">
   <div class="container nav-inner">
     {{- $lark := resources.Get "images/lark.svg" | fingerprint -}}
+    {{- $larkColor := resources.Get "images/lark-color.svg" | fingerprint -}}
     <a href="{{ "/" | relURL }}" class="nav-logo"><img src="{{ $lark.RelPermalink }}" alt="" class="nav-logo-icon" aria-hidden="true">CalcMark</a>
     <nav class="nav-links" aria-label="Main navigation">
       {{ range .Site.Menus.main }}
       <a class="nav-link{{ if or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }} nav-link--active{{ end }}"
          href="{{ .URL }}"{{ with .Params.external }} target="_blank" rel="noopener"{{ end }}>{{ .Name }}</a>
       {{ end }}
+      <a class="nav-link nav-link--lark"
+         href="https://lark.calcmark.org" target="_blank" rel="noopener"><img src="{{ $larkColor.RelPermalink }}" alt="" class="nav-lark-icon" aria-hidden="true">Try it live</a>
     </nav>
     {{ partial "theme-toggle.html" . }}
   </div>

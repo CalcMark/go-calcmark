@@ -104,7 +104,7 @@ For reference, 1000 kilowatts converts cleanly:
 
 CalcMark knows SI power units and can convert between them using the `in` keyword. The `$9.5M` syntax uses a multiplier suffix -- CalcMark supports `k` (thousand), `M` (million), and `B` (billion).
 
-**CalcMark features:** Quantities with units (`kilowatts`); `in` unit conversion; multiplier suffixes (`$9.5M`); markdown prose between calculations.
+**CalcMark features:** Quantities with units (`kilowatts`); `in` unit conversion; multiplier suffixes (`$9.5M`); Markdown prose between calculations.
 
 ---
 

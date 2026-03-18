@@ -1,12 +1,23 @@
 ---
 title: "Examples"
-summary: "Worked examples showing CalcMark in action."
+summary: "Tutorials, worked examples, and feature references for CalcMark."
 weight: 900
 ---
 
-Explore complete CalcMark files that demonstrate real-world use cases. Each example page has a Larky icon you can click to copy the `cm remote` command — paste it into your terminal to open the file directly.
+Each example page has a Larky icon you can click to open the file directly in [Lark](https://lark.calcmark.org), or copy the `cm remote` command to your terminal.
 
-## Real-World Use Cases
+## Tutorials
+
+Step-by-step walkthroughs that teach CalcMark through a specific domain.
+
+- [System Sizing & Capacity Planning](/guides/system-sizing/) -- Server fleets, bandwidth, storage, and SLA budgets
+- [Business Planning & Financial Modeling](/guides/business-planning/) -- P&L statements, budgets, and projections
+- [Recipe Scaling & Cooking](/guides/recipe-scaling/) -- Fractions, measurement conventions, and the `scale` directive
+- [Unit Conversion & Measurement](/guides/unit-conversion/) -- Ambiguous units, inline qualifiers, and unit systems
+
+## Worked Examples
+
+Complete `.cm` files you can run, modify, and learn from.
 
 - [Markdown Showcase](markdown-showcase/) -- Headings, lists, quotes, links, tables, and live calculations
 - [Household Budget](household-budget/) -- Monthly budget with rates, conversions, and napkin math
@@ -21,7 +32,7 @@ Explore complete CalcMark files that demonstrate real-world use cases. Each exam
 
 ## Feature Reference
 
-These examples are drawn from the project's {{< repo-file path="testdata/eval/success/features" type="tree" text="golden test suite" >}} and demonstrate every language feature:
+Drawn from the project's {{< repo-file path="testdata/eval/success/features" type="tree" text="golden test suite" >}}, these pages demonstrate every language feature:
 
 - [Functions & Natural Language](functions-and-nl/) -- All function call styles
 - [Network & Storage](network-and-storage/) -- Latency, throughput, read/seek, compression

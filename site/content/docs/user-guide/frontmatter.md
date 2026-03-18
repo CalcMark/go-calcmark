@@ -74,7 +74,7 @@ The summary renders with **$1.8M** and **$150K** substituted in. If a variable i
 
 #### Inline Patterns
 
-Interpolated values render **bold** in markdown output and are wrapped in `<span class="cm-interpolated">` in HTML. You can combine them with other markdown formatting:
+Interpolated values render **bold** in Markdown output and are wrapped in `<span class="cm-interpolated">` in HTML. You can combine them with other Markdown formatting:
 
 ```text
 The grand total is {{total_cost}}.
