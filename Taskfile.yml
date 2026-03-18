@@ -104,6 +104,22 @@ tasks:
         fi
         PATH="$ROOT:$PATH" "$CODE" --extensionDevelopmentPath="$ROOT/editors/vscode-calcmark" --new-window "$ROOT"
 
+  publish:vscode:
+    desc: Publish the VS Code extension to the marketplace (stable)
+    deps:
+      - build:vscode
+    dir: editors/vscode-calcmark
+    cmds:
+      - npx vsce publish
+
+  publish:vscode:pre:
+    desc: Publish the VS Code extension as a pre-release
+    deps:
+      - build:vscode
+    dir: editors/vscode-calcmark
+    cmds:
+      - npx vsce publish --pre-release
+
   # ── Development ────────────────────────────────────────────────────
 
   dev:

@@ -5,6 +5,16 @@
   "version": "0.1.0",
   "publisher": "calcmark",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CalcMark/go-calcmark",
+    "directory": "editors/vscode-calcmark"
+  },
+  "icon": "icon.png",
+  "homepage": "https://calcmark.org/docs/ide-setup/",
+  "bugs": {
+    "url": "https://github.com/CalcMark/go-calcmark/issues"
+  },
   "extensionKind": [
     "workspace"
   ],
@@ -69,7 +79,10 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package"
+    "package": "vsce package",
+    "package:pre": "vsce package --pre-release",
+    "publish": "vsce publish",
+    "publish:pre": "vsce publish --pre-release"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.0"
@@ -77,6 +90,7 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@types/vscode": "^1.82.0",
+    "@vscode/vsce": "^3.0.0",
     "typescript": "^5.0.0"
   }
 }
