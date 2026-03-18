@@ -1,5 +1,8 @@
 # Releasing the VS Code Extension
 
+**Marketplace:** [marketplace.visualstudio.com/items?itemName=calcmark.vscode-calcmark](https://marketplace.visualstudio.com/items?itemName=calcmark.vscode-calcmark)
+**Publisher management:** [marketplace.visualstudio.com/manage/publishers/calcmark](https://marketplace.visualstudio.com/manage/publishers/calcmark)
+
 ## One-Time Setup
 
 ### 1. Create an Azure DevOps organization
@@ -40,39 +43,33 @@ For GitHub Actions, add the PAT as a repository secret named `VSCE_PAT`:
 
 ## Publishing
 
-### Pre-release (from local machine)
+### Option A: Manual upload (recommended for now)
 
-```bash
-task publish:vscode:pre
-```
-
-Or manually:
+Package the extension and upload via the web:
 
 ```bash
 cd editors/vscode-calcmark
 npm install
 npm run compile
-npx vsce publish --pre-release
+npx vsce package
 ```
 
-Pre-release versions show a "Pre-Release" badge in the marketplace. Users must opt in to install them.
+Then upload at [marketplace.visualstudio.com/manage/publishers/calcmark](https://marketplace.visualstudio.com/manage/publishers/calcmark):
 
-### Stable release (from local machine)
+1. Click your extension (or **New Extension** → **Visual Studio Code** for the first time)
+2. Click **Update** (or drag the `.vsix` for a new extension)
+3. Wait for validation to complete (~5 minutes)
+
+**Important:** When creating a new extension, select **Visual Studio Code** — not "Visual Studio" or "Azure DevOps". Selecting the wrong type produces a confusing "Value cannot be null. Parameter name: v1" error.
+
+### Option B: CLI publish (requires working PAT auth)
 
 ```bash
-task publish:vscode
+task publish:vscode        # stable
+task publish:vscode:pre    # pre-release
 ```
 
-Or manually:
-
-```bash
-cd editors/vscode-calcmark
-npm install
-npm run compile
-npx vsce publish
-```
-
-### Via GitHub Actions
+### Option C: GitHub Actions (requires working PAT auth)
 
 The workflow at `.github/workflows/vscode-extension.yml` publishes automatically:
 
@@ -88,6 +85,8 @@ git push origin vscode-v0.1.0-pre.1
 git tag vscode-v0.1.0
 git push origin vscode-v0.1.0
 ```
+
+**Note:** CI publishing via `VSCE_PAT` secret is not yet working (TF400813 auth error under investigation). Use Option A until resolved.
 
 ## Versioning
 

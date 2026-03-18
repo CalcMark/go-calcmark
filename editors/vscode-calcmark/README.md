@@ -1,5 +1,7 @@
 # CalcMark for VS Code
 
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/calcmark.vscode-calcmark)](https://marketplace.visualstudio.com/items?itemName=calcmark.vscode-calcmark)
+
 Language support for [CalcMark](https://calcmark.org) — calculations and markdown in one document.
 
 ## Features

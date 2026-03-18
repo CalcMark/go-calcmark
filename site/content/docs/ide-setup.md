@@ -8,7 +8,7 @@ CalcMark ships an LSP server (`cm lsp`) that provides diagnostics, autocomplete,
 
 ## VS Code
 
-Install the **CalcMark** extension from the VS Code marketplace, or from the `editors/vscode-calcmark/` directory in the repository.
+Install the [**CalcMark** extension from the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=calcmark.vscode-calcmark), or from the `editors/vscode-calcmark/` directory in the repository.
 
 The extension automatically finds the `cm` binary in your PATH. To use a specific binary:
 
