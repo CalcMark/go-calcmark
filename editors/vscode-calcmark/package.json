@@ -40,6 +40,21 @@
         "path": "./syntaxes/calcmark.tmLanguage.json"
       }
     ],
+    "commands": [
+      {
+        "command": "calcmark.openPreview",
+        "title": "CalcMark: Open Preview",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "calcmark.openPreview",
+          "when": "editorLangId == calcmark"
+        }
+      ]
+    },
     "configuration": {
       "title": "CalcMark",
       "properties": {
