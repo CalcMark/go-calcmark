@@ -277,6 +277,26 @@ func TestLinearGrow(t *testing.T) {
 			input: "grow($500, $100, 36)",
 			want:  "$4100.00",
 		},
+		{
+			name:  "same-unit quantity",
+			input: "grow(50 GB, 500 GB, 3)",
+			want:  "1550 GB",
+		},
+		{
+			name:  "mixed-unit quantity TB to GB",
+			input: "grow(50 GB, 20 TB, 6)",
+			want:  "122930 GB",
+		},
+		{
+			name:  "mixed-unit quantity with duration periods",
+			input: "grow(50 GB, 20 TB, 6 months)",
+			want:  "122930 GB",
+		},
+		{
+			name:  "NL syntax mixed-unit quantity",
+			input: "grow 50 GB by 20 TB over 6 months",
+			want:  "122930 GB",
+		},
 	}
 
 	for _, tt := range tests {
@@ -312,6 +332,17 @@ func TestDepreciateWithSalvage(t *testing.T) {
 	}
 }
 
+// TestDepreciateWithMixedUnitSalvage tests that depreciate converts salvage to principal's unit.
+func TestDepreciateWithMixedUnitSalvage(t *testing.T) {
+	// depreciate(1 TB, 15%, 20, 100 GB) — salvage 100 GB = 0.09765625 TB
+	// After 20 years at 15%, 1 TB becomes ~$0.03875... TB, which is below salvage
+	got := evalGrowthLine(t, "depreciate(1 TB, 15%, 20, 100 GB)")
+	// 100 GB in TB = 100/1024 ≈ 0.09765625 TB, result should be clamped to salvage
+	if got != "0.1 TB" {
+		t.Errorf("got %q, want %q", got, "0.1 TB")
+	}
+}
+
 // TestGrowthErrors tests error cases
 func TestGrowthErrors(t *testing.T) {
 	tests := []struct {
@@ -343,6 +374,11 @@ func TestGrowthErrors(t *testing.T) {
 			name:    "compound unknown frequency",
 			input:   "compound($1000, 5%, 10 years, compounded biweekly)",
 			wantErr: "unknown compounding frequency",
+		},
+		{
+			name:    "grow incompatible units",
+			input:   "grow(50 GB, 20 kg, 6)",
+			wantErr: "incompatible units",
 		},
 	}
 

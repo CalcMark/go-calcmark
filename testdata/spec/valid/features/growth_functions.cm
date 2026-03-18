@@ -36,8 +36,13 @@ compound $1000 by 5% per month over 12 months
 # Natural language compound with compounded modifier
 compound $1000 by 12% compounded monthly over 10 years
 
+# Linear growth with mixed compatible units
+grow(50 GB, 20 TB, 6)
+grow(50 GB, 20 TB, 6 months)
+
 # Natural language grow
 grow 100 by 20 over 5 months
+grow 50 GB by 20 TB over 6 months
 
 # Natural language depreciate
 depreciate $50000 by 15% over 5 years
