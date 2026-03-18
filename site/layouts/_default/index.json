@@ -1,0 +1,13 @@
+{{- $pages := slice -}}
+{{- range .Site.Pages -}}
+  {{- if and .Title (not .IsHome) -}}
+    {{- $pages = $pages | append (dict
+      "title" .Title
+      "description" (.Description | default "")
+      "contents" (.Plain | truncate 800 "")
+      "permalink" .RelPermalink
+      "section" (cond (eq .Section "") "" .Section)
+    ) -}}
+  {{- end -}}
+{{- end -}}
+{{ $pages | jsonify }}

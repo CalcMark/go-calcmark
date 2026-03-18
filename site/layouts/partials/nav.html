@@ -11,6 +11,10 @@
       <a class="nav-link nav-link--lark"
          href="https://lark.calcmark.org" target="_blank" rel="noopener"><img src="{{ $larkColor.RelPermalink }}" alt="" class="nav-lark-icon" aria-hidden="true">Try it live</a>
     </nav>
+    <button id="search-toggle" class="search-toggle" type="button" aria-label="Search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>
+      <kbd class="search-kbd">/</kbd>
+    </button>
     {{ partial "theme-toggle.html" . }}
   </div>
 </header>

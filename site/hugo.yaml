@@ -11,6 +11,12 @@ disableKinds:
 # Auto "last updated" dates from git history
 enableGitInfo: true
 
+# Generate JSON search index alongside HTML
+outputs:
+  home:
+    - HTML
+    - JSON
+
 params:
   description: "Calculations embedded in Markdown documents."
   githubURL: "https://github.com/CalcMark/go-calcmark"
