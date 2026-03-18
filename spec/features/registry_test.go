@@ -172,6 +172,22 @@ func TestNLAliasesAreParseable(t *testing.T) {
 	}
 }
 
+func TestNLTriggerKeywords(t *testing.T) {
+	r := NewRegistry()
+	keywords := r.NLTriggerKeywords()
+
+	// All 6 NL function trigger keywords must be present.
+	expected := []string{"compound", "compress", "depreciate", "grow", "read", "transfer"}
+	if len(keywords) != len(expected) {
+		t.Fatalf("NLTriggerKeywords() returned %d keywords, want %d: got %v", len(keywords), len(expected), keywords)
+	}
+	for i, want := range expected {
+		if keywords[i] != want {
+			t.Errorf("NLTriggerKeywords()[%d] = %q, want %q", i, keywords[i], want)
+		}
+	}
+}
+
 func TestParseableAliasesHaveExamples(t *testing.T) {
 	r := NewRegistry()
 

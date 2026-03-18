@@ -3,17 +3,24 @@ package document
 import (
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
 
 // Detector analyzes source text and splits it into blocks.
 type Detector struct {
+	nlTriggers map[string]bool // NL function trigger keywords from the feature registry
 }
 
 // NewDetector creates a new block detector.
 func NewDetector() *Detector {
-	return &Detector{}
+	r := features.NewRegistry()
+	triggers := make(map[string]bool)
+	for _, kw := range r.NLTriggerKeywords() {
+		triggers[kw] = true
+	}
+	return &Detector{nlTriggers: triggers}
 }
 
 // DetectBlocks splits source into blocks using these rules:
@@ -241,7 +248,7 @@ func (d *Detector) IsCalculation(line string) (bool, error) {
 	}
 
 	// A valid calculation must have recognizable structure
-	return looksLikeCalculation(meaningfulTokens), nil
+	return d.looksLikeCalculation(meaningfulTokens), nil
 }
 
 // filterNonNewlineTokens returns tokens excluding NEWLINE and EOF.
@@ -257,8 +264,9 @@ func filterNonNewlineTokens(tokens []lexer.Token) []lexer.Token {
 }
 
 // looksLikeCalculation checks if tokens represent a calculation structure.
-// Pure function: deterministic, no side effects.
-func looksLikeCalculation(tokens []lexer.Token) bool {
+// Deterministic, no side effects. Uses nlTriggers from the feature registry
+// to recognize NL function patterns without hard-coding keyword lists.
+func (d *Detector) looksLikeCalculation(tokens []lexer.Token) bool {
 	if len(tokens) == 0 {
 		return false
 	}
@@ -336,17 +344,12 @@ func looksLikeCalculation(tokens []lexer.Token) bool {
 			return true
 		}
 		// Identifier followed by another identifier = likely prose,
-		// EXCEPT NL function patterns: compress <var> using, read <var> from, transfer <var> across
+		// EXCEPT NL function patterns where the first token is a known
+		// NL trigger keyword (derived from the feature registry).
+		// The parser already validated the line parses successfully,
+		// so we only need to confirm the trigger keyword matches.
 		if second.Type == lexer.IDENTIFIER {
-			firstLower := strings.ToLower(string(first.Value))
-			if len(tokens) >= 3 {
-				if (firstLower == "compress" && tokens[2].Type == lexer.IDENTIFIER && strings.ToLower(string(tokens[2].Value)) == "using") ||
-					(firstLower == "read" && tokens[2].Type == lexer.FROM) ||
-					(firstLower == "transfer" && tokens[2].Type == lexer.IDENTIFIER && strings.ToLower(string(tokens[2].Value)) == "across") {
-					return true
-				}
-			}
-			return false
+			return d.nlTriggers[strings.ToLower(string(first.Value))]
 		}
 		// Identifier followed by keyword (like "in", "as") = calculation
 		if isKeywordToken(second.Type) {

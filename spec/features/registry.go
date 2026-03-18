@@ -156,6 +156,34 @@ func (r *Registry) Categories() []Category {
 	return cats
 }
 
+// NLTriggerKeywords returns the set of keywords that begin NL function syntax.
+// These are extracted from parseable aliases: the first word of each alias name
+// (before "...") is the trigger keyword. Both the document detector and the
+// line classifier use this to identify NL function lines without hard-coding.
+func (r *Registry) NLTriggerKeywords() []string {
+	seen := make(map[string]bool)
+	for _, f := range r.features {
+		for _, a := range f.Aliases {
+			if !a.Parseable {
+				continue
+			}
+			// NL aliases use "..." as separator: "compound...by...over"
+			if before, _, ok := strings.Cut(a.Name, "..."); ok {
+				kw := strings.ToLower(before)
+				if kw != "" {
+					seen[kw] = true
+				}
+			}
+		}
+	}
+	result := make([]string, 0, len(seen))
+	for kw := range seen {
+		result = append(result, kw)
+	}
+	slices.Sort(result)
+	return result
+}
+
 // getFunctions returns built-in function features.
 // Params are pulled from types.FunctionSpecs — single source of truth for parameter metadata.
 func getFunctions() []Feature {

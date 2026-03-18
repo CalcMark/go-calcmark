@@ -3,13 +3,33 @@ package classifier
 
 import (
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/constants"
 	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/parser"
 )
+
+// nlTriggerKeywords is the set of NL function trigger keywords, derived from
+// the feature registry. Computed once on first use.
+var (
+	nlTriggerOnce     sync.Once
+	nlTriggerKeywords map[string]bool
+)
+
+func getNLTriggerKeywords() map[string]bool {
+	nlTriggerOnce.Do(func() {
+		r := features.NewRegistry()
+		nlTriggerKeywords = make(map[string]bool)
+		for _, kw := range r.NLTriggerKeywords() {
+			nlTriggerKeywords[kw] = true
+		}
+	})
+	return nlTriggerKeywords
+}
 
 // IdentifierResolver checks whether a variable name is defined in the current
 // evaluation context. This interface decouples the spec/classifier package
@@ -83,14 +103,16 @@ func containsFunctions(tokens []lexer.Token) bool {
 		lexer.FUNC_SUM_OF:         true,
 	}
 
+	triggers := getNLTriggerKeywords()
+
 	for _, token := range tokens {
 		if functionTypes[token.Type] {
 			return true
 		}
-		// Growth functions use IDENTIFIER tokens (not reserved keywords)
+		// NL functions use IDENTIFIER tokens (not reserved keywords).
+		// The trigger set is derived from the feature registry.
 		if token.Type == lexer.IDENTIFIER {
-			switch strings.ToLower(string(token.Value)) {
-			case "compound", "grow", "depreciate":
+			if triggers[strings.ToLower(string(token.Value))] {
 				return true
 			}
 		}

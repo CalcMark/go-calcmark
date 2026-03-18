@@ -47,3 +47,13 @@ grow 50 GB by 20 TB over 6 months
 # Natural language depreciate
 depreciate $50000 by 15% over 5 years
 depreciate $50000 by 15% over 5 years to $5000
+
+# Natural language with variable arguments
+price = $1000
+compound price by 5% over 10 years
+
+servers = 100
+grow servers by 20 over 5 months
+
+asset = $50000
+depreciate asset by 15% over 5 years
