@@ -66,6 +66,60 @@ tasks:
       - GOOS=windows GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o dist/{{.BINARY_NAME}}-windows-amd64.exe ./cmd/calcmark
       - echo 'Built Windows binary'
 
+  build:vscode:
+    desc: Build the VS Code extension (and cm binary)
+    deps:
+      - build
+    dir: editors/vscode-calcmark
+    cmds:
+      - npm install --no-audit --no-fund
+      - npm run compile
+      - echo '✓ VS Code extension built to editors/vscode-calcmark/out/'
+
+  run:vscode:
+    desc: Build and launch VS Code with the CalcMark extension loaded
+    deps:
+      - build:vscode
+    cmds:
+      - pkill -f "extensionDevelopmentPath" 2>/dev/null || true
+      - rm -rf ~/Library/Application\ Support/Code/CachedExtensionVSIXs 2>/dev/null || true
+      - echo 'Launching VS Code with CalcMark extension...'
+      - echo 'Open any .cm file to test.'
+      - |
+        ROOT="{{.ROOT_DIR}}"
+        CODE=""
+        for candidate in \
+          "$(command -v code 2>/dev/null)" \
+          "/usr/local/bin/code" \
+          "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
+          "$(command -v cursor 2>/dev/null)"; do
+          if [ -x "$candidate" ]; then
+            CODE="$candidate"
+            break
+          fi
+        done
+        if [ -z "$CODE" ]; then
+          echo "Error: VS Code not found. Install the 'code' CLI: open VS Code, Cmd+Shift+P, 'Shell Command: Install code command in PATH'"
+          exit 1
+        fi
+        PATH="$ROOT:$PATH" "$CODE" --extensionDevelopmentPath="$ROOT/editors/vscode-calcmark" --new-window "$ROOT"
+
+  publish:vscode:
+    desc: Publish the VS Code extension to the marketplace (stable)
+    deps:
+      - build:vscode
+    dir: editors/vscode-calcmark
+    cmds:
+      - npx vsce publish
+
+  publish:vscode:pre:
+    desc: Publish the VS Code extension as a pre-release
+    deps:
+      - build:vscode
+    dir: editors/vscode-calcmark
+    cmds:
+      - npx vsce publish --pre-release
+
   # ── Development ────────────────────────────────────────────────────
 
   dev:

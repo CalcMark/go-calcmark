@@ -7,18 +7,44 @@ import (
 	"html/template"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/microcosm-cc/bluemonday"
 )
 
-//go:embed templates/default.html
+var (
+	sanitizerOnce sync.Once
+	sanitizerInst *bluemonday.Policy
+)
+
+// htmlSanitizer returns a cached bluemonday UGC policy for sanitizing
+// gomarkdown HTML output. Thread-safe via sync.Once.
+func htmlSanitizer() *bluemonday.Policy {
+	sanitizerOnce.Do(func() {
+		sanitizerInst = bluemonday.UGCPolicy()
+	})
+	return sanitizerInst
+}
+
+//go:embed templates/default.gohtml
 var defaultHTMLTemplate string
+
+//go:embed templates/preview.gohtml
+var previewHTMLTemplate string
 
 // DefaultHTMLTemplate returns the embedded default HTML template.
 // Use this to inspect the template data model or as a starting point for custom templates.
 func DefaultHTMLTemplate() string {
 	return defaultHTMLTemplate
+}
+
+// PreviewHTMLTemplate returns a content-only HTML fragment template for
+// editor webview previews. No <html>/<head>/<body> wrapper — the editor
+// provides its own shell with styles and scripts.
+func PreviewHTMLTemplate() string {
+	return previewHTMLTemplate
 }
 
 // HTMLFormatter formats CalcMark documents as HTML.
@@ -36,12 +62,14 @@ type TemplateBlock struct {
 	SourceLines []TemplateLine // For calc blocks with per-line results
 	Error       string
 	HTML        template.HTML // For text blocks
+	DocLine     int           // 1-indexed document-absolute start line (for scroll sync)
 }
 
 // TemplateLine represents a single source line with its result
 type TemplateLine struct {
-	Source string
-	Result string // Formatted result for this line
+	Source  string
+	Result  string // Formatted result for this line
+	DocLine int    // 1-indexed document-absolute line number (for scroll sync)
 }
 
 // TemplateFrontmatter represents frontmatter for template rendering
@@ -159,19 +187,32 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 
 	blocks := doc.GetBlocks()
 
+	// Compute document-absolute line offset: frontmatter lines come before blocks.
+	docLine := 1
+	if fm := doc.GetFrontmatter(); fm != nil {
+		docLine += fm.LineCount()
+	}
+
 	for _, node := range blocks {
 		tb := TemplateBlock{}
+		blockStartLine := docLine
 
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
 			tb.Type = "calculation"
+			tb.DocLine = blockStartLine
 
 			stmts := AlignResults(block)
+			lineIdx := 0
 			for _, stmt := range stmts {
+				lineIdx++ // every aligned statement is a source line
 				if stmt.IsBlank || stmt.IsResultLine {
 					continue
 				}
-				tl := TemplateLine{Source: stmt.Source}
+				tl := TemplateLine{
+					Source:  stmt.Source,
+					DocLine: blockStartLine + lineIdx - 1,
+				}
 				if stmt.Result != nil {
 					tl.Result = df.Format(stmt.Result)
 				}
@@ -181,9 +222,11 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			if block.Error() != nil {
 				tb.Error = block.Error().Error()
 			}
+			docLine += len(block.Source())
 
 		case *document.TextBlock:
 			tb.Type = "text"
+			tb.DocLine = blockStartLine
 			// Call Render() to actively process markdown to HTML
 			renderedHTML := block.Render()
 			if renderedHTML == "" {
@@ -195,7 +238,12 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				}
 				renderedHTML = strings.Join(escaped, "<br>")
 			}
-			tb.HTML = template.HTML(renderedHTML) // Convert to template.HTML to mark as safe
+			// Defense-in-depth: sanitize gomarkdown output with bluemonday.
+			// UGCPolicy allows safe HTML tags (headings, lists, links, code, emphasis)
+			// while stripping dangerous content (script, event handlers, data URIs).
+			renderedHTML = htmlSanitizer().Sanitize(renderedHTML)
+			tb.HTML = template.HTML(renderedHTML)
+			docLine += len(block.Source())
 		}
 
 		data.Blocks = append(data.Blocks, tb)

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CalcMark",
+  "scopeName": "source.calcmark",
+  "patterns": [
+    {
+      "_comment": "Sync NL function patterns with spec/features/registry.go when adding new aliases"
+    },
+    { "include": "#frontmatter" },
+    { "include": "#heading" },
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#currency" },
+    { "include": "#percentage" },
+    { "include": "#number" },
+    { "include": "#nl-function" },
+    { "include": "#function-call" },
+    { "include": "#keyword" },
+    { "include": "#operator" },
+    { "include": "#variable-assignment" }
+  ],
+  "repository": {
+    "frontmatter": {
+      "name": "comment.block.frontmatter.calcmark",
+      "begin": "\\A---$",
+      "end": "^---$",
+      "beginCaptures": {
+        "0": { "name": "comment.block.frontmatter.calcmark" }
+      },
+      "endCaptures": {
+        "0": { "name": "comment.block.frontmatter.calcmark" }
+      }
+    },
+    "heading": {
+      "name": "markup.heading.calcmark",
+      "match": "^#{1,6}\\s.*$"
+    },
+    "comment": {
+      "name": "comment.line.double-slash.calcmark",
+      "match": "//.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.calcmark",
+      "match": "\"[^\"]*\""
+    },
+    "currency": {
+      "name": "constant.numeric.currency.calcmark",
+      "match": "\\$[\\d][\\d,_]*(\\.\\d+)?"
+    },
+    "percentage": {
+      "name": "constant.numeric.percentage.calcmark",
+      "match": "\\d[\\d,_]*(\\.\\d+)?%"
+    },
+    "number": {
+      "name": "constant.numeric.calcmark",
+      "match": "\\d[\\d,_]*(\\.\\d+)?([eE][+-]?\\d+)?[kKmMbBtT]?"
+    },
+    "nl-function": {
+      "name": "entity.name.function.nl.calcmark",
+      "match": "(?i)\\b(average\\s+of|sum\\s+of|square\\s+root\\s+of|compress\\s+using|read\\s+from|transfer\\s+across)\\b"
+    },
+    "function-call": {
+      "name": "entity.name.function.calcmark",
+      "match": "[a-zA-Z_]\\w*(?=\\()"
+    },
+    "keyword": {
+      "name": "keyword.other.calcmark",
+      "match": "\\b(in|as|and|or|not|true|false|per|of|from|over|with)\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.calcmark",
+      "match": "[+\\-*/^%]|[<>!=]=?|={1,2}"
+    },
+    "variable-assignment": {
+      "match": "^([a-zA-Z_]\\w*)\\s*=",
+      "captures": {
+        "1": { "name": "variable.other.assignment.calcmark" }
+      }
+    }
+  }
+}

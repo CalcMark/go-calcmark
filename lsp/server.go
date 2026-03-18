@@ -1,11 +1,13 @@
 package lsp
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/CalcMark/go-calcmark/format"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	specDoc "github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/tliron/commonlog"
@@ -76,9 +78,10 @@ func (ds *documentState) setSource(src string) {
 
 // Server is the CalcMark LSP server.
 type Server struct {
-	handler protocol.Handler
-	server  *glspServer.Server
-	log     commonlog.Logger
+	handler       protocol.Handler
+	server        *glspServer.Server
+	log           commonlog.Logger
+	htmlFormatter format.HTMLFormatter
 
 	mu        sync.RWMutex
 	documents map[string]*documentState // URI -> state
@@ -256,6 +259,22 @@ func (s *Server) evaluate(source string) *DocumentSnapshot {
 	}
 
 	return snap
+}
+
+// renderHTML renders the document in the snapshot to HTML using the preview
+// template (content-only fragment, no <html>/<head>/<body> wrapper).
+// Returns empty string if the snapshot has no parsed document.
+func (s *Server) renderHTML(snap *DocumentSnapshot) string {
+	if snap.Document == nil {
+		return ""
+	}
+	var buf bytes.Buffer
+	opts := format.Options{Template: format.PreviewHTMLTemplate()}
+	if err := s.htmlFormatter.Format(&buf, snap.Document, opts); err != nil {
+		s.log.Errorf("HTML render failed: %v", err)
+		return ""
+	}
+	return buf.String()
 }
 
 func boolPtr(b bool) *bool { return &b }

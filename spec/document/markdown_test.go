@@ -74,6 +74,11 @@ func TestMarkdownUnsafeLinkSchemes(t *testing.T) {
 			source: "[click](vbscript:MsgBox)",
 			banned: "vbscript:",
 		},
+		{
+			name:   "data URI link",
+			source: "[click](data:text/html,<script>alert(1)</script>)",
+			banned: "data:",
+		},
 	}
 
 	for _, tt := range tests {

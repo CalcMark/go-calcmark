@@ -250,7 +250,7 @@
     {{if eq .Type "calculation"}}
     <div class="calc-block">
         {{range $i, $line := .SourceLines}}
-        <div class="calc-line">
+        <div class="calc-line" data-source-line="{{$line.DocLine}}">
             <code class="calc-source">{{$line.Source}}</code>
             {{if $line.Result}}
             <span class="calc-inline-result">{{$line.Result}}</span>
@@ -262,7 +262,7 @@
         {{end}}
     </div>
     {{else}}
-    <div class="text-block">{{.HTML}}</div>
+    <div class="text-block" data-source-line="{{.DocLine}}">{{.HTML}}</div>
     {{end}}
     {{end}}
 </body>

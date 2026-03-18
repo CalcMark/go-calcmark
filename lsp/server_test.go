@@ -148,6 +148,22 @@ func TestEvaluate_DocumentSizeLimit(t *testing.T) {
 	}
 }
 
+func TestEvaluate_ProducesHTML(t *testing.T) {
+	s := NewServer()
+	snap := s.evaluate("a = 1 + 1")
+	snap.HTML = s.renderHTML(snap)
+
+	if snap.HTML == "" {
+		t.Fatal("expected non-empty HTML")
+	}
+	if !strings.Contains(snap.HTML, "calc-block") {
+		t.Error("expected HTML to contain 'calc-block'")
+	}
+	if !strings.Contains(snap.HTML, "data-source-line") {
+		t.Error("expected HTML to contain 'data-source-line'")
+	}
+}
+
 // --- Diagnostic mapping tests ---
 
 func TestToLSPSeverity(t *testing.T) {

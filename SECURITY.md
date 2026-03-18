@@ -91,6 +91,17 @@ case <-ctx.Done():
 | Regex DOS | No regex in language (by design) |
 | Memory exhaustion | Limits on all inputs |
 
+## Language Server Protocol (`cm lsp`)
+
+The LSP server inherits all protections from the evaluation pipeline and adds:
+
+- **Per-evaluation timeout**: Each evaluation is wrapped in `context.WithTimeout` (1 second). Malicious documents cannot hang the server.
+- **Document size limit**: Documents larger than 1MB are rejected on `textDocument/didOpen` and `textDocument/didChange` with a diagnostic.
+- **Panic recovery**: The evaluation entry point is wrapped in `recover()`. The server logs the panic, publishes a diagnostic, and continues serving. It never crashes on malformed input.
+- **HTML sanitization**: Rendered HTML passes through bluemonday before being sent to editor webviews, preventing XSS even if gomarkdown has a bypass.
+- **Full document sync**: The server uses full document sync mode (`TextDocumentSyncKind=1`), eliminating sync drift between client and server state.
+- **Loopback-only binding**: The future `cm watch` HTTP server will bind to `127.0.0.1` only, never `0.0.0.0`. A random session token in the URL prevents cross-origin access.
+
 ## Security Best Practices
 
 ### For Library Users
