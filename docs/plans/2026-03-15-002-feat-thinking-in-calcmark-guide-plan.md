@@ -95,11 +95,11 @@ Create `site/content/guides/thinking-in-calcmark/_index.md` following the establ
 - One example: `read 100 MB from ssd` → `0.1818 second`
 - Brief: "These read like English and compute real results. See the [System Sizing guide](/guides/system-sizing/) for the full story."
 
-#### Section 8: NL Limitations — A Practical Note
+#### Section 8: NL Syntax with Variables
 
-- Brief, honest note: some NL functions work with literal values but not variable references.
-- Example: `compress 796 GB using gzip` works, but `compress yearly_storage using gzip` may need the functional form `compress(yearly_storage, gzip)`.
-- Teaching point: "When the NL form doesn't accept a variable, use the functional form instead. Both produce identical results."
+- Show that NL functions accept both literals and variable references in any argument position.
+- Example: `compress yearly_storage using gzip` works just like `compress 796 GB using gzip`.
+- Teaching point: "Define your values once, then use them by name in NL syntax."
 
 #### Section 9: Quick Reference Card
 

@@ -72,7 +72,7 @@ peak_read_rate = read_rate * peak_multiplier
 
 ## Storage Requirements
 
-Each post is about 2 KB of text and metadata. 30% of posts include an image averaging 500 KB. CalcMark's `compress()` function estimates gzip compression on the text portion.
+Each post is about 2 KB of text and metadata. 30% of posts include an image averaging 500 KB. CalcMark's `compress ... using` syntax estimates gzip compression on the text portion.
 
 ```calcmark
 avg_post_size = 2 KB
@@ -82,13 +82,13 @@ yearly_post_storage = daily_post_storage * 365
 daily_media_storage = daily_posts * 30% * 500 KB
 yearly_media_storage = daily_media_storage * 365
 
-compressed_posts = compress(yearly_post_storage, gzip)
+compressed_posts = compress yearly_post_storage using gzip
 total_yearly_storage = compressed_posts + yearly_media_storage
 ```
 
-Text storage is ~796 GB/year before compression. `compress()` applies a typical 3:1 gzip ratio, bringing it down to ~265 GB. Media dominates at ~58.3 TB/year. Total yearly storage lands at ~58.5 TB.
+Text storage is ~796 GB/year before compression. `compress ... using gzip` applies a typical 3:1 gzip ratio, bringing it down to ~265 GB. Media dominates at ~58.3 TB/year. Total yearly storage lands at ~58.5 TB.
 
-**CalcMark features:** Data size units (`KB`, `GB`, `TB`); inline `30%` for percentages; `compress()` with compression algorithm argument.
+**CalcMark features:** Data size units (`KB`, `GB`, `TB`); inline `30%` for percentages; `compress ... using` NL syntax with a variable reference.
 
 ---
 

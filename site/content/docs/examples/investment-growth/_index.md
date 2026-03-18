@@ -14,19 +14,19 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ## Retirement Savings
 
-You start with $50,000 in savings, a 7% annual return, and 30 years until retirement. The `compound()` function models exponential growth over time.
+You start with $50,000 in savings, a 7% annual return, and 30 years until retirement. Define the inputs as variables, then pass them to `compound` using the natural language form.
 
 ```calcmark
 initial_savings = $50000
 annual_return = 7%
 years_to_retire = 30
 
-retirement_fund = compound $50000 by 7% over 30
+retirement_fund = compound initial_savings by annual_return over years_to_retire
 ```
 
-Without a frequency modifier, `compound()` compounds once per year: `A = P × (1+r)^t`. The 7% annual rate is applied once per year for 30 years, growing $50K to ~$380.6K.
+Without a frequency modifier, `compound` compounds once per year: `A = P × (1+r)^t`. The 7% annual rate is applied once per year for 30 years, growing $50K to ~$380.6K. The NL form accepts variable references in any argument position.
 
-**CalcMark features:** `compound()` function for exponential growth; currency literals (`$50000`); percentage literals (`7%`).
+**CalcMark features:** `compound` NL form with variable references; currency literals (`$50000`); percentage literals (`7%`).
 
 ---
 
@@ -41,12 +41,12 @@ A = P × (1 + r/n)^(n × t)
 where `r` = annual rate, `n` = 12 (monthly), `t` = years.
 
 ```calcmark
-retirement_monthly = compound($50000, 7%, 30 years, monthly)
+retirement_monthly = compound initial_savings by annual_return compounded monthly over 30 years
 ```
 
 Monthly compounding pushes the result to ~$405.8K -- about $25K more than annual compounding over the same 30 years. The frequency adverb (`monthly`, `quarterly`, `weekly`, `daily`, `yearly`) is what triggers this formula. Without it, you get simple growth.
 
-**CalcMark features:** `monthly` frequency modifier; `30 years` unit annotation on the periods argument.
+**CalcMark features:** `compound ... compounded monthly` NL modifier; variable references for principal and rate; `30 years` duration annotation.
 
 ---
 
@@ -56,10 +56,10 @@ Growth functions are not limited to money. You can use custom units like `custom
 
 ```calcmark
 starting_customers = 500 customers
-monthly_growth = compound 500 customers by 15% over 24
+monthly_growth = compound starting_customers by 15% over 24
 ```
 
-Starting from 500 customers at 15% monthly growth, you reach ~14.3K customers after two years. CalcMark preserves the `customers` unit through the calculation.
+Starting from 500 customers at 15% monthly growth, you reach ~14.3K customers after two years. The NL form references `starting_customers` by name — CalcMark preserves the `customers` unit through the calculation.
 
 The natural language form reads like a sentence:
 

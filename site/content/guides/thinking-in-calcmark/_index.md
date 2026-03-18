@@ -327,16 +327,17 @@ read 100 MB from ssd
 
 That computes how long it takes to read 100 MB from an SSD (0.18 seconds). It reads like English and produces real results. See the [System Sizing guide](/guides/system-sizing/) for the full story on capacity planning, transfer times, and compression estimates.
 
-## A Practical Note on NL Syntax
+## NL Syntax with Variables
 
-Most NL functions work with both literal values and variables. Occasionally, an NL function may not accept a variable reference — in that case, use the functional form instead:
+NL functions work with both literal values and variable references. Define values once and refer to them by name:
 
 ```text
-compress 796 GB using gzip            -- works with literals
-compress(yearly_storage, gzip)         -- use functional form for variables
+yearly_storage = 796 GB
+compress yearly_storage using gzip    -- variable reference
+compress 796 GB using gzip            -- literal value (equivalent)
 ```
 
-Both produce identical results. The functional form is always available as a fallback.
+Both forms produce identical results. Use whichever reads most naturally for your document.
 
 ## Quick Reference
 

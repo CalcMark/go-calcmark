@@ -132,7 +132,7 @@ Summary table:
 
 7. **Guide URL:** `guides/thinking-in-calcmark/` — signals a mindset shift, not just syntax.
 8. **Sidebar weight:** 24, before Understanding Measurements (26). This guide is more foundational — basic CalcMark idioms before units and conversions.
-9. **NL limitations:** Brief practical note when it naturally comes up ("If a NL function doesn't accept a variable, use the functional form instead"). Honest without being discouraging.
+9. **NL with variables:** Brief practical note showing that NL functions accept variable references in any argument position. Define once, use by name.
 
 ## Open Questions
 

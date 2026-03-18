@@ -54,7 +54,7 @@ yearly_media_storage = daily_media_storage * 365
 
 Gzip text storage (images are already compressed):
 
-compressed_posts = compress(yearly_post_storage, gzip)
+compressed_posts = compress yearly_post_storage using gzip
 total_yearly_storage = compressed_posts + yearly_media_storage
 
 ## Database Sizing
