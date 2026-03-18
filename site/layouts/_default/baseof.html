@@ -9,9 +9,22 @@
     {{ block "main" . }}{{ end }}
   </main>
   {{ partial "footer.html" . }}
+
+  {{/* Search modal */}}
+  <div id="search-modal" class="search-modal" aria-hidden="true" role="dialog" aria-label="Search">
+    <div class="search-modal-inner">
+      <input id="search-input" class="search-input" type="search" placeholder="Search docs..." autocomplete="off" aria-label="Search documentation">
+      <div id="search-results" class="search-results"></div>
+    </div>
+  </div>
+
   {{ $js := resources.Get "js/theme.js" | fingerprint }}
   <script src="{{ $js.RelPermalink }}"></script>
   {{ $tabs := resources.Get "js/tabs.js" | fingerprint }}
   <script src="{{ $tabs.RelPermalink }}"></script>
+  {{ $fuse := resources.Get "js/fuse.basic.min.js" | fingerprint }}
+  <script src="{{ $fuse.RelPermalink }}"></script>
+  {{ $search := resources.Get "js/search.js" | fingerprint }}
+  <script src="{{ $search.RelPermalink }}"></script>
 </body>
 </html>
