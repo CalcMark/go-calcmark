@@ -1,6 +1,8 @@
 import {
   commands,
   ExtensionContext,
+  SaveDialogOptions,
+  Uri,
   ViewColumn,
   WebviewPanel,
   window,
@@ -63,6 +65,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
   );
 
+  // Convert commands
+  const exportToHTML = commands.registerCommand(
+    "calcmark.exportHTML",
+    () => exportDocument("html", "HTML", { "HTML": ["html"] })
+  );
+  const exportToMarkdown = commands.registerCommand(
+    "calcmark.exportMarkdown",
+    () => exportDocument("md", "Markdown", { "Markdown": ["md"] })
+  );
+  const exportToJSON = commands.registerCommand(
+    "calcmark.exportJSON",
+    () => exportDocument("json", "JSON", { "JSON": ["json"] })
+  );
+
   // Track active editor to update preview
   const editorChange = window.onDidChangeActiveTextEditor((editor) => {
     if (
@@ -103,7 +119,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
     },
   });
 
-  context.subscriptions.push(openPreview, editorChange, scrollSync);
+  context.subscriptions.push(
+    openPreview, exportToHTML, exportToMarkdown, exportToJSON,
+    editorChange, scrollSync,
+  );
 
   // Find and validate the cm binary, then start the LSP client.
   const cmPath = findBinary();
@@ -169,6 +188,51 @@ export async function activate(context: ExtensionContext): Promise<void> {
   );
 
   await client.start();
+}
+
+async function exportDocument(
+  format: string,
+  label: string,
+  filters: Record<string, string[]>,
+): Promise<void> {
+  const editor = window.activeTextEditor;
+  if (!editor || editor.document.languageId !== "calcmark") {
+    window.showErrorMessage("CalcMark: Open a .cm file first.");
+    return;
+  }
+
+  const cmPath = findBinary();
+  if (!cmPath) {
+    window.showErrorMessage("CalcMark: cm binary not found.");
+    return;
+  }
+
+  const sourceUri = editor.document.uri;
+  const sourcePath = sourceUri.fsPath;
+  const defaultName = sourcePath.replace(/\.(cm|calcmark)$/, `.${format}`);
+
+  const saveUri = await window.showSaveDialog({
+    defaultUri: Uri.file(defaultName),
+    filters: { [label]: filters[label] },
+  } as SaveDialogOptions);
+
+  if (!saveUri) return; // user cancelled
+
+  try {
+    await execFileAsync(cmPath, [
+      "convert", sourcePath, "--to", format, "-o", saveUri.fsPath,
+    ]);
+    const openIt = await window.showInformationMessage(
+      `Exported to ${saveUri.fsPath}`, "Open File"
+    );
+    if (openIt === "Open File") {
+      const doc = await workspace.openTextDocument(saveUri);
+      await window.showTextDocument(doc);
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    window.showErrorMessage(`CalcMark export failed: ${msg}`);
+  }
 }
 
 export async function deactivate(): Promise<void> {

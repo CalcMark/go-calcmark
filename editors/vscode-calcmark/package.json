@@ -55,12 +55,36 @@
         "command": "calcmark.openPreview",
         "title": "CalcMark: Open Preview",
         "icon": "$(open-preview)"
+      },
+      {
+        "command": "calcmark.exportHTML",
+        "title": "CalcMark: Export to HTML"
+      },
+      {
+        "command": "calcmark.exportMarkdown",
+        "title": "CalcMark: Export to Markdown"
+      },
+      {
+        "command": "calcmark.exportJSON",
+        "title": "CalcMark: Export to JSON"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "calcmark.openPreview",
+          "when": "editorLangId == calcmark"
+        },
+        {
+          "command": "calcmark.exportHTML",
+          "when": "editorLangId == calcmark"
+        },
+        {
+          "command": "calcmark.exportMarkdown",
+          "when": "editorLangId == calcmark"
+        },
+        {
+          "command": "calcmark.exportJSON",
           "when": "editorLangId == calcmark"
         }
       ]
