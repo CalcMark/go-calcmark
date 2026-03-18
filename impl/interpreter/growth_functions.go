@@ -86,6 +86,25 @@ func wrapResult(result decimal.Decimal, original types.Type) types.Type {
 	}
 }
 
+// convertToMatchingUnit converts val to match target's unit when both are
+// compatible quantities (first-unit-wins). Returns val unchanged if types
+// don't both have units. Returns an error for incompatible quantity units.
+func convertToMatchingUnit(target, val types.Type) (types.Type, error) {
+	targetQty, targetIsQty := target.(*types.Quantity)
+	valQty, valIsQty := val.(*types.Quantity)
+	if !targetIsQty || !valIsQty {
+		return val, nil
+	}
+	if targetQty.Unit == valQty.Unit {
+		return val, nil
+	}
+	converted, err := convertQuantity(valQty, targetQty.Unit)
+	if err != nil {
+		return nil, fmt.Errorf("incompatible units %s and %s", targetQty.Unit, valQty.Unit)
+	}
+	return converted, nil
+}
+
 // validateRate checks that rate is within (-1, 1] i.e. (-100%, 100%].
 func validateRate(rate decimal.Decimal) error {
 	if rate.GreaterThan(decOne) || rate.LessThanOrEqual(decNegOne) {
@@ -248,6 +267,13 @@ func evalGrowFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	// Convert increment to amount's unit when both are compatible quantities
+	incrementVal, err = convertToMatchingUnit(amountVal, incrementVal)
+	if err != nil {
+		return nil, fmt.Errorf("grow: %w", err)
+	}
+
 	increment, err := extractDecimalValue(incrementVal)
 	if err != nil {
 		return nil, fmt.Errorf("grow: invalid increment: %w", err)
@@ -318,6 +344,13 @@ func evalDepreciateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 		if err != nil {
 			return nil, err
 		}
+
+		// Convert salvage to principal's unit when both are compatible quantities
+		salvageVal, err = convertToMatchingUnit(valueVal, salvageVal)
+		if err != nil {
+			return nil, fmt.Errorf("depreciate: %w", err)
+		}
+
 		salvage, err := extractDecimalValue(salvageVal)
 		if err != nil {
 			return nil, fmt.Errorf("depreciate: invalid salvage value: %w", err)
