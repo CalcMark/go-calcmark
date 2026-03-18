@@ -81,7 +81,7 @@ Call `session.Reset()` to clear all variables and start fresh.
 
 ## Evaluate a Full Document
 
-For complete CalcMark documents — with markdown, frontmatter, and multiple calc blocks — use the document-level API:
+For complete CalcMark documents — with Markdown, frontmatter, and multiple calc blocks — use the document-level API:
 
 ```go
 import (

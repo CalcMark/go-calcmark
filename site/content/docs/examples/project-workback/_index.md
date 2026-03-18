@@ -99,7 +99,7 @@ total_points = num_sprints * team_velocity
 
 Plain arithmetic works alongside dates and durations. `2 * 40 = 80` story points across two sprints.
 
-**CalcMark features:** Plain arithmetic; markdown prose between calculations.
+**CalcMark features:** Plain arithmetic; Markdown prose between calculations.
 
 ---
 

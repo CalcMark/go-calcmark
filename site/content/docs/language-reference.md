@@ -10,7 +10,7 @@ This is the complete and authoritative specification for the CalcMark language. 
 
 ## Overview
 
-CalcMark is a calculation language that blends seamlessly with markdown. It allows calculations to live naturally within prose documents.
+CalcMark is a calculation language that blends seamlessly with Markdown. It allows calculations to live naturally within prose documents.
 
 ### Design Goals
 
@@ -18,7 +18,7 @@ CalcMark is a calculation language that blends seamlessly with markdown. It allo
 - **Minimal**: Only essential features, no unnecessary complexity
 - **Unambiguous**: One way to do things, clear error messages
 - **Unicode-aware**: Full international character support
-- **Markdown-compatible**: Works within existing markdown documents
+- **Markdown-compatible**: Works within existing Markdown documents
 
 ### Key Characteristics
 
@@ -33,7 +33,7 @@ CalcMark is a calculation language that blends seamlessly with markdown. It allo
 
 ### Calculation by Exclusion
 
-CalcMark uses "calculation by exclusion" - if a line looks like markdown, it's markdown. Only unambiguous calculations are treated as calculations.
+CalcMark uses "calculation by exclusion" - if a line looks like Markdown, it's Markdown. Only unambiguous calculations are treated as calculations.
 
 ```calcmark
 # My Budget          -> MARKDOWN (header prefix)
@@ -288,7 +288,7 @@ See the [Recipe Scaling](/docs/examples/recipe-scaling/) example for a complete 
 
 ### Template Interpolation {#template-interpolation}
 
-Template variables embed calculated values into prose. After all calculations are evaluated, `{{variable_name}}` tags in text blocks are replaced with display-formatted results. Resolved values render **bold** in markdown and are wrapped in `<span class="cm-interpolated">` in HTML.
+Template variables embed calculated values into prose. After all calculations are evaluated, `{{variable_name}}` tags in text blocks are replaced with display-formatted results. Resolved values render **bold** in Markdown and are wrapped in `<span class="cm-interpolated">` in HTML.
 
 #### Forward References
 
@@ -313,7 +313,7 @@ The summary table renders with **$4.2M**, **28%**, and **14 people** — even th
 
 #### Inline Formatting
 
-Combine `{{var}}` with markdown formatting for emphasis, headings, and lists:
+Combine `{{var}}` with Markdown formatting for emphasis, headings, and lists:
 
 ```text
 The grand total is {{total_cost}}.
@@ -331,7 +331,7 @@ Backticks around tags are consumed — `` `{{var}}` `` renders as **value**, not
 
 #### Tables
 
-Interpolation works naturally in markdown tables. Use it for dashboard-style summaries:
+Interpolation works naturally in Markdown tables. Use it for dashboard-style summaries:
 
 ```text
 | Scenario | Revenue | Margin |
@@ -371,7 +371,7 @@ Lines are classified in this order:
 
 1. **BLANK** — Empty or only whitespace
 2. **INDENTED CODE** → MARKDOWN — Line starts with 4+ spaces or a tab
-3. **FENCED CODE BLOCK** → MARKDOWN — Lines between `` ``` `` or `~~~` fences (stateful; all content inside is markdown regardless of what it looks like)
+3. **FENCED CODE BLOCK** → MARKDOWN — Lines between `` ``` `` or `~~~` fences (stateful; all content inside is Markdown regardless of what it looks like)
 4. **MARKDOWN pattern** — Matches a known CommonMark construct:
    - Block-level: `#` (ATX heading), `>` (blockquote), `- ` / `* ` / `+ ` (unordered list), `digit.` (ordered list), `---` / `***` / `___` (horizontal rule), `===` / `---` (setext heading underline), `` ``` `` / `~~~` (fenced code fence)
    - Inline-level at start of line: `![` (image), `[text](url)` (inline link), `[id]: url` (link definition), `**text**` (bold formatting)
@@ -748,7 +748,7 @@ Case-insensitive: `AND`, `and`, `And` all work.
 | Operator | Name | Example | Result |
 |----------|------|---------|--------|
 | `in` | Unit conversion | `10 meters in feet` | `32.81 feet` |
-| `as` | Display modifier | `1234567 as napkin` | `~1.2M` |
+| `as` | Unit conversion or display modifier | `1 mile as km`, `1234567 as napkin` | `1.61 km`, `~1.2M` |
 | `per` | Rate denominator | `100 MB per day` | `100 MB/day` |
 | `over` | Accumulation | `100 MB/s over 1 day` | `~8.64 TB` |
 | `at...per` | Capacity | `10 TB at 2 TB per disk` | `5 disk` |

@@ -79,9 +79,9 @@ capacity(10000 req/s, 500 req/s, server) -> 20 servers
 #### `downtime` {#downtime-examples}
 
 ```calcmark
-downtime(0.999, year)              -> 8.76 hours
-downtime(0.999, month)             -> 43.2 minutes
-downtime(0.9999, month)            -> 4.32 minutes
+downtime(0.999, year)              -> 8.76 hour
+downtime(0.999, month)             -> 43.2 minute
+downtime(0.9999, month)            -> 4.32 minute
 ```
 
 #### `rtt` {#rtt-examples}
@@ -97,7 +97,7 @@ rtt(global)                        -> 150 ms
 
 ```calcmark
 throughput(gigabit)                 -> 125 MB/s
-throughput(ten_gig)                -> 1250 MB/s
+throughput(ten_gig)                -> 1.22 GB/s
 throughput(wifi)                   -> 12.5 MB/s
 throughput(five_g)                 -> 50 MB/s
 ```
@@ -140,7 +140,7 @@ db_query_hdd = seek(hdd) + read(5 MB, hdd)
 ```calcmark
 compress(1 GB, gzip)               -> ~333 MB
 compress(500 MB, lz4)              -> ~250 MB
-compress(2 GB, zstd)               -> ~571 MB
+compress(2 GB, zstd)               -> 585 MB
 compress 1 GB using gzip            -> (NL form)
 compress 500 MB using lz4
 
@@ -293,8 +293,8 @@ transfer 1 GB across regional gigabit       (NL form)
 #### Downtime from Availability
 
 ```calcmark
-downtime(99.9%, year)     -> ~8.76 hours
-downtime(99.99%, month)   -> ~4.32 minutes
+downtime(99.9%, year)     -> 8.76 hour
+downtime(99.99%, month)   -> 4.32 minute
 ```
 
 ### Storage Functions {#storage-functions}

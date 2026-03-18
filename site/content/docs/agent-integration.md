@@ -278,7 +278,7 @@ When combined with `cm convert --to=html`, this produces readable reports with i
 
 ## JSON Response Structure
 
-The response is an array of **blocks**. Each block is either `"calculation"` or `"text"` (markdown):
+The response is an array of **blocks**. Each block is either `"calculation"` or `"text"` (Markdown):
 
 ```json
 {
@@ -357,7 +357,7 @@ Note: `value` is the display-formatted string (may auto-convert units for readab
 |------|----------|
 | `--format json` | Structured data for programs and agents |
 | `--format text` | Human-readable plain text |
-| `cm convert --to=html` | HTML document with rendered markdown and results |
+| `cm convert --to=html` | HTML document with rendered Markdown and results |
 | `cm convert --to=md` | Markdown with results inline |
 
 Convert to a file with `-o`:
@@ -378,7 +378,7 @@ echo "x = unknown + 1" | cm --format json
 
 **Errors go to stderr as plain text, not JSON.** Always check the exit code.
 
-**Silent misinterpretation:** If CalcMark doesn't recognize an expression, it treats it as markdown prose. The JSON will contain `"type": "text"` blocks instead of `"type": "calculation"`. Always verify your output contains calculation blocks when you expect them.
+**Silent misinterpretation:** If CalcMark doesn't recognize an expression, it treats it as Markdown prose. The JSON will contain `"type": "text"` blocks instead of `"type": "calculation"`. Always verify your output contains calculation blocks when you expect them.
 
 ## Common Pitfalls
 
@@ -399,7 +399,7 @@ adjusted_cost = base_cost + 15%
 ```
 ### Calculations Are Separate From Markdown
 
-Calculations live on their own lines, not interspersed with markdown. The only exception is `{{ interpolated_variables}}`.
+Calculations live on their own lines, not interspersed with Markdown. The only exception is `{{ interpolated_variables}}`.
 
 OK:
 
@@ -500,7 +500,7 @@ Create a CalcMark document and convert it for the user:
 
 1. Write the `.cm` file with frontmatter, headers, calculations, and `{{template}}` interpolation
 2. Convert: `cm convert report.cm --to=html -o report.html`
-3. Deliver the HTML (or markdown) to the user
+3. Deliver the HTML (or Markdown) to the user
 
 ### Iterative Analysis
 

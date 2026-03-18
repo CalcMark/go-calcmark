@@ -1,6 +1,6 @@
 ---
 title: "The CalcMark Editor"
-summary: "A terminal-based editor with live results, markdown preview, autocomplete, and keyboard-driven workflows."
+summary: "A terminal-based editor with live results, Markdown preview, autocomplete, and keyboard-driven workflows."
 weight: 22
 ---
 
@@ -26,9 +26,9 @@ The default mode. Shows calculation results aligned with their source lines. Mar
 
 ### Side-by-Side
 
-Shows rendered markdown alongside calculation results. Headings, lists, and prose are styled with terminal colors. This is useful when your document mixes explanatory text with calculations and you want to see both.
+Shows rendered Markdown alongside calculation results. Headings, lists, and prose are styled with terminal colors. This is useful when your document mixes explanatory text with calculations and you want to see both.
 
-<img src="/images/editor-sidebyside.png" alt="Side-by-Side mode — rendered markdown next to results" width="700">
+<img src="/images/editor-sidebyside.png" alt="Side-by-Side mode — rendered Markdown next to results" width="700">
 
 ### Reading Mode
 
@@ -111,7 +111,7 @@ The same picker appears for **Save As** and **Export**, with context-appropriate
 
 **Ctrl+T** opens the export dialog. Choose a format:
 
-- **Markdown** (`.md`) — Rendered markdown with results inline
+- **Markdown** (`.md`) — Rendered Markdown with results inline
 - **JSON** (`.json`) — Structured output with values, types, and units
 - **HTML** (`.html`) — Styled HTML document
 

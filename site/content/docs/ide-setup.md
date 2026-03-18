@@ -326,6 +326,6 @@ cm watch --port 8080 budget.cm    # Custom port (default: 3141)
 | Hover | Variable values, function signatures, unit descriptions |
 | Go-to-definition | Jump to variable assignment |
 | Document symbols | Variables and headings in outline view |
-| Semantic tokens | Context-aware highlighting (calc vs markdown lines) |
+| Semantic tokens | Context-aware highlighting (calc vs Markdown lines) |
 | Code actions | Quick fixes for undefined variables ("did you mean?") |
 | Signature help | Parameter hints inside function calls |

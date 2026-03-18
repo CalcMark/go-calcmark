@@ -98,7 +98,7 @@ flooring = kitchen_sqft * tile_per_sqft
 
 CalcMark preserves currency types through arithmetic — multiplying a count by a currency produces a currency, not a plain number.
 
-**CalcMark features:** Currency literals (`$`); currency arithmetic; markdown prose between calculations.
+**CalcMark features:** Currency literals (`$`); currency arithmetic; Markdown prose between calculations.
 
 ---
 

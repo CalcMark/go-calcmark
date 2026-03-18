@@ -19,6 +19,8 @@ cm help functions    # List all CalcMark functions
 cm help constants    # List all unit constants
 cm help frontmatter  # List all frontmatter directives
 cm help --all        # Show everything at once
+cm watch <file.cm>   # Live HTML preview in browser
+cm lsp               # Start language server (stdio)
 cm version           # Print version info
 cm completion [shell] # Generate shell completions
 ```
@@ -169,7 +171,7 @@ The template receives a root object with two fields:
 | `.Type` | string | `"calculation"` or `"text"` |
 | `.SourceLines` | list | Calculation lines (only for `calculation` blocks) |
 | `.Error` | string | Error message (only for `calculation` blocks) |
-| `.HTML` | HTML | Rendered markdown (only for `text` blocks) |
+| `.HTML` | HTML | Rendered Markdown (only for `text` blocks) |
 
 **SourceLine fields** (each item in `.SourceLines`):
 
@@ -303,8 +305,58 @@ cm help functions        # Functions only
 cm help constants        # Unit constants only
 cm help frontmatter      # Frontmatter directives only
 cm help --functions      # Same as cm help functions
+cm help --constants      # Same as cm help constants
+cm help --frontmatter    # Same as cm help frontmatter
 cm help --all            # Everything at once
 cm help eval             # Help for a specific command
+```
+
+---
+
+## `cm watch <file.cm>` {#watch}
+
+Watch a CalcMark file for changes and serve a live HTML preview in the browser. The preview updates automatically on every save via WebSocket.
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--port int` | Port to listen on (default 3141) |
+
+### Security
+
+The watch server binds to `127.0.0.1` only (never exposed to the network), generates a random session token in the URL, and validates WebSocket origins.
+
+### Examples
+
+```bash
+cm watch budget.cm                  # Open http://127.0.0.1:3141/<token>
+cm watch budget.cm --port 8080      # Use a custom port
+```
+
+---
+
+## `cm lsp` {#lsp}
+
+Start the CalcMark language server over stdio. Editor extensions (such as the VS Code extension) spawn this command automatically to provide language intelligence for `.cm` files.
+
+This command is not typically invoked directly by users.
+
+### Capabilities
+
+- Diagnostics
+- Autocomplete
+- Hover
+- Go-to-definition
+- Document symbols
+- Semantic tokens
+- Code actions
+- Signature help
+
+### Example
+
+```bash
+cm lsp    # Start the language server (called by editor extensions)
 ```
 
 ---
