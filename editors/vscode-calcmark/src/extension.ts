@@ -94,7 +94,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         "calcmarkPreview",
         "CalcMark Preview",
         ViewColumn.Beside,
-        { enableScripts: false, retainContextWhenHidden: true }
+        { enableScripts: true, retainContextWhenHidden: true }
       );
 
       previewPanel.onDidDispose(() => {
@@ -131,7 +131,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
   });
 
-  // Scroll sync: editor-to-preview (unidirectional)
+  // Scroll sync: editor-to-preview (unidirectional via postMessage)
   const scrollSync = window.onDidChangeTextEditorVisibleRanges((e) => {
     if (
       !previewPanel ||
@@ -140,11 +140,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
     ) {
       return;
     }
-    const topLine = e.visibleRanges[0]?.start.line ?? 0;
-    const html = lastRenderedHTML.get(activePreviewURI!);
-    if (html) {
-      updatePreviewWithAnchor(html, topLine + 1); // Convert 0-indexed to 1-indexed
-    }
+    const topLine = (e.visibleRanges[0]?.start.line ?? 0) + 1; // 0-indexed to 1-indexed
+    previewPanel.webview.postMessage({ type: "scrollTo", line: topLine });
   });
 
   context.subscriptions.push(openPreview, editorChange, scrollSync);
@@ -185,30 +182,47 @@ function updatePreview(html: string): void {
   previewPanel.webview.html = getPreviewHTML(html);
 }
 
-function updatePreviewWithAnchor(html: string, sourceLine: number): void {
-  if (!previewPanel) return;
-  // Add an anchor id to the element closest to the source line
-  const anchored = html.replace(
-    new RegExp(`data-source-line="${sourceLine}"`),
-    `data-source-line="${sourceLine}" id="scroll-target"`
-  );
-  previewPanel.webview.html = getPreviewHTML(anchored, true);
-}
-
-function getPreviewHTML(html: string, hasAnchor = false): string {
-  const scrollScript = hasAnchor
-    ? '<script>document.getElementById("scroll-target")?.scrollIntoView({block:"start"});</script>'
-    : "";
+function getPreviewHTML(html: string): string {
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'unsafe-inline'${hasAnchor ? "; script-src 'unsafe-inline'" : ""};">
+        content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 1rem; }
+    /* Override the CalcMark template styles for webview context */
+    body {
+      background: white;
+      margin: 0;
+      padding: 1rem 2rem;
+    }
+    .calc-block {
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
   </style>
 </head>
-<body>${html}${scrollScript}</body>
+<body>
+${html}
+<script>
+  // Listen for scroll-to messages from the extension
+  window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg.type === 'scrollTo') {
+      // Find the closest element at or before the target line
+      let best = null;
+      document.querySelectorAll('[data-source-line]').forEach((el) => {
+        const line = parseInt(el.getAttribute('data-source-line'), 10);
+        if (line <= msg.line) {
+          best = el;
+        }
+      });
+      if (best) {
+        best.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    }
+  });
+</script>
+</body>
 </html>`;
 }
