@@ -81,9 +81,12 @@ tasks:
     deps:
       - build:vscode
     cmds:
+      - pkill -f "extensionDevelopmentPath" 2>/dev/null || true
+      - rm -rf ~/Library/Application\ Support/Code/CachedExtensionVSIXs 2>/dev/null || true
       - echo 'Launching VS Code with CalcMark extension...'
       - echo 'Open any .cm file to test.'
       - |
+        ROOT="{{.ROOT_DIR}}"
         CODE=""
         for candidate in \
           "$(command -v code 2>/dev/null)" \
@@ -99,7 +102,7 @@ tasks:
           echo "Error: VS Code not found. Install the 'code' CLI: open VS Code, Cmd+Shift+P, 'Shell Command: Install code command in PATH'"
           exit 1
         fi
-        PATH="$(pwd):$PATH" "$CODE" --extensionDevelopmentPath="$(pwd)/editors/vscode-calcmark"
+        PATH="$ROOT:$PATH" "$CODE" --extensionDevelopmentPath="$ROOT/editors/vscode-calcmark" --new-window "$ROOT"
 
   # ── Development ────────────────────────────────────────────────────
 

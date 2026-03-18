@@ -28,13 +28,23 @@ func htmlSanitizer() *bluemonday.Policy {
 	return sanitizerInst
 }
 
-//go:embed templates/default.html
+//go:embed templates/default.gohtml
 var defaultHTMLTemplate string
+
+//go:embed templates/preview.gohtml
+var previewHTMLTemplate string
 
 // DefaultHTMLTemplate returns the embedded default HTML template.
 // Use this to inspect the template data model or as a starting point for custom templates.
 func DefaultHTMLTemplate() string {
 	return defaultHTMLTemplate
+}
+
+// PreviewHTMLTemplate returns a content-only HTML fragment template for
+// editor webview previews. No <html>/<head>/<body> wrapper — the editor
+// provides its own shell with styles and scripts.
+func PreviewHTMLTemplate() string {
+	return previewHTMLTemplate
 }
 
 // HTMLFormatter formats CalcMark documents as HTML.

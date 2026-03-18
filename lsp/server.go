@@ -261,14 +261,16 @@ func (s *Server) evaluate(source string) *DocumentSnapshot {
 	return snap
 }
 
-// renderHTML renders the document in the snapshot to HTML.
+// renderHTML renders the document in the snapshot to HTML using the preview
+// template (content-only fragment, no <html>/<head>/<body> wrapper).
 // Returns empty string if the snapshot has no parsed document.
 func (s *Server) renderHTML(snap *DocumentSnapshot) string {
 	if snap.Document == nil {
 		return ""
 	}
 	var buf bytes.Buffer
-	if err := s.htmlFormatter.Format(&buf, snap.Document, format.Options{}); err != nil {
+	opts := format.Options{Template: format.PreviewHTMLTemplate()}
+	if err := s.htmlFormatter.Format(&buf, snap.Document, opts); err != nil {
 		s.log.Errorf("HTML render failed: %v", err)
 		return ""
 	}
