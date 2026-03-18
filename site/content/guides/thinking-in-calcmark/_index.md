@@ -14,9 +14,11 @@ You could open a spreadsheet. Or you could write it down the way you think about
 |-----------------|----------------|-----------|
 | `a + b + c + d` | `sum of a, b, c, d` | [Functions](/docs/user-guide/functions/) |
 | `x * 1.08` | `x + 8%` | [Language Reference](/docs/language-reference/#percentage-arithmetic) |
+| `$280000` | `$280K` | [Language Reference](/docs/language-reference/#numbers-and-currency) |
+| `profit / revenue * 100` | `profit as % of revenue` | [Language Reference](/docs/language-reference/#percentage-arithmetic) |
+| `price * 0.92` | `price in EUR` | [Language Reference](/docs/language-reference/#currency-conversion) |
 | `2.75 * 2 * 22` | `$5.50/day over 1 month` | [Language Reference](/docs/language-reference/#rates) |
 | `P*(1+r/n)^(nt)` | `compound P by r% monthly over t years` | [Functions](/docs/user-guide/functions/) |
-| `sum(a,b,c)` | `sum of a, b, c` | [Functions](/docs/user-guide/functions/) |
 
 ## Simple Arithmetic Already Works
 
@@ -317,6 +319,87 @@ depreciate $35000 by 15% over ...    $15.53K
 Run `cm help compound` to see all growth function variants — including `grow` for linear growth.
 {{< /callout >}}
 
+## Currency Shortcuts
+
+You don't need to type `$280000`. CalcMark understands magnitude suffixes on currency:
+
+{{< tabs group="output" >}}
+{{< tab name="CalcMark" >}}
+```text
+revenue = $450K
+expenses = $1.2M
+valuation = $3.5B
+```
+{{< /tab >}}
+{{< tab name="Editor" >}}
+```text
+revenue = $450K                      $450K
+expenses = $1.2M                     $1.2M
+valuation = $3.5B                    $3.5B
+```
+{{< /tab >}}
+{{< /tabs >}}
+
+`K` (thousands), `M` (millions), `B` (billions), and `T` (trillions) work with any currency symbol: `€150K`, `£25K`, `¥500M`.
+
+## Exchange Rates
+
+Working with multiple currencies? Define exchange rates in frontmatter and convert with `in`:
+
+{{< tabs group="output" >}}
+{{< tab name="CalcMark" >}}
+```text
+---
+exchange:
+  USD_EUR: 0.92
+  EUR_USD: 1.09
+---
+
+price = $100
+price_in_euros = price in EUR
+```
+{{< /tab >}}
+{{< tab name="Editor" >}}
+```text
+price = $100                         $100.00
+price_in_euros = price in EUR        €92.00
+```
+{{< /tab >}}
+{{< /tabs >}}
+
+Rates are unidirectional — define both `USD_EUR` and `EUR_USD` if you need conversion in both directions.
+
+## Ratios and Margins
+
+Your calculator instinct for a profit margin:
+
+```text
+margin = (revenue - expenses) / revenue * 100
+```
+
+CalcMark has `as % of`:
+
+{{< tabs group="output" >}}
+{{< tab name="CalcMark" >}}
+```text
+revenue = $1M
+expenses = $550K
+profit = revenue - expenses
+margin = profit as % of revenue
+```
+{{< /tab >}}
+{{< tab name="Editor" >}}
+```text
+revenue = $1M                        $1M
+expenses = $550K                     $550K
+profit = revenue - expenses          $450K
+margin = profit as % of revenue      45%
+```
+{{< /tab >}}
+{{< /tabs >}}
+
+No division, no multiplying by 100, no remembering the order. `X as % of Y` gives you the ratio as a percentage directly.
+
 ## Beyond the Calculator
 
 CalcMark also has domain-specific functions for engineering and infrastructure:
@@ -332,8 +415,11 @@ That computes how long it takes to read 100 MB from an SSD (0.18 seconds). It re
 Most NL functions work with both literal values and variables. Occasionally, an NL function may not accept a variable reference — in that case, use the functional form instead:
 
 ```text
-compress 796 GB using gzip            -- works with literals
-compress(yearly_storage, gzip)         -- use functional form for variables
+depreciate $50000 by 15% over 5 years          -- works with literals
+depreciate(car_value, 15%, 5 years)             -- use functional form for variables
+
+compress 796 GB using gzip                      -- works with literals
+compress(yearly_storage, gzip)                  -- use functional form for variables
 ```
 
 Both produce identical results. The functional form is always available as a fallback.
@@ -350,6 +436,9 @@ Both produce identical results. The functional form is always available as a fal
 | `sum(a,b,c)` | `sum of a, b, c` | NL form preferred |
 | `avg(a,b,c)` | `average of a, b, c` | Same pattern |
 | `sqrt(16)` | `square root of 16` | Same pattern |
+| `$280000` | `$280K` | Magnitude suffixes: K, M, B, T |
+| `profit / revenue * 100` | `profit as % of revenue` | Direct ratio as percentage |
+| `price * 0.92` | `price in EUR` | Frontmatter exchange rates |
 
 ## What to Read Next
 

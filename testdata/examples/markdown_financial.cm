@@ -1,28 +1,44 @@
+---
+exchange:
+  USD_EUR: 0.92
+  EUR_USD: 1.09
+  USD_GBP: 0.79
+  GBP_USD: 1.27
+---
+
 # Quarterly Revenue Forecast
 
 ## Revenue Streams
 
 ### Software Licenses
 
-license_revenue = $450000
+license_revenue = $450K
 license_growth = 12%
-projected_licenses = license_revenue * (1 + license_growth)
+projected_licenses = license_revenue + license_growth
+
+`license_revenue + license_growth` is equivalent to `license_revenue * (1 + license_growth)`.
+When you add a percentage to a value, CalcMark widens it automatically — no manual conversion to `* 1.12`.
 
 ### Consulting Services
 
-consulting_revenue = $280000
+consulting_revenue = $280K
 consulting_growth = 8%
-projected_consulting = consulting_revenue * (1 + consulting_growth)
+projected_consulting = consulting_revenue + consulting_growth
 
-### Maintenance Contracts
+### International Contracts
 
-maintenance_revenue = $120000
-maintenance_growth = 5%
-projected_maintenance = maintenance_revenue * (1 + maintenance_growth)
+A European client pays in euros, and a UK partner pays in pounds.
+Both need conversion to USD for consolidated reporting.
 
-## Total Revenue
+eu_contract = €150K
+eu_revenue = eu_contract in USD
 
-total_revenue = projected_licenses + projected_consulting + projected_maintenance
+uk_contract = £25K
+uk_revenue = uk_contract in USD
+
+### Total Revenue
+
+total_revenue = sum of projected_licenses, projected_consulting, eu_revenue, uk_revenue
 
 ## Expense Breakdown
 
@@ -34,11 +50,11 @@ The following expenses are projected for the quarter:
 4. Research and development
 5. General and administrative
 
-salaries = $320000
-infrastructure = $45000
-marketing = $60000
-rnd = $95000
-admin = $30000
+salaries = $320K
+infrastructure = $45K
+marketing = $60K
+rnd = $95K
+admin = $30K
 
 total_expenses = sum of salaries, infrastructure, marketing, rnd, admin
 
@@ -51,16 +67,16 @@ profit_margin = operating_income as % of total_revenue
 
 - **Operating Income**: The result of `total_revenue - total_expenses`
 - **Profit Margin**: Expressed as a percentage of revenue
-- Revenue mix is weighted toward **software licenses**
+- Revenue mix includes **international contracts** converted at current exchange rates
 
-### Nested List Example
+### Revenue Categories
 
-- Revenue Categories
-  - Recurring
-    + License subscriptions
-    + Maintenance contracts
-  - Non-recurring
-    + Consulting engagements
+- Recurring
+  + License subscriptions
+  + Maintenance contracts
+- Non-recurring
+  + Consulting engagements
+  + International projects
 
 ## Tax Estimate
 
@@ -73,7 +89,27 @@ net_income = operating_income - tax_amount
 >
 > > Consult your financial advisor before making investment decisions.
 
+## Infrastructure Cost Projection
+
+Cloud hosting is billed monthly but compounds with usage growth.
+
+cloud_spend = $15K/month
+annual_cloud = cloud_spend over 1 year
+
+Equipment purchased this year depreciates over its useful life.
+
+server_equipment = $180K
+book_value = depreciate(server_equipment, 20%, 3 years)
+
+## Investment Growth
+
+The company reinvests a portion of net income into a reserve fund.
+Assuming a 6% annual return compounded monthly:
+
+reserve_contribution = $50K
+future_value = compound(reserve_contribution, 6%, 5 years, compounded monthly)
+
 ## Year-Over-Year Comparison
 
-last_year_revenue = $780000
+last_year_revenue = $780K
 yoy_growth = (total_revenue - last_year_revenue) as % of last_year_revenue
