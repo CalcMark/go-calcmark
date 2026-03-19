@@ -12,7 +12,6 @@ require (
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/cockroachdb/datadriven v1.0.2
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a
 	github.com/google/uuid v1.6.0
 	github.com/martinlindhe/unit v0.0.0-20230420213220-4adfd7d0a0d6
 	github.com/mattn/go-isatty v0.0.20

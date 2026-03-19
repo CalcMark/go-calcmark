@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/CalcMark/go-calcmark"
+	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
 	"github.com/CalcMark/go-calcmark/format"
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ starting point for custom templates passed via --template.
 
 Use --embedded to process a standard Markdown file that contains cm/calcmark
 fenced code blocks. Each block is evaluated independently and replaced with
-its Markdown output. All other content passes through unchanged.
+its formatted output. All other content passes through unchanged.
 
 Examples:
   cm convert doc.cm --to=html              Convert to HTML (stdout)
@@ -36,7 +36,8 @@ Examples:
   cm convert doc.cm --to=json              Convert to JSON
   cm convert doc.cm --to=html -T tpl.html  Use custom HTML template
   cm convert --show-template               Print default HTML template
-  cm convert report.md --embedded          Process embedded CalcMark blocks`,
+  cm convert report.md --embedded          Process embedded CalcMark blocks
+  cm convert report.md --embedded --to=html  Embedded CalcMark to HTML`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if convertShowTemplate {
@@ -45,9 +46,6 @@ Examples:
 		}
 		if len(args) == 0 {
 			return fmt.Errorf("missing file — usage: cm convert <file.cm> --to=<format>")
-		}
-		if convertEmbedded {
-			return runConvertEmbedded(args[0])
 		}
 		return runConvert(args[0])
 	},
@@ -62,89 +60,119 @@ func init() {
 	rootCmd.AddCommand(convertCmd)
 }
 
-// runConvert handles the convert subcommand
+// runConvert handles the convert subcommand for both cm and embedded modes.
 func runConvert(filename string) error {
-	// --to is required for conversion
-	if convertFormat == "" {
-		return fmt.Errorf("missing --to flag — usage: cm convert <file.cm> --to=<format> (valid: html, md, json, text, cm)")
+	// Determine mode and validate file path.
+	mode := calcmark.CM
+	if convertEmbedded {
+		mode = calcmark.Embedded
+		if err := validateReadFilePathEmbedded(filename); err != nil {
+			return fmt.Errorf("invalid file: %w", err)
+		}
+	} else {
+		if err := validateReadFilePath(filename); err != nil {
+			return fmt.Errorf("invalid file: %w", err)
+		}
 	}
 
-	// Validate file path
-	if err := validateReadFilePath(filename); err != nil {
-		return fmt.Errorf("invalid file: %w", err)
+	// --to is required for cm mode; for embedded it defaults to "md".
+	formatName := convertFormat
+	if formatName == "" {
+		if convertEmbedded {
+			formatName = "md"
+		} else {
+			return fmt.Errorf("missing --to flag — usage: cm convert <file.cm> --to=<format> (valid: html, md, json, text, cm)")
+		}
 	}
 
-	// Read input file
+	// Validate format name.
+	validFormats := map[string]bool{
+		"html": true, "md": true, "json": true, "text": true, "cm": true,
+	}
+	if !validFormats[formatName] {
+		return fmt.Errorf("unknown format: %s (valid: html, md, json, text, cm)", formatName)
+	}
+
+	// Embedded mode only supports md and html.
+	if convertEmbedded && formatName != "md" && formatName != "html" {
+		return fmt.Errorf("--embedded only supports md and html output; --to=%s is not valid with --embedded", formatName)
+	}
+
+	// Validate template option.
+	if convertTemplate != "" && formatName != "html" {
+		return fmt.Errorf("--template is only valid with --to=html")
+	}
+
+	// Read input file.
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("read file: %w", err)
 	}
 
-	// Security: Reject binary/non-text content before parsing
+	// Security: Reject binary/non-text content.
 	if err := validateFileContent(content); err != nil {
 		return fmt.Errorf("invalid file: %w", err)
 	}
 
-	// Parse document
-	doc, err := document.NewDocument(string(content))
+	// Resolve template content.
+	templateContent, err := resolveTemplate(formatName)
 	if err != nil {
-		return fmt.Errorf("parse error: %w", err)
+		return err
 	}
 
-	// Evaluate with display formatter for {{var}} interpolation
-	eval := implDoc.NewEvaluator()
-	eval.SetDisplayFormatter(localeFormatter())
-	if err := eval.Evaluate(doc); err != nil {
-		return fmt.Errorf("evaluation error: %w", err)
+	// Build conversion options.
+	opts := calcmark.Options{
+		Mode:     mode,
+		Format:   formatName,
+		Template: templateContent,
+		Locale:   config.Get().Locale,
 	}
 
-	// Validate template option
-	if convertTemplate != "" && convertFormat != "html" {
-		return fmt.Errorf("--template is only valid with --to=html")
+	// Convert.
+	result, convErr := calcmark.Convert(string(content), opts)
+
+	// Write output first — even if there were partial errors (e.g., some embedded
+	// blocks failed), the result contains inline error blockquotes and should be written.
+	if result != "" {
+		if err := writeOutput(result); err != nil {
+			return err
+		}
 	}
 
-	// Load custom template if provided
-	var templateContent string
+	return convErr
+}
+
+// resolveTemplate determines the template content for the conversion.
+// For HTML format: uses custom template if provided, otherwise the default full template.
+// For embedded mode: no default template (goldmark output is self-contained).
+// For other formats: no template.
+func resolveTemplate(formatName string) (string, error) {
+	if formatName != "html" {
+		return "", nil
+	}
 	if convertTemplate != "" {
-		tplContent, err := os.ReadFile(convertTemplate)
+		content, err := os.ReadFile(convertTemplate)
 		if err != nil {
-			return fmt.Errorf("read template: %w", err)
+			return "", fmt.Errorf("read template: %w", err)
 		}
-		templateContent = string(tplContent)
+		return string(content), nil
 	}
-
-	// Validate format name
-	validFormats := map[string]bool{
-		"html": true, "md": true, "json": true, "text": true, "cm": true,
+	// Embedded mode: no default template — goldmark HTML is self-contained.
+	if convertEmbedded {
+		return "", nil
 	}
-	if !validFormats[convertFormat] {
-		return fmt.Errorf("unknown format: %s (valid: html, md, json, text, cm)", convertFormat)
-	}
+	// CM mode: CLI uses the full default template (not fragment) for backwards compatibility.
+	return format.DefaultHTMLTemplate(), nil
+}
 
-	// Get formatter
-	formatter := format.GetFormatter(convertFormat, convertOutput)
-
-	// Determine output destination
-	var out *os.File
+// writeOutput writes the conversion result to the output destination.
+func writeOutput(result string) error {
 	if convertOutput != "" {
-		out, err = os.Create(convertOutput)
-		if err != nil {
-			return fmt.Errorf("create output file: %w", err)
+		if err := os.WriteFile(convertOutput, []byte(result), 0o644); err != nil {
+			return fmt.Errorf("write output file: %w", err)
 		}
-		defer out.Close()
-	} else {
-		out = os.Stdout
+		return nil
 	}
-
-	// Format and write — use evaluator's formatter (includes measurement annotations)
-	opts := format.Options{
-		Verbose:          true,
-		Template:         templateContent,
-		DisplayFormatter: eval.GetDisplayFormatter(),
-	}
-	if err := formatter.Format(out, doc, opts); err != nil {
-		return fmt.Errorf("format error: %w", err)
-	}
-
+	fmt.Print(result)
 	return nil
 }

@@ -191,20 +191,24 @@ func TestEmbedded_BlockFrontmatter_Suppressed(t *testing.T) {
 	}
 }
 
-func TestEmbedded_FlagError_ToHTML(t *testing.T) {
+func TestEmbedded_ToHTML_OK(t *testing.T) {
 	binary := buildCM(t)
-	path := writeTempMD(t, "# Test\n")
+	path := writeTempMD(t, "# Test\n\n```cm\nx = 42\n```\n")
 
 	cmd := exec.Command(binary, "convert", "--embedded", "--to", "html", path)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
 
-	if err := cmd.Run(); err == nil {
-		t.Fatal("expected error for --embedded --to html")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("--embedded --to html should succeed: %v", err)
 	}
 
-	if !strings.Contains(stderr.String(), "--embedded only supports Markdown") {
-		t.Errorf("unexpected error message: %s", stderr.String())
+	got := stdout.String()
+	if !strings.Contains(got, "<h1") {
+		t.Error("expected HTML heading in output")
+	}
+	if !strings.Contains(got, "42") {
+		t.Error("expected evaluated CalcMark value in HTML output")
 	}
 }
 
@@ -212,15 +216,16 @@ func TestEmbedded_FlagError_Template(t *testing.T) {
 	binary := buildCM(t)
 	path := writeTempMD(t, "# Test\n")
 
+	// --template without --to=html should fail
 	cmd := exec.Command(binary, "convert", "--embedded", "--template", "tpl.html", path)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err == nil {
-		t.Fatal("expected error for --embedded --template")
+		t.Fatal("expected error for --embedded --template without --to=html")
 	}
 
-	if !strings.Contains(stderr.String(), "--template is not valid with --embedded") {
+	if !strings.Contains(stderr.String(), "--template is only valid with --to=html") {
 		t.Errorf("unexpected error message: %s", stderr.String())
 	}
 }

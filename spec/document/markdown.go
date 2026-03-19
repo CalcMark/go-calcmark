@@ -3,11 +3,11 @@
 package document
 
 import (
+	"bytes"
 	"strings"
 
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/html"
-	"github.com/gomarkdown/markdown/parser"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
 // Render converts the markdown source to HTML.
@@ -30,39 +30,21 @@ func (tb *TextBlock) Render() string {
 	return tb.html
 }
 
-// renderMarkdown converts markdown source to HTML using gomarkdown.
+// renderMarkdown converts markdown source to HTML using goldmark.
+// Raw HTML in the source is escaped by default (goldmark's safe mode).
 func renderMarkdown(source string) string {
 	if source == "" {
 		return ""
 	}
 
-	// gomarkdown requires a trailing newline to correctly parse certain
-	// constructs (e.g., setext headings). SourceText() joins lines with \n
-	// but does not append a final newline.
-	if source[len(source)-1] != '\n' {
-		source += "\n"
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+	)
+
+	var buf bytes.Buffer
+	if err := md.Convert([]byte(source), &buf); err != nil {
+		return ""
 	}
 
-	// CommonMark + GFM tables parser extensions
-	extensions := parser.NoIntraEmphasis | parser.Tables | parser.FencedCode | parser.Autolink |
-		parser.SpaceHeadings | parser.HeadingIDs | parser.BackslashLineBreak |
-		parser.AutoHeadingIDs
-	p := parser.NewWithExtensions(extensions)
-
-	// Parse markdown to AST
-	doc := p.Parse([]byte(source))
-
-	// Create HTML renderer with security flags:
-	// - SkipHTML: strip raw HTML to prevent XSS
-	// - Safelink: block javascript:, vbscript:, data: URI schemes
-	// - HrefTargetBlank: open links in new tab
-	// - SmartypantsFractions: converts prose 1/2→½, 1/4→¼, 3/4→¾ (desirable for text)
-	htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.SkipHTML | html.Safelink
-	opts := html.RendererOptions{Flags: htmlFlags}
-	renderer := html.NewRenderer(opts)
-
-	// Render to HTML
-	htmlBytes := markdown.Render(doc, renderer)
-
-	return string(htmlBytes)
+	return buf.String()
 }

@@ -20,7 +20,7 @@ var (
 )
 
 // htmlSanitizer returns a cached bluemonday UGC policy for sanitizing
-// gomarkdown HTML output. Thread-safe via sync.Once.
+// markdown HTML output. Thread-safe via sync.Once.
 func htmlSanitizer() *bluemonday.Policy {
 	sanitizerOnce.Do(func() {
 		sanitizerInst = bluemonday.UGCPolicy()
@@ -116,6 +116,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	data := struct {
 		Frontmatter *TemplateFrontmatter
 		Blocks      []TemplateBlock
+		Content     template.HTML // Populated by embedded mode only (via calcmark.Convert).
 	}{}
 
 	df := opts.getFormatter()
@@ -238,7 +239,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				}
 				renderedHTML = strings.Join(escaped, "<br>")
 			}
-			// Defense-in-depth: sanitize gomarkdown output with bluemonday.
+			// Defense-in-depth: sanitize goldmark output with bluemonday.
 			// UGCPolicy allows safe HTML tags (headings, lists, links, code, emphasis)
 			// while stripping dangerous content (script, event handlers, data URIs).
 			renderedHTML = htmlSanitizer().Sanitize(renderedHTML)

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -10,13 +9,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/format"
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/websocket"
@@ -25,16 +23,21 @@ import (
 var watchPort int
 
 var watchCmd = &cobra.Command{
-	Use:   "watch <file.cm>",
+	Use:   "watch <file>",
 	Short: "Watch a CalcMark file and serve a live preview",
-	Long: `Watch a CalcMark file for changes and serve a live HTML preview
+	Long: `Watch a CalcMark or Markdown file for changes and serve a live HTML preview
 in the browser. The preview updates automatically on every save.
+
+For .cm/.calcmark files, the entire file is evaluated as CalcMark.
+For .md/.markdown files, embedded cm/calcmark fenced code blocks are evaluated
+and the surrounding Markdown prose is rendered to HTML.
 
 Security: binds to 127.0.0.1 only, uses a random session token in the URL,
 and validates WebSocket origins.
 
-Example:
-  cm watch budget.cm     Open http://127.0.0.1:3141/<token> in your browser`,
+Examples:
+  cm watch budget.cm       CalcMark live preview
+  cm watch report.md       Embedded mode live preview`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(_ *cobra.Command, args []string) error {
 		return runWatch(args[0])
@@ -47,8 +50,18 @@ func init() {
 }
 
 func runWatch(filename string) error {
-	if err := validateReadFilePath(filename); err != nil {
-		return fmt.Errorf("invalid file: %w", err)
+	// Detect mode from file extension.
+	mode := calcmark.CM
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext == ".md" || ext == ".markdown" {
+		mode = calcmark.Embedded
+		if err := validateReadFilePathEmbedded(filename); err != nil {
+			return fmt.Errorf("invalid file: %w", err)
+		}
+	} else {
+		if err := validateReadFilePath(filename); err != nil {
+			return fmt.Errorf("invalid file: %w", err)
+		}
 	}
 
 	// Generate random session token for URL path
@@ -59,13 +72,14 @@ func runWatch(filename string) error {
 	sessionToken := hex.EncodeToString(tokenBytes)
 
 	// Initial render
-	html, err := renderFile(filename)
+	html, err := renderFile(filename, mode)
 	if err != nil {
 		return fmt.Errorf("initial render: %w", err)
 	}
 
 	srv := &watchServer{
 		filename:     filename,
+		mode:         mode,
 		sessionToken: sessionToken,
 		html:         html,
 	}
@@ -121,6 +135,7 @@ func runWatch(filename string) error {
 // watchServer holds state for the live preview server.
 type watchServer struct {
 	filename     string
+	mode         calcmark.Mode
 	sessionToken string
 
 	mu      sync.RWMutex
@@ -144,7 +159,7 @@ func (s *watchServer) watchLoop(watcher *fsnotify.Watcher) {
 					debounceTimer.Stop()
 				}
 				debounceTimer = time.AfterFunc(100*time.Millisecond, func() {
-					html, err := renderFile(s.filename)
+					html, err := renderFile(s.filename, s.mode)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "render error: %v\n", err)
 						return
@@ -248,28 +263,22 @@ func isLoopbackOrigin(origin string) bool {
 		strings.Contains(origin, "[::1]")
 }
 
-// renderFile reads, parses, evaluates, and renders a CalcMark file to HTML.
-func renderFile(filename string) (string, error) {
+// renderFile reads and converts a CalcMark or Markdown file to HTML.
+func renderFile(filename string, mode calcmark.Mode) (string, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
 
-	doc, err := document.NewDocument(string(data))
-	if err != nil {
+	result, err := calcmark.Convert(string(data), calcmark.Options{
+		Mode:   mode,
+		Format: "html",
+	})
+	// For embedded mode, partial errors still produce useful output.
+	if err != nil && result == "" {
 		return "", err
 	}
-
-	eval := implDoc.NewEvaluator()
-	eval.Evaluate(doc)
-
-	var buf bytes.Buffer
-	formatter := &format.HTMLFormatter{}
-	if err := formatter.Format(&buf, doc, format.Options{}); err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
+	return result, nil
 }
 
 const watchPageTemplate = `<!DOCTYPE html>

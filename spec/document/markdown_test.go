@@ -254,18 +254,17 @@ func TestSetextHeadingRendersAsH2(t *testing.T) {
 	}
 }
 
-func TestSmartypantsFractionsInProse(t *testing.T) {
-	// gomarkdown's SmartypantsFractions converts prose fractions to styled HTML.
-	// This is DESIRABLE for plain prose text — "Use 1/2 cup" renders as a proper fraction.
-	// gomarkdown uses <sup>num</sup>&frasl;<sub>denom</sub> format.
+func TestFractionsInProse(t *testing.T) {
+	// Goldmark renders prose fractions as plain text (1/2, 1/4, 3/4).
+	// No smartypants fraction conversion — fractions appear literally.
 	tests := []struct {
 		name   string
 		source string
-		want   string // HTML expected (sup/frasl/sub format)
+		want   string
 	}{
-		{"1/2 in prose", "Use 1/2 cup of flour", "<sup>1</sup>&frasl;<sub>2</sub>"},
-		{"1/4 in prose", "Use 1/4 cup of sugar", "<sup>1</sup>&frasl;<sub>4</sub>"},
-		{"3/4 in prose", "Fill 3/4 of the tank", "<sup>3</sup>&frasl;<sub>4</sub>"},
+		{"1/2 in prose", "Use 1/2 cup of flour", "1/2"},
+		{"1/4 in prose", "Use 1/4 cup of sugar", "1/4"},
+		{"3/4 in prose", "Fill 3/4 of the tank", "3/4"},
 	}
 
 	for _, tt := range tests {
@@ -274,7 +273,7 @@ func TestSmartypantsFractionsInProse(t *testing.T) {
 			html := block.Render()
 
 			if !strings.Contains(html, tt.want) {
-				t.Errorf("SmartypantsFractions should convert prose fractions: expected %s in %q", tt.want, html)
+				t.Errorf("Expected prose fraction %q in output, got: %q", tt.want, html)
 			}
 		})
 	}
