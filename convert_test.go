@@ -145,3 +145,98 @@ func TestConvert_WhitespaceInput(t *testing.T) {
 		t.Error("expected error for whitespace-only input")
 	}
 }
+
+// --- Embedded mode tests ---
+
+// T4: embedded mode, markdown output (blocks replaced, prose unchanged)
+func TestConvert_Embedded_Markdown(t *testing.T) {
+	input := "# Budget\n\n```cm\nprice = 100 USD\n```\n\nSome prose.\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "md",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Prose should be preserved
+	if !strings.Contains(result, "# Budget") {
+		t.Error("expected heading to be preserved")
+	}
+	if !strings.Contains(result, "Some prose.") {
+		t.Error("expected prose to be preserved")
+	}
+	// CalcMark block should be replaced with evaluated output
+	if strings.Contains(result, "```cm") {
+		t.Error("expected cm fence to be replaced with evaluated output")
+	}
+	// Should contain the evaluated result (price = 100 USD → table or annotation)
+	if !strings.Contains(result, "price") {
+		t.Error("expected evaluated output to contain 'price'")
+	}
+}
+
+// T8: embedded mode, block with evaluation error → inline error blockquote
+func TestConvert_Embedded_BlockError(t *testing.T) {
+	input := "# Test\n\n```cm\nx = unknown_var + 1\n```\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "md",
+	})
+	// Error should be non-nil (signals block failures)
+	if err == nil {
+		t.Error("expected non-nil error for block with evaluation issues")
+	}
+	// But result should still contain output (partial success)
+	if result == "" {
+		t.Fatal("expected non-empty result even with block errors")
+	}
+	// Should contain inline error blockquote
+	if !strings.Contains(result, "# Test") {
+		t.Error("expected heading to be preserved")
+	}
+}
+
+// T9: embedded mode preserves frontmatter passthrough
+func TestConvert_Embedded_FrontmatterPreserved(t *testing.T) {
+	input := "---\ntitle: Test Doc\n---\n\n# Doc\n\n```cm\nx = 42\n```\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "md",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Frontmatter should be preserved as-is
+	if !strings.Contains(result, "---\ntitle: Test Doc\n---") {
+		t.Errorf("expected frontmatter to be preserved, got:\n%s", result)
+	}
+	// Heading should be preserved
+	if !strings.Contains(result, "# Doc") {
+		t.Error("expected heading to be preserved")
+	}
+}
+
+// T4b: embedded mode with multiple blocks
+func TestConvert_Embedded_MultipleBlocks(t *testing.T) {
+	input := "# Report\n\n```cm\na = 10\n```\n\nMiddle text.\n\n```cm\nb = 20\n```\n\nEnd.\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "md",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "# Report") {
+		t.Error("expected heading preserved")
+	}
+	if !strings.Contains(result, "Middle text.") {
+		t.Error("expected middle prose preserved")
+	}
+	if !strings.Contains(result, "End.") {
+		t.Error("expected end prose preserved")
+	}
+	// Both cm fences should be gone
+	if strings.Contains(result, "```cm") {
+		t.Error("expected all cm fences to be replaced")
+	}
+}

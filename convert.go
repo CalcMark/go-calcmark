@@ -9,6 +9,7 @@ import (
 	"github.com/CalcMark/go-calcmark/format"
 	"github.com/CalcMark/go-calcmark/format/display"
 	impldoc "github.com/CalcMark/go-calcmark/impl/document"
+	"github.com/CalcMark/go-calcmark/impl/embedded"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -102,8 +103,85 @@ func convertCM(input string, opts Options) (string, error) {
 }
 
 // convertEmbedded handles the embedded Markdown conversion pipeline.
+// It scans the input for cm/calcmark fenced code blocks, evaluates each
+// independently, and reassembles the document. For "md" format, the output
+// is the reassembled Markdown. For "html" format, the reassembled Markdown
+// is converted to HTML via goldmark.
 func convertEmbedded(input string, opts Options) (string, error) {
-	return "", errors.New("embedded mode not yet implemented")
+	segments := embedded.Scan(input)
+
+	df := localeFormatter(opts.Locale)
+
+	// Process segments: passthrough text is kept as-is,
+	// CalcMark blocks are evaluated and formatted as Markdown.
+	var out strings.Builder
+	var errCount int
+	for _, seg := range segments {
+		switch seg.Kind {
+		case embedded.Passthrough:
+			out.WriteString(seg.Text)
+		case embedded.CalcMarkBlock:
+			result := evalEmbeddedBlock(seg.Text, seg.OpenLine, df)
+			out.WriteString(result)
+			if strings.HasPrefix(result, "> **CalcMark Error:**") {
+				errCount++
+			}
+		}
+	}
+
+	assembled := out.String()
+
+	// For markdown format, return the assembled markdown directly.
+	if opts.Format == "md" {
+		if errCount > 0 {
+			return assembled, fmt.Errorf("%d CalcMark block(s) had errors", errCount)
+		}
+		return assembled, nil
+	}
+
+	// For HTML format, convert assembled markdown to HTML via goldmark.
+	// TODO: implement in phase 1c
+	if opts.Format == "html" {
+		return "", errors.New("embedded HTML output not yet implemented")
+	}
+
+	// Other formats not supported for embedded mode.
+	return "", fmt.Errorf("embedded mode does not support format %q (use md or html)", opts.Format)
+}
+
+// evalEmbeddedBlock evaluates a single CalcMark block and returns its Markdown output.
+// On error, returns an inline error blockquote with the host-file line number.
+func evalEmbeddedBlock(source string, openLine int, df display.Formatter) string {
+	contentLine := openLine + 1
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		return formatEmbeddedBlockError(err.Error(), contentLine)
+	}
+
+	eval := impldoc.NewEvaluator()
+	eval.SetDisplayFormatter(df)
+	if err := eval.Evaluate(doc); err != nil {
+		return formatEmbeddedBlockError(err.Error(), contentLine)
+	}
+
+	var buf bytes.Buffer
+	formatter := &format.MarkdownFormatter{}
+	fmtOpts := format.Options{
+		Verbose:             true,
+		SuppressFrontmatter: true,
+		DisplayFormatter:    eval.GetDisplayFormatter(),
+	}
+	if err := formatter.Format(&buf, doc, fmtOpts); err != nil {
+		return formatEmbeddedBlockError(err.Error(), contentLine)
+	}
+
+	return buf.String()
+}
+
+// formatEmbeddedBlockError returns an inline error blockquote for a failed CalcMark block.
+func formatEmbeddedBlockError(msg string, line int) string {
+	return fmt.Sprintf("> **CalcMark Error:** %s (line %d)\n\n", msg, line)
 }
 
 // localeFormatter builds a display.Formatter from a BCP 47 locale string.
