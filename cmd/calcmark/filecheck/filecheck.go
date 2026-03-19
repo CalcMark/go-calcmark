@@ -17,6 +17,13 @@ func IsCalcMarkExtension(path string) bool {
 	return ext == ".cm" || ext == ".calcmark"
 }
 
+// IsMarkdownExtension reports whether the file at path has a recognized
+// Markdown extension (.md or .markdown, case-insensitive).
+func IsMarkdownExtension(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".md" || ext == ".markdown"
+}
+
 // binarySignature maps a human-readable format name to its magic bytes.
 type binarySignature struct {
 	name  string

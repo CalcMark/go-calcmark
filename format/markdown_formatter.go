@@ -19,23 +19,25 @@ func (f *MarkdownFormatter) Extensions() []string {
 
 // Format writes the document as Markdown to the writer.
 func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Options) error {
-	// Serialize frontmatter first (if present)
-	if fm := doc.GetFrontmatter(); fm != nil {
-		fmStr := fm.Serialize()
-		if fmStr != "" {
-			if opts.FrontmatterAsCodeFence {
-				// Render as a visible code fence instead of raw --- delimiters.
-				// This avoids collisions when the output is embedded in a Hugo
-				// page that has its own YAML frontmatter.
-				inner := strings.TrimSpace(fmStr)
-				inner = strings.TrimPrefix(inner, "---")
-				inner = strings.TrimSuffix(inner, "---")
-				inner = strings.TrimSpace(inner)
-				if inner != "" {
-					fmt.Fprintf(w, "```yaml\n%s\n```\n\n", inner)
+	// Serialize frontmatter first (if present and not suppressed)
+	if !opts.SuppressFrontmatter {
+		if fm := doc.GetFrontmatter(); fm != nil {
+			fmStr := fm.Serialize()
+			if fmStr != "" {
+				if opts.FrontmatterAsCodeFence {
+					// Render as a visible code fence instead of raw --- delimiters.
+					// This avoids collisions when the output is embedded in a Hugo
+					// page that has its own YAML frontmatter.
+					inner := strings.TrimSpace(fmStr)
+					inner = strings.TrimPrefix(inner, "---")
+					inner = strings.TrimSuffix(inner, "---")
+					inner = strings.TrimSpace(inner)
+					if inner != "" {
+						fmt.Fprintf(w, "```yaml\n%s\n```\n\n", inner)
+					}
+				} else {
+					fmt.Fprint(w, fmStr)
 				}
-			} else {
-				fmt.Fprint(w, fmStr)
 			}
 		}
 	}

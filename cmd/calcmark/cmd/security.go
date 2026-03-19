@@ -91,6 +91,58 @@ func validateFileConstraints(absPath string) error {
 	return nil
 }
 
+// validateReadFilePathEmbedded performs security checks on a file path for
+// embedded mode read-only commands. Same as validateReadFilePath but accepts
+// .md/.markdown extensions instead of .cm/.calcmark.
+func validateReadFilePathEmbedded(path string) error {
+	cleanPath := filepath.Clean(path)
+
+	// Security: Block ".." traversal sequences after cleaning
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("invalid path: path traversal detected")
+	}
+
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return fmt.Errorf("invalid path: %w", err)
+	}
+
+	return validateFileConstraintsEmbedded(absPath)
+}
+
+// validateFileConstraintsEmbedded checks extension, existence, type, and size
+// for embedded mode. Accepts .md/.markdown extensions instead of .cm/.calcmark.
+func validateFileConstraintsEmbedded(absPath string) error {
+	// Security: Check file extension (case-insensitive)
+	if !filecheck.IsMarkdownExtension(absPath) {
+		return fmt.Errorf("invalid file extension for --embedded: expected .md or .markdown")
+	}
+
+	// Security: Verify file exists and is a regular file
+	info, err := os.Stat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file not found: %s", absPath)
+		}
+		if os.IsPermission(err) {
+			return fmt.Errorf("permission denied: %s", absPath)
+		}
+		return fmt.Errorf("cannot access file: %s", absPath)
+	}
+
+	if info.IsDir() {
+		return fmt.Errorf("invalid path: expected file, got directory")
+	}
+
+	// Security: Limit file size to 1MB
+	const maxFileSize = 1 * 1024 * 1024 // 1MB
+	if info.Size() > maxFileSize {
+		return fmt.Errorf("file too large: %d bytes (max %d)", info.Size(), maxFileSize)
+	}
+
+	return nil
+}
+
 // validateFileContent checks that data is valid text suitable for CalcMark.
 // Delegates to the shared filecheck package for reuse by the TUI editor.
 func validateFileContent(data []byte) error {

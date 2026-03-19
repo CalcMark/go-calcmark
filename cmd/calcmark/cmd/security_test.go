@@ -130,6 +130,103 @@ func TestStdinSizeLimit(t *testing.T) {
 	// The real stdin limit is enforced in runEval via io.LimitReader.
 }
 
+// --- Embedded mode path validation tests ---
+
+// createTempFile creates a file with the given name and content in dir.
+func createTempFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestValidateReadFilePathEmbedded_AllowsMD(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := createTempFile(t, tmpDir, "readme.md", "# Hello\n")
+
+	if err := validateReadFilePathEmbedded(path); err != nil {
+		t.Fatalf("expected no error for .md file, got: %v", err)
+	}
+}
+
+func TestValidateReadFilePathEmbedded_AllowsMarkdown(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := createTempFile(t, tmpDir, "readme.markdown", "# Hello\n")
+
+	if err := validateReadFilePathEmbedded(path); err != nil {
+		t.Fatalf("expected no error for .markdown file, got: %v", err)
+	}
+}
+
+func TestValidateReadFilePathEmbedded_BlocksCM(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := createTempFile(t, tmpDir, "budget.cm", "x = 1\n")
+
+	err := validateReadFilePathEmbedded(path)
+	if err == nil {
+		t.Fatal("expected error for .cm file in embedded mode, got nil")
+	}
+	if !strings.Contains(err.Error(), "--embedded") {
+		t.Fatalf("expected --embedded in error, got: %v", err)
+	}
+}
+
+func TestValidateReadFilePathEmbedded_BlocksTxt(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := createTempFile(t, tmpDir, "notes.txt", "hello\n")
+
+	err := validateReadFilePathEmbedded(path)
+	if err == nil {
+		t.Fatal("expected error for .txt file in embedded mode, got nil")
+	}
+	if !strings.Contains(err.Error(), "--embedded") {
+		t.Fatalf("expected --embedded in error, got: %v", err)
+	}
+}
+
+func TestValidateReadFilePathEmbedded_BlocksTraversal(t *testing.T) {
+	err := validateReadFilePathEmbedded("../../etc/passwd.md")
+	if err == nil {
+		t.Fatal("expected error for path traversal, got nil")
+	}
+	if !strings.Contains(err.Error(), "path traversal") {
+		t.Fatalf("expected path traversal error, got: %v", err)
+	}
+}
+
+func TestValidateReadFilePathEmbedded_BlocksLargeFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "huge.md")
+	data := make([]byte, 1*1024*1024+1)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := validateReadFilePathEmbedded(path)
+	if err == nil {
+		t.Fatal("expected error for large file, got nil")
+	}
+	if !strings.Contains(err.Error(), "file too large") {
+		t.Fatalf("expected size error, got: %v", err)
+	}
+}
+
+func TestValidateReadFilePathEmbedded_BlocksDirectory(t *testing.T) {
+	err := validateReadFilePathEmbedded(t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for directory, got nil")
+	}
+}
+
+func TestValidateReadFilePathEmbedded_BlocksMissingFile(t *testing.T) {
+	err := validateReadFilePathEmbedded("/tmp/does-not-exist.md")
+	if err == nil {
+		t.Fatal("expected error for missing file, got nil")
+	}
+}
+
 // --- Content validation integration tests ---
 // These verify that validateFileContent and validateStdinContent work
 // correctly when called through the cmd package wrappers.
