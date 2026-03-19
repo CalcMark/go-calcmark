@@ -1,0 +1,12 @@
+# Sync CalcMark Tracker project board status to issue labels.
+# See: https://github.com/dvhthomas/project-label-sync
+project-url: https://github.com/orgs/CalcMark/projects/1
+field: Status
+mapping:
+  "In progress":
+    - in-progress
+  "In review":
+    - in-review
+  Done:
+    - done
+
