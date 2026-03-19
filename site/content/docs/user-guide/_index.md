@@ -11,6 +11,7 @@ This guide covers everything you need to use CalcMark effectively -- from editor
 - [Editor Shortcuts](#editor-shortcuts) -- Keyboard shortcuts for the CalcMark editor
 - [Locale Formatting](#locale-formatting) -- Display numbers in your locale
 - [Exporting Results](#exporting-results) -- `cm convert` and `cm eval`
+- [Embedded Mode](#embedded-mode) -- CalcMark blocks inside standard Markdown files
 - [Sharing with GitHub Gist](#sharing-gist) -- Share and open documents via GitHub Gist
 - [Language Features](#language-features)
   - [Units & Measurement](units/) -- Physical units, conversion, and measurement conventions
@@ -162,6 +163,19 @@ cm eval --locale=de-DE budget.cm  # German number formatting
 ```
 
 All export formats respect the `--locale` flag (or config setting) except `cm` format, which stays locale-independent.
+
+### Embedded Mode {#embedded-mode}
+
+You can embed CalcMark blocks inside standard Markdown files — blog posts, READMEs, Hugo content — and use `cm convert --embedded` to evaluate just the calculation blocks while leaving everything else untouched.
+
+```bash
+cm convert report.md --embedded            # Evaluate cm blocks, output to stdout
+cm convert report.md --embedded -o out.md  # Write to file
+```
+
+Each ` ```cm ` or ` ```calcmark ` fenced code block is treated as an independent CalcMark document. Blocks can have their own frontmatter (exchange rates, scale directives), but they don't share variables with each other. Everything outside the blocks — prose, Hugo frontmatter, footnotes, tables, HTML — passes through byte-for-byte.
+
+This makes CalcMark work like a preprocessor in your static site build pipeline, similar to how [D2](https://d2lang.com) handles diagram blocks. See the [CLI reference](/docs/cli-reference/#embedded-mode) for full details and the [embedded datacenter cost example](/docs/examples/embedded-datacenter-cost/) for a complete walkthrough.
 
 ## Sharing with GitHub Gist {#sharing-gist}
 

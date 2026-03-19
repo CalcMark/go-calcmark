@@ -114,6 +114,7 @@ Convert a CalcMark file to another format. Requires the `--to` flag.
 | `--output` | `-o` | Write to file instead of stdout |
 | `--template` | `-T` | Custom Go template (html format only) |
 | `--show-template` | | Print the default HTML template and exit |
+| `--embedded` | | Process a Markdown file with embedded `cm`/`calcmark` blocks |
 
 ### Examples
 
@@ -125,7 +126,34 @@ cm convert doc.cm --to=text              # Plain text
 cm convert doc.cm --to=html -T tpl.html  # Custom HTML template
 cm convert --show-template               # Print default HTML template
 cm convert doc.cm --to=json --locale=de-DE  # JSON with German formatting
+cm convert report.md --embedded          # Evaluate embedded CalcMark blocks
+cm convert report.md --embedded -o out.md  # Write processed output to file
 ```
+
+### Embedded Mode {#embedded-mode}
+
+Use `--embedded` to process a standard Markdown file that contains ` ```cm ` or ` ```calcmark ` fenced code blocks. Each block is evaluated independently as a self-contained CalcMark document, and the result replaces the original block. Everything else — prose, Hugo frontmatter, footnotes, tables, HTML — passes through unchanged.
+
+This is designed for static-site preprocessor pipelines (like [D2](https://d2lang.com) for diagrams). Wire it into your Hugo or Jekyll build to add live calculations to blog posts and reports.
+
+```bash
+# Process a Markdown file with embedded CalcMark blocks
+cm convert report.md --embedded
+
+# In a Hugo build script
+cm convert content/post.md --embedded -o content/post.processed.md
+```
+
+**Key behaviors:**
+
+- `--to md` is implied — other output formats are not supported with `--embedded`
+- Each block is independent: no shared variables or state between blocks
+- Block-level CalcMark frontmatter (e.g., `scale`, `exchange`) works inside each block but does not appear in output
+- Outer document frontmatter (Hugo YAML/TOML) passes through untouched
+- On block error: an inline error blockquote replaces the block and processing continues
+- Exit code is 1 if any block had errors; output is always produced
+- Backtick (`` ` ``) and tilde (`~`) fences are both supported per CommonMark spec
+- File must have a `.md` or `.markdown` extension
 
 ### Output Formats
 
