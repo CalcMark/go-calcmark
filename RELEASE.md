@@ -270,20 +270,67 @@ git tag -a "v0.4.0" -m "Release v0.4.0"
 git push origin v0.4.0
 ```
 
-### Need to redo a release
+### Published release has a bug — forward-fix
 
-If the release was published but something was wrong:
+**Always forward-fix. Never delete published tags or releases.**
+
+Deleting a published tag and re-releasing is unreliable:
+
+- Homebrew bottles are cached — users who already ran `brew upgrade` have the
+  bad version and won't re-fetch the same tag.
+- The Go module proxy caches tagged versions permanently.
+- GitHub release URLs may be cached by CDNs and CI systems.
+- Lark has already been notified and may have pulled the release.
+
+Instead, fix the problem and release the next patch version:
 
 ```bash
-# Delete the tag locally and remotely
+# 1. Revert the bad commit(s) on main (or fix the bug directly)
+git checkout main && git pull
+git revert <bad-commit-sha>
+
+# 2. Run the full quality gate
+task test
+task quality
+
+# 3. Tag the next patch version
+git tag -a v1.8.18 -m "Release v1.8.18 — fixes regression in v1.8.17"
+git push origin v1.8.18
+```
+
+A forward-fix is fully propagated within ~5 minutes: GitHub Actions builds the
+release (~3 min), the Homebrew tap is updated in the same workflow, and the Go
+module proxy picks up the new tag shortly after.
+
+When users report the bad version, tell them:
+
+```bash
+brew update && brew upgrade calcmark/tap/calcmark
+```
+
+**What NOT to do with published releases:**
+
+- Don't delete the tag — leaves a gap and breaks pinned consumers
+- Don't delete the GitHub release — cached URLs return 404
+- Don't force-push the tag — Go module proxy has the old content cached forever
+- Don't amend the tagged commit — same problem as force-pushing
+
+### Unpublished release failed in CI
+
+If you pushed a tag but the workflow failed before publishing any artifacts
+(no binaries, no Homebrew update), you can safely delete and re-push:
+
+```bash
 git tag -d v0.4.0
 git push origin :refs/tags/v0.4.0
 
-# Delete the GitHub release manually (if created)
-# Then fix the issue, commit, and re-tag
+# Fix the issue, then re-tag
 git tag -a "v0.4.0" -m "Release v0.4.0"
 git push origin v0.4.0
 ```
+
+Only do this if the release **never published**. If any artifacts were
+published, forward-fix instead.
 
 ### Site deploy fails
 

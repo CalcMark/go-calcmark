@@ -15,6 +15,7 @@ var (
 	convertOutput       string
 	convertTemplate     string
 	convertShowTemplate bool
+	convertEmbedded     bool
 )
 
 var convertCmd = &cobra.Command{
@@ -25,12 +26,17 @@ var convertCmd = &cobra.Command{
 Use --show-template to print the default HTML template. This is useful as a
 starting point for custom templates passed via --template.
 
+Use --embedded to process a standard Markdown file that contains cm/calcmark
+fenced code blocks. Each block is evaluated independently and replaced with
+its Markdown output. All other content passes through unchanged.
+
 Examples:
   cm convert doc.cm --to=html              Convert to HTML (stdout)
   cm convert doc.cm --to=md -o doc.md      Convert to Markdown file
   cm convert doc.cm --to=json              Convert to JSON
   cm convert doc.cm --to=html -T tpl.html  Use custom HTML template
-  cm convert --show-template               Print default HTML template`,
+  cm convert --show-template               Print default HTML template
+  cm convert report.md --embedded          Process embedded CalcMark blocks`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if convertShowTemplate {
@@ -39,6 +45,9 @@ Examples:
 		}
 		if len(args) == 0 {
 			return fmt.Errorf("missing file — usage: cm convert <file.cm> --to=<format>")
+		}
+		if convertEmbedded {
+			return runConvertEmbedded(args[0])
 		}
 		return runConvert(args[0])
 	},
@@ -49,6 +58,7 @@ func init() {
 	convertCmd.Flags().StringVarP(&convertOutput, "output", "o", "", "Write to file instead of stdout")
 	convertCmd.Flags().StringVarP(&convertTemplate, "template", "T", "", "Custom Go template (html only)")
 	convertCmd.Flags().BoolVar(&convertShowTemplate, "show-template", false, "Print the default HTML template and exit")
+	convertCmd.Flags().BoolVar(&convertEmbedded, "embedded", false, "Process a Markdown file with embedded cm/calcmark blocks")
 	rootCmd.AddCommand(convertCmd)
 }
 

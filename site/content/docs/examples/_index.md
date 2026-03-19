@@ -29,6 +29,7 @@ Complete `.cm` files you can run, modify, and learn from.
 - [Investment & Growth](investment-growth/) -- Compound growth, depreciation, and linear growth for financial modeling
 - [Home Renovation](home-renovation/) -- Averages, square roots, constants, booleans, and rate conversions
 - [Services P&L](services-pl/) -- Post-sales consulting P&L with percentage widening, globals, and scenario analysis
+- [Embedded Datacenter Cost](embedded-datacenter-cost/) -- Embedded mode: CalcMark blocks inside a standard Markdown file
 
 ## Feature Reference
 

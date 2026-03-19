@@ -656,3 +656,62 @@ avocados = 3
 		t.Error("Expected markdown output to preserve title value")
 	}
 }
+
+// TestMarkdownFormatterSuppressFrontmatter tests that SuppressFrontmatter
+// omits frontmatter from output (used by embedded mode).
+func TestMarkdownFormatterSuppressFrontmatter(t *testing.T) {
+	source := `---
+scale: 2
+---
+a = 5
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	formatter := &MarkdownFormatter{}
+
+	// With SuppressFrontmatter: true, output should NOT contain frontmatter
+	var suppressed bytes.Buffer
+	opts := Options{SuppressFrontmatter: true}
+	if err := formatter.Format(&suppressed, doc, opts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := suppressed.String()
+	if strings.Contains(output, "---") {
+		t.Errorf("Expected no frontmatter delimiters with SuppressFrontmatter, got:\n%s", output)
+	}
+	if strings.Contains(output, "scale") {
+		t.Errorf("Expected no frontmatter fields with SuppressFrontmatter, got:\n%s", output)
+	}
+	if strings.Contains(output, "```yaml") {
+		t.Errorf("Expected no yaml code fence with SuppressFrontmatter, got:\n%s", output)
+	}
+
+	// Calculation results should still be present
+	if !strings.Contains(output, "a = 5 → 5") {
+		t.Errorf("Expected calculation result preserved, got:\n%s", output)
+	}
+
+	// Without SuppressFrontmatter, output SHOULD contain frontmatter
+	var normal bytes.Buffer
+	normalOpts := Options{}
+	if err := formatter.Format(&normal, doc, normalOpts); err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	normalOutput := normal.String()
+	if !strings.Contains(normalOutput, "---") {
+		t.Errorf("Expected frontmatter delimiters without SuppressFrontmatter, got:\n%s", normalOutput)
+	}
+	if !strings.Contains(normalOutput, "scale") {
+		t.Errorf("Expected frontmatter fields without SuppressFrontmatter, got:\n%s", normalOutput)
+	}
+}

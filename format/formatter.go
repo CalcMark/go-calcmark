@@ -31,6 +31,9 @@ type Options struct {
 	// fence instead of raw --- delimiters. Use when embedding CalcMark output
 	// inside a Hugo page that has its own YAML frontmatter.
 	FrontmatterAsCodeFence bool
+
+	// SuppressFrontmatter skips frontmatter serialization (used by embedded mode).
+	SuppressFrontmatter bool
 }
 
 // getFormatter returns the DisplayFormatter from Options, or the default en-US formatter.

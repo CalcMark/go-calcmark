@@ -34,6 +34,38 @@ func TestIsCalcMarkExtension(t *testing.T) {
 	}
 }
 
+// --- IsMarkdownExtension tests ---
+
+func TestIsMarkdownExtension(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"readme.md", true},
+		{"readme.MD", true},
+		{"readme.Md", true},
+		{"readme.markdown", true},
+		{"readme.MARKDOWN", true},
+		{"readme.Markdown", true},
+		{"/path/to/readme.md", true},
+		{"/path/to/readme.markdown", true},
+		{"budget.cm", false},
+		{"budget.calcmark", false},
+		{"budget.txt", false},
+		{"budget.json", false},
+		{"budget", false},
+		{"readme.md.bak", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := IsMarkdownExtension(tt.path); got != tt.want {
+				t.Errorf("IsMarkdownExtension(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
 // --- Magic number rejection tests ---
 
 func TestValidateContent_RejectsPNG(t *testing.T) {
