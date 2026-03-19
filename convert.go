@@ -146,7 +146,11 @@ func convertEmbedded(input string, opts Options) (string, error) {
 
 	// For HTML format, convert assembled markdown to HTML via goldmark.
 	if opts.Format == "html" {
-		htmlFragment, err := markdownToHTML(assembled)
+		// Strip YAML frontmatter before goldmark — it's not valid Markdown,
+		// just a convention used by CMSs like Hugo. Goldmark would render
+		// it as a thematic break + paragraph.
+		mdForGoldmark := stripFrontmatter(assembled)
+		htmlFragment, err := markdownToHTML(mdForGoldmark)
 		if err != nil {
 			return "", fmt.Errorf("markdown to HTML conversion error: %w", err)
 		}
@@ -203,6 +207,24 @@ func evalEmbeddedBlock(source string, openLine int, df display.Formatter) string
 // formatEmbeddedBlockError returns an inline error blockquote for a failed CalcMark block.
 func formatEmbeddedBlockError(msg string, line int) string {
 	return fmt.Sprintf("> **CalcMark Error:** %s (line %d)\n\n", msg, line)
+}
+
+// stripFrontmatter removes YAML frontmatter (---\n...\n---\n) from the
+// beginning of a Markdown document. Frontmatter is not valid Markdown and
+// would be rendered incorrectly by goldmark.
+func stripFrontmatter(md string) string {
+	if !strings.HasPrefix(md, "---\n") {
+		return md
+	}
+	// Find the closing ---
+	rest := md[4:] // skip opening "---\n"
+	idx := strings.Index(rest, "\n---\n")
+	if idx < 0 {
+		// No closing delimiter — not frontmatter, return as-is
+		return md
+	}
+	// Skip past the closing "---\n"
+	return rest[idx+4:]
 }
 
 // markdownToHTML converts Markdown to an HTML fragment using goldmark with GFM extensions.

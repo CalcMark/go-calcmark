@@ -291,6 +291,26 @@ func TestConvert_Embedded_NoBlocks(t *testing.T) {
 	}
 }
 
+// T9b: embedded mode, frontmatter stripped from HTML output
+func TestConvert_Embedded_FrontmatterStrippedFromHTML(t *testing.T) {
+	input := "---\ntitle: Test Doc\n---\n\n# Doc\n\n```cm\nx = 42\n```\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "html",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Frontmatter should NOT appear in the HTML output
+	if strings.Contains(result, "title: Test Doc") {
+		t.Error("expected frontmatter to be stripped from HTML output")
+	}
+	// The heading should still be there
+	if !strings.Contains(result, "<h1") {
+		t.Error("expected heading in HTML output")
+	}
+}
+
 // T4b: embedded mode with multiple blocks
 func TestConvert_Embedded_MultipleBlocks(t *testing.T) {
 	input := "# Report\n\n```cm\na = 10\n```\n\nMiddle text.\n\n```cm\nb = 20\n```\n\nEnd.\n"
