@@ -1,0 +1,26 @@
+name: Sync Project Labels
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply changes (false = preview only)"
+        type: boolean
+        default: false
+      verbose:
+        description: "Show per-issue detail"
+        type: boolean
+        default: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dvhthomas/project-label-sync@v0.1.2
+        with:
+          token: ${{ secrets.PROJECT_PAT }}
+          apply: ${{ github.event.inputs.apply || 'false' }}
+          verbose: ${{ github.event.inputs.verbose || 'true' }}
+
