@@ -57,8 +57,8 @@ a fleet at scale). The outer Hugo frontmatter is **not** affected.
 
 ```calcmark
 units = 5 → 5
-unit_cost = 200 USD → $200.00
-fleet_cost = units * unit_cost → $1,000.00
+unit_cost = 200 USD → $200K
+fleet_cost = units * unit_cost → $1M
 ```
 
 
@@ -79,7 +79,7 @@ monthly_bandwidth = bandwidth_gbps * cost_per_gbps → $600.00
 This block references an undefined variable. The preprocessor should emit
 an inline error and continue processing the rest of the document.
 
-> **CalcMark Error:** line 1: undefined_variable: undefined variable "nonexistent_var" (line 81)
+> **CalcMark Error:** line 1: undefined_variable: undefined variable "nonexistent_var" (line 83)
 
 
 ## Markdown Feature Showcase

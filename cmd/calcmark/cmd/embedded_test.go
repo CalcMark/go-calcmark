@@ -391,6 +391,8 @@ func TestEmbedded_GoldenComplexMarkdown(t *testing.T) {
 		`→ $5,400.00`,
 		`→ $1,150.00`,
 		`→ $870.00`,
+		// Scaled block (scale factor 1000, unit_categories: [Currency])
+		`→ $1M`,
 		// Error block
 		`> **CalcMark Error:**`,
 	}

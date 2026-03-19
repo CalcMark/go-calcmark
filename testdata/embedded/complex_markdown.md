@@ -54,7 +54,9 @@ a fleet at scale). The outer Hugo frontmatter is **not** affected.
 
 ```cm
 ---
-scale: 1000
+scale:
+  factor: 1000
+  unit_categories: [Currency]
 ---
 units = 5
 unit_cost = 200 USD
