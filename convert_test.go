@@ -146,6 +146,17 @@ func TestConvert_WhitespaceInput(t *testing.T) {
 	}
 }
 
+// Test that unknown format returns an error
+func TestConvert_UnknownFormat(t *testing.T) {
+	_, err := Convert("x = 1", Options{Format: "xml"})
+	if err == nil {
+		t.Error("expected error for unknown format")
+	}
+	if !strings.Contains(err.Error(), "unknown format") {
+		t.Errorf("expected 'unknown format' error, got: %v", err)
+	}
+}
+
 // --- Embedded mode tests ---
 
 // T4: embedded mode, markdown output (blocks replaced, prose unchanged)

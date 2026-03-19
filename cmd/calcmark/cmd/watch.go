@@ -264,22 +264,15 @@ func isLoopbackOrigin(origin string) bool {
 }
 
 // renderFile reads and converts a CalcMark or Markdown file to HTML.
-// Locale is passed separately to avoid depending on config.Load() state.
-func renderFile(filename string, mode calcmark.Mode, locale ...string) (string, error) {
+func renderFile(filename string, mode calcmark.Mode) (string, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
 
-	loc := ""
-	if len(locale) > 0 {
-		loc = locale[0]
-	}
-
 	result, err := calcmark.Convert(string(data), calcmark.Options{
 		Mode:   mode,
 		Format: "html",
-		Locale: loc,
 	})
 	// For embedded mode, partial errors still produce useful output.
 	if err != nil && result == "" {

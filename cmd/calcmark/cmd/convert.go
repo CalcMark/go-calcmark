@@ -115,14 +115,17 @@ func runConvert(filename string) error {
 	}
 
 	// Resolve template content.
-	templateContent := resolveTemplate(formatName)
+	templateContent, err := resolveTemplate(formatName)
+	if err != nil {
+		return err
+	}
 
 	// Build conversion options.
 	opts := calcmark.Options{
 		Mode:     mode,
 		Format:   formatName,
 		Template: templateContent,
-		Locale:   localeString(),
+		Locale:   config.Get().Locale,
 	}
 
 	// Convert.
@@ -143,23 +146,23 @@ func runConvert(filename string) error {
 // For HTML format: uses custom template if provided, otherwise the default full template.
 // For embedded mode: no default template (goldmark output is self-contained).
 // For other formats: no template.
-func resolveTemplate(formatName string) string {
+func resolveTemplate(formatName string) (string, error) {
 	if formatName != "html" {
-		return ""
+		return "", nil
 	}
 	if convertTemplate != "" {
 		content, err := os.ReadFile(convertTemplate)
 		if err != nil {
-			return "" // error will be caught during conversion
+			return "", fmt.Errorf("read template: %w", err)
 		}
-		return string(content)
+		return string(content), nil
 	}
 	// Embedded mode: no default template — goldmark HTML is self-contained.
 	if convertEmbedded {
-		return ""
+		return "", nil
 	}
 	// CM mode: CLI uses the full default template (not fragment) for backwards compatibility.
-	return format.DefaultHTMLTemplate()
+	return format.DefaultHTMLTemplate(), nil
 }
 
 // writeOutput writes the conversion result to the output destination.
@@ -172,13 +175,4 @@ func writeOutput(result string) error {
 	}
 	fmt.Print(result)
 	return nil
-}
-
-// localeString returns the locale string from config for use with calcmark.Convert.
-func localeString() string {
-	cfg := config.Get()
-	if cfg.Locale != "" {
-		return cfg.Locale
-	}
-	return ""
 }

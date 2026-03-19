@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"strings"
 
-	"html/template"
-
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
@@ -36,6 +36,22 @@ type Options struct {
 	Locale   string // BCP 47 locale for number formatting (default: "en-US")
 }
 
+// validFormats is the set of recognized output format names.
+var validFormats = map[string]bool{
+	"html": true, "md": true, "text": true, "json": true, "cm": true,
+}
+
+// embeddedMarkdown is a reusable goldmark instance for Markdown→HTML conversion.
+// Goldmark instances are stateless after construction and safe for concurrent use.
+var embeddedMarkdown = goldmark.New(
+	goldmark.WithExtensions(extension.GFM),
+)
+
+// embeddedSanitizer is a reusable bluemonday policy for sanitizing goldmark HTML output.
+// Defense-in-depth: goldmark escapes raw HTML by default, but we sanitize as well
+// to match the CM-mode pipeline's security posture (see format/html_formatter.go).
+var embeddedSanitizer = bluemonday.UGCPolicy()
+
 // Convert processes CalcMark input and returns formatted output.
 //
 // In CM mode, the entire input is parsed as a CalcMark document, evaluated,
@@ -43,18 +59,29 @@ type Options struct {
 //
 // In Embedded mode, the input is scanned for cm/calcmark fenced code blocks.
 // Each block is evaluated independently and replaced with its formatted output.
-// Surrounding Markdown prose passes through unchanged.
+// Surrounding Markdown prose passes through unchanged. Embedded mode supports
+// "md" and "html" formats only.
 //
 // HTML output returns a fragment by default (no <html>/<head>/<body> wrapper).
 // When Template is set, the fragment is wrapped using the provided Go template.
+//
+// In Embedded mode, Convert may return both a non-empty result and a non-nil
+// error when some CalcMark blocks fail evaluation. The result contains inline
+// error markers (blockquotes in Markdown, or their HTML rendering) and is still
+// useful for display. The error reports the count of failed blocks.
 func Convert(input string, opts Options) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		return "", errors.New("empty input")
 	}
 
-	// Default format is html
+	// Default format is html.
 	if opts.Format == "" {
 		opts.Format = "html"
+	}
+
+	// Validate format.
+	if !validFormats[opts.Format] {
+		return "", fmt.Errorf("unknown format: %q (valid: html, md, text, json, cm)", opts.Format)
 	}
 
 	switch opts.Mode {
@@ -69,24 +96,19 @@ func Convert(input string, opts Options) (string, error) {
 
 // convertCM handles the pure CalcMark conversion pipeline.
 func convertCM(input string, opts Options) (string, error) {
-	// Parse
 	doc, err := document.NewDocument(input)
 	if err != nil {
 		return "", fmt.Errorf("parse error: %w", err)
 	}
 
-	// Evaluate
 	eval := impldoc.NewEvaluator()
 	eval.SetDisplayFormatter(localeFormatter(opts.Locale))
 	if err := eval.Evaluate(doc); err != nil {
 		return "", fmt.Errorf("evaluation error: %w", err)
 	}
 
-	// Format
 	formatter := format.GetFormatter(opts.Format, "")
 
-	// For HTML without a template, use the preview (fragment) template.
-	// For HTML with a template, use the caller's template.
 	fmtOpts := format.Options{
 		Verbose:          true,
 		DisplayFormatter: eval.GetDisplayFormatter(),
@@ -107,18 +129,22 @@ func convertCM(input string, opts Options) (string, error) {
 	return buf.String(), nil
 }
 
-// convertEmbedded handles the embedded Markdown conversion pipeline.
-// It scans the input for cm/calcmark fenced code blocks, evaluates each
-// independently, and reassembles the document. For "md" format, the output
-// is the reassembled Markdown. For "html" format, the reassembled Markdown
-// is converted to HTML via goldmark.
-func convertEmbedded(input string, opts Options) (string, error) {
-	segments := embedded.Scan(input)
+// embeddedBlockResult holds the output of evaluating a single CalcMark block.
+type embeddedBlockResult struct {
+	text  string
+	isErr bool
+}
 
+// convertEmbedded handles the embedded Markdown conversion pipeline.
+func convertEmbedded(input string, opts Options) (string, error) {
+	// Embedded mode only supports md and html.
+	if opts.Format != "md" && opts.Format != "html" {
+		return "", fmt.Errorf("embedded mode does not support format %q (use md or html)", opts.Format)
+	}
+
+	segments := embedded.Scan(input)
 	df := localeFormatter(opts.Locale)
 
-	// Process segments: passthrough text is kept as-is,
-	// CalcMark blocks are evaluated and formatted as Markdown.
 	var out strings.Builder
 	var errCount int
 	for _, seg := range segments {
@@ -126,9 +152,9 @@ func convertEmbedded(input string, opts Options) (string, error) {
 		case embedded.Passthrough:
 			out.WriteString(seg.Text)
 		case embedded.CalcMarkBlock:
-			result := evalEmbeddedBlock(seg.Text, seg.OpenLine, df)
-			out.WriteString(result)
-			if strings.HasPrefix(result, "> **CalcMark Error:**") {
+			br := evalEmbeddedBlock(seg.Text, seg.OpenLine, df)
+			out.WriteString(br.text)
+			if br.isErr {
 				errCount++
 			}
 		}
@@ -136,7 +162,6 @@ func convertEmbedded(input string, opts Options) (string, error) {
 
 	assembled := out.String()
 
-	// For markdown format, return the assembled markdown directly.
 	if opts.Format == "md" {
 		if errCount > 0 {
 			return assembled, fmt.Errorf("%d CalcMark block(s) had errors", errCount)
@@ -144,50 +169,46 @@ func convertEmbedded(input string, opts Options) (string, error) {
 		return assembled, nil
 	}
 
-	// For HTML format, convert assembled markdown to HTML via goldmark.
-	if opts.Format == "html" {
-		// Strip YAML frontmatter before goldmark — it's not valid Markdown,
-		// just a convention used by CMSs like Hugo. Goldmark would render
-		// it as a thematic break + paragraph.
-		mdForGoldmark := stripFrontmatter(assembled)
-		htmlFragment, err := markdownToHTML(mdForGoldmark)
-		if err != nil {
-			return "", fmt.Errorf("markdown to HTML conversion error: %w", err)
-		}
-
-		// If a template is provided, wrap the fragment.
-		if opts.Template != "" {
-			wrapped, tplErr := wrapEmbeddedHTML(htmlFragment, opts.Template)
-			if tplErr != nil {
-				return "", fmt.Errorf("template error: %w", tplErr)
-			}
-			htmlFragment = wrapped
-		}
-
-		if errCount > 0 {
-			return htmlFragment, fmt.Errorf("%d CalcMark block(s) had errors", errCount)
-		}
-		return htmlFragment, nil
+	// HTML format: strip frontmatter (not valid Markdown), convert via goldmark,
+	// sanitize, and optionally wrap in a template.
+	mdForGoldmark := stripFrontmatter(assembled)
+	htmlFragment, err := markdownToHTML(mdForGoldmark)
+	if err != nil {
+		return "", fmt.Errorf("markdown to HTML conversion error: %w", err)
 	}
 
-	// Other formats not supported for embedded mode.
-	return "", fmt.Errorf("embedded mode does not support format %q (use md or html)", opts.Format)
+	// Defense-in-depth: sanitize goldmark output with bluemonday.
+	// Matches the CM-mode pipeline's security posture in format/html_formatter.go.
+	htmlFragment = embeddedSanitizer.Sanitize(htmlFragment)
+
+	if opts.Template != "" {
+		wrapped, tplErr := wrapEmbeddedHTML(htmlFragment, opts.Template)
+		if tplErr != nil {
+			return "", fmt.Errorf("template error: %w", tplErr)
+		}
+		htmlFragment = wrapped
+	}
+
+	if errCount > 0 {
+		return htmlFragment, fmt.Errorf("%d CalcMark block(s) had errors", errCount)
+	}
+	return htmlFragment, nil
 }
 
 // evalEmbeddedBlock evaluates a single CalcMark block and returns its Markdown output.
 // On error, returns an inline error blockquote with the host-file line number.
-func evalEmbeddedBlock(source string, openLine int, df display.Formatter) string {
+func evalEmbeddedBlock(source string, openLine int, df display.Formatter) embeddedBlockResult {
 	contentLine := openLine + 1
 
 	doc, err := document.NewDocument(source)
 	if err != nil {
-		return formatEmbeddedBlockError(err.Error(), contentLine)
+		return embeddedBlockResult{text: formatEmbeddedBlockError(err.Error(), contentLine), isErr: true}
 	}
 
 	eval := impldoc.NewEvaluator()
 	eval.SetDisplayFormatter(df)
 	if err := eval.Evaluate(doc); err != nil {
-		return formatEmbeddedBlockError(err.Error(), contentLine)
+		return embeddedBlockResult{text: formatEmbeddedBlockError(err.Error(), contentLine), isErr: true}
 	}
 
 	var buf bytes.Buffer
@@ -198,10 +219,10 @@ func evalEmbeddedBlock(source string, openLine int, df display.Formatter) string
 		DisplayFormatter:    eval.GetDisplayFormatter(),
 	}
 	if err := formatter.Format(&buf, doc, fmtOpts); err != nil {
-		return formatEmbeddedBlockError(err.Error(), contentLine)
+		return embeddedBlockResult{text: formatEmbeddedBlockError(err.Error(), contentLine), isErr: true}
 	}
 
-	return buf.String()
+	return embeddedBlockResult{text: buf.String()}
 }
 
 // formatEmbeddedBlockError returns an inline error blockquote for a failed CalcMark block.
@@ -210,37 +231,36 @@ func formatEmbeddedBlockError(msg string, line int) string {
 }
 
 // stripFrontmatter removes YAML frontmatter (---\n...\n---\n) from the
-// beginning of a Markdown document. Frontmatter is not valid Markdown and
-// would be rendered incorrectly by goldmark.
+// beginning of a Markdown document. Handles both Unix (\n) and Windows (\r\n)
+// line endings. Frontmatter is not valid Markdown and would be rendered
+// incorrectly by goldmark.
 func stripFrontmatter(md string) string {
-	if !strings.HasPrefix(md, "---\n") {
+	// Normalize \r\n to \n for consistent matching.
+	normalized := strings.ReplaceAll(md, "\r\n", "\n")
+	if !strings.HasPrefix(normalized, "---\n") {
 		return md
 	}
-	// Find the closing ---
-	rest := md[4:] // skip opening "---\n"
+	rest := normalized[4:] // skip opening "---\n"
 	idx := strings.Index(rest, "\n---\n")
 	if idx < 0 {
-		// No closing delimiter — not frontmatter, return as-is
 		return md
 	}
-	// Skip past the closing "---\n"
 	return rest[idx+4:]
 }
 
-// markdownToHTML converts Markdown to an HTML fragment using goldmark with GFM extensions.
+// markdownToHTML converts Markdown to an HTML fragment using the shared goldmark instance.
 func markdownToHTML(markdown string) (string, error) {
-	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
-	)
 	var buf bytes.Buffer
-	if err := md.Convert([]byte(markdown), &buf); err != nil {
+	if err := embeddedMarkdown.Convert([]byte(markdown), &buf); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
 }
 
-// wrapEmbeddedHTML wraps an HTML fragment in a Go template.
+// wrapEmbeddedHTML wraps a sanitized HTML fragment in a Go template.
 // The template receives a data struct with a Content field containing the HTML.
+// The Content is typed as template.HTML because it has already been sanitized
+// by bluemonday before reaching this function.
 func wrapEmbeddedHTML(htmlContent string, templateContent string) (string, error) {
 	tmpl, err := template.New("embedded").Parse(templateContent)
 	if err != nil {

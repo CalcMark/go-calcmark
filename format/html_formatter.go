@@ -116,7 +116,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	data := struct {
 		Frontmatter *TemplateFrontmatter
 		Blocks      []TemplateBlock
-		Content     template.HTML // For embedded mode: pre-rendered HTML content
+		Content     template.HTML // Populated by embedded mode only (via calcmark.Convert).
 	}{}
 
 	df := opts.getFormatter()
