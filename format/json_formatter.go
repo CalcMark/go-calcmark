@@ -90,11 +90,17 @@ func populateResult(jr *JSONResult, result types.Type) {
 		jr.Type = "number"
 		f := v.Value.InexactFloat64()
 		jr.NumericValue = &f
+		if v.IsNapkin {
+			jr.IsApproximate = true
+		}
 	case *types.Currency:
 		jr.Type = "currency"
 		f := v.Value.InexactFloat64()
 		jr.NumericValue = &f
 		jr.Unit = v.Code
+		if v.IsNapkin {
+			jr.IsApproximate = true
+		}
 	case *types.Quantity:
 		jr.Type = "quantity"
 		f := v.Value.InexactFloat64()

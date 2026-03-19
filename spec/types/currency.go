@@ -9,9 +9,10 @@ import (
 // Currency represents a monetary value with a currency symbol and ISO code.
 // It preserves both the display symbol (e.g., "$") and the normalized ISO code (e.g., "USD").
 type Currency struct {
-	Value  decimal.Decimal
-	Symbol string // Display symbol: "$", "€", "£", "¥", or ISO code like "USD"
-	Code   string // Normalized ISO 4217 code: "USD", "EUR", "GBP", "JPY"
+	Value    decimal.Decimal
+	Symbol   string // Display symbol: "$", "€", "£", "¥", or ISO code like "USD"
+	Code     string // Normalized ISO 4217 code: "USD", "EUR", "GBP", "JPY"
+	IsNapkin bool   // true when produced by `as napkin` conversion
 }
 
 // SymbolToCode maps currency symbols to their ISO 4217 codes.

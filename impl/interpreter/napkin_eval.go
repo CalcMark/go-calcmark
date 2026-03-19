@@ -31,7 +31,7 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 	switch v := value.(type) {
 	case *types.Number:
 		rounded := roundToNapkinPrecision(v.Value)
-		return types.NewNumber(rounded), nil
+		return &types.Number{Value: rounded, IsNapkin: true}, nil
 
 	case *types.Quantity:
 		// Round the value, then normalize to human-friendly unit
@@ -47,7 +47,7 @@ func (interp *Interpreter) evalNapkinConversion(n *ast.NapkinConversion) (types.
 	case *types.Currency:
 		// Preserve symbol, round value
 		rounded := roundToNapkinPrecision(v.Value)
-		return types.NewCurrency(rounded, v.Symbol), nil
+		return &types.Currency{Value: rounded, Symbol: v.Symbol, Code: v.Code, IsNapkin: true}, nil
 
 	case *types.Duration:
 		// Preserve unit, round value (keep in original unit)

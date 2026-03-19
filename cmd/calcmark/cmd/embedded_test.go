@@ -450,15 +450,15 @@ func TestEmbedded_GoldmarkValidation(t *testing.T) {
 
 	// Verify key structural elements are present in the parsed AST.
 	checks := map[string]ast.NodeKind{
-		"Heading":        ast.KindHeading,
+		"Heading":         ast.KindHeading,
 		"FencedCodeBlock": ast.KindFencedCodeBlock,
-		"Blockquote":     ast.KindBlockquote,
-		"List":           ast.KindList,
-		"Link":           ast.KindLink,
-		"Image":          ast.KindImage,
-		"ThematicBreak":  ast.KindThematicBreak,
-		"HTMLBlock":      ast.KindHTMLBlock,
-		"Paragraph":      ast.KindParagraph,
+		"Blockquote":      ast.KindBlockquote,
+		"List":            ast.KindList,
+		"Link":            ast.KindLink,
+		"Image":           ast.KindImage,
+		"ThematicBreak":   ast.KindThematicBreak,
+		"HTMLBlock":       ast.KindHTMLBlock,
+		"Paragraph":       ast.KindParagraph,
 	}
 
 	for name, kind := range checks {

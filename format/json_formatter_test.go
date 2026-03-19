@@ -654,6 +654,56 @@ func TestJSONFormatterNapkinEstimate(t *testing.T) {
 	}
 }
 
+// TestJSONFormatterNapkinNumber verifies is_approximate for napkin numbers.
+func TestJSONFormatterNapkinNumber(t *testing.T) {
+	result := formatJSON(t, "estimate = 1234567 as napkin\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) < 1 {
+		t.Fatal("Expected at least one result")
+	}
+
+	r := block.Results[0]
+	if r.Type != "number" {
+		t.Errorf("Type = %q, want %q", r.Type, "number")
+	}
+	if !r.IsApproximate {
+		t.Error("IsApproximate should be true for napkin number")
+	}
+	if r.Value != "~1.2M" {
+		t.Errorf("Value = %q, want %q", r.Value, "~1.2M")
+	}
+}
+
+// TestJSONFormatterNapkinCurrency verifies is_approximate for napkin currencies.
+func TestJSONFormatterNapkinCurrency(t *testing.T) {
+	result := formatJSON(t, "estimate = $1234567 as napkin\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+
+	if len(block.Results) < 1 {
+		t.Fatal("Expected at least one result")
+	}
+
+	r := block.Results[0]
+	if r.Type != "currency" {
+		t.Errorf("Type = %q, want %q", r.Type, "currency")
+	}
+	if !r.IsApproximate {
+		t.Error("IsApproximate should be true for napkin currency")
+	}
+	if r.Value != "~$1.2M" {
+		t.Errorf("Value = %q, want %q", r.Value, "~$1.2M")
+	}
+}
+
 // TestJSONFormatterFractionASCII verifies that JSON output uses ASCII fractions,
 // never Unicode Number Forms.
 func TestJSONFormatterFractionASCII(t *testing.T) {
