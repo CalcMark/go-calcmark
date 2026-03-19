@@ -7,7 +7,7 @@ on:
       apply:
         description: "Apply changes (false = preview only)"
         type: boolean
-        default: false
+        default: true
       verbose:
         description: "Show per-issue detail"
         type: boolean
@@ -21,6 +21,6 @@ jobs:
       - uses: dvhthomas/project-label-sync@v0.1.2
         with:
           token: ${{ secrets.PROJECT_PAT }}
-          apply: ${{ github.event.inputs.apply || 'false' }}
+          apply: ${{ github.event.inputs.apply || 'true' }}
           verbose: ${{ github.event.inputs.verbose || 'true' }}
 
