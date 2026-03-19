@@ -222,6 +222,126 @@ func TestNapkinTypePreservation(t *testing.T) {
 	}
 }
 
+// TestNapkinNumberIsNapkinFlag verifies that napkin conversion sets IsNapkin=true
+// on Number results, enabling tilde prefix in display formatting.
+func TestNapkinNumberIsNapkinFlag(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantDisplay string
+	}{
+		{
+			name:        "large number shows tilde",
+			input:       "x = 1234567 as napkin\n",
+			wantDisplay: "~1.2M",
+		},
+		{
+			name:        "small number shows tilde",
+			input:       "x = 47 as napkin\n",
+			wantDisplay: "~47",
+		},
+		{
+			name:        "negative number shows tilde",
+			input:       "x = -1234567 as napkin\n",
+			wantDisplay: "~-1.2M",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[0]
+			n, ok := result.(*types.Number)
+			if !ok {
+				t.Fatalf("Expected *types.Number, got %T", result)
+			}
+
+			if !n.IsNapkin {
+				t.Error("Expected IsNapkin=true, got false")
+			}
+
+			formatted := display.Format(result)
+			if formatted != tt.wantDisplay {
+				t.Errorf("Expected display %q, got %q", tt.wantDisplay, formatted)
+			}
+		})
+	}
+}
+
+// TestNapkinCurrencyIsNapkinFlag verifies that napkin conversion sets IsNapkin=true
+// on Currency results, enabling tilde prefix in display formatting.
+func TestNapkinCurrencyIsNapkinFlag(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantDisplay string
+	}{
+		{
+			name:        "large currency shows tilde",
+			input:       "x = $1234567 as napkin\n",
+			wantDisplay: "~$1.2M",
+		},
+		{
+			name:        "small currency shows tilde",
+			input:       "x = $42.50 as napkin\n",
+			wantDisplay: "~$43.00",
+		},
+		{
+			name:        "negative currency shows tilde",
+			input:       "x = -$1234567 as napkin\n",
+			wantDisplay: "~-$1.2M",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) == 0 {
+				t.Fatal("No results returned")
+			}
+
+			result := results[0]
+			c, ok := result.(*types.Currency)
+			if !ok {
+				t.Fatalf("Expected *types.Currency, got %T", result)
+			}
+
+			if !c.IsNapkin {
+				t.Error("Expected IsNapkin=true, got false")
+			}
+
+			formatted := display.Format(result)
+			if formatted != tt.wantDisplay {
+				t.Errorf("Expected display %q, got %q", tt.wantDisplay, formatted)
+			}
+		})
+	}
+}
+
 // TestNapkinQuantityIsNapkinFlag verifies that napkin conversion sets IsNapkin=true
 // on Quantity results, enabling tilde prefix in display formatting.
 func TestNapkinQuantityIsNapkinFlag(t *testing.T) {

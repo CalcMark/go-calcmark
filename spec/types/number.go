@@ -5,7 +5,8 @@ import "github.com/shopspring/decimal"
 // Number represents an arbitrary-precision decimal number.
 // It uses the shopspring/decimal package for accurate decimal arithmetic.
 type Number struct {
-	Value decimal.Decimal
+	Value    decimal.Decimal
+	IsNapkin bool // true when produced by `as napkin` conversion
 }
 
 // NewNumber creates a new Number from a decimal.Decimal value.

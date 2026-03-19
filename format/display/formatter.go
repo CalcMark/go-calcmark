@@ -68,7 +68,11 @@ func (f Formatter) Format(t types.Type) string {
 
 	switch v := t.(type) {
 	case *types.Number:
-		return f.FormatNumber(v.Value)
+		s := f.FormatNumber(v.Value)
+		if v.IsNapkin {
+			return "~" + s
+		}
+		return s
 	case *types.Quantity:
 		return f.FormatQuantity(v)
 	case *types.Rate:
@@ -236,10 +240,16 @@ func (f Formatter) FormatCurrency(c *types.Currency) string {
 		numStr = f.localizeDecimal(c.Value.Abs().StringFixed(int32(decimals)))
 	}
 
+	var result string
 	if isNegative {
-		return "-" + symbol + sep + numStr
+		result = "-" + symbol + sep + numStr
+	} else {
+		result = symbol + sep + numStr
 	}
-	return symbol + sep + numStr
+	if c.IsNapkin {
+		return "~" + result
+	}
+	return result
 }
 
 // FormatDuration formats a duration in human-readable form.
