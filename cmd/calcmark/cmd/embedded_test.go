@@ -306,6 +306,96 @@ func TestEmbedded_IndependentBlocks(t *testing.T) {
 	}
 }
 
+func TestEmbedded_GoldenComplexMarkdown(t *testing.T) {
+	binary := buildCM(t)
+
+	inputPath := "testdata/embedded/complex_markdown.md"
+	expectedPath := "testdata/embedded/complex_markdown.expected.md"
+
+	// Resolve paths relative to the cmd package directory.
+	cwd := mustGetwd(t)
+	absInput := filepath.Join(cwd, "..", "..", "..", inputPath)
+	absExpected := filepath.Join(cwd, "..", "..", "..", expectedPath)
+
+	expected, err := os.ReadFile(absExpected)
+	if err != nil {
+		t.Fatalf("read expected: %v", err)
+	}
+
+	cmd := exec.Command(binary, "convert", "--embedded", absInput)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// Expect non-zero exit because the test file has a deliberate error block.
+	if err := cmd.Run(); err == nil {
+		t.Fatal("expected non-zero exit due to deliberate error block")
+	}
+
+	got := stdout.String()
+	want := string(expected)
+
+	if got != want {
+		// Find first differing line for a clear error message.
+		gotLines := strings.Split(got, "\n")
+		wantLines := strings.Split(want, "\n")
+		for i := 0; i < len(gotLines) && i < len(wantLines); i++ {
+			if gotLines[i] != wantLines[i] {
+				t.Fatalf("output differs at line %d:\n  want: %q\n  got:  %q", i+1, wantLines[i], gotLines[i])
+			}
+		}
+		if len(gotLines) != len(wantLines) {
+			t.Fatalf("output line count differs: want %d, got %d", len(wantLines), len(gotLines))
+		}
+	}
+
+	// Verify key passthrough features survived.
+	checks := []string{
+		// Hugo frontmatter
+		`title: "Infrastructure Cost Analysis"`,
+		// Reference links
+		`[cm]: https://calcmark.com "CalcMark Homepage"`,
+		// Footnotes
+		`[^1]: CalcMark was designed for exactly this kind of napkin math.`,
+		// GFM table
+		`| Servers   | $5,400`,
+		// Task list
+		`- [x] Model server costs`,
+		`- [ ] Add redundancy multiplier`,
+		// Definition list
+		`:   An interpreted language`,
+		// HTML pass-through
+		`<div class="callout" data-type="warning">`,
+		// Image
+		`![Architecture diagram]`,
+		// Autolink
+		`<https://calcmark.com>`,
+		// Nested blockquote
+		`> > > Level 3`,
+		// Non-CalcMark fences
+		`def estimate_cost(servers, price):`,
+		"```yaml",
+		`~~~bash`,
+		// Indented code block
+		`    This is an indented code block.`,
+		// Hard line break
+		"backslash\\",
+		// Horizontal rule
+		`---`,
+		// CalcMark results
+		`→ $5,400.00`,
+		`→ $1,150.00`,
+		`→ $870.00`,
+		// Error block
+		`> **CalcMark Error:**`,
+	}
+	for _, check := range checks {
+		if !strings.Contains(got, check) {
+			t.Errorf("missing expected content: %q", check)
+		}
+	}
+}
+
 func TestEmbedded_HelpShowsFlag(t *testing.T) {
 	binary := buildCM(t)
 
