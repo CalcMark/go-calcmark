@@ -7,6 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/text"
 )
 
 // writeTempMD writes content to a temporary .md file and returns its path.
@@ -394,6 +399,111 @@ func TestEmbedded_GoldenComplexMarkdown(t *testing.T) {
 			t.Errorf("missing expected content: %q", check)
 		}
 	}
+}
+
+// TestEmbedded_GoldmarkValidation parses the embedded mode output with goldmark
+// (Hugo's markdown parser) to verify the output is valid, well-formed markdown
+// that a real CommonMark parser can walk without issues.
+func TestEmbedded_GoldmarkValidation(t *testing.T) {
+	binary := buildCM(t)
+
+	cwd := mustGetwd(t)
+	inputPath := filepath.Join(cwd, "..", "..", "..", "testdata", "embedded", "complex_markdown.md")
+
+	cmd := exec.Command(binary, "convert", "--embedded", inputPath)
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+
+	// Ignore exit code — we expect non-zero due to the deliberate error block.
+	cmd.Run()
+
+	output := stdout.Bytes()
+	if len(output) == 0 {
+		t.Fatal("embedded mode produced no output")
+	}
+
+	// Parse the output with goldmark + GFM extensions + footnotes + definition lists.
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,
+			extension.Footnote,
+			extension.DefinitionList,
+		),
+	)
+
+	reader := text.NewReader(output)
+	doc := md.Parser().Parse(reader)
+
+	// Walk the AST and collect node kinds to verify structure.
+	kinds := make(map[ast.NodeKind]int)
+	err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if entering {
+			kinds[n.Kind()]++
+		}
+		return ast.WalkContinue, nil
+	})
+	if err != nil {
+		t.Fatalf("goldmark AST walk failed: %v", err)
+	}
+
+	// Verify key structural elements are present in the parsed AST.
+	checks := map[string]ast.NodeKind{
+		"Heading":        ast.KindHeading,
+		"FencedCodeBlock": ast.KindFencedCodeBlock,
+		"Blockquote":     ast.KindBlockquote,
+		"List":           ast.KindList,
+		"Link":           ast.KindLink,
+		"Image":          ast.KindImage,
+		"ThematicBreak":  ast.KindThematicBreak,
+		"HTMLBlock":      ast.KindHTMLBlock,
+		"Paragraph":      ast.KindParagraph,
+	}
+
+	for name, kind := range checks {
+		if kinds[kind] == 0 {
+			t.Errorf("goldmark AST missing expected node type: %s", name)
+		}
+	}
+
+	// Verify the output renders to HTML without error.
+	var htmlBuf bytes.Buffer
+	if err := md.Convert(output, &htmlBuf); err != nil {
+		t.Fatalf("goldmark HTML conversion failed: %v", err)
+	}
+
+	html := htmlBuf.String()
+
+	// Spot-check that key HTML elements are produced.
+	htmlChecks := []string{
+		"<h1",          // headings
+		"<table>",      // GFM table
+		"<blockquote>", // blockquotes (including error block)
+		"<code",        // code spans/blocks
+		"<a href=",     // links
+		"<img ",        // images
+		"<pre>",        // fenced code blocks
+		"<hr",          // thematic break
+	}
+	for _, check := range htmlChecks {
+		if !strings.Contains(html, check) {
+			t.Errorf("goldmark HTML output missing expected element: %s", check)
+		}
+	}
+
+	t.Logf("goldmark parsed %d AST nodes across %d node types; HTML output: %d bytes",
+		countNodes(doc), len(kinds), len(html))
+}
+
+// countNodes counts all nodes in a goldmark AST.
+func countNodes(doc ast.Node) int {
+	count := 0
+	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if entering {
+			count++
+		}
+		return ast.WalkContinue, nil
+	})
+	return count
 }
 
 func TestEmbedded_HelpShowsFlag(t *testing.T) {
