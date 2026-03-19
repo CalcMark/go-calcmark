@@ -258,8 +258,10 @@ func markdownToHTML(markdown string) (string, error) {
 }
 
 // wrapEmbeddedHTML wraps a sanitized HTML fragment in a Go template.
-// The template receives a data struct with a Content field containing the HTML.
-// The Content is typed as template.HTML because it has already been sanitized
+// The template receives the same data struct as HTMLFormatter.Format() — with
+// Frontmatter, Blocks, and Content fields — so a single template can serve both
+// cm mode (using .Blocks) and embedded mode (using .Content) via {{if .Content}}.
+// Content is typed as template.HTML because it has already been sanitized
 // by bluemonday before reaching this function.
 func wrapEmbeddedHTML(htmlContent string, templateContent string) (string, error) {
 	tmpl, err := template.New("embedded").Parse(templateContent)
@@ -268,7 +270,9 @@ func wrapEmbeddedHTML(htmlContent string, templateContent string) (string, error
 	}
 
 	data := struct {
-		Content template.HTML
+		Frontmatter *format.TemplateFrontmatter
+		Blocks      []format.TemplateBlock
+		Content     template.HTML
 	}{
 		Content: template.HTML(htmlContent),
 	}
