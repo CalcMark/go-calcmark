@@ -216,6 +216,81 @@ func TestConvert_Embedded_FrontmatterPreserved(t *testing.T) {
 	}
 }
 
+// T5: embedded mode, html fragment (new)
+func TestConvert_Embedded_HTMLFragment(t *testing.T) {
+	input := "# Budget\n\n```cm\nprice = 100 USD\n```\n\nSome prose.\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "html",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should be an HTML fragment (no DOCTYPE, no <html> tag)
+	if strings.Contains(result, "<!DOCTYPE") {
+		t.Error("expected HTML fragment, got full document")
+	}
+	// Should contain goldmark-rendered heading
+	if !strings.Contains(result, "<h1") {
+		t.Error("expected <h1> heading in goldmark output")
+	}
+	// Should contain prose as paragraph
+	if !strings.Contains(result, "Some prose.") {
+		t.Error("expected prose paragraph in output")
+	}
+	// Should contain evaluated CalcMark output (rendered as HTML table or similar)
+	if !strings.Contains(result, "price") {
+		t.Error("expected evaluated CalcMark content")
+	}
+}
+
+// T6: embedded mode, html with template (what Lark uses)
+func TestConvert_Embedded_HTMLWithTemplate(t *testing.T) {
+	input := "# Budget\n\n```cm\nprice = 100 USD\n```\n"
+	result, err := Convert(input, Options{
+		Mode:     Embedded,
+		Format:   "html",
+		Template: simpleTemplate,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should be a full HTML document using our template
+	if !strings.Contains(result, "<!DOCTYPE html>") {
+		t.Error("expected full HTML document with DOCTYPE")
+	}
+	if !strings.Contains(result, "<title>Test</title>") {
+		t.Error("expected template title")
+	}
+	// Content should be inside the embedded div
+	if !strings.Contains(result, `class="embedded"`) {
+		t.Error("expected embedded content wrapper from template")
+	}
+	// Should contain goldmark-rendered content
+	if !strings.Contains(result, "<h1") {
+		t.Error("expected <h1> heading in goldmark output")
+	}
+}
+
+// T7: embedded mode, no calcmark blocks → passthrough
+func TestConvert_Embedded_NoBlocks(t *testing.T) {
+	input := "# Just Markdown\n\nNo calcmark here.\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "html",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should contain goldmark-rendered heading and paragraph
+	if !strings.Contains(result, "<h1") {
+		t.Error("expected <h1> heading")
+	}
+	if !strings.Contains(result, "No calcmark here.") {
+		t.Error("expected prose content")
+	}
+}
+
 // T4b: embedded mode with multiple blocks
 func TestConvert_Embedded_MultipleBlocks(t *testing.T) {
 	input := "# Report\n\n```cm\na = 10\n```\n\nMiddle text.\n\n```cm\nb = 20\n```\n\nEnd.\n"

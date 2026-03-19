@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"html/template"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+
 	"github.com/CalcMark/go-calcmark/format"
 	"github.com/CalcMark/go-calcmark/format/display"
 	impldoc "github.com/CalcMark/go-calcmark/impl/document"
@@ -140,9 +145,25 @@ func convertEmbedded(input string, opts Options) (string, error) {
 	}
 
 	// For HTML format, convert assembled markdown to HTML via goldmark.
-	// TODO: implement in phase 1c
 	if opts.Format == "html" {
-		return "", errors.New("embedded HTML output not yet implemented")
+		htmlFragment, err := markdownToHTML(assembled)
+		if err != nil {
+			return "", fmt.Errorf("markdown to HTML conversion error: %w", err)
+		}
+
+		// If a template is provided, wrap the fragment.
+		if opts.Template != "" {
+			wrapped, tplErr := wrapEmbeddedHTML(htmlFragment, opts.Template)
+			if tplErr != nil {
+				return "", fmt.Errorf("template error: %w", tplErr)
+			}
+			htmlFragment = wrapped
+		}
+
+		if errCount > 0 {
+			return htmlFragment, fmt.Errorf("%d CalcMark block(s) had errors", errCount)
+		}
+		return htmlFragment, nil
 	}
 
 	// Other formats not supported for embedded mode.
@@ -182,6 +203,39 @@ func evalEmbeddedBlock(source string, openLine int, df display.Formatter) string
 // formatEmbeddedBlockError returns an inline error blockquote for a failed CalcMark block.
 func formatEmbeddedBlockError(msg string, line int) string {
 	return fmt.Sprintf("> **CalcMark Error:** %s (line %d)\n\n", msg, line)
+}
+
+// markdownToHTML converts Markdown to an HTML fragment using goldmark with GFM extensions.
+func markdownToHTML(markdown string) (string, error) {
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+	)
+	var buf bytes.Buffer
+	if err := md.Convert([]byte(markdown), &buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// wrapEmbeddedHTML wraps an HTML fragment in a Go template.
+// The template receives a data struct with a Content field containing the HTML.
+func wrapEmbeddedHTML(htmlContent string, templateContent string) (string, error) {
+	tmpl, err := template.New("embedded").Parse(templateContent)
+	if err != nil {
+		return "", err
+	}
+
+	data := struct {
+		Content template.HTML
+	}{
+		Content: template.HTML(htmlContent),
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // localeFormatter builds a display.Formatter from a BCP 47 locale string.
