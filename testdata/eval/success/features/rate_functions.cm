@@ -29,9 +29,19 @@ w = mau over 1 week
 avg_session_data = 500 KB
 monthly_data = w * avg_session_data
 
-# Combined examples
-# bandwidth = 100 MB/s
-# daily_total = bandwidth over 1 day
+# Variable rate conversion with per keyword (issue #87)
+# d per year is a synonym for convert_rate(d, year)
+d = 10 dogs/day
+y_functional = convert_rate(d, year)
+y_per = d per year
 
-# monthly_rate = 5 GB/day
-# per_second = monthly_rate per second
+# Different time units
+r = 1000 req/s
+r_per_min = r per minute
+r_functional = convert_rate(r, minute)
+
+bandwidth = 100 MB/s
+daily_total = bandwidth over 1 day
+
+monthly_rate = 5 GB/day
+per_second = monthly_rate per second

@@ -549,6 +549,21 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit", timeUnit))
 			}
 
+			// If left is an identifier, desugar to convert_rate(identifier, time_unit).
+			// Variables holding rates should be converted, not used as rate amounts.
+			// Example: d = 10 dogs/day; y = d per year → convert_rate(d, year)
+			if _, isIdent := left.(*ast.Identifier); isIdent {
+				targetNode := &ast.Identifier{
+					Name:  timeUnit,
+					Range: left.GetRange(),
+				}
+				return &ast.FunctionCall{
+					Name:      "convert_rate",
+					Arguments: []ast.Node{left, targetNode},
+					Range:     left.GetRange(),
+				}, nil
+			}
+
 			left = &ast.RateLiteral{
 				Amount:     left,
 				PerUnit:    timeUnit,

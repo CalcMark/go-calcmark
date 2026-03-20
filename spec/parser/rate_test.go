@@ -119,6 +119,109 @@ func TestRateParsing(t *testing.T) {
 	}
 }
 
+// TestIdentifierPerDesugarsToConvertRate tests that "identifier per time_unit"
+// desugars to convert_rate(identifier, time_unit) at parse time (issue #87).
+func TestIdentifierPerDesugarsToConvertRate(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		targetUnit string
+	}{
+		{
+			name:       "identifier per year",
+			input:      "d per year\n",
+			targetUnit: "year",
+		},
+		{
+			name:       "identifier per second",
+			input:      "r per second\n",
+			targetUnit: "second",
+		},
+		{
+			name:       "identifier per month",
+			input:      "rate per month\n",
+			targetUnit: "month",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
+			}
+
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+
+			// Must be a FunctionCall to convert_rate, NOT a RateLiteral
+			fc, ok := nodes[0].(*ast.FunctionCall)
+			if !ok {
+				t.Fatalf("Expected FunctionCall (convert_rate), got %T", nodes[0])
+			}
+
+			if fc.Name != "convert_rate" {
+				t.Errorf("Expected function name 'convert_rate', got '%s'", fc.Name)
+			}
+
+			if len(fc.Arguments) != 2 {
+				t.Fatalf("Expected 2 arguments, got %d", len(fc.Arguments))
+			}
+
+			// First arg should be the identifier
+			_, isIdent := fc.Arguments[0].(*ast.Identifier)
+			if !isIdent {
+				t.Errorf("Expected first arg to be Identifier, got %T", fc.Arguments[0])
+			}
+
+			// Second arg should be the target time unit identifier
+			targetIdent, ok := fc.Arguments[1].(*ast.Identifier)
+			if !ok {
+				t.Fatalf("Expected second arg to be Identifier, got %T", fc.Arguments[1])
+			}
+			if targetIdent.Name != tt.targetUnit {
+				t.Errorf("Expected target unit '%s', got '%s'", tt.targetUnit, targetIdent.Name)
+			}
+		})
+	}
+}
+
+// TestLiteralPerStillCreatesRate ensures that literal expressions with per
+// still create RateLiterals (not convert_rate calls).
+func TestLiteralPerStillCreatesRate(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "quantity per day",
+			input: "5 GB per day\n",
+		},
+		{
+			name:  "number per hour",
+			input: "100 per hour\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
+			}
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+			// Must be RateLiteral, NOT FunctionCall
+			_, ok := nodes[0].(*ast.RateLiteral)
+			if !ok {
+				t.Fatalf("Expected RateLiteral, got %T", nodes[0])
+			}
+		})
+	}
+}
+
 // TestRateUnitConversionParsing tests parsing of rate-to-rate unit conversion.
 // Examples: "10 m/s in inch/s", "60 km/h in mph"
 func TestRateUnitConversionParsing(t *testing.T) {
