@@ -2,6 +2,7 @@ package document
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/CalcMark/go-calcmark/format/display"
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -9,10 +10,10 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
-// interpolationPattern matches {{variable_name}} with optional whitespace and
-// optional surrounding backticks. Backticks are consumed so interpolated values
-// render as plain inline text rather than <code> elements in HTML.
-var interpolationPattern = regexp.MustCompile("`?" + `\{\{\s*(\w+)\s*\}\}` + "`?")
+// interpolationPattern matches {{variable_name}}, {{@scale}}, or {{@globals.field}}
+// with optional whitespace and optional surrounding backticks.
+// Backticks are consumed so interpolated values render as plain inline text.
+var interpolationPattern = regexp.MustCompile("`?" + `\{\{\s*(@?\w+(?:\.\w+)?)\s*\}\}` + "`?")
 
 // interpolateTextBlocks resolves {{var}} tags in all TextBlocks against
 // the final environment. Called after evaluation completes.
@@ -53,15 +54,30 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 		if len(submatch) < 2 {
 			return match
 		}
-		varName := submatch[1]
+		ref := submatch[1]
 
-		value, ok := env[varName]
-		if !ok || value == nil {
+		var value types.Type
+		isDirective := strings.HasPrefix(ref, "@")
+		if isDirective {
+			// Directive reference: @scale or @globals.field
+			value = resolveDirectiveForInterpolation(ref, fm)
+		} else {
+			// Variable reference
+			var ok bool
+			value, ok = env[ref]
+			if !ok {
+				value = nil
+			}
+		}
+
+		if value == nil {
 			return match // Leave unresolved tags as-is
 		}
 
-		// Apply scale/convert_to transforms to match CalcBlock display
-		if fm != nil {
+		// Apply scale/convert_to transforms to match CalcBlock display.
+		// Directive values are already the raw factor/value — skip transform
+		// to avoid double-scaling (consistent with R3: explicit @scale opts out).
+		if fm != nil && !isDirective {
 			value = transform.Apply(value, fm.Scale, fm.ConvertTo)
 		}
 
@@ -71,4 +87,42 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 		}
 		return "**" + formatted + "**"
 	})
+}
+
+// resolveDirectiveForInterpolation resolves @scale or @globals.field
+// from frontmatter for use in {{ }} interpolation tags.
+func resolveDirectiveForInterpolation(ref string, fm *document.Frontmatter) types.Type {
+	if fm == nil {
+		return nil
+	}
+
+	// Strip the leading "@"
+	name := ref[1:]
+
+	if name == "scale" {
+		if fm.Scale == nil {
+			return nil
+		}
+		val := types.NewNumber(fm.Scale.Factor)
+		return val
+	}
+
+	// @globals.field
+	if strings.HasPrefix(name, "globals.") {
+		field := strings.TrimPrefix(name, "globals.")
+		if fm.Globals == nil {
+			return nil
+		}
+		exprStr, ok := fm.Globals[field]
+		if !ok {
+			return nil
+		}
+		parsed, err := document.ParseGlobals(map[string]string{field: exprStr})
+		if err != nil {
+			return nil
+		}
+		return parsed.Values[field]
+	}
+
+	return nil
 }

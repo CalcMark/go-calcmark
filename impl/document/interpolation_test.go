@@ -335,3 +335,67 @@ func TestInterpolateTextBlocksNoChange(t *testing.T) {
 		return
 	}
 }
+
+func TestInterpolateLineDirectiveScale(t *testing.T) {
+	env := map[string]types.Type{}
+	df := display.DefaultFormatter()
+	fm := &document.Frontmatter{
+		Scale: &document.ScaleConfig{
+			Factor:         decimal.NewFromInt(3),
+			UnitCategories: []string{"All"},
+		},
+	}
+
+	got := interpolateLine("Scale factor: {{ @scale }}", env, df, fm, false)
+	want := "Scale factor: **3**"
+	if got != want {
+		t.Errorf("interpolateLine(@scale) = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineDirectiveGlobals(t *testing.T) {
+	env := map[string]types.Type{}
+	df := display.DefaultFormatter()
+	fm := &document.Frontmatter{
+		Globals: map[string]string{
+			"tax_rate": "0.32",
+		},
+	}
+
+	got := interpolateLine("Tax: {{ @globals.tax_rate }}", env, df, fm, false)
+	want := "Tax: **0.32**"
+	if got != want {
+		t.Errorf("interpolateLine(@globals.tax_rate) = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineDirectiveNoFrontmatter(t *testing.T) {
+	env := map[string]types.Type{}
+	df := display.DefaultFormatter()
+
+	// No frontmatter — directive should remain unresolved
+	got := interpolateLine("Factor: {{ @scale }}", env, df, nil, false)
+	want := "Factor: {{ @scale }}"
+	if got != want {
+		t.Errorf("interpolateLine(@scale, no fm) = %q, want %q", got, want)
+	}
+}
+
+func TestInterpolateLineDirectiveNotScaled(t *testing.T) {
+	// Verify that @scale value is NOT itself scaled (no double-scaling)
+	env := map[string]types.Type{}
+	df := display.DefaultFormatter()
+	fm := &document.Frontmatter{
+		Scale: &document.ScaleConfig{
+			Factor:         decimal.NewFromInt(1000),
+			UnitCategories: []string{"All"},
+		},
+	}
+
+	got := interpolateLine("Factor: {{ @scale }}", env, df, fm, false)
+	// Should be 1000 (displayed as 1K), NOT 1000*1000=1000000 (1M)
+	want := "Factor: **1K**"
+	if got != want {
+		t.Errorf("interpolateLine(@scale, should not double-scale) = %q, want %q", got, want)
+	}
+}
