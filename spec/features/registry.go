@@ -247,10 +247,16 @@ func getFunctions() []Feature {
 			Category:    CategoryFunction,
 			Subcategory: "Conversion",
 			Syntax:      "convert_rate(rate, time_unit)",
-			Description: "Convert a rate to a different time unit",
-			Aliases:     nil,
-			Example:     "convert_rate(1000 req/s, minute) → 60000 req/min",
-			NLExample:   "5 MB/s per minute",
+			Description: "Convert a rate to a different time unit. " +
+				"Use the 'per' keyword as a natural-language synonym: " +
+				"d per year is equivalent to convert_rate(d, year). " +
+				"Works with literal rates (5 MB/s per minute) and variables holding rates (r per hour). " +
+				"Supports all time units including sub-second: nanosecond (ns), microsecond (μs/us), millisecond (ms).",
+			Aliases: []Alias{
+				{Name: "per", Parseable: true, Example: "d per year"},
+			},
+			Example:   "convert_rate(1000 req/s, minute) → 60000 req/min",
+			NLExample: "5 MB/s per minute",
 		},
 		{
 			Name:        "capacity",

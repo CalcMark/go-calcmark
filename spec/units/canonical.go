@@ -830,6 +830,92 @@ var StandardUnits = map[string]UnitMapping{
 		Description: "1 trillion hertz",
 	},
 
+	// ========== TIME / DURATION UNITS ==========
+	//
+	// Used in rates (req/s, MB/day), durations (1 year in seconds),
+	// and rate conversion (d per millisecond).
+
+	"nanosecond": {
+		Canonical:   "nanosecond",
+		Symbol:      "ns",
+		Aliases:     []string{"nanosecond", "nanoseconds", "ns"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "0.000000001 seconds (10⁻⁹ s)",
+	},
+	"microsecond": {
+		Canonical:   "microsecond",
+		Symbol:      "μs",
+		Aliases:     []string{"microsecond", "microseconds", "μs", "us"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "0.000001 seconds (10⁻⁶ s)",
+	},
+	"millisecond": {
+		Canonical:   "millisecond",
+		Symbol:      "ms",
+		Aliases:     []string{"millisecond", "milliseconds", "ms"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "0.001 seconds (10⁻³ s)",
+	},
+	"second": {
+		Canonical:   "second",
+		Symbol:      "s",
+		Aliases:     []string{"second", "seconds", "s", "sec"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "SI base unit of time",
+	},
+	"minute": {
+		Canonical:   "minute",
+		Symbol:      "min",
+		Aliases:     []string{"minute", "minutes", "min", "m"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "60 seconds",
+	},
+	"hour": {
+		Canonical:   "hour",
+		Symbol:      "h",
+		Aliases:     []string{"hour", "hours", "h", "hr"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "3600 seconds",
+	},
+	"day": {
+		Canonical:   "day",
+		Symbol:      "day",
+		Aliases:     []string{"day", "days", "d"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "86400 seconds",
+	},
+	"week": {
+		Canonical:   "week",
+		Symbol:      "week",
+		Aliases:     []string{"week", "weeks", "wk", "w"},
+		System:      "SI",
+		Quantity:    "Time",
+		Description: "604800 seconds (7 days)",
+	},
+	"month": {
+		Canonical:   "month",
+		Symbol:      "month",
+		Aliases:     []string{"month", "months", "mo"},
+		System:      "Conventional",
+		Quantity:    "Time",
+		Description: "Approximately 2592000 seconds (30 days)",
+	},
+	"year": {
+		Canonical:   "year",
+		Symbol:      "year",
+		Aliases:     []string{"year", "years", "yr", "y"},
+		System:      "Conventional",
+		Quantity:    "Time",
+		Description: "Approximately 31536000 seconds (365 days)",
+	},
+
 	// ========== END OF UNITS ==========
 }
 
