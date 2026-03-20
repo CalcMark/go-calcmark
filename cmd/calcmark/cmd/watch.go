@@ -185,11 +185,11 @@ func (s *watchServer) watchLoop(watcher *fsnotify.Watcher) {
 				continue
 			}
 			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Rename) {
-				s.logf("[watch] change detected: %s", filepath.Base(s.filename))
 				if debounceTimer != nil {
 					debounceTimer.Stop()
 				}
 				debounceTimer = time.AfterFunc(100*time.Millisecond, func() {
+					s.logf("[watch] change detected: %s", filepath.Base(s.filename))
 					start := time.Now()
 					html, err := renderFile(s.filename, s.mode)
 					if err != nil {
