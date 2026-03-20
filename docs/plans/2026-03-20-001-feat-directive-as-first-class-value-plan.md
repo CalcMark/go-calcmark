@@ -1,7 +1,7 @@
 ---
 title: "feat: Directive References as First-Class Values in All Expression Positions"
 type: feat
-status: active
+status: completed
 date: 2026-03-20
 origin: docs/brainstorms/2026-03-20-directive-as-value-requirements.md
 ---
