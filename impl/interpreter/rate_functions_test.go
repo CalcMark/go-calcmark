@@ -255,6 +255,211 @@ func TestConvertRateTimeUnit(t *testing.T) {
 	}
 }
 
+// TestConvertRateSubSecondUnits verifies that rate conversions work correctly
+// with sub-second time units (millisecond, microsecond, nanosecond).
+// Each expected value is hand-calculated from the conversion factor:
+//
+//	conversionFactor = targetSeconds / sourceSeconds
+//	newAmount = amount * conversionFactor
+func TestConvertRateSubSecondUnits(t *testing.T) {
+	t.Run("second to sub-second (scaling down)", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			rate          *types.Rate
+			targetUnit    string
+			expectedExact string
+			expectedPer   string
+		}{
+			{
+				// 1000 req/s → per ms: factor = 0.001/1 = 0.001, 1000 * 0.001 = 1
+				name: "1000 req/s per millisecond",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1000), Unit: "req"},
+					"second",
+				),
+				targetUnit:    "millisecond",
+				expectedExact: "1",
+				expectedPer:   "millisecond",
+			},
+			{
+				// 1M req/s → per μs: factor = 0.000001/1 = 0.000001, 1000000 * 0.000001 = 1
+				name: "1M req/s per microsecond",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1000000), Unit: "req"},
+					"second",
+				),
+				targetUnit:    "microsecond",
+				expectedExact: "1",
+				expectedPer:   "microsecond",
+			},
+			{
+				// 1B ops/s → per ns: factor = 0.000000001/1 = 1e-9, 1e9 * 1e-9 = 1
+				name: "1B ops/s per nanosecond",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1000000000), Unit: "ops"},
+					"second",
+				),
+				targetUnit:    "nanosecond",
+				expectedExact: "1",
+				expectedPer:   "nanosecond",
+			},
+			{
+				// 10 req/s → per ms: factor = 0.001, 10 * 0.001 = 0.01
+				name: "10 req/s per millisecond",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(10), Unit: "req"},
+					"second",
+				),
+				targetUnit:    "millisecond",
+				expectedExact: "0.01",
+				expectedPer:   "millisecond",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result, err := convertRateTimeUnit(tt.rate, tt.targetUnit)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+				if result.Amount.Value.String() != tt.expectedExact {
+					t.Errorf("Expected exactly %s, got %s", tt.expectedExact, result.Amount.Value.String())
+				}
+				if result.PerUnit != tt.expectedPer {
+					t.Errorf("Expected per unit %q, got %q", tt.expectedPer, result.PerUnit)
+				}
+			})
+		}
+	})
+
+	t.Run("sub-second to second (scaling up)", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			rate          *types.Rate
+			targetUnit    string
+			expectedExact string
+		}{
+			{
+				// 1 req/ms → per second: factor = 1/0.001 = 1000, 1 * 1000 = 1000
+				name: "1 req/ms per second",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1), Unit: "req"},
+					"millisecond",
+				),
+				targetUnit:    "second",
+				expectedExact: "1000",
+			},
+			{
+				// 1 req/μs → per second: factor = 1/0.000001 = 1000000
+				name: "1 req/μs per second",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1), Unit: "req"},
+					"microsecond",
+				),
+				targetUnit:    "second",
+				expectedExact: "1000000",
+			},
+			{
+				// 1 op/ns → per second: factor = 1/0.000000001 = 1000000000
+				name: "1 op/ns per second",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1), Unit: "op"},
+					"nanosecond",
+				),
+				targetUnit:    "second",
+				expectedExact: "1000000000",
+			},
+			{
+				// 5 req/ms → per minute: factor = 60/0.001 = 60000, 5 * 60000 = 300000
+				name: "5 req/ms per minute",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(5), Unit: "req"},
+					"millisecond",
+				),
+				targetUnit:    "minute",
+				expectedExact: "300000",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result, err := convertRateTimeUnit(tt.rate, tt.targetUnit)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+				if result.Amount.Value.String() != tt.expectedExact {
+					t.Errorf("Expected exactly %s, got %s", tt.expectedExact, result.Amount.Value.String())
+				}
+				if result.PerUnit != tt.targetUnit {
+					t.Errorf("Expected per unit %q, got %q", tt.targetUnit, result.PerUnit)
+				}
+			})
+		}
+	})
+
+	t.Run("sub-second to sub-second", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			rate          *types.Rate
+			targetUnit    string
+			expectedExact string
+		}{
+			{
+				// 1 req/ms → per μs: factor = 0.000001/0.001 = 0.001, 1 * 0.001 = 0.001
+				name: "1 req/ms per microsecond",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1), Unit: "req"},
+					"millisecond",
+				),
+				targetUnit:    "microsecond",
+				expectedExact: "0.001",
+			},
+			{
+				// 1000 req/μs → per ms: factor = 0.001/0.000001 = 1000, 1000 * 1000 = 1000000
+				name: "1000 req/μs per millisecond",
+				rate: types.NewRate(
+					&types.Quantity{Value: decimal.NewFromInt(1000), Unit: "req"},
+					"microsecond",
+				),
+				targetUnit:    "millisecond",
+				expectedExact: "1000000",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result, err := convertRateTimeUnit(tt.rate, tt.targetUnit)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+				if result.Amount.Value.String() != tt.expectedExact {
+					t.Errorf("Expected exactly %s, got %s", tt.expectedExact, result.Amount.Value.String())
+				}
+			})
+		}
+	})
+
+	t.Run("alias forms normalize correctly", func(t *testing.T) {
+		// "ms" should normalize to "millisecond", "μs" to "microsecond", "ns" to "nanosecond"
+		rate := types.NewRate(
+			&types.Quantity{Value: decimal.NewFromInt(1000), Unit: "req"},
+			"s", // alias for "second"
+		)
+
+		for _, alias := range []string{"ms", "μs", "us", "ns"} {
+			t.Run(alias, func(t *testing.T) {
+				result, err := convertRateTimeUnit(rate, alias)
+				if err != nil {
+					t.Fatalf("convertRateTimeUnit with alias %q failed: %v", alias, err)
+				}
+				if result == nil {
+					t.Fatalf("Expected result for alias %q, got nil", alias)
+				}
+			})
+		}
+	})
+}
+
 // TestConvertRateTimeUnitExactPrecision verifies that rate time unit conversions
 // produce exact results for the common user scenario: converting rates from
 // smaller to larger time units (e.g., per second to per hour).

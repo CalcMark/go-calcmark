@@ -34,6 +34,10 @@ var DurationToSeconds = map[string]int64{
 
 // durationToSecondsDecimal provides decimal conversion factors including sub-second units.
 var durationToSecondsDecimal = map[string]decimal.Decimal{
+	"nanosecond":   decimal.NewFromFloat(0.000000001),
+	"nanoseconds":  decimal.NewFromFloat(0.000000001),
+	"microsecond":  decimal.NewFromFloat(0.000001),
+	"microseconds": decimal.NewFromFloat(0.000001),
 	"millisecond":  decimal.NewFromFloat(0.001),
 	"milliseconds": decimal.NewFromFloat(0.001),
 	"second":       decimal.NewFromInt(1),

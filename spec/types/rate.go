@@ -124,6 +124,15 @@ func (r *Rate) Multiply(scalar decimal.Decimal) *Rate {
 // timeUnitAliases maps all time unit variants to their canonical form.
 // This is a package-level var to avoid per-call allocation.
 var timeUnitAliases = map[string]string{
+	"ns":          "nanosecond",
+	"nanosecond":  "nanosecond",
+	"nanoseconds": "nanosecond",
+
+	"μs":           "microsecond",
+	"us":           "microsecond",
+	"microsecond":  "microsecond",
+	"microseconds": "microsecond",
+
 	"ms":           "millisecond",
 	"millisecond":  "millisecond",
 	"milliseconds": "millisecond",
@@ -181,6 +190,8 @@ var periodsPerYear = map[string]int{
 
 // timeUnitAbbrevs maps canonical time units to short display forms.
 var timeUnitAbbrevs = map[string]string{
+	"nanosecond":  "ns",
+	"microsecond": "μs",
 	"millisecond": "ms",
 	"second":      "s",
 	"minute":      "min",
@@ -228,9 +239,9 @@ func abbreviateTimeUnit(unit string) string {
 func TimeUnitToSeconds(unit string) (decimal.Decimal, error) {
 	normalized := NormalizeTimeUnit(unit)
 
-	// Use the shared conversion map from duration.go
-	if seconds, ok := DurationToSeconds[normalized]; ok {
-		return decimal.NewFromInt(seconds), nil
+	// Use the decimal map which includes sub-second units (ns, μs, ms).
+	if seconds, ok := durationToSecondsDecimal[normalized]; ok {
+		return seconds, nil
 	}
 
 	return decimal.Zero, fmt.Errorf("unknown time unit: %s", unit)

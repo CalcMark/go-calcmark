@@ -90,6 +90,13 @@ func TestTimeUnitNormalization(t *testing.T) {
 		input    string
 		expected string
 	}{
+		{"ns", "nanosecond"},
+		{"nanosecond", "nanosecond"},
+		{"nanoseconds", "nanosecond"},
+		{"μs", "microsecond"},
+		{"us", "microsecond"},
+		{"microsecond", "microsecond"},
+		{"microseconds", "microsecond"},
 		{"ms", "millisecond"},
 		{"millisecond", "millisecond"},
 		{"milliseconds", "millisecond"},
@@ -109,6 +116,38 @@ func TestTimeUnitNormalization(t *testing.T) {
 			result := NormalizeTimeUnit(tt.input)
 			if result != tt.expected {
 				t.Errorf("NormalizeTimeUnit(%q) = %q, expected %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTimeUnitToSeconds_SubSecond(t *testing.T) {
+	tests := []struct {
+		unit     string
+		expected string // decimal string representation
+	}{
+		{"nanosecond", "0.000000001"},
+		{"ns", "0.000000001"},
+		{"microsecond", "0.000001"},
+		{"μs", "0.000001"},
+		{"us", "0.000001"},
+		{"millisecond", "0.001"},
+		{"ms", "0.001"},
+		// Standard units should still work
+		{"second", "1"},
+		{"minute", "60"},
+		{"hour", "3600"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.unit, func(t *testing.T) {
+			result, err := TimeUnitToSeconds(tt.unit)
+			if err != nil {
+				t.Fatalf("TimeUnitToSeconds(%q) error: %v", tt.unit, err)
+			}
+			expected := decimal.RequireFromString(tt.expected)
+			if !result.Equal(expected) {
+				t.Errorf("TimeUnitToSeconds(%q) = %s, expected %s", tt.unit, result.String(), expected.String())
 			}
 		})
 	}

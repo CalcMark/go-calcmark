@@ -1522,7 +1522,7 @@ func isTimeUnit(unit string) bool {
 	// but returns a canonical form (second, minute, etc.) if recognized.
 	// If the output matches one of the canonical forms, it's a time unit.
 	switch normalized {
-	case "millisecond", "second", "minute", "hour", "day", "week", "month", "year":
+	case "nanosecond", "microsecond", "millisecond", "second", "minute", "hour", "day", "week", "month", "year":
 		return true
 	default:
 		return false
