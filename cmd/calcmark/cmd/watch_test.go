@@ -233,25 +233,23 @@ func TestWatchLoop_LogsOnChange(t *testing.T) {
 	}
 }
 
-func TestAddRemoveClient_Logs(t *testing.T) {
+func TestLogf_WritesToLogWriter(t *testing.T) {
 	var buf bytes.Buffer
-	srv := &watchServer{
-		logw: &buf,
-	}
+	srv := &watchServer{logw: &buf}
 
-	// Use a mock conn — we just need the pointer for map tracking.
-	// We can't easily create a real websocket.Conn in a unit test,
-	// so we test the log method directly.
-	srv.logf("[watch] client connected (1 total)")
-	srv.logf("[watch] client disconnected (0 total)")
+	srv.logf("[watch] test message: %d", 42)
 
 	output := buf.String()
-	if !strings.Contains(output, "[watch] client connected") {
-		t.Errorf("expected client connected log, got: %q", output)
+	if !strings.Contains(output, "[watch] test message: 42") {
+		t.Errorf("expected formatted log message, got: %q", output)
 	}
-	if !strings.Contains(output, "[watch] client disconnected") {
-		t.Errorf("expected client disconnected log, got: %q", output)
-	}
+}
+
+func TestLogf_DefaultsToStderr(t *testing.T) {
+	// When logw is nil, logf should not panic.
+	srv := &watchServer{}
+	// This writes to os.Stderr — we just verify it doesn't panic.
+	srv.logf("[watch] smoke test")
 }
 
 func TestIsLoopbackOrigin(t *testing.T) {
