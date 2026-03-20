@@ -1,0 +1,25 @@
+---
+scale:
+  factor: 5
+  unit_categories: [Number]
+globals:
+  tax_rate: "0.32"
+  budget: "$1000"
+---
+# Standalone directive expressions
+
+a = @scale
+# Expected: 5
+
+b = @globals.tax_rate
+# Expected: 0.32
+
+c = @globals.budget
+# Expected: $1000.00
+
+# Directive in arithmetic
+d = @scale * 2
+# Expected: 10
+
+# Directive with other variables
+e = a + 1

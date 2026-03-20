@@ -108,8 +108,7 @@ func resolveDirectiveForInterpolation(ref string, fm *document.Frontmatter) type
 	}
 
 	// @globals.field
-	if strings.HasPrefix(name, "globals.") {
-		field := strings.TrimPrefix(name, "globals.")
+	if field, ok := strings.CutPrefix(name, "globals."); ok {
 		if fm.Globals == nil {
 			return nil
 		}

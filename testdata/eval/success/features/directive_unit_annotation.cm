@@ -1,0 +1,27 @@
+---
+scale:
+  factor: 3
+  unit_categories: [All]
+globals:
+  rate: "10"
+---
+# Directive references with unit annotation
+
+# @scale with unit — value comes from directive, annotated with meters
+dist = @scale meters
+# Expected: 3 m
+
+# @scale with rate unit
+speed = @scale meters / second
+# Expected: 3 m/s
+
+# @globals with unit
+weight = @globals.rate kg
+# Expected: 10 kg
+
+# @scale exemption: expressions using @scale are NOT auto-scaled
+manual = @scale * 2
+# Expected: 6
+
+# Downstream reference IS auto-scaled
+result = manual + 1

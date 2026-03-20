@@ -300,7 +300,7 @@ func (d *DirectiveSuggestionSource) GetSuggestions(prefix string) []components.S
 	}
 
 	// @globals.field — offered when frontmatter has globals
-	if fm.Globals != nil && len(fm.Globals) > 0 {
+	if len(fm.Globals) > 0 {
 		// Check if prefix matches @globals or @globals.partial
 		if strings.HasPrefix("@globals", strings.ToLower(prefix)) && !strings.Contains(prefix, ".") {
 			// Offer @globals (will auto-append dot on acceptance)
