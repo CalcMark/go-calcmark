@@ -280,9 +280,69 @@ if currency, ok := result.Value.(*types.Currency); ok {
 }
 ```
 
+## Frontmatter in Code
+
+CalcMark frontmatter (`exchange`, `globals`, `scale`, `convert_to`, `measurement`) is normally written at the top of a `.cm` file. But you can use it anywhere — including `Session.Eval`, `calcmark.Eval`, and `calcmark.Convert`. Just pass the YAML frontmatter block as part of the input:
+
+```go
+session := calcmark.NewSession()
+
+// Set up exchange rates via frontmatter
+session.Eval(`---
+exchange:
+  USD_EUR: 0.92
+  GBP_USD: 1.27
+---`)
+
+// Now currency conversion works
+result, _ := session.Eval("price = 100 USD\nprice_eur = price in EUR")
+fmt.Println(result.Value) // €92.00
+```
+
+This works identically with `calcmark.Convert` for document rendering:
+
+```go
+input := `---
+exchange:
+  USD_EUR: 0.92
+scale: 2x
+globals:
+  tax_rate: 0.08
+---
+
+revenue = 500K USD
+costs = revenue * 0.6
+tax = costs * @globals.tax_rate
+`
+
+html, _ := calcmark.Convert(input, calcmark.Options{Format: "html"})
+```
+
+For Markdown with embedded CalcMark blocks, frontmatter works the same way — it's stripped before goldmark processing and applied to all `cm` blocks:
+
+```go
+input := `---
+exchange:
+  USD_EUR: 0.92
+---
+
+# Invoice
+
+` + "```cm" + `
+subtotal = 500 USD
+total_eur = subtotal in EUR
+` + "```" + `
+`
+
+html, _ := calcmark.Convert(input, calcmark.Options{
+    Mode:   calcmark.Embedded,
+    Format: "html",
+})
+```
+
 ## The Environment
 
-The `Environment` holds all variable bindings and exchange rates. You can pre-populate it before evaluation:
+For programmatic control without frontmatter, use the `Environment` directly:
 
 ```go
 import (
