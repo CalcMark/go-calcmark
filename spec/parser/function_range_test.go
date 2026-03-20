@@ -62,6 +62,7 @@ func TestAllFunctionCallsHaveRange(t *testing.T) {
 		// Rate functions — implicit
 		{"downtime implicit", "99.9% downtime per month"},
 		{"accumulate implicit", "100 req/s over 1 hour"},
+		{"convert_rate identifier per", "d per year"},
 	}
 
 	for _, tt := range expressions {
