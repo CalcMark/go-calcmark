@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/CalcMark/go-calcmark"
+	"github.com/CalcMark/go-calcmark/format"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -88,6 +89,71 @@ func TestHandlePage_IncludesCalcStyles(t *testing.T) {
 	for _, rule := range cssRules {
 		if !strings.Contains(body, rule+" {") && !strings.Contains(body, rule+" ") {
 			t.Errorf("watch page missing CSS rule for %s", rule)
+		}
+	}
+}
+
+func TestStyleCSS_UsedByWatchPage(t *testing.T) {
+	// The watch page template must use the shared format.StyleCSS() source,
+	// not a duplicated copy of the CSS. Verify by checking that the watch
+	// page output contains the exact shared CSS string.
+	css := format.StyleCSS()
+	if css == "" {
+		t.Fatal("format.StyleCSS() returned empty string")
+	}
+
+	srv := &watchServer{
+		sessionToken: "testtoken",
+		html:         "<p>test</p>",
+	}
+	req := httptest.NewRequest("GET", "/testtoken", nil)
+	rec := httptest.NewRecorder()
+	srv.handlePage(rec, req)
+
+	body := rec.Body.String()
+	if !strings.Contains(body, css) {
+		t.Error("watch page does not contain the shared format.StyleCSS() output — CSS is likely duplicated")
+	}
+}
+
+func TestStyleCSS_UsedByDefaultTemplate(t *testing.T) {
+	// The default HTML template must reference {{.Style}} for the shared CSS,
+	// not contain a hardcoded copy of the styles.
+	tmpl := format.DefaultHTMLTemplate()
+	if !strings.Contains(tmpl, "{{.Style}}") {
+		t.Error("default HTML template does not reference {{.Style}} — CSS may be duplicated")
+	}
+	// And the shared CSS must exist and be non-trivial
+	css := format.StyleCSS()
+	if !strings.Contains(css, ".calc-block") {
+		t.Error("format.StyleCSS() missing .calc-block rule")
+	}
+}
+
+func TestHandlePage_EmbeddedModeTypography(t *testing.T) {
+	// Embedded mode produces bare HTML (h1, p, pre>code, table, blockquote)
+	// without .text-block wrappers. The watch page CSS must style these bare elements.
+	srv := &watchServer{
+		sessionToken: "testtoken",
+		html:         `<h1>Title</h1><pre><code class="language-calcmark">x = 1</code></pre><blockquote><p>note</p></blockquote>`,
+	}
+
+	req := httptest.NewRequest("GET", "/testtoken", nil)
+	rec := httptest.NewRecorder()
+	srv.handlePage(rec, req)
+
+	body := rec.Body.String()
+
+	// Must have styles for bare elements (not just .text-block scoped ones)
+	embeddedRules := []string{
+		"#content h1",    // bare heading styles for embedded mode
+		"#content pre",   // bare pre styles for embedded mode
+		"#content code",  // bare code styles for embedded mode
+		"#content table", // bare table styles for embedded mode
+	}
+	for _, rule := range embeddedRules {
+		if !strings.Contains(body, rule) {
+			t.Errorf("watch page missing embedded-mode CSS rule for %q", rule)
 		}
 	}
 }

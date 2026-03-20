@@ -28,11 +28,21 @@ func htmlSanitizer() *bluemonday.Policy {
 	return sanitizerInst
 }
 
+//go:embed templates/calcmark.css
+var styleCSS string
+
 //go:embed templates/default.gohtml
 var defaultHTMLTemplate string
 
 //go:embed templates/preview.gohtml
 var previewHTMLTemplate string
+
+// StyleCSS returns the shared CalcMark CSS styles.
+// Used by the default HTML template, the watch page, and any consumer
+// that needs CalcMark-styled HTML output.
+func StyleCSS() string {
+	return styleCSS
+}
 
 // DefaultHTMLTemplate returns the embedded default HTML template.
 // Use this to inspect the template data model or as a starting point for custom templates.
@@ -114,10 +124,13 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 	}
 
 	data := struct {
+		Style       template.CSS
 		Frontmatter *TemplateFrontmatter
 		Blocks      []TemplateBlock
 		Content     template.HTML // Populated by embedded mode only (via calcmark.Convert).
-	}{}
+	}{
+		Style: template.CSS(styleCSS),
+	}
 
 	df := opts.getFormatter()
 	// HTML output should use Unicode fractions (½, ⅓, ¾) for readability.

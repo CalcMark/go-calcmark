@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/CalcMark/go-calcmark"
+	"github.com/CalcMark/go-calcmark/format"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/websocket"
@@ -323,22 +324,17 @@ func renderFile(filename string, mode calcmark.Mode) (string, error) {
 	return result, nil
 }
 
-const watchPageTemplate = `<!DOCTYPE html>
+// watchPageShell is the HTML shell for the live preview page.
+// The shared CSS from format.StyleCSS() is injected at build time via
+// buildWatchPageTemplate(), keeping styles in a single source file.
+const watchPageShell = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CalcMark Preview</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem;
-      line-height: 1.6;
-      color: #333;
-    }
-
+{{STYLE}}
     #status {
       position: fixed;
       top: 8px;
@@ -350,192 +346,6 @@ const watchPageTemplate = `<!DOCTYPE html>
     }
     .connected { background: #d4edda; color: #155724; }
     .disconnected { background: #f8d7da; color: #721c24; }
-
-    .calc-block {
-      margin: 1.5em 0;
-      padding: 1em;
-      background: #f8f9fa;
-      border-left: 4px solid #0066cc;
-      border-radius: 4px;
-    }
-
-    .calc-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin: 0.25em 0;
-    }
-
-    .calc-source {
-      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-      font-size: 0.95em;
-      color: #24292e;
-      flex: 1;
-    }
-
-    .calc-inline-result {
-      font-weight: 600;
-      color: #0066cc;
-      margin-left: 2em;
-      font-size: 0.9em;
-    }
-
-    .calc-inline-result::before {
-      content: "= ";
-    }
-
-    .calc-result {
-      font-weight: 600;
-      color: #0066cc;
-      margin-top: 0.5em;
-      padding: 0.5em;
-      background: white;
-      border-radius: 3px;
-    }
-
-    .calc-error {
-      color: #d73a49;
-      background: #ffeef0;
-      padding: 0.5em;
-      border-radius: 3px;
-      border-left: 3px solid #d73a49;
-      margin-top: 0.5em;
-    }
-
-    .text-block {
-      margin: 1.5em 0;
-    }
-
-    .text-block p {
-      margin: 0.75em 0;
-    }
-
-    .cm-interpolated {
-      font-weight: 600;
-    }
-
-    .text-block h1, .text-block h2, .text-block h3 {
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
-    }
-
-    .text-block code {
-      background: #f6f8fa;
-      padding: 0.2em 0.4em;
-      border-radius: 3px;
-      font-family: 'SF Mono', Monaco, monospace;
-      font-size: 0.9em;
-    }
-
-    .text-block pre {
-      background: #f6f8fa;
-      padding: 1em;
-      border-radius: 6px;
-      overflow-x: auto;
-    }
-
-    .text-block pre code {
-      background: none;
-      padding: 0;
-    }
-
-    .text-block blockquote {
-      border-left: 3px solid #0066cc;
-      padding-left: 1em;
-      color: #57606a;
-      margin: 1em 0;
-    }
-
-    .text-block blockquote p {
-      margin: 0.5em 0;
-    }
-
-    .text-block table {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 1em 0;
-    }
-
-    .text-block th, .text-block td {
-      border: 1px solid #d0d7de;
-      padding: 0.5em 0.75em;
-      text-align: left;
-    }
-
-    .text-block th {
-      background: #f0f4f8;
-      font-weight: 600;
-    }
-
-    .frontmatter {
-      margin-bottom: 2em;
-      padding: 1em 1.5em;
-      background: #f0f4f8;
-      border-radius: 6px;
-      border: 1px solid #d0d7de;
-    }
-
-    .frontmatter h3 {
-      margin: 0 0 0.75em 0;
-      font-size: 0.9em;
-      color: #57606a;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .frontmatter dl {
-      margin: 0;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 0.25em 1em;
-    }
-
-    .frontmatter dt {
-      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-      font-size: 0.9em;
-      color: #0550ae;
-    }
-
-    .frontmatter dt::before {
-      content: "@";
-      color: #6e7781;
-    }
-
-    .frontmatter dd {
-      margin: 0;
-      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-      font-size: 0.9em;
-      color: #24292e;
-    }
-
-    .frontmatter .exchange dt::before {
-      content: "";
-    }
-
-    .frontmatter .exchange dt {
-      color: #6e7781;
-    }
-
-    .frontmatter hr {
-      border: none;
-      border-top: 1px solid #d0d7de;
-      margin: 0.75em 0;
-    }
-
-    .frontmatter-value {
-      margin: 0;
-      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-      font-size: 0.9em;
-      color: #24292e;
-    }
-
-    .frontmatter .extra dt::before {
-      content: "";
-    }
-
-    .frontmatter .extra dt {
-      color: #57606a;
-    }
   </style>
 </head>
 <body>
@@ -557,3 +367,10 @@ const watchPageTemplate = `<!DOCTYPE html>
   </script>
 </body>
 </html>`
+
+// watchPageTemplate is built once at init by injecting the shared CSS.
+var watchPageTemplate string
+
+func init() {
+	watchPageTemplate = strings.Replace(watchPageShell, "{{STYLE}}", format.StyleCSS(), 1)
+}
