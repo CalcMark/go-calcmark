@@ -12,43 +12,115 @@ Full API documentation is on [pkg.go.dev](https://pkg.go.dev/github.com/CalcMark
 go get github.com/CalcMark/go-calcmark
 ```
 
-## Start with an Example: CalcMark Lark
+## Quick Start: Convert in One Call
 
-[CalcMark Lark](https://github.com/CalcMark/calcmark-lark) is a web-based playground built entirely on the go-calcmark library. The full integration is ~30 lines in [handler.go](https://github.com/CalcMark/calcmark-lark/blob/main/handler.go) — parse, evaluate, format:
+The simplest integration — pass CalcMark input, get formatted output:
 
 ```go
-doc, err := document.NewDocument(source)
-// ...
-evaluator := impldoc.NewEvaluator()
-evaluator.Evaluate(doc)
-// ...
-formatter := format.GetFormatter("html", "")
-formatter.Format(buf, doc, format.Options{Template: customTemplate})
+result, err := calcmark.Convert("price = 100 USD * 1.08", calcmark.Options{
+    Format: "html",
+})
+// result contains styled HTML with the evaluated expression
 ```
 
-Lark also demonstrates custom HTML templates for rendering CalcMark output — see [template.go](https://github.com/CalcMark/calcmark-lark/blob/main/template.go) for a complete working example.
+`Convert` handles the full pipeline: parse, evaluate, and format. It supports both CalcMark documents and Markdown with embedded CalcMark blocks:
 
-## Evaluate a Single Expression
+```go
+// Embedded mode: Markdown with ```cm fenced code blocks
+result, err := calcmark.Convert(markdownInput, calcmark.Options{
+    Mode:   calcmark.Embedded,
+    Format: "html",
+})
+```
 
-The simplest entry point — pass an expression, get a result:
+Available formats: `"html"`, `"md"`, `"text"`, `"json"`, `"cm"`.
+
+## Example: How CalcMark Lark Works
+
+[CalcMark Lark](https://github.com/CalcMark/calcmark-lark) is a web-based playground built entirely on `calcmark.Convert`. The core is just one function call:
+
+```go
+html, err := calcmark.Convert(userInput, calcmark.Options{
+    Format:   "html",
+    Template: customTemplate, // optional — wraps output in a full HTML page
+})
+if err != nil {
+    // partial results are still useful — display what we have
+    log.Printf("convert: %v", err)
+}
+w.Write([]byte(html))
+```
+
+For custom styling, pass a Go `html/template` string via the `Template` option. Lark uses this to wrap CalcMark output in its own page layout — see [template.go](https://github.com/CalcMark/calcmark-lark/blob/main/template.go) for a working example.
+
+The template receives a data struct with `.Style` (shared CSS), `.Frontmatter`, `.Blocks`, and `.Content` fields. Use `format.DefaultHTMLTemplate()` as a starting point, or `format.StyleCSS()` to get just the stylesheet.
+
+## Example: A Minimal REPL
+
+A working CalcMark REPL in under 30 lines. Save this as `repl.go`:
 
 ```go
 package main
 
 import (
+    "bufio"
     "fmt"
-    "log"
+    "os"
 
     calcmark "github.com/CalcMark/go-calcmark"
 )
 
 func main() {
-    result, err := calcmark.Eval("price = 100 USD * 1.08")
-    if err != nil {
-        log.Fatal(err)
+    session := calcmark.NewSession()
+    scanner := bufio.NewScanner(os.Stdin)
+
+    fmt.Println("CalcMark REPL — type expressions, Ctrl+D to quit")
+    for fmt.Print("» "); scanner.Scan(); fmt.Print("» ") {
+        result, err := session.Eval(scanner.Text())
+        if err != nil {
+            fmt.Println("error:", err)
+            continue
+        }
+        if result.Value != nil {
+            fmt.Println(result.Value)
+        }
     }
-    fmt.Println(result.Value) // $108.00
 }
+```
+
+Then run it:
+
+```bash
+go mod init myrepl
+go mod tidy
+go run repl.go
+```
+
+Variables persist across lines:
+
+```
+» price = $49.99
+$49.99
+» qty = 3
+3
+» total = price * qty
+$149.97
+» tax = 8.5% of total
+$12.75
+» grand_total = total + tax
+$162.72
+```
+
+## Evaluate a Single Expression
+
+For one-off evaluations without session state:
+
+```go
+result, err := calcmark.Eval("price = 100 USD * 1.08")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(result.Value) // $108.00
 ```
 
 `Eval` creates a fresh session for each call. The returned `Result` contains:
@@ -256,7 +328,7 @@ The codebase separates specification from implementation:
 
 | Package | Purpose |
 |---------|---------|
-| `github.com/CalcMark/go-calcmark` | Top-level `Eval` and `Session` API |
+| `github.com/CalcMark/go-calcmark` | Top-level `Eval`, `Session`, and `Convert` API |
 | `spec/types` | Value types (Number, Currency, Quantity, etc.) |
 | `spec/document` | Document model (blocks, parsing) |
 | `spec/units` | Canonical unit definitions and conversions |
