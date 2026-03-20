@@ -215,6 +215,7 @@ func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (w
 }
 
 // getCurrentWordPrefix extracts the word being typed at cursor (UTF-8 safe).
+// Includes a leading '@' for directive completion and '.' within @globals. context.
 func (m *Model) getCurrentWordPrefix() string {
 	m.loadCurrentLineIntoEditBuffer()
 	if m.cursorCol == 0 {
@@ -238,6 +239,25 @@ func (m *Model) getCurrentWordPrefix() string {
 	if start >= m.cursorCol {
 		return ""
 	}
+
+	// Extend prefix to include leading '@' for directive completion.
+	// Also scan backwards through '.' and word chars to capture @globals.field patterns.
+	if start > 0 && runes[start-1] == '.' {
+		// Scan through dot and preceding word: @globals.field
+		dotPos := start - 1
+		wordStart := dotPos
+		for wordStart > 0 && isWordRune(runes[wordStart-1]) {
+			wordStart--
+		}
+		// Include '@' if present before the word
+		if wordStart > 0 && runes[wordStart-1] == '@' {
+			start = wordStart - 1
+		}
+	} else if start > 0 && runes[start-1] == '@' {
+		// Simple @word prefix: @scale, @globals
+		start--
+	}
+
 	return string(runes[start:m.cursorCol])
 }
 

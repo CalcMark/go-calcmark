@@ -8,6 +8,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/shopspring/decimal"
 )
 
 func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
@@ -858,5 +859,99 @@ func TestAutocompleteSuppressedInFrontmatter(t *testing.T) {
 
 	if m.mode != StateAutocomplete {
 		t.Error("Autocomplete should activate on calc lines with matching prefix")
+	}
+}
+
+func TestDirectiveSuggestionSource_Scale(t *testing.T) {
+	fm := &document.Frontmatter{
+		Scale: &document.ScaleConfig{
+			Factor: decimal.NewFromInt(3),
+		},
+	}
+	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+
+	t.Run("@s prefix matches @scale", func(t *testing.T) {
+		suggestions := source.GetSuggestions("@s")
+		if len(suggestions) != 1 {
+			t.Fatalf("expected 1 suggestion, got %d", len(suggestions))
+		}
+		if suggestions[0].InsertText != "@scale" {
+			t.Errorf("expected InsertText=@scale, got %q", suggestions[0].InsertText)
+		}
+		if suggestions[0].Category != "directive" {
+			t.Errorf("expected Category=directive, got %q", suggestions[0].Category)
+		}
+	})
+
+	t.Run("no @ prefix returns nothing", func(t *testing.T) {
+		suggestions := source.GetSuggestions("sc")
+		if len(suggestions) != 0 {
+			t.Errorf("expected 0 suggestions for non-@ prefix, got %d", len(suggestions))
+		}
+	})
+
+	t.Run("no scale in frontmatter returns nothing", func(t *testing.T) {
+		noScale := NewDirectiveSuggestionSource(func() *document.Frontmatter {
+			return &document.Frontmatter{}
+		})
+		suggestions := noScale.GetSuggestions("@s")
+		if len(suggestions) != 0 {
+			t.Errorf("expected 0 suggestions without scale config, got %d", len(suggestions))
+		}
+	})
+}
+
+func TestDirectiveSuggestionSource_Globals(t *testing.T) {
+	fm := &document.Frontmatter{
+		Globals: map[string]string{
+			"tax_rate": "0.32",
+			"budget":   "$5000",
+		},
+	}
+	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+
+	t.Run("@g prefix matches @globals", func(t *testing.T) {
+		suggestions := source.GetSuggestions("@g")
+		if len(suggestions) != 1 {
+			t.Fatalf("expected 1 suggestion (@globals), got %d", len(suggestions))
+		}
+		if suggestions[0].InsertText != "@globals." {
+			t.Errorf("expected InsertText=@globals., got %q", suggestions[0].InsertText)
+		}
+	})
+
+	t.Run("@globals. prefix shows field completions", func(t *testing.T) {
+		suggestions := source.GetSuggestions("@globals.")
+		if len(suggestions) != 2 {
+			t.Fatalf("expected 2 field suggestions, got %d", len(suggestions))
+		}
+	})
+
+	t.Run("@globals.t narrows to tax_rate", func(t *testing.T) {
+		suggestions := source.GetSuggestions("@globals.t")
+		if len(suggestions) != 1 {
+			t.Fatalf("expected 1 suggestion, got %d", len(suggestions))
+		}
+		if suggestions[0].InsertText != "@globals.tax_rate" {
+			t.Errorf("expected InsertText=@globals.tax_rate, got %q", suggestions[0].InsertText)
+		}
+	})
+
+	t.Run("no globals returns nothing", func(t *testing.T) {
+		noGlobals := NewDirectiveSuggestionSource(func() *document.Frontmatter {
+			return &document.Frontmatter{}
+		})
+		suggestions := noGlobals.GetSuggestions("@g")
+		if len(suggestions) != 0 {
+			t.Errorf("expected 0 suggestions without globals, got %d", len(suggestions))
+		}
+	})
+}
+
+func TestDirectiveSuggestionSource_NilFrontmatter(t *testing.T) {
+	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return nil })
+	suggestions := source.GetSuggestions("@s")
+	if len(suggestions) != 0 {
+		t.Errorf("expected 0 suggestions with nil frontmatter, got %d", len(suggestions))
 	}
 }

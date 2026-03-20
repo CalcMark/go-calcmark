@@ -412,7 +412,11 @@ func New(doc *document.Document) Model {
 		},
 	)
 	m.varSource = varSource
-	m.suggestionSource = NewCombinedSuggestionSource(funcSource, unitSource, varSource)
+	// Directive source uses lazy frontmatter access via closure.
+	directiveSource := NewDirectiveSuggestionSource(func() *document.Frontmatter {
+		return m.doc.GetFrontmatter()
+	})
+	m.suggestionSource = NewCombinedSuggestionSource(funcSource, unitSource, varSource, directiveSource)
 
 	// CRITICAL: Transition to StateReady - establishes all invariants
 	// This is the ONLY state transition during initialization
