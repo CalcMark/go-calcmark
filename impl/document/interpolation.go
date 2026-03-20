@@ -20,6 +20,16 @@ var interpolationPattern = regexp.MustCompile("`?" + `\{\{\s*(@?\w+(?:\.\w+)?)\s
 func interpolateTextBlocks(doc *document.Document, env map[string]types.Type, df display.Formatter) {
 	fm := doc.GetFrontmatter()
 
+	// Pre-parse globals once for the entire interpolation pass to avoid
+	// redundant ParseGlobals calls on every {{ @globals.field }} match.
+	var parsedGlobals map[string]types.Type
+	if fm != nil && len(fm.Globals) > 0 {
+		parsed, err := document.ParseGlobals(fm.Globals)
+		if err == nil {
+			parsedGlobals = parsed.Values
+		}
+	}
+
 	for _, node := range doc.GetBlocks() {
 		tb, ok := node.Block.(*document.TextBlock)
 		if !ok {
@@ -29,9 +39,9 @@ func interpolateTextBlocks(doc *document.Document, env map[string]types.Type, df
 		interpolatedHTML := make([]string, len(tb.Source()))
 		changed := false
 		for i, line := range tb.Source() {
-			plain := interpolateLine(line, env, df, fm, false)
+			plain := interpolateLine(line, env, df, fm, parsedGlobals, false)
 			interpolated[i] = plain
-			interpolatedHTML[i] = interpolateLine(line, env, df, fm, true)
+			interpolatedHTML[i] = interpolateLine(line, env, df, fm, parsedGlobals, true)
 			if plain != line {
 				changed = true
 			}
@@ -47,7 +57,7 @@ func interpolateTextBlocks(doc *document.Document, env map[string]types.Type, df
 // interpolateLine replaces all {{var}} tags in a single line.
 // Unresolved tags are left as-is. When wrapHTML is true, resolved values
 // are wrapped with STX/ETX sentinels for post-processing into <span> tags.
-func interpolateLine(line string, env map[string]types.Type, df display.Formatter, fm *document.Frontmatter, wrapHTML bool) string {
+func interpolateLine(line string, env map[string]types.Type, df display.Formatter, fm *document.Frontmatter, parsedGlobals map[string]types.Type, wrapHTML bool) string {
 	return interpolationPattern.ReplaceAllStringFunc(line, func(match string) string {
 		// Extract variable name from the match
 		submatch := interpolationPattern.FindStringSubmatch(match)
@@ -59,15 +69,9 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 		var value types.Type
 		isDirective := strings.HasPrefix(ref, "@")
 		if isDirective {
-			// Directive reference: @scale or @globals.field
-			value = resolveDirectiveForInterpolation(ref, fm)
+			value = resolveDirectiveForInterpolation(ref, fm, parsedGlobals)
 		} else {
-			// Variable reference
-			var ok bool
-			value, ok = env[ref]
-			if !ok {
-				value = nil
-			}
+			value = env[ref]
 		}
 
 		if value == nil {
@@ -91,7 +95,8 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 
 // resolveDirectiveForInterpolation resolves @scale or @globals.field
 // from frontmatter for use in {{ }} interpolation tags.
-func resolveDirectiveForInterpolation(ref string, fm *document.Frontmatter) types.Type {
+// parsedGlobals is a pre-parsed cache of globals values (may be nil).
+func resolveDirectiveForInterpolation(ref string, fm *document.Frontmatter, parsedGlobals map[string]types.Type) types.Type {
 	if fm == nil {
 		return nil
 	}
@@ -103,24 +108,15 @@ func resolveDirectiveForInterpolation(ref string, fm *document.Frontmatter) type
 		if fm.Scale == nil {
 			return nil
 		}
-		val := types.NewNumber(fm.Scale.Factor)
-		return val
+		return types.NewNumber(fm.Scale.Factor)
 	}
 
 	// @globals.field
 	if field, ok := strings.CutPrefix(name, "globals."); ok {
-		if fm.Globals == nil {
-			return nil
+		if parsedGlobals != nil {
+			return parsedGlobals[field]
 		}
-		exprStr, ok := fm.Globals[field]
-		if !ok {
-			return nil
-		}
-		parsed, err := document.ParseGlobals(map[string]string{field: exprStr})
-		if err != nil {
-			return nil
-		}
-		return parsed.Values[field]
+		return nil
 	}
 
 	return nil

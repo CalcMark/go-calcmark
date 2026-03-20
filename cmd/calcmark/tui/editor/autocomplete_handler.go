@@ -236,26 +236,40 @@ func (m *Model) getCurrentWordPrefix() string {
 		start--
 	}
 
-	if start >= m.cursorCol {
-		return ""
-	}
-
-	// Extend prefix to include leading '@' for directive completion.
-	// Also scan backwards through '.' and word chars to capture @globals.field patterns.
+	// Extend prefix to include leading '@' and dot-separated @globals.field patterns.
+	// Handles three cases:
+	//   @word         — simple directive (@scale, @globals)
+	//   @word.field   — globals field (@globals.tax_rate)
+	//   @word.        — globals dot with no field yet (two-stage completion)
 	if start > 0 && runes[start-1] == '.' {
-		// Scan through dot and preceding word: @globals.field
+		// Cursor after dot: @globals.field or @globals. (no field yet)
 		dotPos := start - 1
 		wordStart := dotPos
 		for wordStart > 0 && isWordRune(runes[wordStart-1]) {
 			wordStart--
 		}
-		// Include '@' if present before the word
 		if wordStart > 0 && runes[wordStart-1] == '@' {
 			start = wordStart - 1
 		}
 	} else if start > 0 && runes[start-1] == '@' {
-		// Simple @word prefix: @scale, @globals
+		// Simple @word prefix
 		start--
+	} else if start >= m.cursorCol {
+		// No word chars found. Check for @word. pattern (cursor right after dot).
+		if m.cursorCol > 0 && runes[m.cursorCol-1] == '.' {
+			dotPos := m.cursorCol - 1
+			wordStart := dotPos
+			for wordStart > 0 && isWordRune(runes[wordStart-1]) {
+				wordStart--
+			}
+			if wordStart > 0 && runes[wordStart-1] == '@' {
+				start = wordStart - 1
+			}
+		}
+	}
+
+	if start >= m.cursorCol {
+		return ""
 	}
 
 	return string(runes[start:m.cursorCol])

@@ -314,6 +314,18 @@ func TestDirectiveReferences(t *testing.T) {
 		// Directives with units
 		{"@scale with unit", "@scale meters", Calculation},
 
+		// Directives with rate units
+		{"@scale with rate", "@scale meters / second", Calculation},
+
+		// Self-referential: @scale used twice in one expression
+		{"@scale ^ @scale", "@scale ^ @scale", Calculation},
+
+		// Complex expression with parentheses
+		{"(@scale + 1) * @scale", "(@scale + 1) * @scale", Calculation},
+
+		// @globals with unit annotation
+		{"@globals.rate with unit", "@globals.rate kg", Calculation},
+
 		// Invalid directive syntax stays markdown
 		{"bare @ with garbage", "@#$%^&*()", Markdown},
 	}

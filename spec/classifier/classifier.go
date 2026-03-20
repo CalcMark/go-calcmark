@@ -183,6 +183,13 @@ func allIdentifiersDefined(node ast.Node, env IdentifierResolver) bool {
 		// Semantic validation (e.g., missing frontmatter) is the interpreter's job.
 		return true
 
+	case *ast.QuantityLiteral:
+		// Recurse into expression-based quantities (e.g., "@scale meters")
+		if n.Expr != nil {
+			return allIdentifiersDefined(n.Expr, env)
+		}
+		return true
+
 	default:
 		// Literals and other nodes don't have identifiers
 		return true

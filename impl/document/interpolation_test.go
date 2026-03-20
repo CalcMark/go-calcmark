@@ -17,7 +17,7 @@ func TestInterpolateLine(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("Result: {{x}}", env, df, nil, false)
+	got := interpolateLine("Result: {{x}}", env, df, nil, nil, false)
 	want := "Result: **42**"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -31,7 +31,7 @@ func TestInterpolateLineMultipleTags(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("{{a}} and {{b}}", env, df, nil, false)
+	got := interpolateLine("{{a}} and {{b}}", env, df, nil, nil, false)
 	want := "**10** and **20**"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -42,7 +42,7 @@ func TestInterpolateLineMissingVar(t *testing.T) {
 	env := map[string]types.Type{}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("Value: {{unknown}}", env, df, nil, false)
+	got := interpolateLine("Value: {{unknown}}", env, df, nil, nil, false)
 	want := "Value: {{unknown}}"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -56,7 +56,7 @@ func TestInterpolateLineNoTags(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	input := "Just plain text"
-	got := interpolateLine(input, env, df, nil, false)
+	got := interpolateLine(input, env, df, nil, nil, false)
 	if got != input {
 		t.Errorf("interpolateLine() = %q, want %q", got, input)
 	}
@@ -79,7 +79,7 @@ func TestInterpolateLineDisplayFormatted(t *testing.T) {
 		{"Team: {{widgets}}", "Team: **14 people**"},
 	}
 	for _, tt := range tests {
-		got := interpolateLine(tt.input, env, df, nil, false)
+		got := interpolateLine(tt.input, env, df, nil, nil, false)
 		if got != tt.want {
 			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
 		}
@@ -93,7 +93,7 @@ func TestInterpolateLineAdjacentTags(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("{{a}}{{b}}", env, df, nil, false)
+	got := interpolateLine("{{a}}{{b}}", env, df, nil, nil, false)
 	want := "**1****2**"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -106,7 +106,7 @@ func TestInterpolateLineInTable(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil, false)
+	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil, nil, false)
 	want := "| Revenue | **$4.2M** |"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -119,7 +119,7 @@ func TestInterpolateLineInHeading(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("# Summary: {{total}}", env, df, nil, false)
+	got := interpolateLine("# Summary: {{total}}", env, df, nil, nil, false)
 	want := "# Summary: **500**"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
@@ -142,7 +142,7 @@ func TestInterpolateLineWhitespace(t *testing.T) {
 		{"{{x }}", "**99**"},
 	}
 	for _, tt := range tests {
-		got := interpolateLine(tt.input, env, df, nil, false)
+		got := interpolateLine(tt.input, env, df, nil, nil, false)
 		if got != tt.want {
 			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
 		}
@@ -164,7 +164,7 @@ func TestInterpolateLinePartialBraces(t *testing.T) {
 		"{{a + b}}", // Expression (space prevents \w+ match)
 	}
 	for _, input := range tests {
-		got := interpolateLine(input, env, df, nil, false)
+		got := interpolateLine(input, env, df, nil, nil, false)
 		if got != input {
 			t.Errorf("interpolateLine(%q) = %q, should be unchanged", input, got)
 		}
@@ -188,7 +188,7 @@ func TestInterpolateLineBackticks(t *testing.T) {
 		{"`{{unknown}}`", "`{{unknown}}`"},  // Missing var: backticks preserved
 	}
 	for _, tt := range tests {
-		got := interpolateLine(tt.input, env, df, nil, false)
+		got := interpolateLine(tt.input, env, df, nil, nil, false)
 		if got != tt.want {
 			t.Errorf("interpolateLine(%q) = %q, want %q", tt.input, got, tt.want)
 		}
@@ -209,7 +209,7 @@ func TestInterpolateLineWithTransform(t *testing.T) {
 		},
 	}
 
-	got := interpolateLine("Total: {{cost}}", env, df, fm, false)
+	got := interpolateLine("Total: {{cost}}", env, df, fm, nil, false)
 	// 500 * 1000 = 500,000 → formatted as $500K
 	want := "Total: **$500K**"
 	if got != want {
@@ -258,7 +258,7 @@ func TestInterpolateLineHTML(t *testing.T) {
 	}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("Revenue: {{rev}}", env, df, nil, true)
+	got := interpolateLine("Revenue: {{rev}}", env, df, nil, nil, true)
 	want := "Revenue: \x02$4.2M\x03"
 	if got != want {
 		t.Errorf("interpolateLine(wrapHTML=true) = %q, want %q", got, want)
@@ -269,7 +269,7 @@ func TestInterpolateLineHTMLMissingVar(t *testing.T) {
 	env := map[string]types.Type{}
 	df := display.DefaultFormatter()
 
-	got := interpolateLine("Value: {{unknown}}", env, df, nil, true)
+	got := interpolateLine("Value: {{unknown}}", env, df, nil, nil, true)
 	want := "Value: {{unknown}}"
 	if got != want {
 		t.Errorf("interpolateLine(wrapHTML=true, missing) = %q, want %q", got, want)
@@ -346,7 +346,7 @@ func TestInterpolateLineDirectiveScale(t *testing.T) {
 		},
 	}
 
-	got := interpolateLine("Scale factor: {{ @scale }}", env, df, fm, false)
+	got := interpolateLine("Scale factor: {{ @scale }}", env, df, fm, nil, false)
 	want := "Scale factor: **3**"
 	if got != want {
 		t.Errorf("interpolateLine(@scale) = %q, want %q", got, want)
@@ -361,8 +361,9 @@ func TestInterpolateLineDirectiveGlobals(t *testing.T) {
 			"tax_rate": "0.32",
 		},
 	}
+	parsed, _ := document.ParseGlobals(fm.Globals)
 
-	got := interpolateLine("Tax: {{ @globals.tax_rate }}", env, df, fm, false)
+	got := interpolateLine("Tax: {{ @globals.tax_rate }}", env, df, fm, parsed.Values, false)
 	want := "Tax: **0.32**"
 	if got != want {
 		t.Errorf("interpolateLine(@globals.tax_rate) = %q, want %q", got, want)
@@ -374,7 +375,7 @@ func TestInterpolateLineDirectiveNoFrontmatter(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	// No frontmatter — directive should remain unresolved
-	got := interpolateLine("Factor: {{ @scale }}", env, df, nil, false)
+	got := interpolateLine("Factor: {{ @scale }}", env, df, nil, nil, false)
 	want := "Factor: {{ @scale }}"
 	if got != want {
 		t.Errorf("interpolateLine(@scale, no fm) = %q, want %q", got, want)
@@ -392,7 +393,7 @@ func TestInterpolateLineDirectiveNotScaled(t *testing.T) {
 		},
 	}
 
-	got := interpolateLine("Factor: {{ @scale }}", env, df, fm, false)
+	got := interpolateLine("Factor: {{ @scale }}", env, df, fm, nil, false)
 	// Should be 1000 (displayed as 1K), NOT 1000*1000=1000000 (1M)
 	want := "Factor: **1K**"
 	if got != want {

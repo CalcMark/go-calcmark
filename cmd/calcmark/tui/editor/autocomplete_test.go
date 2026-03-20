@@ -955,3 +955,153 @@ func TestDirectiveSuggestionSource_NilFrontmatter(t *testing.T) {
 		t.Errorf("expected 0 suggestions with nil frontmatter, got %d", len(suggestions))
 	}
 }
+
+// TestGetCurrentWordPrefix_DirectiveEdgeCases tests that getCurrentWordPrefix
+// correctly handles @ prefix patterns for directive autocomplete.
+func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
+	doc, err := document.NewDocument("x = 1\n")
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	tests := []struct {
+		name       string
+		editBuf    string
+		cursorCol  int
+		wantPrefix string
+	}{
+		// Basic directive prefixes
+		{"@s produces @s prefix", "@s", 2, "@s"},
+		{"@scale produces @scale prefix", "@scale", 6, "@scale"},
+		{"@globals produces @globals prefix", "@globals", 8, "@globals"},
+
+		// @globals.field patterns
+		// BUG: @globals. (dot with no field chars) returns "" because the backward
+		// Two-stage completion: cursor right after dot, field suggestions should appear.
+		{"@globals. returns @globals. prefix (two-stage completion)", "@globals.", 9, "@globals."},
+		{"@globals.tax produces @globals.tax prefix", "@globals.tax", 12, "@globals.tax"},
+		{"@globals.tax_rate produces full prefix", "@globals.tax_rate", 17, "@globals.tax_rate"},
+
+		// Bare @ returns "@" -- length 1, below minAutocompletePrefix (2),
+		// so autocomplete won't trigger. But prefix extraction is correct.
+		{"bare @ returns @", "@", 1, "@"},
+
+		// @ in middle of expression
+		{"a = @s produces @s", "a = @s", 6, "@s"},
+		{"x + @globals.rate produces @globals.rate", "x + @globals.rate", 17, "@globals.rate"},
+
+		// email@example should NOT produce @example as a directive prefix.
+		// The current implementation DOES extend to include @, which is a known
+		// edge case. This test documents the actual behavior.
+		{"email@example produces @example (known edge case)", "email@example", 13, "@example"},
+
+		// No @ present
+		{"plain word", "scale", 5, "scale"},
+		{"empty at col 0", "", 0, ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := New(doc)
+			m.width = 80
+			m.height = 24
+			m.cursorLine = 0
+			m.editBuf = tc.editBuf
+			m.editBufLoaded = true
+			m.cursorCol = tc.cursorCol
+
+			got := m.getCurrentWordPrefix()
+			if got != tc.wantPrefix {
+				t.Errorf("getCurrentWordPrefix() = %q, want %q (editBuf=%q, col=%d)",
+					got, tc.wantPrefix, tc.editBuf, tc.cursorCol)
+			}
+		})
+	}
+}
+
+// TestDirectiveSuggestionSource_BareAtPrefix verifies that a bare "@" prefix
+// (which getCurrentWordPrefix currently cannot produce) would correctly return
+// all available directive suggestions if it were passed to GetSuggestions.
+func TestDirectiveSuggestionSource_BareAtPrefix(t *testing.T) {
+	fm := &document.Frontmatter{
+		Scale: &document.ScaleConfig{
+			Factor: decimal.NewFromInt(3),
+		},
+		Globals: map[string]string{
+			"tax_rate": "0.32",
+		},
+	}
+	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+
+	// "@" should match both @scale and @globals
+	suggestions := source.GetSuggestions("@")
+	if len(suggestions) != 2 {
+		t.Errorf("GetSuggestions(\"@\") returned %d suggestions, want 2 (@scale + @globals)", len(suggestions))
+		for _, s := range suggestions {
+			t.Logf("  suggestion: %s", s.InsertText)
+		}
+	}
+}
+
+// TestDirectiveSuggestionSource_DotDeletion verifies the two-stage completion
+// after the user deletes the dot from @globals. — they should see @globals again.
+func TestDirectiveSuggestionSource_DotDeletion(t *testing.T) {
+	fm := &document.Frontmatter{
+		Globals: map[string]string{
+			"tax_rate": "0.32",
+		},
+	}
+	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+
+	// Stage 1: user typed @globals (no dot yet)
+	suggestions := source.GetSuggestions("@globals")
+	if len(suggestions) != 1 {
+		t.Fatalf("expected 1 suggestion for @globals, got %d", len(suggestions))
+	}
+	if suggestions[0].InsertText != "@globals." {
+		t.Errorf("expected InsertText=@globals., got %q", suggestions[0].InsertText)
+	}
+
+	// Stage 2: user accepted, now has @globals. and sees fields
+	suggestions = source.GetSuggestions("@globals.")
+	if len(suggestions) != 1 {
+		t.Fatalf("expected 1 field suggestion for @globals., got %d", len(suggestions))
+	}
+	if suggestions[0].InsertText != "@globals.tax_rate" {
+		t.Errorf("expected InsertText=@globals.tax_rate, got %q", suggestions[0].InsertText)
+	}
+
+	// Stage 3: user deletes the dot — back to @globals prefix, should see @globals again
+	suggestions = source.GetSuggestions("@globals")
+	if len(suggestions) != 1 {
+		t.Fatalf("expected 1 suggestion after dot deletion, got %d", len(suggestions))
+	}
+	if suggestions[0].InsertText != "@globals." {
+		t.Errorf("expected InsertText=@globals. after dot deletion, got %q", suggestions[0].InsertText)
+	}
+}
+
+// TestDirectiveSuggestionSource_FrontmatterUpdate verifies that directive
+// suggestions reflect frontmatter changes during a session (lazy callback).
+func TestDirectiveSuggestionSource_FrontmatterUpdate(t *testing.T) {
+	fm := &document.Frontmatter{}
+	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+
+	// Initially no scale, no suggestions
+	suggestions := source.GetSuggestions("@s")
+	if len(suggestions) != 0 {
+		t.Errorf("expected 0 suggestions before adding scale, got %d", len(suggestions))
+	}
+
+	// User edits frontmatter to add scale
+	fm.Scale = &document.ScaleConfig{Factor: decimal.NewFromInt(5)}
+
+	// Now suggestions should include @scale
+	suggestions = source.GetSuggestions("@s")
+	if len(suggestions) != 1 {
+		t.Fatalf("expected 1 suggestion after adding scale, got %d", len(suggestions))
+	}
+	if suggestions[0].InsertText != "@scale" {
+		t.Errorf("expected InsertText=@scale, got %q", suggestions[0].InsertText)
+	}
+}
