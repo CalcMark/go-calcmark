@@ -862,7 +862,7 @@ var StandardUnits = map[string]UnitMapping{
 	"second": {
 		Canonical:   "second",
 		Symbol:      "s",
-		Aliases:     []string{"second", "seconds", "s", "sec"},
+		Aliases:     []string{"second", "seconds", "sec"},
 		System:      "SI",
 		Quantity:    "Time",
 		Description: "SI base unit of time",
@@ -870,7 +870,7 @@ var StandardUnits = map[string]UnitMapping{
 	"minute": {
 		Canonical:   "minute",
 		Symbol:      "min",
-		Aliases:     []string{"minute", "minutes", "min", "m"},
+		Aliases:     []string{"minute", "minutes", "min"},
 		System:      "SI",
 		Quantity:    "Time",
 		Description: "60 seconds",
@@ -878,7 +878,7 @@ var StandardUnits = map[string]UnitMapping{
 	"hour": {
 		Canonical:   "hour",
 		Symbol:      "h",
-		Aliases:     []string{"hour", "hours", "h", "hr"},
+		Aliases:     []string{"hour", "hours", "hr"},
 		System:      "SI",
 		Quantity:    "Time",
 		Description: "3600 seconds",
@@ -886,7 +886,7 @@ var StandardUnits = map[string]UnitMapping{
 	"day": {
 		Canonical:   "day",
 		Symbol:      "day",
-		Aliases:     []string{"day", "days", "d"},
+		Aliases:     []string{"day", "days"},
 		System:      "SI",
 		Quantity:    "Time",
 		Description: "86400 seconds",
@@ -894,7 +894,7 @@ var StandardUnits = map[string]UnitMapping{
 	"week": {
 		Canonical:   "week",
 		Symbol:      "week",
-		Aliases:     []string{"week", "weeks", "wk", "w"},
+		Aliases:     []string{"week", "weeks", "wk"},
 		System:      "SI",
 		Quantity:    "Time",
 		Description: "604800 seconds (7 days)",
@@ -910,7 +910,7 @@ var StandardUnits = map[string]UnitMapping{
 	"year": {
 		Canonical:   "year",
 		Symbol:      "year",
-		Aliases:     []string{"year", "years", "yr", "y"},
+		Aliases:     []string{"year", "years", "yr"},
 		System:      "Conventional",
 		Quantity:    "Time",
 		Description: "Approximately 31536000 seconds (365 days)",
