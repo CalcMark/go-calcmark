@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -91,7 +92,7 @@ func runWatch(filename string) error {
 	}
 	defer watcher.Close()
 
-	if err := watcher.Add(filename); err != nil {
+	if err := srv.addWatch(watcher); err != nil {
 		return fmt.Errorf("watch file: %w", err)
 	}
 
@@ -141,6 +142,29 @@ type watchServer struct {
 	mu      sync.RWMutex
 	html    string
 	clients map[*websocket.Conn]struct{}
+
+	logw io.Writer // destination for log output; nil means os.Stderr
+}
+
+// logf writes a formatted log line to the server's log writer.
+func (s *watchServer) logf(format string, args ...any) {
+	w := s.logw
+	if w == nil {
+		w = os.Stderr
+	}
+	fmt.Fprintf(w, format+"\n", args...)
+}
+
+// addWatch registers the parent directory with the fsnotify watcher.
+// Watching the directory instead of the file ensures atomic saves
+// (write-temp-rename) are detected on all platforms.
+func (s *watchServer) addWatch(watcher *fsnotify.Watcher) error {
+	absPath, err := filepath.Abs(s.filename)
+	if err != nil {
+		return err
+	}
+	s.filename = absPath
+	return watcher.Add(filepath.Dir(absPath))
 }
 
 // watchLoop listens for file changes and re-renders.
@@ -154,16 +178,25 @@ func (s *watchServer) watchLoop(watcher *fsnotify.Watcher) {
 			if !ok {
 				return
 			}
-			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
+			// Filter: only react to events on the target file.
+			// We watch the directory to catch atomic saves (write-temp-rename).
+			if event.Name != s.filename {
+				continue
+			}
+			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Rename) {
+				s.logf("[watch] change detected: %s", filepath.Base(s.filename))
 				if debounceTimer != nil {
 					debounceTimer.Stop()
 				}
 				debounceTimer = time.AfterFunc(100*time.Millisecond, func() {
+					start := time.Now()
 					html, err := renderFile(s.filename, s.mode)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "render error: %v\n", err)
+						s.logf("[watch] render error: %v", err)
 						return
 					}
+					s.logf("[watch] re-rendered (%s)", time.Since(start).Round(time.Millisecond))
+
 					s.mu.Lock()
 					s.html = html
 					clients := make(map[*websocket.Conn]struct{}, len(s.clients))
@@ -178,31 +211,38 @@ func (s *watchServer) watchLoop(watcher *fsnotify.Watcher) {
 							s.removeClient(conn)
 						}
 					}
+					if n := len(clients); n > 0 {
+						s.logf("[watch] notified %d client(s)", n)
+					}
 				})
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
-			fmt.Fprintf(os.Stderr, "watch error: %v\n", err)
+			s.logf("[watch] error: %v", err)
 		}
 	}
 }
 
 func (s *watchServer) addClient(conn *websocket.Conn) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.clients == nil {
 		s.clients = make(map[*websocket.Conn]struct{})
 	}
 	s.clients[conn] = struct{}{}
+	n := len(s.clients)
+	s.mu.Unlock()
+	s.logf("[watch] client connected (%d total)", n)
 }
 
 func (s *watchServer) removeClient(conn *websocket.Conn) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	delete(s.clients, conn)
+	n := len(s.clients)
+	s.mu.Unlock()
 	conn.Close()
+	s.logf("[watch] client disconnected (%d total)", n)
 }
 
 // securityMiddleware enforces security headers and origin validation.
@@ -239,7 +279,9 @@ func (s *watchServer) handlePage(w http.ResponseWriter, _ *http.Request) {
 	s.mu.RUnlock()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, watchPageTemplate, html, s.sessionToken)
+	page := strings.Replace(watchPageTemplate, "{{CONTENT}}", html, 1)
+	page = strings.Replace(page, "{{TOKEN}}", s.sessionToken, 1)
+	io.WriteString(w, page)
 }
 
 // handleWebSocket handles WebSocket connections for live reload.
@@ -282,27 +324,230 @@ func renderFile(filename string, mode calcmark.Mode) (string, error) {
 }
 
 const watchPageTemplate = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CalcMark Preview</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-    #status { position: fixed; top: 8px; right: 8px; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    #status {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1000;
+    }
     .connected { background: #d4edda; color: #155724; }
     .disconnected { background: #f8d7da; color: #721c24; }
+
+    .calc-block {
+      margin: 1.5em 0;
+      padding: 1em;
+      background: #f8f9fa;
+      border-left: 4px solid #0066cc;
+      border-radius: 4px;
+    }
+
+    .calc-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 0.25em 0;
+    }
+
+    .calc-source {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.95em;
+      color: #24292e;
+      flex: 1;
+    }
+
+    .calc-inline-result {
+      font-weight: 600;
+      color: #0066cc;
+      margin-left: 2em;
+      font-size: 0.9em;
+    }
+
+    .calc-inline-result::before {
+      content: "= ";
+    }
+
+    .calc-result {
+      font-weight: 600;
+      color: #0066cc;
+      margin-top: 0.5em;
+      padding: 0.5em;
+      background: white;
+      border-radius: 3px;
+    }
+
+    .calc-error {
+      color: #d73a49;
+      background: #ffeef0;
+      padding: 0.5em;
+      border-radius: 3px;
+      border-left: 3px solid #d73a49;
+      margin-top: 0.5em;
+    }
+
+    .text-block {
+      margin: 1.5em 0;
+    }
+
+    .text-block p {
+      margin: 0.75em 0;
+    }
+
+    .cm-interpolated {
+      font-weight: 600;
+    }
+
+    .text-block h1, .text-block h2, .text-block h3 {
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+
+    .text-block code {
+      background: #f6f8fa;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.9em;
+    }
+
+    .text-block pre {
+      background: #f6f8fa;
+      padding: 1em;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    .text-block pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .text-block blockquote {
+      border-left: 3px solid #0066cc;
+      padding-left: 1em;
+      color: #57606a;
+      margin: 1em 0;
+    }
+
+    .text-block blockquote p {
+      margin: 0.5em 0;
+    }
+
+    .text-block table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+    }
+
+    .text-block th, .text-block td {
+      border: 1px solid #d0d7de;
+      padding: 0.5em 0.75em;
+      text-align: left;
+    }
+
+    .text-block th {
+      background: #f0f4f8;
+      font-weight: 600;
+    }
+
+    .frontmatter {
+      margin-bottom: 2em;
+      padding: 1em 1.5em;
+      background: #f0f4f8;
+      border-radius: 6px;
+      border: 1px solid #d0d7de;
+    }
+
+    .frontmatter h3 {
+      margin: 0 0 0.75em 0;
+      font-size: 0.9em;
+      color: #57606a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .frontmatter dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25em 1em;
+    }
+
+    .frontmatter dt {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      font-size: 0.9em;
+      color: #0550ae;
+    }
+
+    .frontmatter dt::before {
+      content: "@";
+      color: #6e7781;
+    }
+
+    .frontmatter dd {
+      margin: 0;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      font-size: 0.9em;
+      color: #24292e;
+    }
+
+    .frontmatter .exchange dt::before {
+      content: "";
+    }
+
+    .frontmatter .exchange dt {
+      color: #6e7781;
+    }
+
+    .frontmatter hr {
+      border: none;
+      border-top: 1px solid #d0d7de;
+      margin: 0.75em 0;
+    }
+
+    .frontmatter-value {
+      margin: 0;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      font-size: 0.9em;
+      color: #24292e;
+    }
+
+    .frontmatter .extra dt::before {
+      content: "";
+    }
+
+    .frontmatter .extra dt {
+      color: #57606a;
+    }
   </style>
 </head>
 <body>
   <div id="status" class="disconnected">disconnected</div>
-  <div id="content">%s</div>
+  <div id="content">{{CONTENT}}</div>
   <script>
     (function() {
       var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       var ws;
       var statusEl = document.getElementById('status');
       function connect() {
-        ws = new WebSocket(proto + '//' + location.host + '/%s/ws');
+        ws = new WebSocket(proto + '//' + location.host + '/{{TOKEN}}/ws');
         ws.onopen = function() { statusEl.textContent = 'live'; statusEl.className = 'connected'; };
         ws.onclose = function() { statusEl.textContent = 'disconnected'; statusEl.className = 'disconnected'; setTimeout(connect, 1000); };
         ws.onmessage = function(e) { if (e.data === 'reload') location.reload(); };

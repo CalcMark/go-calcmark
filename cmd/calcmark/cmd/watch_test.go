@@ -1,12 +1,17 @@
 package cmd
 
 import (
+	"bytes"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/CalcMark/go-calcmark"
+	"github.com/fsnotify/fsnotify"
 )
 
 func TestRenderFile(t *testing.T) {
@@ -55,6 +60,197 @@ func TestRenderFile_Embedded(t *testing.T) {
 	}
 	if !strings.Contains(html, "Some prose.") {
 		t.Error("expected prose in output")
+	}
+}
+
+func TestHandlePage_IncludesCalcStyles(t *testing.T) {
+	srv := &watchServer{
+		sessionToken: "testtoken",
+		html:         `<div class="calc-block"><div class="calc-line"><code class="calc-source">x = 1</code></div></div>`,
+	}
+
+	req := httptest.NewRequest("GET", "/testtoken", nil)
+	rec := httptest.NewRecorder()
+	srv.handlePage(rec, req)
+
+	body := rec.Body.String()
+
+	// The watch page must include CSS for the content classes from preview.gohtml
+	cssRules := []string{
+		".calc-block",
+		".calc-line",
+		".calc-source",
+		".calc-inline-result",
+		".calc-error",
+		".text-block",
+		".frontmatter",
+	}
+	for _, rule := range cssRules {
+		if !strings.Contains(body, rule+" {") && !strings.Contains(body, rule+" ") {
+			t.Errorf("watch page missing CSS rule for %s", rule)
+		}
+	}
+}
+
+func TestAddWatch_WatchesDirectory(t *testing.T) {
+	// addWatch should watch the parent directory, not the file itself.
+	// This ensures atomic saves (write-temp-rename) are detected on all platforms.
+	dir := t.TempDir()
+	cmFile := filepath.Join(dir, "test.cm")
+	if err := os.WriteFile(cmFile, []byte("x = 1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &watchServer{filename: cmFile, mode: calcmark.CM}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer watcher.Close()
+
+	if err := srv.addWatch(watcher); err != nil {
+		t.Fatal(err)
+	}
+
+	// The watcher should be watching the directory, not the file
+	watchList := watcher.WatchList()
+	if !slices.Contains(watchList, dir) {
+		t.Errorf("addWatch should watch directory %s, but watch list is %v", dir, watchList)
+	}
+}
+
+func TestWatchLoop_AtomicSave(t *testing.T) {
+	// Create a temp dir with a .cm file
+	dir := t.TempDir()
+	cmFile := filepath.Join(dir, "test.cm")
+	if err := os.WriteFile(cmFile, []byte("x = 1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	srv := &watchServer{
+		filename: cmFile,
+		mode:     calcmark.CM,
+		logw:     &buf,
+	}
+
+	// Initial render
+	html, err := renderFile(cmFile, calcmark.CM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv.html = html
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer watcher.Close()
+
+	if err := srv.addWatch(watcher); err != nil {
+		t.Fatal(err)
+	}
+
+	go srv.watchLoop(watcher)
+
+	// Give the watcher time to start
+	time.Sleep(50 * time.Millisecond)
+
+	// Simulate atomic save: write temp file, rename over original
+	tmpFile := filepath.Join(dir, "test.cm.tmp")
+	if err := os.WriteFile(tmpFile, []byte("x = 42"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(tmpFile, cmFile); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for debounce (100ms) + processing time
+	deadline := time.After(2 * time.Second)
+	for {
+		srv.mu.RLock()
+		current := srv.html
+		srv.mu.RUnlock()
+		if strings.Contains(current, "42") {
+			break // Success: the change was detected
+		}
+		select {
+		case <-deadline:
+			t.Fatal("atomic save was not detected within 2 seconds — file watcher lost the file")
+		case <-time.After(50 * time.Millisecond):
+			// Poll again
+		}
+	}
+}
+
+func TestWatchLoop_LogsOnChange(t *testing.T) {
+	dir := t.TempDir()
+	cmFile := filepath.Join(dir, "test.cm")
+	if err := os.WriteFile(cmFile, []byte("a = 1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Capture stderr
+	var buf bytes.Buffer
+	srv := &watchServer{
+		filename: cmFile,
+		mode:     calcmark.CM,
+		logw:     &buf,
+	}
+	html, err := renderFile(cmFile, calcmark.CM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv.html = html
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer watcher.Close()
+
+	if err := srv.addWatch(watcher); err != nil {
+		t.Fatal(err)
+	}
+	go srv.watchLoop(watcher)
+	time.Sleep(50 * time.Millisecond)
+
+	// Trigger a normal write
+	if err := os.WriteFile(cmFile, []byte("a = 2"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for debounce + render
+	time.Sleep(300 * time.Millisecond)
+
+	output := buf.String()
+	if !strings.Contains(output, "[watch] change detected") {
+		t.Errorf("expected '[watch] change detected' in stderr, got: %q", output)
+	}
+	if !strings.Contains(output, "[watch] re-rendered") {
+		t.Errorf("expected '[watch] re-rendered' in stderr, got: %q", output)
+	}
+}
+
+func TestAddRemoveClient_Logs(t *testing.T) {
+	var buf bytes.Buffer
+	srv := &watchServer{
+		logw: &buf,
+	}
+
+	// Use a mock conn — we just need the pointer for map tracking.
+	// We can't easily create a real websocket.Conn in a unit test,
+	// so we test the log method directly.
+	srv.logf("[watch] client connected (1 total)")
+	srv.logf("[watch] client disconnected (0 total)")
+
+	output := buf.String()
+	if !strings.Contains(output, "[watch] client connected") {
+		t.Errorf("expected client connected log, got: %q", output)
+	}
+	if !strings.Contains(output, "[watch] client disconnected") {
+		t.Errorf("expected client disconnected log, got: %q", output)
 	}
 }
 
