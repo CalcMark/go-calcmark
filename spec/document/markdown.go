@@ -38,7 +38,7 @@ func renderMarkdown(source string) string {
 	}
 
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote),
 	)
 
 	var buf bytes.Buffer

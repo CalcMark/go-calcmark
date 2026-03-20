@@ -270,7 +270,14 @@ body {
     font-weight: 600;
 }
 
-#content .language-calcmark {
+/* Embedded calcmark code blocks get the same visual treatment as CM mode calc blocks */
+#content pre:has(> .language-calcmark),
+#content pre:has(> .language-cm) {
+    border-left: 4px solid #0066cc;
+}
+
+#content .language-calcmark,
+#content .language-cm {
     color: #24292e;
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
 }

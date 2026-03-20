@@ -44,7 +44,7 @@ var validFormats = map[string]bool{
 // embeddedMarkdown is a reusable goldmark instance for Markdown→HTML conversion.
 // Goldmark instances are stateless after construction and safe for concurrent use.
 var embeddedMarkdown = goldmark.New(
-	goldmark.WithExtensions(extension.GFM),
+	goldmark.WithExtensions(extension.GFM, extension.Footnote),
 )
 
 // embeddedSanitizer is a reusable bluemonday policy for sanitizing goldmark HTML output.

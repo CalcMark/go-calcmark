@@ -346,3 +346,23 @@ func TestConvert_Embedded_MultipleBlocks(t *testing.T) {
 		t.Error("expected all cm fences to be replaced")
 	}
 }
+
+// Footnotes are standard Markdown and must render as proper HTML links.
+func TestConvert_Embedded_Footnotes(t *testing.T) {
+	input := "Text with a footnote[^1].\n\n[^1]: This is the footnote content.\n"
+	result, err := Convert(input, Options{
+		Mode:   Embedded,
+		Format: "html",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Footnote reference should become a link, not literal "[^1]"
+	if strings.Contains(result, "[^1]") {
+		t.Error("footnote not rendered — literal [^1] found in HTML output")
+	}
+	// Should contain a footnote backref or footnote section
+	if !strings.Contains(result, "footnote") {
+		t.Error("expected footnote HTML elements in output")
+	}
+}
