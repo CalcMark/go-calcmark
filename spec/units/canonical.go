@@ -870,7 +870,7 @@ var StandardUnits = map[string]UnitMapping{
 	"minute": {
 		Canonical:   "minute",
 		Symbol:      "min",
-		Aliases:     []string{"minute", "minutes", "min"},
+		Aliases:     []string{"minute", "minutes", "min", "mins"},
 		System:      "SI",
 		Quantity:    "Time",
 		Description: "60 seconds",

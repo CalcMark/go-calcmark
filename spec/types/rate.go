@@ -144,6 +144,7 @@ var timeUnitAliases = map[string]string{
 
 	"m":       "minute",
 	"min":     "minute",
+	"mins":    "minute",
 	"minute":  "minute",
 	"minutes": "minute",
 
