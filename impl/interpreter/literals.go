@@ -6,6 +6,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
 
 // Literal evaluation methods.
@@ -61,14 +62,36 @@ func (interp *Interpreter) evalFractionLiteral(f *ast.FractionLiteral) (types.Ty
 }
 
 func (interp *Interpreter) evalQuantityLiteral(q *ast.QuantityLiteral) (types.Type, error) {
-	// Expand multipliers like "1k" → 1000, "1M" → 1000000
-	value, err := expandNumberLiteral(q.Value)
-	if err != nil {
-		return nil, fmt.Errorf("invalid quantity value %q: %w", q.Value, err)
+	var value decimal.Decimal
+	var err error
+
+	if q.Expr != nil {
+		// Expression-based quantity (e.g., "@scale meters")
+		result, evalErr := interp.evalNode(q.Expr)
+		if evalErr != nil {
+			return nil, evalErr
+		}
+		switch v := result.(type) {
+		case *types.Number:
+			value = v.Value
+		case *types.Quantity:
+			value = v.Value
+		case *types.Currency:
+			value = v.Value
+		case *types.Percentage:
+			value = v.Value
+		default:
+			return nil, fmt.Errorf("cannot use %T as quantity value", result)
+		}
+	} else {
+		// Literal quantity (e.g., "5 meters")
+		value, err = expandNumberLiteral(q.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid quantity value %q: %w", q.Value, err)
+		}
 	}
 
 	// Resolve ambiguous unit names using measurement conventions.
-	// This is a pre-interpreter step: "oz" → "troy ounce" when mass: troy is set.
 	unit := interp.resolveUnit(q.Unit)
 	return types.NewQuantity(value, unit), nil
 }

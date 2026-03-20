@@ -62,14 +62,20 @@ func (f *FractionLiteral) GetRange() *Range {
 }
 
 // QuantityLiteral represents a number with a unit (e.g., "5 kg", "10 meters").
+// When Expr is non-nil, the quantity value comes from evaluating the expression
+// (e.g., "@scale meters" uses a DirectiveRef as the value source).
 type QuantityLiteral struct {
-	Value      string // The numeric value
+	Value      string // The numeric value (used when Expr is nil)
+	Expr       Node   // Expression providing the value (e.g., DirectiveRef); nil for literal quantities
 	Unit       string // The unit identifier
 	SourceText string // Original text
 	Range      *Range
 }
 
 func (q *QuantityLiteral) String() string {
+	if q.Expr != nil {
+		return fmt.Sprintf("QuantityLiteral(%s %s)", q.Expr.String(), q.Unit)
+	}
 	return fmt.Sprintf("QuantityLiteral(%s %s)", q.Value, q.Unit)
 }
 
@@ -444,9 +450,11 @@ func ContainsScaleRef(node Node) bool {
 		return ContainsScaleRef(n.Numerator) || ContainsScaleRef(n.Denominator)
 	case *RateLiteral:
 		return ContainsScaleRef(n.Amount)
+	case *QuantityLiteral:
+		return ContainsScaleRef(n.Expr)
 	default:
 		// Leaf nodes: NumberLiteral, FractionLiteral, CurrencyLiteral,
-		// QuantityLiteral, DateLiteral, TimeLiteral, DurationLiteral,
+		// DateLiteral, TimeLiteral, DurationLiteral,
 		// BooleanLiteral, Identifier, RelativeDateLiteral
 		return false
 	}

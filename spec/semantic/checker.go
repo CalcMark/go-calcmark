@@ -398,8 +398,10 @@ func (c *Checker) checkFunctionCall(f *ast.FunctionCall) {
 
 // checkQuantityLiteral validates quantity literals.
 func (c *Checker) checkQuantityLiteral(q *ast.QuantityLiteral) {
-	// Quantity literals are valid - we check compatibility during operations
-	// No need to error here
+	// Recurse into expression-based quantities (e.g., "@scale meters")
+	if q.Expr != nil {
+		c.checkNode(q.Expr)
+	}
 }
 
 // checkRateLiteral validates rate literals (e.g., "100 MB/s").

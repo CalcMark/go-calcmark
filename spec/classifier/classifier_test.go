@@ -291,6 +291,43 @@ func TestSpecialCharacters(t *testing.T) {
 	}
 }
 
+// TestDirectiveReferences tests classification of @scale and @globals directive references
+func TestDirectiveReferences(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected LineType
+	}{
+		// Standalone directives are calculations
+		{"standalone @scale", "@scale", Calculation},
+		{"standalone @globals.tax_rate", "@globals.tax_rate", Calculation},
+
+		// Directives in assignment expressions
+		{"assignment with @scale", "a = @scale", Calculation},
+		{"assignment with @scale arithmetic", "a = @scale * 3", Calculation},
+		{"assignment with @globals", "a = @globals.tax_rate * 100", Calculation},
+
+		// Directives with operators (no assignment)
+		{"@scale in operator expression", "@scale + 1", Calculation},
+		{"@scale * literal", "@scale * 2", Calculation},
+
+		// Directives with units
+		{"@scale with unit", "@scale meters", Calculation},
+
+		// Invalid directive syntax stays markdown
+		{"bare @ with garbage", "@#$%^&*()", Markdown},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := classifyLineTest(t, tc.line, nil)
+			if result != tc.expected {
+				t.Errorf("ClassifyLine(%q) = %s, want %s", tc.line, result, tc.expected)
+			}
+		})
+	}
+}
+
 // TestDocumentExample tests classification of a full document
 func TestBudgetDocument(t *testing.T) {
 	document := `# My Monthly Budget

@@ -1065,10 +1065,43 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			}
 		}
 
-		return &ast.DirectiveRef{
+		ref := &ast.DirectiveRef{
 			Directive: directive,
 			Field:     field,
-		}, nil
+		}
+
+		// Check for unit annotation: "@scale meters", "@globals.rate kg"
+		// Mirrors the NUMBER + IDENTIFIER unit lookahead pattern.
+		if p.check(lexer.IDENTIFIER) {
+			unitName := string(p.peek().Value)
+			if !isNaturalSyntaxKeyword(unitName) {
+				p.advance()
+
+				normalizedUnit, isKnownUnit := units.NormalizeUnitName(unitName)
+				if isKnownUnit {
+					unitName = normalizedUnit
+				}
+
+				// Multi-word units: "@scale nautical miles"
+				if p.check(lexer.IDENTIFIER) {
+					nextWord := string(p.peek().Value)
+					if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
+						p.advance()
+						unitName = multiWordUnit
+						if normalized, ok := units.NormalizeUnitName(multiWordUnit); ok {
+							unitName = normalized
+						}
+					}
+				}
+
+				return &ast.QuantityLiteral{
+					Expr: ref,
+					Unit: unitName,
+				}, nil
+			}
+		}
+
+		return ref, nil
 	}
 
 	// Prefix currency symbols: $100, €50, £30, ¥1000
