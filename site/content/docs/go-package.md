@@ -305,7 +305,6 @@ This works identically with `calcmark.Convert` for document rendering:
 input := `---
 exchange:
   USD_EUR: 0.92
-scale: 2x
 globals:
   tax_rate: 0.08
 ---
