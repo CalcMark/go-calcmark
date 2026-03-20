@@ -119,6 +119,7 @@ func runWatch(filename string) error {
 
 	fmt.Fprintf(os.Stderr, "Watching %s\n", filename)
 	fmt.Fprintf(os.Stderr, "Preview: http://%s/%s\n", addr, sessionToken)
+	fmt.Fprintf(os.Stderr, "Press Ctrl+C to stop\n")
 
 	// Graceful shutdown on interrupt
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
