@@ -1,7 +1,7 @@
 ---
 title: "fix: cm watch live preview — styling, file watching, and logging"
 type: fix
-status: active
+status: completed
 date: 2026-03-19
 ---
 
