@@ -1,0 +1,45 @@
+name: PR Velocity Metrics
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to annotate'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  metrics:
+    name: Annotate PR with Velocity Metrics
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       !contains(fromJSON('["dependabot[bot]","renovate[bot]"]'), github.actor))
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: gh extension install dvhthomas/gh-velocity
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post PR metrics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_VELOCITY_POST_LIVE: 'true'
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            NUM="$INPUT_NUMBER"
+          else
+            NUM="$PR_NUMBER"
+          fi
+          gh velocity pr "$NUM" --post

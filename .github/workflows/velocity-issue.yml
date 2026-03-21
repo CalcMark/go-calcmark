@@ -1,0 +1,44 @@
+name: Issue Velocity Metrics
+
+on:
+  issues:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to annotate'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  metrics:
+    name: Annotate Issue with Velocity Metrics
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.issue.state_reason == 'completed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: gh extension install dvhthomas/gh-velocity
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post issue metrics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_VELOCITY_POST_LIVE: 'true'
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_NUMBER: ${{ inputs.issue_number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            NUM="$INPUT_NUMBER"
+          else
+            NUM="$ISSUE_NUMBER"
+          fi
+          gh velocity issue "$NUM" --post
