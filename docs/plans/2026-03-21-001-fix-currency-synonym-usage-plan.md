@@ -1,7 +1,7 @@
 ---
 title: "fix: Currency synonym usage — $ and USD treated as different currencies"
 type: fix
-status: active
+status: completed
 date: 2026-03-21
 issue: https://github.com/CalcMark/go-calcmark/issues/95
 ---
