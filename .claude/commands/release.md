@@ -150,23 +150,15 @@ Once complete:
   - Homebrew: brew tap calcmark/tap && brew upgrade calcmark/tap/calcmark
 ```
 
-## Step 9: Post velocity discussion
+## Step 9: Velocity discussion (automated)
 
-After the tag push succeeds, post a release quality report as a GitHub Discussion:
+The `velocity-release.yml` GitHub Actions workflow automatically posts a release quality Discussion when a release is published. No manual action is needed.
+
+If the automated workflow fails or you want to post manually:
 
 ```bash
 gh velocity quality release vX.Y.Z --post -r markdown
 ```
-
-This analyzes the release for lead time, cycle time, bug ratio, and category composition, then posts a Discussion with the metrics.
-
-If `gh velocity` is not installed, fall back to the legacy script:
-
-```bash
-.claude/skills/github-project/scripts/release-velocity.sh vX.Y.Z
-```
-
-Print the discussion URL when done.
 
 ## Hard Rules
 

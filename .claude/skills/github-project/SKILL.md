@@ -1,7 +1,7 @@
 ---
 name: github-project
 description: Manage GitHub issues and project status for CalcMark work. Use when starting work, transitioning status, creating issues, or finishing features. Handles both local-only workflows (merge to main) and remote PR workflows.
-allowed-tools: Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(printf:*),Bash(.claude/skills/github-project/scripts/*),Read,Glob,Grep
+allowed-tools: Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(printf:*),Read,Glob,Grep
 ---
 
 # GitHub Project Management
@@ -136,56 +136,35 @@ When work is finished (status set to "In review" and handed to human), run the m
 
 Both metrics share the same end point: the work appears in a release that users can see. The difference is the start point — lead time starts when the idea is filed, cycle time starts when coding begins.
 
-### Scripts
+### Velocity Metrics via gh-velocity
 
-All metric scripts live in `.claude/skills/github-project/scripts/`:
+All velocity metrics are handled by the [`gh-velocity`](https://dvhthomas.github.io/gh-velocity/) GitHub CLI extension. Configuration lives in `.gh-velocity.yml` at the repo root.
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `lead-time.sh` | Issue created → now (snapshot; true lead time measured at release) | `.claude/skills/github-project/scripts/lead-time.sh <ISSUE_NUMBER>` |
-| `cycle-time.sh` | First commit → last commit for an issue (active work duration) | `.claude/skills/github-project/scripts/cycle-time.sh <ISSUE_NUMBER> [BRANCH]` |
-| `pr-metrics.sh` | PR size (additions, deletions, files) | `.claude/skills/github-project/scripts/pr-metrics.sh <PR_NUMBER>` |
-| `issue-summary.sh` | Full completion summary (auto-detects release) | `.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> [BRANCH] [PR_NUMBER]` |
-| `release-velocity.sh` | Post velocity Discussion for a release | `.claude/skills/github-project/scripts/release-velocity.sh <TAG>` |
-| `helpers.sh` | Shared functions (sourced by other scripts) | `source .claude/skills/github-project/scripts/helpers.sh` |
+**Commands for local use:**
 
-`cycle-time.sh` finds commits associated with an issue through multiple signals:
-1. Commits mentioning `(#N)` in the message (conventional commit trailers)
-2. Commits linked to PRs that reference the issue
-3. Commits on an explicit branch (optional fallback)
-4. Commit SHAs mentioned in the issue body or comments
+| Command | Purpose |
+|---------|---------|
+| `gh velocity issue <NUMBER>` | Full metrics for a single issue (lead time, cycle time) |
+| `gh velocity pr <NUMBER>` | Full metrics for a single PR |
+| `gh velocity flow lead-time <NUMBER>` | Lead time for a specific issue |
+| `gh velocity flow cycle-time <NUMBER>` | Cycle time for a specific issue |
+| `gh velocity report --since 7d` | Project-wide report for the last 7 days |
+| `gh velocity quality release <TAG>` | Release quality analysis |
 
-Run the summary script when handing work to the human:
+**When handing work to the human**, run:
 
 ```bash
-.claude/skills/github-project/scripts/issue-summary.sh <ISSUE_NUMBER> [BRANCH] [PR_NUMBER]
+gh velocity issue <ISSUE_NUMBER> -r pretty
 ```
 
-### Release Velocity Discussion
+**Automated workflows** (no manual action needed):
 
-After every release, post a velocity report as a GitHub Discussion in the Announcements category:
-
-```bash
-.claude/skills/github-project/scripts/release-velocity.sh v1.6.5
-```
-
-This is called automatically at the end of the `/release` skill (Step 9). It:
-1. Finds all issues referenced in commits between the previous tag and this tag
-2. Calculates lead time (created → release) and cycle time (first → last commit) for each
-3. Posts a Discussion with a metrics table and link to release notes
-
-The `/release` skill MUST call this script after Step 8 (post-release summary).
-
-### Future: `gh velocity` Extension
-
-These metrics scripts are candidates for a future `gh` CLI extension written in Go:
-
-```
-gh velocity show          # current open issues with age
-gh velocity stats         # lead/cycle time stats across closed issues
-gh velocity trend         # trend chart over last N issues/releases
-gh velocity release v1.2  # metrics for a specific release
-```
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| `velocity-weekly.yml` | Monday 09:00 UTC | Posts a Discussion with 7-day project metrics |
+| `velocity-pr.yml` | PR merged | Appends velocity metrics to PR body |
+| `velocity-issue.yml` | Issue closed (completed) | Appends velocity metrics to issue body |
+| `velocity-release.yml` | Release published | Posts release quality Discussion |
 
 This is out of scope for now but the data model is already in place via issue timestamps, commit timestamps, and PR metadata.
 

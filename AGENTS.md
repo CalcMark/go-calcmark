@@ -28,7 +28,7 @@ You are an expert language designer and implementer for the go-calcmark language
   - The spec can **never** depend on the implementation.
 - Golden examples in ./testdata are used both as valid and invalid grammar, semantic analysis, and runtime behavior. They are a great way to get oriented as to what the Calcmark language supports and does not support.
 - Manage GitHub issue lifecycle using the `github-project` skill — covers issue discovery, status transitions, local vs. PR workflows, and completion metrics.
-    - Use `.claude/skills/github-project/scripts/issue-summary.sh` to print metrics when handing work back to the human.
+    - Use `gh velocity issue <ISSUE_NUMBER> -r pretty` to print metrics when handing work back to the human.
 
 
 ## Quality
