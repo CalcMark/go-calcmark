@@ -14,18 +14,21 @@ quality:
   categories:
     - name: bug
       match:
+        - "type:Bug"  # repo-configured issue type
         - "label:bug"
         - "title:/\\bfix(es|ed)?\\b/i"
         - "title:/^fix[\\(: ]/i"
         - "title:/^bug[\\(: ]/i"
     - name: feature
       match:
+        - "type:Feature"  # repo-configured issue type
         - "label:enhancement"
         - "title:/^feat[\\(: ]/i"
         - "title:/^add[\\(: ]/i"
         - "title:/^feature[\\(: ]/i"
     - name: chore
       match:
+        - "type:Task"  # repo-configured issue type
         - "title:/^refactor[\\(: ]/i"
         - "title:/^chore[\\(: ]/i"
         - "title:/^ci[\\(: ]/i"
@@ -64,6 +67,8 @@ lifecycle:
 # CI/Actions: requires 'discussions: write' in workflow permissions.
 discussions:
   category: General
+  # title: "Weekly Velocity: {{.Repo}} ({{.Date}})"  # optional Go template
+  # repo: owner/other-repo                            # optional: post to a different repo
 
 # Effort: how effort is assigned to work items (shared by velocity and WIP).
 effort:
