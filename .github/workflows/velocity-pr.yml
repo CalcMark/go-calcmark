@@ -25,73 +25,63 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install gh-velocity
-        run: gh extension install dvhthomas/gh-velocity
+        run: gh extension install dvhthomas/gh-velocity --pin v0.1.1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine PR number
         id: pr
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "number=${{ inputs.pr_number }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "number=$INPUT_NUMBER" >> "$GITHUB_OUTPUT"
           else
-            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Generate metrics
         id: metrics
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ITEM_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
-          METRICS=$(gh velocity pr ${{ steps.pr.outputs.number }} -r markdown 2>/dev/null || echo "")
-          if [ -z "$METRICS" ]; then
+          gh velocity pr "$ITEM_NUMBER" -r markdown > /tmp/velocity-metrics.md 2>/dev/null || true
+          if [ ! -s /tmp/velocity-metrics.md ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Write metrics to a file to preserve formatting
-          echo "$METRICS" > /tmp/velocity-metrics.md
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Update PR body
         if: steps.metrics.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ITEM_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
-          PR_NUM="${{ steps.pr.outputs.number }}"
-          METRICS=$(cat /tmp/velocity-metrics.md)
-
-          # Get current body
-          CURRENT_BODY=$(gh pr view "$PR_NUM" --json body --jq '.body // ""')
+          # Get current body to a file (avoids shell injection via body content)
+          gh pr view "$ITEM_NUMBER" --json body --jq '.body // ""' > /tmp/current-body.txt
 
           # Build the metrics block
-          METRICS_BLOCK="<!-- gh-velocity-start -->
-          ---
-          <details>
-          <summary>Velocity Metrics</summary>
+          {
+            echo '<!-- gh-velocity-start -->'
+            echo '---'
+            echo '<details>'
+            echo '<summary>Velocity Metrics</summary>'
+            echo ''
+            cat /tmp/velocity-metrics.md
+            echo ''
+            echo '</details>'
+            echo '<!-- gh-velocity-end -->'
+          } > /tmp/metrics-block.txt
 
-          ${METRICS}
+          # Strip old sentinel block if present, then append new one
+          sed '/<!-- gh-velocity-start -->/,/<!-- gh-velocity-end -->/d' /tmp/current-body.txt > /tmp/new-body.txt
+          echo '' >> /tmp/new-body.txt
+          cat /tmp/metrics-block.txt >> /tmp/new-body.txt
 
-          </details>
-          <!-- gh-velocity-end -->"
-
-          # Check if sentinel markers already exist and replace, otherwise append
-          if echo "$CURRENT_BODY" | grep -q '<!-- gh-velocity-start -->'; then
-            # Replace existing block using awk
-            NEW_BODY=$(echo "$CURRENT_BODY" | awk '
-              /<!-- gh-velocity-start -->/{skip=1; next}
-              /<!-- gh-velocity-end -->/{skip=0; next}
-              !skip{print}
-            ')
-            NEW_BODY="${NEW_BODY}
-          ${METRICS_BLOCK}"
-          else
-            NEW_BODY="${CURRENT_BODY}
-
-          ${METRICS_BLOCK}"
-          fi
-
-          gh pr edit "$PR_NUM" --body "$NEW_BODY"
+          gh pr edit "$ITEM_NUMBER" --body-file /tmp/new-body.txt

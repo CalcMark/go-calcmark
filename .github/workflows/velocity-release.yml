@@ -26,21 +26,26 @@ jobs:
           fetch-depth: 0
 
       - name: Install gh-velocity
-        run: gh extension install dvhthomas/gh-velocity
+        run: gh extension install dvhthomas/gh-velocity --pin v0.1.1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine tag
         id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "name=$INPUT_TAG" >> "$GITHUB_OUTPUT"
           else
-            echo "name=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Post release quality report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_VELOCITY_POST_LIVE: 'true'
-        run: gh velocity quality release ${{ steps.tag.outputs.name }} --post -r markdown
+          TAG_NAME: ${{ steps.tag.outputs.name }}
+        run: gh velocity quality release "$TAG_NAME" --post -r markdown

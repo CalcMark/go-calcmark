@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install gh-velocity
-        run: gh extension install dvhthomas/gh-velocity
+        run: gh extension install dvhthomas/gh-velocity --pin v0.1.1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

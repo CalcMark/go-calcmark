@@ -53,9 +53,9 @@ Run `gh velocity config preflight --write` to auto-generate `.gh-velocity.yml` a
 
 Replace Step 9 in `.claude/commands/release.md` to call `gh velocity quality release vX.Y.Z --post -r markdown` instead of `release-velocity.sh`.
 
-### 4. Keep local scripts for agent use (no deletion)
+### 4. Remove legacy velocity scripts
 
-The `issue-summary.sh` is used by the `github-project` skill for local agent metrics. These scripts remain available. The new workflows are additive CI automation, not a script removal.
+All six custom bash scripts were deleted. Agents now use `gh velocity issue <N> -r pretty` for local metrics (available via the `gh-velocity` CLI extension). The `github-project` skill, AGENTS.md, and CLAUDE.md were updated accordingly.
 
 ## Technical Considerations
 
@@ -114,7 +114,7 @@ This keeps automated dependency PRs from skewing velocity metrics.
 - **Interaction graph**: PR merge → velocity-pr workflow → edits PR body. Issue close → velocity-issue workflow → edits issue body. Weekly cron → velocity-weekly workflow → creates/updates Discussion. Release tag push → release.yml → GoReleaser (unchanged). The `/release` command's Step 9 now calls `gh velocity` instead of `release-velocity.sh`.
 - **Error propagation**: Workflow failures are isolated — a failed metrics insertion does not affect merges, releases, or other workflows. Non-zero exit from `gh velocity` fails the workflow step but the PR/issue is already closed.
 - **State lifecycle risks**: No persistent state. Metrics are computed on-demand from GitHub's event timeline. Sentinel markers in PR/issue bodies are the only state, and they're idempotent.
-- **API surface parity**: The `github-project` skill continues to call `issue-summary.sh` locally. CI automation uses `gh-velocity`. Two parallel systems, but they serve different contexts (local agent vs CI).
+- **API surface parity**: Both local agent use and CI automation now use `gh-velocity` commands. Single system, consistent behavior.
 
 ## Acceptance Criteria
 

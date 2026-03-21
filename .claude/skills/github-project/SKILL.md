@@ -166,8 +166,6 @@ gh velocity issue <ISSUE_NUMBER> -r pretty
 | `velocity-issue.yml` | Issue closed (completed) | Appends velocity metrics to issue body |
 | `velocity-release.yml` | Release published | Posts release quality Discussion |
 
-This is out of scope for now but the data model is already in place via issue timestamps, commit timestamps, and PR metadata.
-
 ## Integration with Compound Engineering Pipeline
 
 This skill integrates with the `/lfg` pipeline:
