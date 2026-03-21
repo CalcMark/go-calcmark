@@ -94,6 +94,16 @@ Three issues found during review:
 
 The `QuantityLiteral` node fell through to the `default → true` arm in `allIdentifiersDefined`, just like `DirectiveRef` did before it was fixed. Added an explicit case that recurses into `Expr` when non-nil. This closes the same fragile-default pattern the plan explicitly identified.
 
+### TUI Side-by-Side preview: `GetLineResults` must use `InterpolatedSource`
+
+**Bug:** `{{@scale}}` and `{{@globals.field}}` showed raw in Side-by-Side preview while `{{variable}}` worked. Root cause: `GetLineResults()` used `b.Source()` (raw) for TextBlock lines. The Side-by-Side mode (`PreviewRendered`) goes through `renderTextBlocks()` → `InterpolatedSource()`, so it WAS correct for Rendered mode. But the `GetLineResults` path also feeds into per-line alignment for text lines.
+
+**Fix:** Changed TextBlock case in `GetLineResults` to use `b.InterpolatedSource()` which falls back to raw `Source()` when no interpolation exists.
+
+**Key insight:** Interpolation in CalcMark happens as a post-evaluation transform on `TextBlock` objects via `SetInterpolatedSource()`. Any code path that reads TextBlock content for display MUST use `InterpolatedSource()`, never `Source()`. The two paths that consume TextBlock content are:
+1. `renderTextBlocks()` — already correct (used by Rendered/Reading modes)
+2. `GetLineResults()` — was using raw Source, now fixed
+
 ## Cookbook: "Add a new expression form to CalcMark"
 
 Based on this implementation, here's the checklist for making any new expression form work in all positions:
