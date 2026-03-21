@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -216,9 +217,9 @@ func TestExtractPrefix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractPrefix(tt.lineText, tt.col)
+			got := features.ExtractPrefix(tt.lineText, tt.col)
 			if got != tt.want {
-				t.Errorf("extractPrefix(%q, %d) = %q, want %q", tt.lineText, tt.col, got, tt.want)
+				t.Errorf("features.ExtractPrefix(%q, %d) = %q, want %q", tt.lineText, tt.col, got, tt.want)
 			}
 		})
 	}
@@ -501,7 +502,7 @@ func TestDirectiveCompletion_ScaleOfferedWithFrontmatter(t *testing.T) {
 		t.Fatal("expected document to be parsed")
 	}
 
-	prefix := extractPrefix("a = @s", 6)
+	prefix := features.ExtractPrefix("a = @s", 6)
 	if prefix != "@s" {
 		t.Fatalf("extractPrefix = %q, want %q", prefix, "@s")
 	}
@@ -543,7 +544,7 @@ func TestDirectiveCompletion_GlobalsFieldsFromFrontmatter(t *testing.T) {
 		t.Fatal("expected document to be parsed")
 	}
 
-	prefix := extractPrefix("a = @globals.", 13)
+	prefix := features.ExtractPrefix("a = @globals.", 13)
 	if prefix != "@globals." {
 		t.Fatalf("extractPrefix = %q, want %q", prefix, "@globals.")
 	}
