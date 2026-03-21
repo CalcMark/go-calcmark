@@ -4,6 +4,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
 )
@@ -108,11 +109,14 @@ func GetFunctionByName(name string) (FunctionInfo, bool) {
 }
 
 // synonymMap maps synonym names to their canonical function name.
-// Built lazily from the features registry.
-var synonymMap map[string]string
+// Built once via sync.Once from the features registry.
+var (
+	synonymMap     map[string]string
+	synonymMapOnce sync.Once
+)
 
 func getSynonymMap() map[string]string {
-	if synonymMap == nil {
+	synonymMapOnce.Do(func() {
 		synonymMap = make(map[string]string)
 		reg := features.DefaultRegistry()
 		for _, fn := range BuiltinFunctions {
@@ -124,6 +128,6 @@ func getSynonymMap() map[string]string {
 				synonymMap[strings.ToLower(syn)] = fn.Name
 			}
 		}
-	}
+	})
 	return synonymMap
 }

@@ -148,10 +148,12 @@ func (r *Registry) All() []Feature {
 }
 
 // GetByName returns the first feature with the given name, or nil if not found.
+// Returns a copy to prevent mutation of the shared DefaultRegistry() singleton.
 func (r *Registry) GetByName(name string) *Feature {
 	for i := range r.features {
 		if r.features[i].Name == name {
-			return &r.features[i]
+			f := r.features[i]
+			return &f
 		}
 	}
 	return nil
