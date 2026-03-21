@@ -160,6 +160,21 @@ func TestFeature(t *testing.T) {
 }
 ```
 
+### Test Quality Rubric
+
+When writing or reviewing tests, classify them using this rubric:
+
+**Behavioral test (high value):** Would still catch a bug if the production code were deleted and rewritten from scratch. These tests assert on observable outputs — evaluation results, rendered views, error messages — not on internal function names or field values.
+
+**Implementation-coupled test (fragile):** Would break on a correct refactoring even though behavior is unchanged. These tests re-implement production logic, assert on internal state fields, or depend on the exact structure of implementation types.
+
+Guidelines:
+- Prefer exact value assertions (`want "42"`) over partial matches (`strings.Contains`)
+- For interpreter tests, use `input → expected` table-driven patterns (see `all_features_test.go`)
+- For TUI catwalk tests, prefer `observe=results` (user-visible output) over `observe=debug` (internal state) when the expectation is about what the user sees
+- Golden tests in `testdata/` serve as language specification — never regenerate them to match new output; fix the code to match the golden files
+- The acid test: "If I rewrote the production code differently, would this test still catch a bug?"
+
 ## Code Style
 
 - Follow [Effective Go](https://golang.org/doc/effective_go.html)
