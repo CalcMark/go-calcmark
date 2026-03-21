@@ -15,11 +15,9 @@ jobs:
     name: Post Weekly Velocity Report
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install gh-velocity
-        run: gh extension install dvhthomas/gh-velocity --pin v0.1.1
+      - run: gh extension install dvhthomas/gh-velocity
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -27,4 +25,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_VELOCITY_POST_LIVE: 'true'
-        run: gh velocity report --since 7d --post -r markdown
+        run: gh velocity report --since 7d --post --results markdown

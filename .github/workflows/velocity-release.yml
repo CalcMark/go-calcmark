@@ -20,32 +20,25 @@ jobs:
     name: Post Release Velocity Report
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install gh-velocity
-        run: gh extension install dvhthomas/gh-velocity --pin v0.1.1
+      - run: gh extension install dvhthomas/gh-velocity
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Determine tag
-        id: tag
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_TAG: ${{ inputs.tag }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "name=$INPUT_TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Post release quality report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_VELOCITY_POST_LIVE: 'true'
-          TAG_NAME: ${{ steps.tag.outputs.name }}
-        run: gh velocity quality release "$TAG_NAME" --post -r markdown
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="$RELEASE_TAG"
+          fi
+          gh velocity quality release "$TAG" --post --results markdown
