@@ -221,7 +221,10 @@ func (m *Model) GetLineResults() []LineResult {
 			}
 
 		case *document.TextBlock:
-			for _, line := range b.Source() {
+			// Use InterpolatedSource so {{var}}, {{@scale}}, and {{@globals.field}}
+			// are resolved in the Side-by-Side preview. InterpolatedSource falls
+			// back to raw Source when no interpolation has been applied.
+			for _, line := range b.InterpolatedSource() {
 				results = append(results, LineResult{
 					LineNum: lineNum,
 					Source:  line,
