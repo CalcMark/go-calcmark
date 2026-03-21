@@ -45,7 +45,7 @@ func kebabCase(name string) string {
 }
 
 func run() error {
-	reg := features.NewRegistry()
+	reg := features.DefaultRegistry()
 
 	output := make(JSONOutput)
 	for _, cat := range reg.Categories() {

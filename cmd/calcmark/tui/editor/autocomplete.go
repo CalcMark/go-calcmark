@@ -32,7 +32,7 @@ func NewFunctionSuggestionSource() *FunctionSuggestionSource {
 		nlByFunction: make(map[string][]nlInfo),
 	}
 
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		// Parseable aliases with examples
 		for _, alias := range f.Aliases {
@@ -64,17 +64,17 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 	prefix = strings.ToLower(prefix)
 	var suggestions []components.Suggestion
 
-	reg := features.NewRegistry()
+	reg := features.DefaultRegistry()
 	for _, fn := range interpreter.BuiltinFunctions {
 		// Look up feature metadata from the registry
 		feature := reg.GetByName(fn.Name)
 
 		// Match primary name or any synonym
-		fnMatched := strings.HasPrefix(strings.ToLower(fn.Name), prefix)
+		fnMatched := features.MatchesPrefix(fn.Name, prefix)
 		matchedSynonym := ""
 		if feature != nil {
 			for _, syn := range feature.Synonyms {
-				if strings.HasPrefix(strings.ToLower(syn), prefix) {
+				if features.MatchesPrefix(syn, prefix) {
 					fnMatched = true
 					matchedSynonym = syn
 					break
@@ -87,7 +87,7 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 		var matchedNL []nlInfo
 		if nls, ok := f.nlByFunction[fn.Name]; ok {
 			for _, nl := range nls {
-				if strings.HasPrefix(strings.ToLower(nl.matchWord), prefix) {
+				if features.MatchesPrefix(nl.matchWord, prefix) {
 					nlMatched = true
 					matchedNL = append(matchedNL, nl)
 				}
@@ -175,14 +175,14 @@ func (u *UnitSuggestionSource) GetSuggestions(prefix string) []components.Sugges
 			continue
 		}
 
-		matched := strings.HasPrefix(strings.ToLower(unit.Canonical), prefix)
+		matched := features.MatchesPrefix(unit.Canonical, prefix)
 		if !matched {
-			matched = strings.HasPrefix(strings.ToLower(unit.Symbol), prefix)
+			matched = features.MatchesPrefix(unit.Symbol, prefix)
 		}
 		// Also check aliases
 		if !matched {
 			for _, alias := range unit.Aliases {
-				if strings.HasPrefix(strings.ToLower(alias), prefix) {
+				if features.MatchesPrefix(alias, prefix) {
 					matched = true
 					break
 				}
@@ -236,7 +236,7 @@ func (v *VariableSuggestionSource) GetSuggestions(prefix string) []components.Su
 	}
 
 	for varName, value := range vars {
-		if !strings.HasPrefix(strings.ToLower(varName), prefix) {
+		if !features.MatchesPrefix(varName, prefix) {
 			continue
 		}
 		// Position filtering: exclude variables defined at or after cursor
@@ -289,7 +289,7 @@ func (d *DirectiveSuggestionSource) GetSuggestions(prefix string) []components.S
 	// @scale — offered when frontmatter has scale config
 	if fm.Scale != nil {
 		name := "@scale"
-		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(prefix)) {
+		if features.MatchesPrefix(name, strings.ToLower(prefix)) {
 			suggestions = append(suggestions, components.Suggestion{
 				Name:        "@scale",
 				Category:    "directive",
@@ -314,7 +314,7 @@ func (d *DirectiveSuggestionSource) GetSuggestions(prefix string) []components.S
 			// Prefix is @globals.something — offer field completions
 			fieldPrefix := strings.ToLower(prefix[len("@globals."):])
 			for name, value := range fm.Globals {
-				if strings.HasPrefix(strings.ToLower(name), fieldPrefix) {
+				if features.MatchesPrefix(name, fieldPrefix) {
 					suggestions = append(suggestions, components.Suggestion{
 						Name:        "@globals." + name,
 						Category:    "directive",

@@ -114,8 +114,7 @@ func (m *Model) updateAutocompleteState() {
 	// No autocomplete inside frontmatter — it's YAML, not CalcMark.
 	if m.cursorLine < m.frontmatterLineCount() {
 		if m.mode == StateAutocomplete {
-			m.mode = StateDefault
-			m.autocompleteState = components.AutosuggestState{}
+			m.exitAutocomplete()
 		}
 		return
 	}
@@ -124,8 +123,7 @@ func (m *Model) updateAutocompleteState() {
 
 	if len(prefix) < minAutocompletePrefix {
 		if m.mode == StateAutocomplete {
-			m.mode = StateDefault
-			m.autocompleteState = components.AutosuggestState{}
+			m.exitAutocomplete()
 		}
 		return
 	}
@@ -149,8 +147,7 @@ func (m *Model) updateAutocompleteState() {
 
 	if len(suggestions) == 0 {
 		if m.mode == StateAutocomplete {
-			m.mode = StateDefault
-			m.autocompleteState = components.AutosuggestState{}
+			m.exitAutocomplete()
 		}
 		return
 	}

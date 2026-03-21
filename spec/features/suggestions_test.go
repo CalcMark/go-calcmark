@@ -37,3 +37,26 @@ func TestFilterSuggestions(t *testing.T) {
 		}
 	})
 }
+
+func TestMatchesPrefix(t *testing.T) {
+	tests := []struct {
+		s, prefix string
+		want      bool
+	}{
+		{"Average", "av", true},    // case-insensitive
+		{"average", "av", true},    // exact case
+		{"avg", "av", true},        // shorter name
+		{"beta", "av", false},      // no match
+		{"average", "", true},      // empty prefix matches all
+		{"", "av", false},          // empty string never matches
+		{"@globals", "@g", true},   // directive prefix
+		{"Meter", "meter", true},   // unit name case fold
+	}
+	for _, tt := range tests {
+		t.Run(tt.s+"_"+tt.prefix, func(t *testing.T) {
+			if got := MatchesPrefix(tt.s, tt.prefix); got != tt.want {
+				t.Errorf("MatchesPrefix(%q, %q) = %v, want %v", tt.s, tt.prefix, got, tt.want)
+			}
+		})
+	}
+}

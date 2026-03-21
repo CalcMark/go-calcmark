@@ -35,6 +35,13 @@ func TestAllInterpreterFeatures(t *testing.T) {
 		{"percentages", "discount", "100 * (1 - 20%)\n", "80"},
 		{"percentages", "markup", "100 * (1 + 20%)\n", "120"},
 
+		// Duration arithmetic
+		{"durations", "addition", "5 days + 3 days\n", "8 days"},
+		{"durations", "subtraction", "10 hours - 4 hours\n", "6 hours"},
+		{"durations", "scalar multiply", "3 days * 2\n", "6 days"},
+		{"durations", "mixed units addition", "5 days + 2 days\n", "7 days"},
+		{"durations", "hours to minutes", "2 hours in minutes\n", "120 minutes"},
+
 		// Functions
 		{"functions", "avg", "avg(1, 2, 3)\n", "2"},
 		{"functions", "sqrt", "sqrt(25)\n", "5"},

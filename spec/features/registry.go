@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -90,6 +91,20 @@ func NewRegistry() *Registry {
 	return r
 }
 
+var (
+	defaultRegistry     *Registry
+	defaultRegistryOnce sync.Once
+)
+
+// DefaultRegistry returns a shared, read-only Registry instance.
+// Use this for production code; use NewRegistry() in tests that need a fresh instance.
+func DefaultRegistry() *Registry {
+	defaultRegistryOnce.Do(func() {
+		defaultRegistry = NewRegistry()
+	})
+	return defaultRegistry
+}
+
 // Search finds features matching a query string (prefix match on name or aliases).
 func (r *Registry) Search(query string) []Feature {
 	if query == "" {
@@ -133,10 +148,12 @@ func (r *Registry) All() []Feature {
 }
 
 // GetByName returns the first feature with the given name, or nil if not found.
+// Returns a copy to prevent mutation of the shared DefaultRegistry() singleton.
 func (r *Registry) GetByName(name string) *Feature {
 	for i := range r.features {
 		if r.features[i].Name == name {
-			return &r.features[i]
+			f := r.features[i]
+			return &f
 		}
 	}
 	return nil

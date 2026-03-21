@@ -68,13 +68,13 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	prefix = strings.ToLower(prefix)
 	var items []protocol.CompletionItem
 
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
-		if prefix != "" && !strings.HasPrefix(strings.ToLower(f.Name), prefix) {
+		if prefix != "" && !features.MatchesPrefix(f.Name, prefix) {
 			// Check synonyms too
 			matched := false
 			for _, syn := range f.Synonyms {
-				if strings.HasPrefix(strings.ToLower(syn), prefix) {
+				if features.MatchesPrefix(syn, prefix) {
 					matched = true
 					break
 				}
@@ -114,7 +114,7 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 			if before, _, ok := strings.Cut(aliasName, " "); ok {
 				firstWord = before
 			}
-			if prefix != "" && !strings.HasPrefix(strings.ToLower(firstWord), prefix) {
+			if prefix != "" && !features.MatchesPrefix(firstWord, prefix) {
 				continue
 			}
 
@@ -324,11 +324,11 @@ func unitCompletionItems(prefix string) []protocol.CompletionItem {
 		}
 
 		matched := prefix == "" ||
-			strings.HasPrefix(strings.ToLower(unit.Canonical), prefix) ||
-			strings.HasPrefix(strings.ToLower(unit.Symbol), prefix)
+			features.MatchesPrefix(unit.Canonical, prefix) ||
+			features.MatchesPrefix(unit.Symbol, prefix)
 		if !matched {
 			for _, alias := range unit.Aliases {
-				if strings.HasPrefix(strings.ToLower(alias), prefix) {
+				if features.MatchesPrefix(alias, prefix) {
 					matched = true
 					break
 				}
@@ -357,7 +357,11 @@ func unitCompletionItems(prefix string) []protocol.CompletionItem {
 	return items
 }
 
-// variableCompletionItems returns completion items for variables defined above the cursor line.
+// variableCompletionItems returns completion items for variables.
+// Known limitation: cursorLine is accepted but not used for position filtering.
+// The TUI equivalent (VariableSuggestionSource) correctly filters variables
+// defined at or after the cursor. This requires mapping document blocks to
+// variable definition lines, which Environment does not currently expose.
 func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine int) []protocol.CompletionItem {
 	prefix = strings.ToLower(prefix)
 	var items []protocol.CompletionItem
@@ -369,7 +373,7 @@ func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine i
 
 	vars := env.GetAllVariables()
 	for name, val := range vars {
-		if prefix != "" && !strings.HasPrefix(strings.ToLower(name), prefix) {
+		if prefix != "" && !features.MatchesPrefix(name, prefix) {
 			continue
 		}
 
@@ -404,7 +408,7 @@ func directiveCompletionItems(snap *DocumentSnapshot, prefix string) []protocol.
 	// @scale
 	if fm.Scale != nil {
 		name := "@scale"
-		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(prefix)) {
+		if features.MatchesPrefix(name, strings.ToLower(prefix)) {
 			detail := fmt.Sprintf("Scale factor (%s)", fm.Scale.Factor.String())
 			items = append(items, protocol.CompletionItem{
 				Label:      name,
@@ -430,7 +434,7 @@ func directiveCompletionItems(snap *DocumentSnapshot, prefix string) []protocol.
 		} else if strings.HasPrefix(strings.ToLower(prefix), "@globals.") {
 			fieldPrefix := strings.ToLower(prefix[len("@globals."):])
 			for name, value := range fm.Globals {
-				if strings.HasPrefix(strings.ToLower(name), fieldPrefix) {
+				if features.MatchesPrefix(name, fieldPrefix) {
 					fullName := "@globals." + name
 					detail := value
 					items = append(items, protocol.CompletionItem{

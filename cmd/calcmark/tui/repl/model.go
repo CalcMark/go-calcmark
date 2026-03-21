@@ -76,7 +76,7 @@ func New(doc *document.Document) Model {
 	m := Model{
 		doc:           doc,
 		eval:          eval,
-		registry:      features.NewRegistry(),
+		registry:      features.DefaultRegistry(),
 		input:         ti,
 		pinnedVars:    make(map[string]bool),
 		changedVars:   make(map[string]bool),

@@ -351,3 +351,27 @@ func TestGetByName(t *testing.T) {
 		t.Error("GetByName(nonexistent) should return nil")
 	}
 }
+
+func TestDefaultRegistryMatchesNewRegistry(t *testing.T) {
+	fresh := NewRegistry()
+	singleton := DefaultRegistry()
+
+	freshAll := fresh.All()
+	singletonAll := singleton.All()
+
+	if len(freshAll) != len(singletonAll) {
+		t.Fatalf("DefaultRegistry has %d features, NewRegistry has %d", len(singletonAll), len(freshAll))
+	}
+
+	for i, f := range freshAll {
+		if f.Name != singletonAll[i].Name {
+			t.Errorf("feature %d: DefaultRegistry has %q, NewRegistry has %q", i, singletonAll[i].Name, f.Name)
+		}
+	}
+
+	// Verify a second call returns the same instance.
+	second := DefaultRegistry()
+	if second != singleton {
+		t.Error("DefaultRegistry() should return the same pointer on repeated calls")
+	}
+}

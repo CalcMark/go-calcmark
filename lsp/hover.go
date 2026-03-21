@@ -52,7 +52,7 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	}
 
 	// Try function hover
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		if strings.EqualFold(f.Name, word) {
 			content := fmt.Sprintf("**%s**\n\n`%s`\n\n%s", f.Name, f.Syntax, f.Description)

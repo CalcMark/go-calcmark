@@ -44,7 +44,7 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 	// Find the feature for its signature string and description
 	var signature string
 	var description string
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		if f.Name == funcName || slices.Contains(f.Synonyms, funcName) {
 			signature = f.Syntax

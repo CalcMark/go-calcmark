@@ -4,6 +4,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
 )
@@ -17,19 +18,9 @@ type FunctionInfo struct {
 	Category    string   // Grouping for help display (e.g., "Math", "Network", "Storage")
 }
 
-// registry is a lazily-initialized features registry.
-var registry *features.Registry
-
-func getRegistry() *features.Registry {
-	if registry == nil {
-		registry = features.NewRegistry()
-	}
-	return registry
-}
-
 // toFunctionInfo builds a FunctionInfo by looking up the feature from spec/features.Registry.
 func toFunctionInfo(name string) FunctionInfo {
-	f := getRegistry().GetByName(name)
+	f := features.DefaultRegistry().GetByName(name)
 	if f == nil {
 		return FunctionInfo{Name: name}
 	}
@@ -94,7 +85,7 @@ func GetFunctionNames() []string {
 	names := make([]string, 0, len(BuiltinFunctions)*2)
 	for _, fn := range BuiltinFunctions {
 		names = append(names, fn.Name)
-		f := getRegistry().GetByName(fn.Name)
+		f := features.DefaultRegistry().GetByName(fn.Name)
 		if f != nil {
 			names = append(names, f.Synonyms...)
 		}
@@ -109,7 +100,7 @@ func GetFunctionByName(name string) (FunctionInfo, bool) {
 		if fn.Name == name {
 			return toFunctionInfo(fn.Name), true
 		}
-		f := getRegistry().GetByName(fn.Name)
+		f := features.DefaultRegistry().GetByName(fn.Name)
 		if f != nil && slices.Contains(f.Synonyms, name) {
 			return toFunctionInfo(fn.Name), true
 		}
@@ -118,13 +109,16 @@ func GetFunctionByName(name string) (FunctionInfo, bool) {
 }
 
 // synonymMap maps synonym names to their canonical function name.
-// Built lazily from the features registry.
-var synonymMap map[string]string
+// Built once via sync.Once from the features registry.
+var (
+	synonymMap     map[string]string
+	synonymMapOnce sync.Once
+)
 
 func getSynonymMap() map[string]string {
-	if synonymMap == nil {
+	synonymMapOnce.Do(func() {
 		synonymMap = make(map[string]string)
-		reg := getRegistry()
+		reg := features.DefaultRegistry()
 		for _, fn := range BuiltinFunctions {
 			f := reg.GetByName(fn.Name)
 			if f == nil {
@@ -134,6 +128,6 @@ func getSynonymMap() map[string]string {
 				synonymMap[strings.ToLower(syn)] = fn.Name
 			}
 		}
-	}
+	})
 	return synonymMap
 }

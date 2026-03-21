@@ -19,14 +19,16 @@ type FunctionDef struct {
 	Name string // Primary name — must match a Feature in spec/features/registry.go
 	// Eval is the function implementation. It receives the interpreter (for evaluating
 	// arguments) and the AST node (for accessing raw arguments when needed).
-	// This field is populated in init() to avoid initialization cycles.
+	// Populated in init() to break an initialization cycle (see BuiltinFunctions).
 	Eval func(interp *Interpreter, f *ast.FunctionCall) (types.Type, error)
 }
 
 // BuiltinFunctions registers all CalcMark function implementations.
 // Metadata (description, params, synonyms) comes from spec/features.Registry.
 // Adding a function here requires a matching Feature in spec/features/registry.go.
-// Note: Eval fields are populated in init() to avoid initialization cycles.
+//
+// Eval fields are populated in init() to break an initialization cycle:
+// BuiltinFunctions → evalXxxFunc → evalAllArgs → evalNode → evalFunctionCall → BuiltinFunctions.
 var BuiltinFunctions = []FunctionDef{
 	{Name: "avg"},
 	{Name: "sum"},
@@ -48,7 +50,6 @@ var BuiltinFunctions = []FunctionDef{
 }
 
 // functionEvalMap maps function names to their Eval implementations.
-// Used by init() to populate BuiltinFunctions.Eval fields.
 var functionEvalMap = map[string]func(interp *Interpreter, f *ast.FunctionCall) (types.Type, error){
 	"avg":           evalAvgFunc,
 	"sum":           evalSumFunc,
@@ -70,7 +71,6 @@ var functionEvalMap = map[string]func(interp *Interpreter, f *ast.FunctionCall) 
 }
 
 func init() {
-	// Populate Eval fields after all functions are defined to avoid initialization cycles.
 	for i := range BuiltinFunctions {
 		fn := &BuiltinFunctions[i]
 		if evalFn, ok := functionEvalMap[fn.Name]; ok {

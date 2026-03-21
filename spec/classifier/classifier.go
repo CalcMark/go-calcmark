@@ -22,7 +22,7 @@ var (
 
 func getNLTriggerKeywords() map[string]bool {
 	nlTriggerOnce.Do(func() {
-		r := features.NewRegistry()
+		r := features.DefaultRegistry()
 		nlTriggerKeywords = make(map[string]bool)
 		for _, kw := range r.NLTriggerKeywords() {
 			nlTriggerKeywords[kw] = true
