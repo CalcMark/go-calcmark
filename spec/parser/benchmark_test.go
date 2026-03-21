@@ -128,6 +128,71 @@ result = total / 2
 	}
 }
 
+// Benchmark rate slash syntax — exercises the largest parseMultiplicative path
+func BenchmarkParseRateSlash(b *testing.B) {
+	input := "100 MB/s\n"
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := parser.Parse(input)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark rate "per" keyword syntax
+func BenchmarkParseRatePer(b *testing.B) {
+	input := "5 GB per day\n"
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := parser.Parse(input)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark unit conversion with "in" keyword
+func BenchmarkParseUnitConversion(b *testing.B) {
+	input := "10 meters in feet\n"
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := parser.Parse(input)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark capacity syntax — deepest parseMultiplicative path
+func BenchmarkParseCapacity(b *testing.B) {
+	input := "10 TB at 2 TB per disk\n"
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := parser.Parse(input)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark "as % of" syntax
+func BenchmarkParseAsPercentOf(b *testing.B) {
+	input := "50 as % of 200\n"
+
+	b.ResetTimer()
+	for b.Loop() {
+		_, err := parser.Parse(input)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 // Performance targets (adjust based on actual hardware):
 // - Simple: < 5μs, < 500 bytes
 // - Complex: < 20μs, < 2KB

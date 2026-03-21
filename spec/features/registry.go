@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -88,6 +89,20 @@ func NewRegistry() *Registry {
 	r.features = append(r.features, getFractionFeatures()...)
 	r.features = append(r.features, getFrontmatterFeatures()...)
 	return r
+}
+
+var (
+	defaultRegistry     *Registry
+	defaultRegistryOnce sync.Once
+)
+
+// DefaultRegistry returns a shared, read-only Registry instance.
+// Use this for production code; use NewRegistry() in tests that need a fresh instance.
+func DefaultRegistry() *Registry {
+	defaultRegistryOnce.Do(func() {
+		defaultRegistry = NewRegistry()
+	})
+	return defaultRegistry
 }
 
 // Search finds features matching a query string (prefix match on name or aliases).

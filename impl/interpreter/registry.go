@@ -22,7 +22,7 @@ var registry *features.Registry
 
 func getRegistry() *features.Registry {
 	if registry == nil {
-		registry = features.NewRegistry()
+		registry = features.DefaultRegistry()
 	}
 	return registry
 }

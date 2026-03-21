@@ -166,7 +166,7 @@ func printFunctions() {
 // Combines parseable aliases from the spec/features registry with
 // keyword-based alternatives (over, at...per, per).
 func buildNLAliasMap() map[string][]string {
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	result := make(map[string][]string)
 
 	// NL examples for functions with parseable aliases in the registry

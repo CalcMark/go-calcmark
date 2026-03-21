@@ -68,7 +68,7 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	prefix = strings.ToLower(prefix)
 	var items []protocol.CompletionItem
 
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		if prefix != "" && !strings.HasPrefix(strings.ToLower(f.Name), prefix) {
 			// Check synonyms too

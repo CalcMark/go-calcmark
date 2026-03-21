@@ -692,20 +692,22 @@ func durationToDays(dur *types.Duration) int {
 	return int(days.IntPart())
 }
 
+// durationFactors maps duration unit names to their conversion factor in seconds.
+// Package-level to avoid allocating on every duration operation.
+var durationFactors = map[string]decimal.Decimal{
+	"millisecond": decimal.NewFromFloat(0.001), "milliseconds": decimal.NewFromFloat(0.001),
+	"second": decimal.NewFromInt(1), "seconds": decimal.NewFromInt(1),
+	"minute": decimal.NewFromInt(60), "minutes": decimal.NewFromInt(60),
+	"hour": decimal.NewFromInt(3600), "hours": decimal.NewFromInt(3600),
+	"day": decimal.NewFromInt(86400), "days": decimal.NewFromInt(86400),
+	"week": decimal.NewFromInt(604800), "weeks": decimal.NewFromInt(604800),
+	"month": decimal.NewFromInt(2592000), "months": decimal.NewFromInt(2592000), // 30 days
+	"year": decimal.NewFromInt(31536000), "years": decimal.NewFromInt(31536000), // 365 days
+}
+
 // getDurationFactorDecimal returns the conversion factor to seconds for a duration unit.
-// Uses decimal to support sub-second units like milliseconds.
 func getDurationFactorDecimal(unit string) decimal.Decimal {
-	factors := map[string]decimal.Decimal{
-		"millisecond": decimal.NewFromFloat(0.001), "milliseconds": decimal.NewFromFloat(0.001),
-		"second": decimal.NewFromInt(1), "seconds": decimal.NewFromInt(1),
-		"minute": decimal.NewFromInt(60), "minutes": decimal.NewFromInt(60),
-		"hour": decimal.NewFromInt(3600), "hours": decimal.NewFromInt(3600),
-		"day": decimal.NewFromInt(86400), "days": decimal.NewFromInt(86400),
-		"week": decimal.NewFromInt(604800), "weeks": decimal.NewFromInt(604800),
-		"month": decimal.NewFromInt(2592000), "months": decimal.NewFromInt(2592000), // 30 days
-		"year": decimal.NewFromInt(31536000), "years": decimal.NewFromInt(31536000), // 365 days
-	}
-	if f, ok := factors[unit]; ok {
+	if f, ok := durationFactors[unit]; ok {
 		return f
 	}
 	return decimal.NewFromInt(1) // fallback to seconds

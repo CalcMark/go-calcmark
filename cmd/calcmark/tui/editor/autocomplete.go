@@ -32,7 +32,7 @@ func NewFunctionSuggestionSource() *FunctionSuggestionSource {
 		nlByFunction: make(map[string][]nlInfo),
 	}
 
-	registry := features.NewRegistry()
+	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		// Parseable aliases with examples
 		for _, alias := range f.Aliases {
@@ -64,7 +64,7 @@ func (f *FunctionSuggestionSource) GetSuggestions(prefix string) []components.Su
 	prefix = strings.ToLower(prefix)
 	var suggestions []components.Suggestion
 
-	reg := features.NewRegistry()
+	reg := features.DefaultRegistry()
 	for _, fn := range interpreter.BuiltinFunctions {
 		// Look up feature metadata from the registry
 		feature := reg.GetByName(fn.Name)

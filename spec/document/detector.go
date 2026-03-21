@@ -15,7 +15,7 @@ type Detector struct {
 
 // NewDetector creates a new block detector.
 func NewDetector() *Detector {
-	r := features.NewRegistry()
+	r := features.DefaultRegistry()
 	triggers := make(map[string]bool)
 	for _, kw := range r.NLTriggerKeywords() {
 		triggers[kw] = true
