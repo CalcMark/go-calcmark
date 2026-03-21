@@ -648,7 +648,7 @@ func uniformCurrency(args []types.Type) (string, bool) {
 	}
 	for _, arg := range args[1:] {
 		c, ok := arg.(*types.Currency)
-		if !ok || !c.IsSameCurrency(first) {
+		if !ok || !c.IsSameCurrency(first) { // #95: compare by Code so $ and USD match
 			return "", false
 		}
 	}
