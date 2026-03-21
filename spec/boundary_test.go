@@ -29,7 +29,7 @@ func TestSpecNeverImportsImpl(t *testing.T) {
 		}
 
 		for _, imp := range pkg.Imports {
-			if strings.Contains(imp, "/impl/") {
+			if strings.HasPrefix(imp, "github.com/CalcMark/go-calcmark/impl/") {
 				t.Errorf("spec package %s imports impl package %s — this violates the spec/impl boundary", pkg.ImportPath, imp)
 			}
 		}

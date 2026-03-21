@@ -19,10 +19,9 @@ type SuggestionSource interface {
 	GetSuggestions(prefix string) []Suggestion
 }
 
-// MatchesPrefix checks if s starts with lowerPrefix (case-insensitive).
-// lowerPrefix must already be lowercased by the caller.
-func MatchesPrefix(s string, lowerPrefix string) bool {
-	return strings.HasPrefix(strings.ToLower(s), lowerPrefix)
+// MatchesPrefix checks if s starts with prefix (case-insensitive).
+func MatchesPrefix(s string, prefix string) bool {
+	return strings.HasPrefix(strings.ToLower(s), strings.ToLower(prefix))
 }
 
 // FilterSuggestions returns suggestions that match the given prefix.
