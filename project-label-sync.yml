@@ -3,6 +3,8 @@
 project-url: https://github.com/orgs/CalcMark/projects/1
 field: Status
 mapping:
+  Ready:
+    - ready
   "In progress":
     - in-progress
   "In review":
