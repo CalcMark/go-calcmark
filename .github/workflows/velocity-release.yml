@@ -31,14 +31,32 @@ jobs:
       - name: Post release quality report
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_VELOCITY_POST_LIVE: 'true'
           EVENT_NAME: ${{ github.event_name }}
           INPUT_TAG: ${{ inputs.tag }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPO_ID: "R_kgDOQSei8w"
+          CATEGORY_ID: "DIC_kwDOQSei884C4Bnr"
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             TAG="$INPUT_TAG"
           else
             TAG="$RELEASE_TAG"
           fi
-          gh velocity quality release "$TAG" --post
+
+          # Generate markdown (no --post, we post manually with a custom title)
+          gh velocity quality release "$TAG" -r markdown > /tmp/release-report.md
+
+          TITLE="Release Velocity: $TAG"
+          BODY=$(cat /tmp/release-report.md)
+
+          gh api graphql \
+            -f query='mutation($repoId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+              createDiscussion(input: {repositoryId: $repoId, categoryId: $categoryId, title: $title, body: $body}) {
+                discussion { url }
+              }
+            }' \
+            -f repoId="$REPO_ID" \
+            -f categoryId="$CATEGORY_ID" \
+            -f title="$TITLE" \
+            -f body="$BODY" \
+            --jq '.data.createDiscussion.discussion.url'
