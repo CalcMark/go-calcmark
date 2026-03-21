@@ -3,6 +3,7 @@ name: Deploy Site
 on:
   push:
     branches: [main]
+    tags: ["v*"]
 
 concurrency:
   group: "pages"
@@ -44,9 +45,9 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          # Use tag name for releases, git describe for pushes to main
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            echo "version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          # Use tag name for tag pushes/releases, git describe for branch pushes
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           else
             echo "version=$(git describe --tags --always 2>/dev/null || echo dev)" >> "$GITHUB_OUTPUT"
           fi
