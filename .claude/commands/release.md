@@ -152,13 +152,7 @@ Once complete:
 
 ## Step 9: Velocity discussion (automated)
 
-The `velocity-release.yml` GitHub Actions workflow automatically posts a release quality Discussion when a release is published. No manual action is needed.
-
-If the automated workflow fails or you want to post manually:
-
-```bash
-gh velocity quality release vX.Y.Z --post -r markdown
-```
+The `velocity-release.yml` GitHub Actions workflow automatically posts a release quality Discussion when the release is published. **Do not post manually** — the workflow handles it.
 
 ## Hard Rules
 

@@ -66,7 +66,7 @@ lifecycle:
 # Post bulk reports (--post) as Discussion posts.
 # CI/Actions: requires 'discussions: write' in workflow permissions.
 discussions:
-  category: General
+  category: Announcements
   title: "Weekly Velocity: ({{.Date}})" # optional Go template
   # repo: owner/other-repo                            # optional: post to a different repo
 
