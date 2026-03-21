@@ -3,6 +3,19 @@ title: "Making @directives first-class values: cross-layer learnings"
 category: language-features
 date: 2026-03-20
 severity: high
+tags:
+  - directive
+  - "@scale"
+  - "@globals"
+  - parser
+  - classifier
+  - interpolation
+  - autocomplete
+  - LSP
+  - cross-layer
+module: Calcmark Language / TUI / LSP
+symptom: "@scale and @globals.field only worked in simple arithmetic; failed in unit-annotated positions, interpolation, autocomplete, LSP completions, and Side-by-Side preview"
+root_cause: "Each layer had independent assumptions about expression forms — 12 layers required coordinated updates"
 ---
 
 # Making @directives first-class values in expressions
@@ -68,6 +81,26 @@ The lexer already emits `AT_SIGN`, `IDENTIFIER`, and contextual `DOT` tokens. Al
 
 **Bubble Tea gotcha:** Per `docs/solutions/logic-errors/go-closure-capturing-stale-value-type.md`, use lazy callbacks rather than capturing state at construction time.
 
+### 10. LSP — `extractPrefix` @-awareness and directive completions (`lsp/completion.go`)
+
+**Gap found:** The LSP completion handler used a prefix extraction function that, like the TUI's `getCurrentWordPrefix`, had no awareness of `@`. Typing `@sc` in an LSP-connected editor sent prefix `sc` to the completion engine, missing all directive candidates.
+
+**Solution:**
+1. `extractPrefix()` was updated with the same `@`-extension logic as the TUI — scans backward through word chars, then checks for a leading `@` (guarded against `email@example` with `isWordRuneBefore`).
+2. Added `directiveCompletionItems(snap, prefix)` which returns `@scale` and `@globals.field` items sourced from the document's frontmatter.
+
+**Key insight:** The TUI autocomplete and LSP completion are independent code paths with duplicated prefix logic. When extending prefix semantics (like adding `@`), both must be updated.
+
+### 11. TUI Side-by-Side preview — `GetLineResults` InterpolatedSource fix (`cmd/calcmark/tui/editor/results.go`)
+
+**Bug:** `{{@scale}}` and `{{@globals.field}}` rendered as raw template syntax in Side-by-Side mode, while `{{variable}}` resolved correctly. Rendered/Reading modes worked fine.
+
+**Root cause:** `GetLineResults()` used `b.Source()` (raw text) for `TextBlock` lines. The Rendered mode path goes through `renderTextBlocks()` which correctly calls `InterpolatedSource()`, but `GetLineResults` was reading raw source.
+
+**Fix:** Changed the `*document.TextBlock` case in `GetLineResults` to use `b.InterpolatedSource()`, which falls back to `Source()` when no interpolation exists.
+
+**Key insight:** Interpolation in CalcMark is a post-evaluation transform on `TextBlock` objects via `SetInterpolatedSource()`. Any code path that reads TextBlock content for display MUST use `InterpolatedSource()`, never `Source()`.
+
 ## Review-discovered issues and fixes
 
 ### Parser unit-lookahead duplication
@@ -118,5 +151,13 @@ Based on this implementation, here's the checklist for making any new expression
 8. **Scale exemption (`ast.ContainsScaleRef`)** — Does it walk into your new node? Add a case.
 9. **Interpolation** — Does the regex match your syntax? Update if needed. Cache parsed values to avoid per-match re-parsing.
 10. **Autocomplete** — Add a suggestion source or extend existing prefix matching. Guard `@` extension against `email@example` false positives with `isWordRuneBefore`.
-11. **TUI preview pane** — Verify rendering works with the new expression form.
-12. **LSP** — Verify completion/hover/diagnostics if applicable.
+11. **TUI preview pane** — Verify `GetLineResults()` uses `InterpolatedSource()` for TextBlock lines, not `Source()`. Any new expression form that participates in interpolation will be invisible in Side-by-Side mode if this path reads raw source. Also verify Rendered mode via `renderTextBlocks()`.
+12. **LSP** — Update `extractPrefix` for new prefix patterns. Add completion items if the new form needs autocomplete. The TUI and LSP have independent prefix extraction — both must be updated.
+
+## Related
+
+- `docs/solutions/logic-errors/adding-new-type-fraction-cross-layer-checklist.md` — The canonical 9-layer checklist for adding a new type. This directive doc extends it to 12 layers.
+- `docs/solutions/integration-issues/nl-functional-syntax-parity-and-doc-staleness.md` — Three-tier NL testing pattern used for directive verification.
+- `docs/solutions/code-organization/unified-feature-registry-three-to-one.md` — Registry consolidation context for understanding where features are registered.
+- `docs/solutions/logic-errors/go-closure-capturing-stale-value-type.md` — Bubble Tea value-type gotcha applied to autocomplete.
+- `docs/solutions/build-errors/worktree-binary-path-confusion.md` — Binary confusion that masked a working fix during this implementation.
