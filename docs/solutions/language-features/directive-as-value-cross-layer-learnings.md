@@ -68,19 +68,45 @@ The lexer already emits `AT_SIGN`, `IDENTIFIER`, and contextual `DOT` tokens. Al
 
 **Bubble Tea gotcha:** Per `docs/solutions/logic-errors/go-closure-capturing-stale-value-type.md`, use lazy callbacks rather than capturing state at construction time.
 
+## Review-discovered issues and fixes
+
+### Parser unit-lookahead duplication
+
+The NUMBER path and DirectiveRef path both had ~22 lines of identical unit-lookahead logic (check for IDENTIFIER, skip NL keywords, normalize, handle multi-word). Extracted into `tryConsumeUnit() (string, bool)` helper on the parser. Both call sites collapsed to 3-4 lines each.
+
+**Pattern:** When adding a new expression form that can be unit-annotated, call `p.tryConsumeUnit()` after parsing the primary value. No need to duplicate the lookahead logic.
+
+### Autocomplete `@` prefix edge cases
+
+Three issues found during review:
+
+1. **`@globals.` two-stage completion:** `getCurrentWordPrefix` returned `""` when cursor was right after a dot with no field chars. Fixed by adding a third branch that scans backward through `@word.` when no word chars are found at cursor position.
+
+2. **`email@example` false positive:** The `@` extension logic included `@` when preceded by word chars (`email`). Fixed by adding `isWordRuneBefore()` guard — only extends to include `@` when preceded by non-word chars (space, operator, SOL).
+
+3. **Bare `@`:** Returns `"@"` (length 1), which is below `minAutocompletePrefix` (2). This means typing just `@` doesn't trigger autocomplete, but `@s` or `@g` does. Acceptable tradeoff — `@` alone is too ambiguous to trigger suggestions.
+
+### Interpolation performance: cache parsed globals
+
+`resolveDirectiveForInterpolation` was calling `ParseGlobals()` (a full parse cycle) on every `{{ @globals.field }}` regex match. For documents with many globals references, this was O(L * parse_cost) redundant work. Fixed by pre-parsing all globals once in `interpolateTextBlocks` and passing the cache through.
+
+### `allIdentifiersDefined` latent correctness gap
+
+The `QuantityLiteral` node fell through to the `default → true` arm in `allIdentifiersDefined`, just like `DirectiveRef` did before it was fixed. Added an explicit case that recurses into `Expr` when non-nil. This closes the same fragile-default pattern the plan explicitly identified.
+
 ## Cookbook: "Add a new expression form to CalcMark"
 
 Based on this implementation, here's the checklist for making any new expression form work in all positions:
 
 1. **Lexer** — Does the token already exist? If not, add it.
-2. **Parser (`parsePrimary`)** — Can it be parsed as a primary expression? Add unit lookahead if the value can be unit-annotated.
+2. **Parser (`parsePrimary`)** — Can it be parsed as a primary expression? Use `p.tryConsumeUnit()` if the value can be unit-annotated.
 3. **AST** — Is there an existing node type, or do you need a new one? Prefer extending existing nodes with optional fields over proliferating node types.
 4. **Semantic checker** — Does the walker visit your node? Add a case if needed.
-5. **Classifier (`spec/classifier/classifier.go`)** — Add a token scan check. **THIS IS THE MOST COMMONLY MISSED LAYER.**
+5. **Classifier (`spec/classifier/classifier.go`)** — Add a token scan check. **THIS IS THE MOST COMMONLY MISSED LAYER.** Also update `allIdentifiersDefined` — don't rely on the `default → true` arm.
 6. **Document detector (`spec/document/detector.go`)** — Check this too (different eval context).
 7. **Interpreter** — Handle the new node/field in the evaluator.
 8. **Scale exemption (`ast.ContainsScaleRef`)** — Does it walk into your new node? Add a case.
-9. **Interpolation** — Does the regex match your syntax? Update if needed.
-10. **Autocomplete** — Add a suggestion source or extend existing prefix matching.
+9. **Interpolation** — Does the regex match your syntax? Update if needed. Cache parsed values to avoid per-match re-parsing.
+10. **Autocomplete** — Add a suggestion source or extend existing prefix matching. Guard `@` extension against `email@example` false positives with `isWordRuneBefore`.
 11. **TUI preview pane** — Verify rendering works with the new expression form.
 12. **LSP** — Verify completion/hover/diagnostics if applicable.

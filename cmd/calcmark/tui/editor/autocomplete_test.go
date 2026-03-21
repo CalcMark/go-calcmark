@@ -990,10 +990,9 @@ func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
 		{"a = @s produces @s", "a = @s", 6, "@s"},
 		{"x + @globals.rate produces @globals.rate", "x + @globals.rate", 17, "@globals.rate"},
 
-		// email@example should NOT produce @example as a directive prefix.
-		// The current implementation DOES extend to include @, which is a known
-		// edge case. This test documents the actual behavior.
-		{"email@example produces @example (known edge case)", "email@example", 13, "@example"},
+		// email@example should NOT produce @example — the '@' is part of an identifier.
+		// Only standalone '@' (preceded by non-word chars) is treated as a directive prefix.
+		{"email@example produces example (not directive)", "email@example", 13, "example"},
 
 		// No @ present
 		{"plain word", "scale", 5, "scale"},
