@@ -25,4 +25,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_VELOCITY_POST_LIVE: 'true'
-        run: gh velocity report --since 7d --post --results markdown
+        run: gh velocity report --since 7d --post

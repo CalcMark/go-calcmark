@@ -41,4 +41,4 @@ jobs:
           else
             TAG="$RELEASE_TAG"
           fi
-          gh velocity quality release "$TAG" --post --results markdown
+          gh velocity quality release "$TAG" --post

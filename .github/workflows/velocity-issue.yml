@@ -41,4 +41,4 @@ jobs:
           else
             NUM="$ISSUE_NUMBER"
           fi
-          gh velocity issue "$NUM" --post --results markdown
+          gh velocity issue "$NUM" --post

@@ -42,4 +42,4 @@ jobs:
           else
             NUM="$PR_NUMBER"
           fi
-          gh velocity pr "$NUM" --post --results markdown
+          gh velocity pr "$NUM" --post
