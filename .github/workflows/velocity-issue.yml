@@ -1,0 +1,94 @@
+name: Issue Velocity Metrics
+
+on:
+  issues:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to annotate'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  metrics:
+    name: Annotate Issue with Velocity Metrics
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.issue.state_reason == 'completed'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gh-velocity
+        run: gh extension install dvhthomas/gh-velocity
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine issue number
+        id: issue
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "number=${{ inputs.issue_number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate metrics
+        id: metrics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          METRICS=$(gh velocity issue ${{ steps.issue.outputs.number }} -r markdown 2>/dev/null || echo "")
+          if [ -z "$METRICS" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$METRICS" > /tmp/velocity-metrics.md
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Update issue body
+        if: steps.metrics.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUM="${{ steps.issue.outputs.number }}"
+          METRICS=$(cat /tmp/velocity-metrics.md)
+
+          # Get current body
+          CURRENT_BODY=$(gh issue view "$ISSUE_NUM" --json body --jq '.body // ""')
+
+          # Build the metrics block
+          METRICS_BLOCK="<!-- gh-velocity-start -->
+          ---
+          <details>
+          <summary>Velocity Metrics</summary>
+
+          ${METRICS}
+
+          </details>
+          <!-- gh-velocity-end -->"
+
+          # Check if sentinel markers already exist and replace, otherwise append
+          if echo "$CURRENT_BODY" | grep -q '<!-- gh-velocity-start -->'; then
+            NEW_BODY=$(echo "$CURRENT_BODY" | awk '
+              /<!-- gh-velocity-start -->/{skip=1; next}
+              /<!-- gh-velocity-end -->/{skip=0; next}
+              !skip{print}
+            ')
+            NEW_BODY="${NEW_BODY}
+          ${METRICS_BLOCK}"
+          else
+            NEW_BODY="${CURRENT_BODY}
+
+          ${METRICS_BLOCK}"
+          fi
+
+          gh issue edit "$ISSUE_NUM" --body "$NEW_BODY"

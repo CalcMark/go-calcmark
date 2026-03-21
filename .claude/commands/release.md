@@ -152,13 +152,19 @@ Once complete:
 
 ## Step 9: Post velocity discussion
 
-After the tag push succeeds, post a velocity report as a GitHub Discussion:
+After the tag push succeeds, post a release quality report as a GitHub Discussion:
+
+```bash
+gh velocity quality release vX.Y.Z --post -r markdown
+```
+
+This analyzes the release for lead time, cycle time, bug ratio, and category composition, then posts a Discussion with the metrics.
+
+If `gh velocity` is not installed, fall back to the legacy script:
 
 ```bash
 .claude/skills/github-project/scripts/release-velocity.sh vX.Y.Z
 ```
-
-This finds all issues referenced in commits since the previous tag, calculates lead time and cycle time for each, and posts an Announcements discussion with a metrics table and link to the release notes.
 
 Print the discussion URL when done.
 
