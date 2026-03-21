@@ -205,6 +205,13 @@ func TestExtractPrefix(t *testing.T) {
 		{"after operator", "a = b", 5, "b"},
 		{"after space", "a = ", 4, ""},
 		{"col beyond line", "abc", 10, "abc"},
+		// Directive prefixes
+		{"@s directive prefix", "a = @s", 6, "@s"},
+		{"@scale full", "@scale", 6, "@scale"},
+		{"@globals.tax_rate", "@globals.tax_rate", 17, "@globals.tax_rate"},
+		{"@globals. two-stage", "@globals.", 9, "@globals."},
+		{"email@example not directive", "email@example", 13, "example"},
+		{"space then @s", "a + @s", 6, "@s"},
 	}
 
 	for _, tt := range tests {
