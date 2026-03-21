@@ -139,6 +139,16 @@ func containsSpecialKeywords(tokens []lexer.Token) bool {
 	return false
 }
 
+// containsDirective checks if token list contains a directive reference (@scale, @globals.x)
+func containsDirective(tokens []lexer.Token) bool {
+	for _, token := range tokens {
+		if token.Type == lexer.AT_SIGN {
+			return true
+		}
+	}
+	return false
+}
+
 // containsAssignment checks if token list contains an assignment operator
 func containsAssignment(tokens []lexer.Token) bool {
 	for _, token := range tokens {
@@ -167,6 +177,18 @@ func allIdentifiersDefined(node ast.Node, env IdentifierResolver) bool {
 
 	case *ast.Expression:
 		return allIdentifiersDefined(n.Expr, env)
+
+	case *ast.DirectiveRef:
+		// Directives are always "defined" from the classifier's perspective.
+		// Semantic validation (e.g., missing frontmatter) is the interpreter's job.
+		return true
+
+	case *ast.QuantityLiteral:
+		// Recurse into expression-based quantities (e.g., "@scale meters")
+		if n.Expr != nil {
+			return allIdentifiersDefined(n.Expr, env)
+		}
+		return true
 
 	default:
 		// Literals and other nodes don't have identifiers
@@ -279,6 +301,19 @@ func ClassifyLine(line string, env IdentifierResolver) (LineType, error) {
 	// 5b. Check for special keywords (IN, PER, AS, NAPKIN, OF)
 	// These indicate unit conversions, rates, napkin formatting, or percentage operations
 	if containsSpecialKeywords(contentTokens) {
+		nodes, err := parser.Parse(line)
+		if err != nil {
+			return Markdown, nil
+		}
+
+		// Must parse to exactly one statement
+		if len(nodes) == 1 {
+			return Calculation, nil
+		}
+	}
+
+	// 5c. Check for directive references (@scale, @globals.x)
+	if containsDirective(contentTokens) {
 		nodes, err := parser.Parse(line)
 		if err != nil {
 			return Markdown, nil

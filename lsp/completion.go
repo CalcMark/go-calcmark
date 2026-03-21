@@ -49,12 +49,15 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		return items, nil
 
 	default:
-		// General context → functions, units, variables
+		// General context → functions, units, variables, directives
 		var items []protocol.CompletionItem
 		items = append(items, functionCompletionItems(prefix)...)
 		items = append(items, unitCompletionItems(prefix)...)
 		if snap.Evaluator != nil {
 			items = append(items, variableCompletionItems(snap, prefix, line)...)
+		}
+		if snap.Document != nil {
+			items = append(items, directiveCompletionItems(snap, prefix)...)
 		}
 		return items, nil
 	}
@@ -384,6 +387,66 @@ func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine i
 	return items
 }
 
+// directiveCompletionItems returns completion items for @scale and @globals.field directives.
+func directiveCompletionItems(snap *DocumentSnapshot, prefix string) []protocol.CompletionItem {
+	if !strings.HasPrefix(prefix, "@") {
+		return nil
+	}
+
+	fm := snap.Document.GetFrontmatter()
+	if fm == nil {
+		return nil
+	}
+
+	var items []protocol.CompletionItem
+	kind := protocol.CompletionItemKindConstant
+
+	// @scale
+	if fm.Scale != nil {
+		name := "@scale"
+		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(prefix)) {
+			detail := fmt.Sprintf("Scale factor (%s)", fm.Scale.Factor.String())
+			items = append(items, protocol.CompletionItem{
+				Label:      name,
+				Kind:       &kind,
+				Detail:     &detail,
+				InsertText: &name,
+			})
+		}
+	}
+
+	// @globals or @globals.field
+	if len(fm.Globals) > 0 {
+		if strings.HasPrefix("@globals", strings.ToLower(prefix)) && !strings.Contains(prefix, ".") {
+			label := "@globals"
+			detail := fmt.Sprintf("%d global(s) defined", len(fm.Globals))
+			insertText := "@globals."
+			items = append(items, protocol.CompletionItem{
+				Label:      label,
+				Kind:       &kind,
+				Detail:     &detail,
+				InsertText: &insertText,
+			})
+		} else if strings.HasPrefix(strings.ToLower(prefix), "@globals.") {
+			fieldPrefix := strings.ToLower(prefix[len("@globals."):])
+			for name, value := range fm.Globals {
+				if strings.HasPrefix(strings.ToLower(name), fieldPrefix) {
+					fullName := "@globals." + name
+					detail := value
+					items = append(items, protocol.CompletionItem{
+						Label:      fullName,
+						Kind:       &kind,
+						Detail:     &detail,
+						InsertText: &fullName,
+					})
+				}
+			}
+		}
+	}
+
+	return items
+}
+
 // getLineText returns the text of a specific 0-indexed line from the source.
 func getLineText(source string, line int) string {
 	lines := strings.Split(source, "\n")
@@ -395,16 +458,49 @@ func getLineText(source string, line int) string {
 
 // extractPrefix extracts the identifier prefix before the cursor position.
 // Uses rune-aware indexing for UTF-8 safety (CalcMark supports Unicode identifiers).
+// Extends to include a leading '@' for directive completion (@scale, @globals.field).
 func extractPrefix(lineText string, col int) string {
 	runes := []rune(lineText)
 	if col > len(runes) {
 		col = len(runes)
 	}
+
+	isWord := func(ch rune) bool {
+		return unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_'
+	}
+
 	// Walk backward from cursor to find start of identifier
 	start := col
-	for start > 0 && (unicode.IsLetter(runes[start-1]) || unicode.IsDigit(runes[start-1]) || runes[start-1] == '_') {
+	for start > 0 && isWord(runes[start-1]) {
 		start--
 	}
+
+	// Extend to include '@' and dot-separated @globals.field patterns.
+	// Only include '@' when preceded by non-word char (not email@example).
+	if start > 0 && runes[start-1] == '.' {
+		// @globals.field or @globals. (no field yet)
+		dotPos := start - 1
+		wordStart := dotPos
+		for wordStart > 0 && isWord(runes[wordStart-1]) {
+			wordStart--
+		}
+		if wordStart > 0 && runes[wordStart-1] == '@' && (wordStart <= 1 || !isWord(runes[wordStart-2])) {
+			start = wordStart - 1
+		}
+	} else if start > 0 && runes[start-1] == '@' && (start <= 1 || !isWord(runes[start-2])) {
+		start--
+	} else if start >= col && col > 0 && runes[col-1] == '.' {
+		// Cursor right after dot: @globals.
+		dotPos := col - 1
+		wordStart := dotPos
+		for wordStart > 0 && isWord(runes[wordStart-1]) {
+			wordStart--
+		}
+		if wordStart > 0 && runes[wordStart-1] == '@' && (wordStart <= 1 || !isWord(runes[wordStart-2])) {
+			start = wordStart - 1
+		}
+	}
+
 	return string(runes[start:col])
 }
 

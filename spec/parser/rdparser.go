@@ -171,6 +171,42 @@ func (p *RecursiveDescentParser) errorAt(tok lexer.Token, message string) error 
 	}
 }
 
+// tryConsumeUnit checks if the next token is a non-keyword IDENTIFIER
+// and consumes it as a unit name. Handles multi-word units like
+// "nautical mile". Returns the normalized unit name and true if a unit
+// was consumed, or ("", false) if no unit follows.
+func (p *RecursiveDescentParser) tryConsumeUnit() (string, bool) {
+	if !p.check(lexer.IDENTIFIER) {
+		return "", false
+	}
+	unitName := string(p.peek().Value)
+
+	// NL keywords (growing, declining, etc.) are NOT units
+	if isNaturalSyntaxKeyword(unitName) {
+		return "", false
+	}
+
+	p.advance()
+
+	if normalized, ok := units.NormalizeUnitName(unitName); ok {
+		unitName = normalized
+	}
+
+	// Multi-word units: "nautical mile", "metric ton"
+	if p.check(lexer.IDENTIFIER) {
+		nextWord := string(p.peek().Value)
+		if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
+			p.advance()
+			unitName = multiWordUnit
+			if normalized, ok := units.NormalizeUnitName(multiWordUnit); ok {
+				unitName = normalized
+			}
+		}
+	}
+
+	return unitName, true
+}
+
 // enterDepth increments nesting depth and checks security limit
 func (p *RecursiveDescentParser) enterDepth() error {
 	p.depth++
@@ -958,46 +994,14 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}
 
 		// Check if followed by a unit identifier: "10 meters", "50% coverage", etc.
-		// IMPORTANT: Don't consume KEYWORDS like "downtime", "over" that have special meaning.
-		// But DO allow arbitrary units for rates ("cars per day", "requests per second").
-		if p.check(lexer.IDENTIFIER) {
-			identTok := p.peek() // Peek without consuming
-			unitName := string(identTok.Value)
-
-			// Check if this identifier is a reserved keyword with special syntax
-			// These should NOT be consumed as units
-			if isNaturalSyntaxKeyword(unitName) {
-				// Don't consume keywords - let natural syntax parsers handle them
-				// Fall through to return plain NumberLiteral
-			} else {
-				// Either a known unit OR an arbitrary identifier (like "cars", "requests")
-				// Consume it as a unit - this allows both "10 meters" AND "5 cars per day"
-				p.advance()
-
-				// Normalize if it's a known unit, otherwise use as-is
-				normalizedUnit, isKnownUnit := units.NormalizeUnitName(unitName)
-				if isKnownUnit {
-					unitName = normalizedUnit
-				}
-
-				// Check for multi-word units: "1 nautical mile", "5 metric tons"
-				if p.check(lexer.IDENTIFIER) {
-					nextWord := string(p.peek().Value)
-					if multiWordUnit := units.IsMultiWordUnit(unitName, nextWord); multiWordUnit != "" {
-						p.advance() // Consume the second word
-						unitName = multiWordUnit
-						if normalized, ok := units.NormalizeUnitName(multiWordUnit); ok {
-							unitName = normalized
-						}
-					}
-				}
-
-				return &ast.QuantityLiteral{
-					Value:      string(tok.Value),
-					Unit:       unitName, // Use normalized if known, otherwise original
-					SourceText: string(tok.OriginalText) + " " + unitName,
-				}, nil
-			}
+		// Skips NL keywords like "downtime", "over" that have special meaning.
+		// Allows arbitrary units for rates ("cars per day", "requests per second").
+		if unitName, consumed := p.tryConsumeUnit(); consumed {
+			return &ast.QuantityLiteral{
+				Value:      string(tok.Value),
+				Unit:       unitName,
+				SourceText: string(tok.OriginalText) + " " + unitName,
+			}, nil
 		}
 
 		// Check for mixed number: integer NUMBER followed by FRACTION (e.g., "11 3/8")
@@ -1065,10 +1069,20 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			}
 		}
 
-		return &ast.DirectiveRef{
+		ref := &ast.DirectiveRef{
 			Directive: directive,
 			Field:     field,
-		}, nil
+		}
+
+		// Check for unit annotation: "@scale meters", "@globals.rate kg"
+		if unitName, consumed := p.tryConsumeUnit(); consumed {
+			return &ast.QuantityLiteral{
+				Expr: ref,
+				Unit: unitName,
+			}, nil
+		}
+
+		return ref, nil
 	}
 
 	// Prefix currency symbols: $100, €50, £30, ¥1000

@@ -205,6 +205,13 @@ func TestExtractPrefix(t *testing.T) {
 		{"after operator", "a = b", 5, "b"},
 		{"after space", "a = ", 4, ""},
 		{"col beyond line", "abc", 10, "abc"},
+		// Directive prefixes
+		{"@s directive prefix", "a = @s", 6, "@s"},
+		{"@scale full", "@scale", 6, "@scale"},
+		{"@globals.tax_rate", "@globals.tax_rate", 17, "@globals.tax_rate"},
+		{"@globals. two-stage", "@globals.", 9, "@globals."},
+		{"email@example not directive", "email@example", 13, "example"},
+		{"space then @s", "a + @s", 6, "@s"},
 	}
 
 	for _, tt := range tests {
@@ -479,5 +486,112 @@ func TestGetLineText(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("getLineText(source, %d) = %q, want %q", tt.line, got, tt.want)
 		}
+	}
+}
+
+// --- Directive completion behavioral tests ---
+
+// TestDirectiveCompletion_ScaleOfferedWithFrontmatter verifies that typing "@s"
+// in a document with scale frontmatter produces an @scale completion item.
+func TestDirectiveCompletion_ScaleOfferedWithFrontmatter(t *testing.T) {
+	source := "---\nscale:\n  factor: 4\n  unit_categories:\n  - All\n---\na = @s"
+	s := NewServer()
+	snap := s.evaluate(source)
+	if snap.Document == nil {
+		t.Fatal("expected document to be parsed")
+	}
+
+	prefix := extractPrefix("a = @s", 6)
+	if prefix != "@s" {
+		t.Fatalf("extractPrefix = %q, want %q", prefix, "@s")
+	}
+
+	items := directiveCompletionItems(snap, prefix)
+	found := false
+	for _, item := range items {
+		if item.InsertText != nil && *item.InsertText == "@scale" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected @scale completion for prefix %q, got %d items", prefix, len(items))
+	}
+}
+
+// TestDirectiveCompletion_ScaleNotOfferedWithoutFrontmatter verifies that @scale
+// is not offered when the document has no scale configuration.
+func TestDirectiveCompletion_ScaleNotOfferedWithoutFrontmatter(t *testing.T) {
+	source := "a = @s"
+	s := NewServer()
+	snap := s.evaluate(source)
+
+	items := directiveCompletionItems(snap, "@s")
+	for _, item := range items {
+		if item.InsertText != nil && *item.InsertText == "@scale" {
+			t.Error("should not offer @scale without scale frontmatter")
+		}
+	}
+}
+
+// TestDirectiveCompletion_GlobalsFieldsFromFrontmatter verifies that typing
+// "@globals." offers field completions sourced from the document's frontmatter.
+func TestDirectiveCompletion_GlobalsFieldsFromFrontmatter(t *testing.T) {
+	source := "---\nglobals:\n  tax_rate: 0.32\n  budget: $5000\n---\na = @globals."
+	s := NewServer()
+	snap := s.evaluate(source)
+	if snap.Document == nil {
+		t.Fatal("expected document to be parsed")
+	}
+
+	prefix := extractPrefix("a = @globals.", 13)
+	if prefix != "@globals." {
+		t.Fatalf("extractPrefix = %q, want %q", prefix, "@globals.")
+	}
+
+	items := directiveCompletionItems(snap, prefix)
+	if len(items) != 2 {
+		t.Fatalf("expected 2 globals field completions, got %d", len(items))
+	}
+
+	names := map[string]bool{}
+	for _, item := range items {
+		if item.InsertText != nil {
+			names[*item.InsertText] = true
+		}
+	}
+	if !names["@globals.tax_rate"] {
+		t.Error("expected @globals.tax_rate completion")
+	}
+	if !names["@globals.budget"] {
+		t.Error("expected @globals.budget completion")
+	}
+}
+
+// TestDirectiveCompletion_GlobalsFieldNarrowedByPrefix verifies that typing
+// "@globals.t" narrows to only matching fields.
+func TestDirectiveCompletion_GlobalsFieldNarrowedByPrefix(t *testing.T) {
+	source := "---\nglobals:\n  tax_rate: 0.32\n  budget: $5000\n---\na = @globals.t"
+	s := NewServer()
+	snap := s.evaluate(source)
+
+	items := directiveCompletionItems(snap, "@globals.t")
+	if len(items) != 1 {
+		t.Fatalf("expected 1 completion for @globals.t, got %d", len(items))
+	}
+	if items[0].InsertText == nil || *items[0].InsertText != "@globals.tax_rate" {
+		t.Errorf("expected @globals.tax_rate, got %v", items[0].InsertText)
+	}
+}
+
+// TestDirectiveCompletion_NonDirectivePrefixReturnsNothing verifies that
+// directive completions are not offered for non-@ prefixes.
+func TestDirectiveCompletion_NonDirectivePrefixReturnsNothing(t *testing.T) {
+	source := "---\nscale:\n  factor: 4\n  unit_categories: [All]\n---\na = sc"
+	s := NewServer()
+	snap := s.evaluate(source)
+
+	items := directiveCompletionItems(snap, "sc")
+	if len(items) != 0 {
+		t.Errorf("expected 0 directive completions for non-@ prefix, got %d", len(items))
 	}
 }

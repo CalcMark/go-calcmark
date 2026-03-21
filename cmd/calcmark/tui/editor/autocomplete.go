@@ -7,6 +7,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
@@ -255,6 +256,79 @@ func (v *VariableSuggestionSource) GetSuggestions(prefix string) []components.Su
 	return suggestions
 }
 
+// DirectiveSuggestionSource provides @scale and @globals.x suggestions
+// from the document's frontmatter. Uses a callback for lazy access so
+// frontmatter edits are reflected immediately.
+type DirectiveSuggestionSource struct {
+	getFrontmatter func() *document.Frontmatter
+}
+
+// NewDirectiveSuggestionSource creates a new directive suggestion source.
+func NewDirectiveSuggestionSource(getFm func() *document.Frontmatter) *DirectiveSuggestionSource {
+	return &DirectiveSuggestionSource{getFrontmatter: getFm}
+}
+
+// GetSuggestions returns directive suggestions matching the given prefix.
+func (d *DirectiveSuggestionSource) GetSuggestions(prefix string) []components.Suggestion {
+	if d.getFrontmatter == nil {
+		return nil
+	}
+
+	// Only respond to prefixes starting with '@'
+	if !strings.HasPrefix(prefix, "@") {
+		return nil
+	}
+
+	fm := d.getFrontmatter()
+	if fm == nil {
+		return nil
+	}
+
+	var suggestions []components.Suggestion
+
+	// @scale — offered when frontmatter has scale config
+	if fm.Scale != nil {
+		name := "@scale"
+		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(prefix)) {
+			suggestions = append(suggestions, components.Suggestion{
+				Name:        "@scale",
+				Category:    "directive",
+				Description: fmt.Sprintf("Scale factor (%s)", fm.Scale.Factor.String()),
+				InsertText:  "@scale",
+			})
+		}
+	}
+
+	// @globals.field — offered when frontmatter has globals
+	if len(fm.Globals) > 0 {
+		// Check if prefix matches @globals or @globals.partial
+		if strings.HasPrefix("@globals", strings.ToLower(prefix)) && !strings.Contains(prefix, ".") {
+			// Offer @globals (will auto-append dot on acceptance)
+			suggestions = append(suggestions, components.Suggestion{
+				Name:        "@globals",
+				Category:    "directive",
+				Description: fmt.Sprintf("%d global(s) defined", len(fm.Globals)),
+				InsertText:  "@globals.",
+			})
+		} else if strings.HasPrefix(strings.ToLower(prefix), "@globals.") {
+			// Prefix is @globals.something — offer field completions
+			fieldPrefix := strings.ToLower(prefix[len("@globals."):])
+			for name, value := range fm.Globals {
+				if strings.HasPrefix(strings.ToLower(name), fieldPrefix) {
+					suggestions = append(suggestions, components.Suggestion{
+						Name:        "@globals." + name,
+						Category:    "directive",
+						Description: value,
+						InsertText:  "@globals." + name,
+					})
+				}
+			}
+		}
+	}
+
+	return suggestions
+}
+
 // CombinedSuggestionSource queries multiple sources and merges results.
 type CombinedSuggestionSource struct {
 	sources []components.SuggestionSource
@@ -290,6 +364,7 @@ func (c *CombinedSuggestionSource) GetSuggestions(prefix string) []components.Su
 		"Energy":      15,
 		"Power":       16,
 		"Area":        17,
+		"directive":   -1,  // Directives first (they're context-specific)
 		"variable":    100, // Variables last
 	}
 

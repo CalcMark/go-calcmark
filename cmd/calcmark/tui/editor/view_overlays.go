@@ -131,6 +131,8 @@ func suggestionTag(category string) string {
 		return "nl"
 	case "variable":
 		return "var"
+	case "directive":
+		return "@"
 	case "Math", "Conversion", "Network", "Storage", "Capacity", "Growth":
 		return "fn"
 	default:
