@@ -8,11 +8,12 @@ import (
 
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
 	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/shopspring/decimal"
 )
 
 func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
-	source := NewFunctionSuggestionSource()
+	implNames := implementedFunctionNames()
 
 	tests := []struct {
 		name         string
@@ -66,7 +67,7 @@ func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			suggestions := source.GetSuggestions(tt.prefix)
+			suggestions := features.FunctionSuggestions(tt.prefix, implNames)
 
 			if len(suggestions) < tt.wantMinCount {
 				t.Errorf("got %d suggestions, want at least %d", len(suggestions), tt.wantMinCount)
@@ -97,8 +98,6 @@ func TestFunctionSuggestionSource_GetSuggestions(t *testing.T) {
 }
 
 func TestUnitSuggestionSource_GetSuggestions(t *testing.T) {
-	source := NewUnitSuggestionSource()
-
 	tests := []struct {
 		name         string
 		prefix       string
@@ -132,7 +131,7 @@ func TestUnitSuggestionSource_GetSuggestions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			suggestions := source.GetSuggestions(tt.prefix)
+			suggestions := features.UnitSuggestions(tt.prefix)
 
 			if len(suggestions) < tt.wantMinCount {
 				t.Errorf("got %d suggestions, want at least %d", len(suggestions), tt.wantMinCount)
@@ -161,10 +160,6 @@ func TestVariableSuggestionSource_GetSuggestions(t *testing.T) {
 		"total":    "500",
 	}
 
-	source := NewVariableSuggestionSource(func() map[string]string {
-		return vars
-	}, nil)
-
 	tests := []struct {
 		name         string
 		prefix       string
@@ -192,7 +187,7 @@ func TestVariableSuggestionSource_GetSuggestions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			suggestions := source.GetSuggestions(tt.prefix)
+			suggestions := features.VariableSuggestions(vars, tt.prefix, 100, nil)
 
 			if len(suggestions) < tt.wantMinCount {
 				t.Errorf("got %d suggestions, want at least %d", len(suggestions), tt.wantMinCount)
@@ -219,13 +214,11 @@ func TestVariableSuggestionSource_GetSuggestions(t *testing.T) {
 }
 
 func TestCombinedSuggestionSource_GetSuggestions(t *testing.T) {
-	funcSource := NewFunctionSuggestionSource()
-	unitSource := NewUnitSuggestionSource()
-	varSource := NewVariableSuggestionSource(func() map[string]string {
-		return map[string]string{"avgPrice": "100"}
-	}, nil)
-
-	combined := NewCombinedSuggestionSource(funcSource, unitSource, varSource)
+	combined := NewCombinedSuggestionSource(
+		func() map[string]string { return map[string]string{"avgPrice": "100"} },
+		nil,
+		nil,
+	)
 
 	// "av" should match both avg function and avgPrice variable
 	suggestions := combined.GetSuggestions("av")
@@ -278,7 +271,7 @@ func TestBackspaceLastCharAfterDebounce(t *testing.T) {
 	m.cursorCol = 0
 	m.editBuf = ""
 
-	// 1. Type "av" — triggers autocomplete (2-char minimum prefix)
+	// 1. Type "av" -- triggers autocomplete (2-char minimum prefix)
 	for _, ch := range "av" {
 		keyMsg := tea.KeyPressMsg{Code: ch, Text: string(ch)}
 		result, _ := m.Update(keyMsg)
@@ -312,7 +305,7 @@ func TestBackspaceLastCharAfterDebounce(t *testing.T) {
 	m.autocompleteState.Visible = true
 	m.autocompleteState.Prefix = "av"
 
-	// 4. Press backspace to delete "v" — prefix becomes "a" (below 2-char minimum)
+	// 4. Press backspace to delete "v" -- prefix becomes "a" (below 2-char minimum)
 	bsMsg := tea.KeyPressMsg{Code: tea.KeyBackspace}
 	result, _ := m.Update(bsMsg)
 	m = result.(Model)
@@ -358,7 +351,7 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 	m.cursorCol = 0
 	m.editBuf = ""
 
-	// 1. Type "a" — inserts on empty line, triggers autocomplete
+	// 1. Type "a" -- inserts on empty line, triggers autocomplete
 	keyMsg := tea.KeyPressMsg{Code: 'a', Text: "a"}
 	result, _ := m.Update(keyMsg)
 	m = result.(Model)
@@ -367,7 +360,7 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 		t.Fatalf("After typing 'a' on empty line: editBuf=%q, want %q", m.editBuf, "a")
 	}
 
-	// 2. Simulate debounce firing — saves "a" to document
+	// 2. Simulate debounce firing -- saves "a" to document
 	m.transitionToProcessing()
 
 	// Document line 1 should now be "a"
@@ -380,9 +373,9 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 	m.mode = StateAutocomplete
 	m.autocompleteState.Visible = true
 	m.autocompleteState.Prefix = "a"
-	m.state = StateReady // debounce transitions through Processing → Ready
+	m.state = StateReady // debounce transitions through Processing -> Ready
 
-	// 4. Press backspace — deletes "a", editBuf becomes ""
+	// 4. Press backspace -- deletes "a", editBuf becomes ""
 	bsMsg := tea.KeyPressMsg{Code: tea.KeyBackspace}
 	result, _ = m.Update(bsMsg)
 	m = result.(Model)
@@ -397,7 +390,7 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 		t.Errorf("After backspace: cursorCol=%d, want 0", m.cursorCol)
 	}
 
-	// The document still has "a" because debounce hasn't fired yet — that's expected.
+	// The document still has "a" because debounce hasn't fired yet -- that's expected.
 	// The critical fix is that editBufLoaded=true so the view renders editBuf=""
 	// instead of falling back to the stale GetLines() content.
 	docLines := m.GetLines()
@@ -412,10 +405,10 @@ func TestBackspaceLastCharOnEmptyLine(t *testing.T) {
 }
 
 func TestFunctionSuggestionSource_NLRows(t *testing.T) {
-	source := NewFunctionSuggestionSource()
+	implNames := implementedFunctionNames()
 
 	t.Run("avg prefix returns fn and nl rows", func(t *testing.T) {
-		suggestions := source.GetSuggestions("av")
+		suggestions := features.FunctionSuggestions("av", implNames)
 		var fnRow, nlRow *components.Suggestion
 		for i := range suggestions {
 			if suggestions[i].InsertText == "avg" {
@@ -440,7 +433,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 	})
 
 	t.Run("NL keyword prefix matches NL row", func(t *testing.T) {
-		suggestions := source.GetSuggestions("aver")
+		suggestions := features.FunctionSuggestions("aver", implNames)
 		found := false
 		for _, s := range suggestions {
 			if s.Category == "example" && s.InsertText == "average of 1, 2, 3" {
@@ -454,7 +447,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 	})
 
 	t.Run("compound prefix returns fn and nl rows", func(t *testing.T) {
-		suggestions := source.GetSuggestions("comp")
+		suggestions := features.FunctionSuggestions("comp", implNames)
 		var fnRow, basicNL, freqNL *components.Suggestion
 		for i := range suggestions {
 			if suggestions[i].InsertText == "compound" {
@@ -480,7 +473,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 
 	t.Run("NL keyword only matches when fn name does not", func(t *testing.T) {
 		// "squa" matches "square root of" but not "sqrt"
-		suggestions := source.GetSuggestions("squa")
+		suggestions := features.FunctionSuggestions("squa", implNames)
 		var hasFn, hasNL bool
 		for _, s := range suggestions {
 			if s.InsertText == "sqrt" {
@@ -499,7 +492,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 	})
 
 	t.Run("template alias cleaned for display", func(t *testing.T) {
-		suggestions := source.GetSuggestions("transfer")
+		suggestions := features.FunctionSuggestions("transfer", implNames)
 		for _, s := range suggestions {
 			if s.Category == "example" {
 				if s.Name != "transfer across" {
@@ -514,7 +507,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 	})
 
 	t.Run("NL row syntax has no parentheses", func(t *testing.T) {
-		suggestions := source.GetSuggestions("av")
+		suggestions := features.FunctionSuggestions("av", implNames)
 		for _, s := range suggestions {
 			if s.Category == "example" {
 				if strings.Contains(s.Syntax, "(") {
@@ -525,7 +518,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 	})
 
 	t.Run("functions with NLExample but no parseable alias", func(t *testing.T) {
-		suggestions := source.GetSuggestions("accum")
+		suggestions := features.FunctionSuggestions("accum", implNames)
 		var nlRow *components.Suggestion
 		for i := range suggestions {
 			if suggestions[i].Category == "example" {
@@ -543,13 +536,11 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 }
 
 func TestCombinedSuggestionSource_NLRowOrdering(t *testing.T) {
-	funcSource := NewFunctionSuggestionSource()
-	unitSource := NewUnitSuggestionSource()
-	varSource := NewVariableSuggestionSource(func() map[string]string {
-		return nil
-	}, nil)
-
-	combined := NewCombinedSuggestionSource(funcSource, unitSource, varSource)
+	combined := NewCombinedSuggestionSource(
+		func() map[string]string { return nil },
+		nil,
+		nil,
+	)
 
 	// "av" should produce fn row for avg, then nl row for avg, grouped together
 	suggestions := combined.GetSuggestions("av")
@@ -576,46 +567,14 @@ func TestCombinedSuggestionSource_NLRowOrdering(t *testing.T) {
 	}
 }
 
-func TestCleanAliasName(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"transfer...across", "transfer across"},
-		{"read...from", "read from"},
-		{"average of", "average of"},
-		{"compress...using", "compress using"},
-	}
-	for _, tt := range tests {
-		if got := cleanAliasName(tt.input); got != tt.want {
-			t.Errorf("cleanAliasName(%q) = %q, want %q", tt.input, got, tt.want)
-		}
-	}
-}
-
-func TestFirstWord(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"average of", "average"},
-		{"square root of", "square"},
-		{"transfer...across", "transfer"},
-		{"read...from", "read"},
-		{"accumulate", "accumulate"},
-	}
-	for _, tt := range tests {
-		if got := firstWord(tt.input); got != tt.want {
-			t.Errorf("firstWord(%q) = %q, want %q", tt.input, got, tt.want)
-		}
-	}
-}
+// Note: cleanAliasName and firstWord are now internal to spec/features
+// and tested in spec/features/completion_test.go.
 
 func TestFunctionSuggestionSource_SynonymDisplay(t *testing.T) {
-	source := NewFunctionSuggestionSource()
+	implNames := implementedFunctionNames()
 
 	// When typing "mean", should show avg with synonyms
-	suggestions := source.GetSuggestions("mean")
+	suggestions := features.FunctionSuggestions("mean", implNames)
 
 	if len(suggestions) == 0 {
 		t.Fatal("expected at least one suggestion for 'mean'")
@@ -654,7 +613,7 @@ result = total + 10`
 	m.cursorCol = 0
 
 	// Set cursor position for variable filtering
-	m.varSource.CursorLine = m.cursorLine
+	m.combinedSource.CursorLine = m.cursorLine
 
 	// Get variable suggestions directly from the combined source
 	suggestions := m.suggestionSource.GetSuggestions("pr")
@@ -665,16 +624,16 @@ result = total + 10`
 			foundPrice = true
 		}
 		if s.Category == "variable" && s.InsertText == "result" {
-			t.Error("should NOT suggest 'result' — it's defined below cursor")
+			t.Error("should NOT suggest 'result' -- it's defined below cursor")
 		}
 	}
 	if !foundPrice {
-		t.Error("should suggest 'price' — it's defined above cursor")
+		t.Error("should suggest 'price' -- it's defined above cursor")
 	}
 
-	// Move cursor to line 0 — no user variables visible above
+	// Move cursor to line 0 -- no user variables visible above
 	m.cursorLine = 0
-	m.varSource.CursorLine = m.cursorLine
+	m.combinedSource.CursorLine = m.cursorLine
 	suggestions = m.suggestionSource.GetSuggestions("pr")
 	for _, s := range suggestions {
 		if s.Category == "variable" && s.InsertText == "price" {
@@ -684,7 +643,7 @@ result = total + 10`
 
 	// PI and E should always be available regardless of cursor position
 	m.cursorLine = 0
-	m.varSource.CursorLine = m.cursorLine
+	m.combinedSource.CursorLine = m.cursorLine
 	suggestions = m.suggestionSource.GetSuggestions("PI")
 	foundPI := false
 	for _, s := range suggestions {
@@ -714,7 +673,7 @@ func TestAutocompleteSuppressesFunctionsInsideFunctionCall(t *testing.T) {
 	m.width = 80
 	m.height = 24
 
-	// Simulate typing "compound($10K, 5%, 10, comp" — no closing paren yet
+	// Simulate typing "compound($10K, 5%, 10, comp" -- no closing paren yet
 	// Cursor is at col 27, right after 'p' of the 4th arg "comp"
 	m.cursorLine = 0
 	m.cursorCol = 27
@@ -752,7 +711,7 @@ total = avg(pr`
 	m.width = 80
 	m.height = 24
 
-	// Simulate typing "avg(pr" — cursor inside avg() call, typing "pr"
+	// Simulate typing "avg(pr" -- cursor inside avg() call, typing "pr"
 	m.cursorLine = 1
 	m.cursorCol = 14
 	m.editBuf = "total = avg(pr"
@@ -799,7 +758,7 @@ func TestAutocompleteNotSuppressedOutsideFunctionCall(t *testing.T) {
 	m.width = 80
 	m.height = 24
 
-	// Cursor at end of "comp" — NOT inside any function call
+	// Cursor at end of "comp" -- NOT inside any function call
 	m.cursorLine = 0
 	m.cursorCol = 4
 	m.editBuf = "comp"
@@ -825,7 +784,7 @@ func TestAutocompleteNotSuppressedOutsideFunctionCall(t *testing.T) {
 
 // TestAutocompleteSuppressedInFrontmatter verifies that autocomplete does not
 // trigger when the cursor is on a frontmatter line. Frontmatter is YAML, not
-// CalcMark — autocomplete suggestions (functions, variables) are irrelevant.
+// CalcMark -- autocomplete suggestions (functions, variables) are irrelevant.
 func TestAutocompleteSuppressedInFrontmatter(t *testing.T) {
 	source := "---\nscale: 9\nconvert_to: si\n---\n\nv = 10 lb\n"
 	doc, err := document.NewDocument(source)
@@ -841,7 +800,7 @@ func TestAutocompleteSuppressedInFrontmatter(t *testing.T) {
 	m.loadCurrentLineIntoEditBuffer()
 	m.cursorCol = len("conv") // simulate having typed "conv"
 
-	// Trigger autocomplete — should NOT activate on frontmatter lines
+	// Trigger autocomplete -- should NOT activate on frontmatter lines
 	m.updateAutocompleteState()
 
 	if m.mode == StateAutocomplete {
@@ -863,15 +822,8 @@ func TestAutocompleteSuppressedInFrontmatter(t *testing.T) {
 }
 
 func TestDirectiveSuggestionSource_Scale(t *testing.T) {
-	fm := &document.Frontmatter{
-		Scale: &document.ScaleConfig{
-			Factor: decimal.NewFromInt(3),
-		},
-	}
-	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
-
 	t.Run("@s prefix matches @scale", func(t *testing.T) {
-		suggestions := source.GetSuggestions("@s")
+		suggestions := features.DirectiveSuggestions("@s", "3", nil)
 		if len(suggestions) != 1 {
 			t.Fatalf("expected 1 suggestion, got %d", len(suggestions))
 		}
@@ -884,17 +836,14 @@ func TestDirectiveSuggestionSource_Scale(t *testing.T) {
 	})
 
 	t.Run("no @ prefix returns nothing", func(t *testing.T) {
-		suggestions := source.GetSuggestions("sc")
+		suggestions := features.DirectiveSuggestions("sc", "3", nil)
 		if len(suggestions) != 0 {
 			t.Errorf("expected 0 suggestions for non-@ prefix, got %d", len(suggestions))
 		}
 	})
 
 	t.Run("no scale in frontmatter returns nothing", func(t *testing.T) {
-		noScale := NewDirectiveSuggestionSource(func() *document.Frontmatter {
-			return &document.Frontmatter{}
-		})
-		suggestions := noScale.GetSuggestions("@s")
+		suggestions := features.DirectiveSuggestions("@s", "", nil)
 		if len(suggestions) != 0 {
 			t.Errorf("expected 0 suggestions without scale config, got %d", len(suggestions))
 		}
@@ -902,16 +851,13 @@ func TestDirectiveSuggestionSource_Scale(t *testing.T) {
 }
 
 func TestDirectiveSuggestionSource_Globals(t *testing.T) {
-	fm := &document.Frontmatter{
-		Globals: map[string]string{
-			"tax_rate": "0.32",
-			"budget":   "$5000",
-		},
+	globals := map[string]string{
+		"tax_rate": "0.32",
+		"budget":   "$5000",
 	}
-	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
 
 	t.Run("@g prefix matches @globals", func(t *testing.T) {
-		suggestions := source.GetSuggestions("@g")
+		suggestions := features.DirectiveSuggestions("@g", "", globals)
 		if len(suggestions) != 1 {
 			t.Fatalf("expected 1 suggestion (@globals), got %d", len(suggestions))
 		}
@@ -921,14 +867,14 @@ func TestDirectiveSuggestionSource_Globals(t *testing.T) {
 	})
 
 	t.Run("@globals. prefix shows field completions", func(t *testing.T) {
-		suggestions := source.GetSuggestions("@globals.")
+		suggestions := features.DirectiveSuggestions("@globals.", "", globals)
 		if len(suggestions) != 2 {
 			t.Fatalf("expected 2 field suggestions, got %d", len(suggestions))
 		}
 	})
 
 	t.Run("@globals.t narrows to tax_rate", func(t *testing.T) {
-		suggestions := source.GetSuggestions("@globals.t")
+		suggestions := features.DirectiveSuggestions("@globals.t", "", globals)
 		if len(suggestions) != 1 {
 			t.Fatalf("expected 1 suggestion, got %d", len(suggestions))
 		}
@@ -938,10 +884,7 @@ func TestDirectiveSuggestionSource_Globals(t *testing.T) {
 	})
 
 	t.Run("no globals returns nothing", func(t *testing.T) {
-		noGlobals := NewDirectiveSuggestionSource(func() *document.Frontmatter {
-			return &document.Frontmatter{}
-		})
-		suggestions := noGlobals.GetSuggestions("@g")
+		suggestions := features.DirectiveSuggestions("@g", "", nil)
 		if len(suggestions) != 0 {
 			t.Errorf("expected 0 suggestions without globals, got %d", len(suggestions))
 		}
@@ -949,21 +892,19 @@ func TestDirectiveSuggestionSource_Globals(t *testing.T) {
 }
 
 func TestDirectiveSuggestionSource_NilFrontmatter(t *testing.T) {
-	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return nil })
-	suggestions := source.GetSuggestions("@s")
-	if len(suggestions) != 0 {
-		t.Errorf("expected 0 suggestions with nil frontmatter, got %d", len(suggestions))
+	// With CombinedSuggestionSource, nil frontmatter produces no directives
+	combined := NewCombinedSuggestionSource(nil, nil, func() *document.Frontmatter { return nil })
+	suggestions := combined.GetSuggestions("@s")
+	for _, s := range suggestions {
+		if s.Category == "directive" {
+			t.Errorf("expected no directive suggestions with nil frontmatter, got %q", s.InsertText)
+		}
 	}
 }
 
-// TestGetCurrentWordPrefix_DirectiveEdgeCases tests that getCurrentWordPrefix
+// TestGetCurrentWordPrefix_DirectiveEdgeCases tests that ExtractPrefix
 // correctly handles @ prefix patterns for directive autocomplete.
 func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
-	doc, err := document.NewDocument("x = 1\n")
-	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
-	}
-
 	tests := []struct {
 		name       string
 		editBuf    string
@@ -976,8 +917,6 @@ func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
 		{"@globals produces @globals prefix", "@globals", 8, "@globals"},
 
 		// @globals.field patterns
-		// BUG: @globals. (dot with no field chars) returns "" because the backward
-		// Two-stage completion: cursor right after dot, field suggestions should appear.
 		{"@globals. returns @globals. prefix (two-stage completion)", "@globals.", 9, "@globals."},
 		{"@globals.tax produces @globals.tax prefix", "@globals.tax", 12, "@globals.tax"},
 		{"@globals.tax_rate produces full prefix", "@globals.tax_rate", 17, "@globals.tax_rate"},
@@ -990,7 +929,7 @@ func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
 		{"a = @s produces @s", "a = @s", 6, "@s"},
 		{"x + @globals.rate produces @globals.rate", "x + @globals.rate", 17, "@globals.rate"},
 
-		// email@example should NOT produce @example — the '@' is part of an identifier.
+		// email@example should NOT produce @example -- the '@' is part of an identifier.
 		// Only standalone '@' (preceded by non-word chars) is treated as a directive prefix.
 		{"email@example produces example (not directive)", "email@example", 13, "example"},
 
@@ -1001,17 +940,9 @@ func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			m := New(doc)
-			m.width = 80
-			m.height = 24
-			m.cursorLine = 0
-			m.editBuf = tc.editBuf
-			m.editBufLoaded = true
-			m.cursorCol = tc.cursorCol
-
-			got := m.getCurrentWordPrefix()
+			got := features.ExtractPrefix(tc.editBuf, tc.cursorCol)
 			if got != tc.wantPrefix {
-				t.Errorf("getCurrentWordPrefix() = %q, want %q (editBuf=%q, col=%d)",
+				t.Errorf("ExtractPrefix() = %q, want %q (editBuf=%q, col=%d)",
 					got, tc.wantPrefix, tc.editBuf, tc.cursorCol)
 			}
 		})
@@ -1019,23 +950,14 @@ func TestGetCurrentWordPrefix_DirectiveEdgeCases(t *testing.T) {
 }
 
 // TestDirectiveSuggestionSource_BareAtPrefix verifies that a bare "@" prefix
-// (which getCurrentWordPrefix currently cannot produce) would correctly return
-// all available directive suggestions if it were passed to GetSuggestions.
+// correctly returns all available directive suggestions.
 func TestDirectiveSuggestionSource_BareAtPrefix(t *testing.T) {
-	fm := &document.Frontmatter{
-		Scale: &document.ScaleConfig{
-			Factor: decimal.NewFromInt(3),
-		},
-		Globals: map[string]string{
-			"tax_rate": "0.32",
-		},
-	}
-	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+	globals := map[string]string{"tax_rate": "0.32"}
 
 	// "@" should match both @scale and @globals
-	suggestions := source.GetSuggestions("@")
+	suggestions := features.DirectiveSuggestions("@", "3", globals)
 	if len(suggestions) != 2 {
-		t.Errorf("GetSuggestions(\"@\") returned %d suggestions, want 2 (@scale + @globals)", len(suggestions))
+		t.Errorf("DirectiveSuggestions(\"@\") returned %d suggestions, want 2 (@scale + @globals)", len(suggestions))
 		for _, s := range suggestions {
 			t.Logf("  suggestion: %s", s.InsertText)
 		}
@@ -1043,17 +965,12 @@ func TestDirectiveSuggestionSource_BareAtPrefix(t *testing.T) {
 }
 
 // TestDirectiveSuggestionSource_DotDeletion verifies the two-stage completion
-// after the user deletes the dot from @globals. — they should see @globals again.
+// after the user deletes the dot from @globals. -- they should see @globals again.
 func TestDirectiveSuggestionSource_DotDeletion(t *testing.T) {
-	fm := &document.Frontmatter{
-		Globals: map[string]string{
-			"tax_rate": "0.32",
-		},
-	}
-	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+	globals := map[string]string{"tax_rate": "0.32"}
 
 	// Stage 1: user typed @globals (no dot yet)
-	suggestions := source.GetSuggestions("@globals")
+	suggestions := features.DirectiveSuggestions("@globals", "", globals)
 	if len(suggestions) != 1 {
 		t.Fatalf("expected 1 suggestion for @globals, got %d", len(suggestions))
 	}
@@ -1062,7 +979,7 @@ func TestDirectiveSuggestionSource_DotDeletion(t *testing.T) {
 	}
 
 	// Stage 2: user accepted, now has @globals. and sees fields
-	suggestions = source.GetSuggestions("@globals.")
+	suggestions = features.DirectiveSuggestions("@globals.", "", globals)
 	if len(suggestions) != 1 {
 		t.Fatalf("expected 1 field suggestion for @globals., got %d", len(suggestions))
 	}
@@ -1070,8 +987,8 @@ func TestDirectiveSuggestionSource_DotDeletion(t *testing.T) {
 		t.Errorf("expected InsertText=@globals.tax_rate, got %q", suggestions[0].InsertText)
 	}
 
-	// Stage 3: user deletes the dot — back to @globals prefix, should see @globals again
-	suggestions = source.GetSuggestions("@globals")
+	// Stage 3: user deletes the dot -- back to @globals prefix, should see @globals again
+	suggestions = features.DirectiveSuggestions("@globals", "", globals)
 	if len(suggestions) != 1 {
 		t.Fatalf("expected 1 suggestion after dot deletion, got %d", len(suggestions))
 	}
@@ -1084,23 +1001,37 @@ func TestDirectiveSuggestionSource_DotDeletion(t *testing.T) {
 // suggestions reflect frontmatter changes during a session (lazy callback).
 func TestDirectiveSuggestionSource_FrontmatterUpdate(t *testing.T) {
 	fm := &document.Frontmatter{}
-	source := NewDirectiveSuggestionSource(func() *document.Frontmatter { return fm })
+	combined := NewCombinedSuggestionSource(nil, nil, func() *document.Frontmatter { return fm })
 
-	// Initially no scale, no suggestions
-	suggestions := source.GetSuggestions("@s")
-	if len(suggestions) != 0 {
-		t.Errorf("expected 0 suggestions before adding scale, got %d", len(suggestions))
+	// Initially no scale, no directive suggestions for @s
+	suggestions := combined.GetSuggestions("@s")
+	directiveCount := 0
+	for _, s := range suggestions {
+		if s.Category == "directive" {
+			directiveCount++
+		}
+	}
+	if directiveCount != 0 {
+		t.Errorf("expected 0 directive suggestions before adding scale, got %d", directiveCount)
 	}
 
 	// User edits frontmatter to add scale
 	fm.Scale = &document.ScaleConfig{Factor: decimal.NewFromInt(5)}
 
 	// Now suggestions should include @scale
-	suggestions = source.GetSuggestions("@s")
-	if len(suggestions) != 1 {
-		t.Fatalf("expected 1 suggestion after adding scale, got %d", len(suggestions))
+	suggestions = combined.GetSuggestions("@s")
+	directiveCount = 0
+	for _, s := range suggestions {
+		if s.Category == "directive" {
+			directiveCount++
+		}
 	}
-	if suggestions[0].InsertText != "@scale" {
-		t.Errorf("expected InsertText=@scale, got %q", suggestions[0].InsertText)
+	if directiveCount != 1 {
+		t.Fatalf("expected 1 directive suggestion after adding scale, got %d", directiveCount)
+	}
+	for _, s := range suggestions {
+		if s.Category == "directive" && s.InsertText != "@scale" {
+			t.Errorf("expected InsertText=@scale, got %q", s.InsertText)
+		}
 	}
 }

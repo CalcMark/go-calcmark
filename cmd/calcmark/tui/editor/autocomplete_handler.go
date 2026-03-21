@@ -4,10 +4,10 @@ package editor
 
 import (
 	"strings"
-	"unicode"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/spec/features"
 )
 
 // minAutocompletePrefix is the minimum number of characters needed to trigger autosuggest.
@@ -119,7 +119,8 @@ func (m *Model) updateAutocompleteState() {
 		return
 	}
 
-	prefix := m.getCurrentWordPrefix()
+	m.loadCurrentLineIntoEditBuffer()
+	prefix := features.ExtractPrefix(m.editBuf, m.cursorCol)
 
 	if len(prefix) < minAutocompletePrefix {
 		if m.mode == StateAutocomplete {
@@ -132,8 +133,8 @@ func (m *Model) updateAutocompleteState() {
 		return
 	}
 
-	if m.varSource != nil {
-		m.varSource.CursorLine = m.cursorLine
+	if m.combinedSource != nil {
+		m.combinedSource.CursorLine = m.cursorLine
 	}
 
 	suggestions := m.suggestionSource.GetSuggestions(prefix)
@@ -211,78 +212,6 @@ func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (w
 	return width, height
 }
 
-// getCurrentWordPrefix extracts the word being typed at cursor (UTF-8 safe).
-// Includes a leading '@' for directive completion and '.' within @globals. context.
-func (m *Model) getCurrentWordPrefix() string {
-	m.loadCurrentLineIntoEditBuffer()
-	if m.cursorCol == 0 {
-		return ""
-	}
-
-	runes := []rune(m.editBuf)
-	if m.cursorCol > len(runes) {
-		return ""
-	}
-
-	start := m.cursorCol
-	for start > 0 {
-		ch := runes[start-1]
-		if !isWordRune(ch) {
-			break
-		}
-		start--
-	}
-
-	// Extend prefix to include leading '@' and dot-separated @globals.field patterns.
-	// Handles three cases:
-	//   @word         — simple directive (@scale, @globals)
-	//   @word.field   — globals field (@globals.tax_rate)
-	//   @word.        — globals dot with no field yet (two-stage completion)
-	if start > 0 && runes[start-1] == '.' {
-		// Cursor after dot: @globals.field or @globals. (no field yet)
-		dotPos := start - 1
-		wordStart := dotPos
-		for wordStart > 0 && isWordRune(runes[wordStart-1]) {
-			wordStart--
-		}
-		if wordStart > 0 && runes[wordStart-1] == '@' && !isWordRuneBefore(runes, wordStart-1) {
-			start = wordStart - 1
-		}
-	} else if start > 0 && runes[start-1] == '@' && !isWordRuneBefore(runes, start-1) {
-		// Simple @word prefix — only when '@' is not part of an identifier like email@example
-		start--
-	} else if start >= m.cursorCol {
-		// No word chars found. Check for @word. pattern (cursor right after dot).
-		if m.cursorCol > 0 && runes[m.cursorCol-1] == '.' {
-			dotPos := m.cursorCol - 1
-			wordStart := dotPos
-			for wordStart > 0 && isWordRune(runes[wordStart-1]) {
-				wordStart--
-			}
-			if wordStart > 0 && runes[wordStart-1] == '@' && !isWordRuneBefore(runes, wordStart-1) {
-				start = wordStart - 1
-			}
-		}
-	}
-
-	if start >= m.cursorCol {
-		return ""
-	}
-
-	return string(runes[start:m.cursorCol])
-}
-
-// isWordRune returns true if the rune is a valid word character for autocomplete.
-func isWordRune(ch rune) bool {
-	return unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_'
-}
-
-// isWordRuneBefore returns true if the rune before position idx is a word character.
-// Returns false when idx is 0 (start of line). Used to distinguish directive '@'
-// (preceded by space/operator/SOL) from email '@' (preceded by letters).
-func isWordRuneBefore(runes []rune, idx int) bool {
-	return idx > 0 && isWordRune(runes[idx-1])
-}
 
 // acceptAutocomplete inserts the selected suggestion at the cursor.
 // Records an OpReplace on the undo stack so the acceptance can be undone.

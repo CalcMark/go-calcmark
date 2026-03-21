@@ -330,8 +330,8 @@ type Model struct {
 
 	// Autocomplete state
 	autocompleteState components.AutosuggestState
-	suggestionSource  components.SuggestionSource
-	varSource         *VariableSuggestionSource // Reference for updating CursorLine
+	suggestionSource components.SuggestionSource
+	combinedSource   *CombinedSuggestionSource // Reference for updating CursorLine
 
 	// Command menu state
 	commandMenuState CommandMenuState
@@ -381,13 +381,9 @@ func New(doc *document.Document) Model {
 		selectionAnchorCol:  -1,
 	}
 
-	// Initialize autocomplete suggestion sources
-	funcSource := NewFunctionSuggestionSource()
-	unitSource := NewUnitSuggestionSource()
-	// Variable source captures 'm' by closure to access current environment.
-	// Returns all variables with their formatted values; position filtering
-	// is done by VariableSuggestionSource using definedOnLine and cursorLine.
-	varSource := NewVariableSuggestionSource(
+	// Initialize autocomplete: single combined source wrapping shared functions.
+	// Closures capture 'm' for lazy access to current environment and frontmatter.
+	combined := NewCombinedSuggestionSource(
 		func() map[string]string {
 			if m.eval == nil {
 				return nil
@@ -401,7 +397,6 @@ func New(doc *document.Document) Model {
 			return result
 		},
 		func() map[string]int {
-			// Returns varName -> definition line (0-indexed)
 			definedOnLine := make(map[string]int)
 			for _, lr := range m.GetLineResults() {
 				if lr.VarName != "" {
@@ -410,13 +405,12 @@ func New(doc *document.Document) Model {
 			}
 			return definedOnLine
 		},
+		func() *document.Frontmatter {
+			return m.doc.GetFrontmatter()
+		},
 	)
-	m.varSource = varSource
-	// Directive source uses lazy frontmatter access via closure.
-	directiveSource := NewDirectiveSuggestionSource(func() *document.Frontmatter {
-		return m.doc.GetFrontmatter()
-	})
-	m.suggestionSource = NewCombinedSuggestionSource(funcSource, unitSource, varSource, directiveSource)
+	m.combinedSource = combined
+	m.suggestionSource = combined
 
 	// CRITICAL: Transition to StateReady - establishes all invariants
 	// This is the ONLY state transition during initialization
