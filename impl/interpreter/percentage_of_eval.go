@@ -104,7 +104,7 @@ func extractDecimalForRatio(t types.Type) (decimal.Decimal, string, error) {
 	case *types.Percentage:
 		return v.Value, "percentage", nil
 	case *types.Currency:
-		return v.Value, "currency:" + v.Symbol, nil
+		return v.Value, "currency:" + v.Code, nil
 	case *types.Quantity:
 		return v.Value, "quantity:" + v.Unit, nil
 	case *types.Duration:

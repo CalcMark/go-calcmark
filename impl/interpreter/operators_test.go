@@ -76,6 +76,23 @@ func TestSameTypeMulDivErrors(t *testing.T) {
 			wantErr:     true,
 			errContains: "number()",
 		},
+		// --- Currency synonym: $ and USD are the same currency ---
+		// Currency + Currency (mixed symbol/code) → ok
+		{
+			name:     "Currency $ + USD synonym works",
+			left:     cur(100, "$"),
+			right:    cur(50, "USD"),
+			operator: "+",
+			wantErr:  false,
+		},
+		// Currency - Currency (mixed symbol/code) → ok
+		{
+			name:     "Currency USD - $ synonym works",
+			left:     cur(200, "USD"),
+			right:    cur(50, "$"),
+			operator: "-",
+			wantErr:  false,
+		},
 		// --- These should STILL work (no error) ---
 		// Currency + Currency → ok
 		{
@@ -207,6 +224,13 @@ func TestAsPercentOf(t *testing.T) {
 
 		// Division by zero
 		{"div by zero", "x = $100 as % of $0\n", "", true, "division by zero"},
+
+		// Currency synonym: $ and USD are the same currency
+		{"$32 as % of 100 USD", "$32 as a % of 100 USD\n", "32%", false, ""},
+		{"32 USD as % of $100", "32 USD as a % of $100\n", "32%", false, ""},
+
+		// Currency synonym: EUR symbol vs code
+		{"€50 as % of 200 EUR", "€50 as a % of 200 EUR\n", "25%", false, ""},
 	}
 
 	for _, tt := range tests {

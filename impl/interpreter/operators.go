@@ -233,9 +233,9 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 		// Currency op Currency (same type)
 		if rightCur, ok := right.(*types.Currency); ok {
-			if leftCur.Symbol != rightCur.Symbol {
+			if !leftCur.IsSameCurrency(rightCur) {
 				return nil, fmt.Errorf("cannot %s different currencies: %s and %s",
-					operator, leftCur.Symbol, rightCur.Symbol)
+					operator, leftCur.Code, rightCur.Code)
 			}
 			// Same-type * and / are nonsensical (square dollars, unitless ratio).
 			// Users should use number() to extract the raw value first.

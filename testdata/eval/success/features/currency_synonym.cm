@@ -1,0 +1,33 @@
+# Currency Synonyms
+# Verifies that $ and USD (and other symbol/code pairs) are treated as the same currency.
+
+## Mixed symbol/code arithmetic
+price_usd = 100 USD
+added = price_usd + $50
+# Expected: USD150.00
+subtracted = $200 - 100 USD
+# Expected: $100.00
+
+## Mixed symbol/code as a % of
+pct1 = $32 as a % of price_usd
+# Expected: 32%
+pct2 = 50 USD as a % of $200
+# Expected: 25%
+
+## Same symbol works as before
+same_sym = $100 + $50
+# Expected: $150.00
+same_code = 100 USD + 50 USD
+# Expected: USD150.00
+
+## Percentage of with mixed currencies
+portion = 10% of price_usd
+# Expected: USD10.00
+
+## Variable reference across styles
+base = $500
+markup = 100 USD
+total = base + markup
+# Expected: $600.00
+ratio = markup as a % of base
+# Expected: 20%
