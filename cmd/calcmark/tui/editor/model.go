@@ -330,8 +330,8 @@ type Model struct {
 
 	// Autocomplete state
 	autocompleteState components.AutosuggestState
-	suggestionSource components.SuggestionSource
-	combinedSource   *CombinedSuggestionSource // Reference for updating CursorLine
+	suggestionSource  components.SuggestionSource
+	combinedSource    *CombinedSuggestionSource // Reference for updating CursorLine
 
 	// Command menu state
 	commandMenuState CommandMenuState

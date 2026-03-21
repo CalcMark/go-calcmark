@@ -212,7 +212,6 @@ func (m *Model) calculatePopupDimensions(suggestions []components.Suggestion) (w
 	return width, height
 }
 
-
 // acceptAutocomplete inserts the selected suggestion at the cursor.
 // Records an OpReplace on the undo stack so the acceptance can be undone.
 func (m Model) acceptAutocomplete() (tea.Model, tea.Cmd) {

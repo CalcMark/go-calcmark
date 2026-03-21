@@ -3,12 +3,10 @@ package lsp
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -22,7 +20,7 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 
 	snap := ds.getSnapshot()
 
-	// Use latest source text (not snapshot — snapshot may be stale during debounce)
+	// Use latest source text (not snapshot -- snapshot may be stale during debounce)
 	source := ds.getSource()
 
 	// Get the current line text for context-sensitive filtering
@@ -31,7 +29,7 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	lineText := getLineText(source, line)
 
 	// Determine prefix (text before cursor on this line, back to last non-identifier char)
-	prefix := extractPrefix(lineText, col)
+	prefix := features.ExtractPrefix(lineText, col)
 
 	// Tokenize the line up to the cursor to determine context.
 	// This replaces string heuristics with the real lexer.
@@ -42,14 +40,14 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		return nil, nil
 
 	case completionContextAfterUnitKeyword:
-		// After "in" or "as" → units + conversion keywords (napkin, precise)
+		// After "in" or "as" -> units + conversion keywords (napkin, precise)
 		var items []protocol.CompletionItem
 		items = append(items, unitCompletionItems(prefix)...)
 		items = append(items, conversionKeywordItems(prefix)...)
 		return items, nil
 
 	default:
-		// General context → functions, units, variables, directives
+		// General context -> functions, units, variables, directives
 		var items []protocol.CompletionItem
 		items = append(items, functionCompletionItems(prefix)...)
 		items = append(items, unitCompletionItems(prefix)...)
@@ -64,67 +62,42 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 }
 
 // functionCompletionItems returns completion items for built-in functions.
+// Delegates to features.FunctionSuggestions then enriches with LSP-specific
+// snippets, parameter docs, and markdown documentation.
 func functionCompletionItems(prefix string) []protocol.CompletionItem {
-	prefix = strings.ToLower(prefix)
+	suggestions := features.FunctionSuggestions(prefix, nil) // nil = all registry functions
 	var items []protocol.CompletionItem
 
-	registry := features.DefaultRegistry()
-	for _, f := range registry.ByCategory(features.CategoryFunction) {
-		if prefix != "" && !features.MatchesPrefix(f.Name, prefix) {
-			// Check synonyms too
-			matched := false
-			for _, syn := range f.Synonyms {
-				if features.MatchesPrefix(syn, prefix) {
-					matched = true
-					break
-				}
-			}
-			if !matched {
-				continue
-			}
-		}
-
-		kind := protocol.CompletionItemKindFunction
-		detail := f.Syntax
-		doc := buildFunctionDoc(f.Name, f.Description)
-		snippetText := buildFunctionSnippet(f.Name)
-		snippetFormat := protocol.InsertTextFormatSnippet
-
-		items = append(items, protocol.CompletionItem{
-			Label:            f.Name,
-			Kind:             &kind,
-			Detail:           &detail,
-			InsertText:       &snippetText,
-			InsertTextFormat: &snippetFormat,
-			Documentation: &protocol.MarkupContent{
-				Kind:  protocol.MarkupKindMarkdown,
-				Value: doc,
-			},
-		})
-	}
-
-	// NL function aliases from the feature registry
-	for _, f := range registry.ByCategory(features.CategoryFunction) {
-		for _, alias := range f.Aliases {
-			if !alias.Parseable || alias.Example == "" {
-				continue
-			}
-			aliasName := strings.ReplaceAll(alias.Name, "...", " ")
-			firstWord := aliasName
-			if before, _, ok := strings.Cut(aliasName, " "); ok {
-				firstWord = before
-			}
-			if prefix != "" && !features.MatchesPrefix(firstWord, prefix) {
-				continue
-			}
-
+	for _, s := range suggestions {
+		if s.Category == "example" {
+			// NL example row -> snippet item
 			kind := protocol.CompletionItemKindSnippet
-			detail := alias.Example
+			detail := s.Syntax
+			insertText := s.InsertText
 			items = append(items, protocol.CompletionItem{
-				Label:      aliasName,
+				Label:      s.Name,
 				Kind:       &kind,
 				Detail:     &detail,
-				InsertText: &alias.Example,
+				InsertText: &insertText,
+			})
+		} else {
+			// Function row -> enriched with snippet + docs
+			kind := protocol.CompletionItemKindFunction
+			detail := s.Syntax
+			doc := buildFunctionDoc(s.InsertText, s.Description)
+			snippetText := buildFunctionSnippet(s.InsertText)
+			snippetFormat := protocol.InsertTextFormatSnippet
+
+			items = append(items, protocol.CompletionItem{
+				Label:            s.InsertText,
+				Kind:             &kind,
+				Detail:           &detail,
+				InsertText:       &snippetText,
+				InsertTextFormat: &snippetFormat,
+				Documentation: &protocol.MarkupContent{
+					Kind:  protocol.MarkupKindMarkdown,
+					Value: doc,
+				},
 			})
 		}
 	}
@@ -168,7 +141,7 @@ func classifyCompletionContext(lineText string, col int) completionContext {
 	}
 
 	if len(meaningful) == 0 {
-		// No tokens → could be blank or pure prose
+		// No tokens -> could be blank or pure prose
 		if isMarkdownLine(lineText) {
 			return completionContextMarkdown
 		}
@@ -215,7 +188,7 @@ func runeCountStr(s string, byteOffset int) int {
 }
 
 // conversionKeywordItems returns completion items for keywords valid after "as" or "in".
-// Derives the list from the lexer's ReservedKeywords — only includes keywords that are
+// Derives the list from the lexer's ReservedKeywords -- only includes keywords that are
 // meaningful in a conversion context (NAPKIN, PRECISE).
 func conversionKeywordItems(prefix string) []protocol.CompletionItem {
 	prefix = strings.ToLower(prefix)
@@ -253,7 +226,7 @@ func conversionKeywordItems(prefix string) []protocol.CompletionItem {
 func keywordDoc(tt lexer.TokenType) string {
 	switch tt {
 	case lexer.NAPKIN:
-		return "Human-readable rounded estimate (e.g., `1234567 as napkin` → ~1.2M)"
+		return "Human-readable rounded estimate (e.g., `1234567 as napkin` -> ~1.2M)"
 	case lexer.PRECISE:
 		return "Full-precision display, no rounding (e.g., `1 second as hour as precise`)"
 	default:
@@ -262,7 +235,7 @@ func keywordDoc(tt lexer.TokenType) string {
 }
 
 // buildFunctionSnippet creates an LSP snippet string for a function.
-// E.g., accumulate → "accumulate(${1:rate}, ${2:duration})"
+// E.g., accumulate -> "accumulate(${1:rate}, ${2:duration})"
 // Uses parameter names from the function spec, with tab stops for each.
 func buildFunctionSnippet(funcName string) string {
 	spec := types.GetFunctionSpec(funcName)
@@ -299,10 +272,10 @@ func buildFunctionDoc(funcName, description string) string {
 			b.WriteString(fmt.Sprintf(" (%s)", p.Type))
 		}
 		if p.Optional {
-			b.WriteString(" — optional")
+			b.WriteString(" -- optional")
 		}
 		if p.Variadic {
-			b.WriteString(" — accepts multiple values")
+			b.WriteString(" -- accepts multiple values")
 		}
 		if len(p.Examples) > 0 {
 			b.WriteString(fmt.Sprintf(": %s", strings.Join(p.Examples, ", ")))
@@ -313,78 +286,62 @@ func buildFunctionDoc(funcName, description string) string {
 }
 
 // unitCompletionItems returns completion items for units.
+// Delegates to features.UnitSuggestions then converts to protocol.CompletionItem
+// with LSP-specific enrichment (kind, documentation).
 func unitCompletionItems(prefix string) []protocol.CompletionItem {
-	prefix = strings.ToLower(prefix)
+	suggestions := features.UnitSuggestions(prefix)
 	var items []protocol.CompletionItem
-	seen := make(map[string]bool)
 
-	for _, unit := range units.StandardUnits {
-		if seen[unit.Canonical] {
-			continue
-		}
+	for _, s := range suggestions {
+		kind := protocol.CompletionItemKindUnit
+		detail := s.Syntax // symbol
+		doc := fmt.Sprintf("%s (%s)", s.Description, s.Category)
 
-		matched := prefix == "" ||
-			features.MatchesPrefix(unit.Canonical, prefix) ||
-			features.MatchesPrefix(unit.Symbol, prefix)
-		if !matched {
-			for _, alias := range unit.Aliases {
-				if features.MatchesPrefix(alias, prefix) {
-					matched = true
-					break
-				}
-			}
-		}
-
-		if matched {
-			seen[unit.Canonical] = true
-			kind := protocol.CompletionItemKindUnit
-			detail := unit.Symbol
-			doc := fmt.Sprintf("%s (%s)", unit.Description, unit.Quantity)
-
-			items = append(items, protocol.CompletionItem{
-				Label:      unit.Canonical,
-				Kind:       &kind,
-				Detail:     &detail,
-				InsertText: &unit.Canonical,
-				Documentation: &protocol.MarkupContent{
-					Kind:  protocol.MarkupKindPlainText,
-					Value: doc,
-				},
-			})
-		}
+		items = append(items, protocol.CompletionItem{
+			Label:      s.Name,
+			Kind:       &kind,
+			Detail:     &detail,
+			InsertText: &s.InsertText,
+			Documentation: &protocol.MarkupContent{
+				Kind:  protocol.MarkupKindPlainText,
+				Value: doc,
+			},
+		})
 	}
 
 	return items
 }
 
 // variableCompletionItems returns completion items for variables.
-// Known limitation: cursorLine is accepted but not used for position filtering.
-// The TUI equivalent (VariableSuggestionSource) correctly filters variables
-// defined at or after the cursor. This requires mapping document blocks to
-// variable definition lines, which Environment does not currently expose.
+// Known limitation: position filtering is not applied because the LSP's
+// Environment does not expose variable definition line numbers.
+// The shared VariableSuggestions function supports it when definedLines is provided.
 func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine int) []protocol.CompletionItem {
-	prefix = strings.ToLower(prefix)
-	var items []protocol.CompletionItem
-
 	env := snap.Evaluator.GetEnvironment()
 	if env == nil {
 		return nil
 	}
 
-	vars := env.GetAllVariables()
-	for name, val := range vars {
-		if prefix != "" && !features.MatchesPrefix(name, prefix) {
-			continue
-		}
+	// Build vars map: name -> formatted value string
+	allVars := env.GetAllVariables()
+	vars := make(map[string]string, len(allVars))
+	for name, val := range allVars {
+		vars[name] = fmt.Sprintf("%v", val)
+	}
 
+	// nil definedLines = no position filtering (LSP limitation documented above)
+	suggestions := features.VariableSuggestions(vars, prefix, cursorLine, nil)
+	var items []protocol.CompletionItem
+
+	for _, s := range suggestions {
 		kind := protocol.CompletionItemKindVariable
-		detail := fmt.Sprintf("%v", val)
+		detail := s.Description
 
 		items = append(items, protocol.CompletionItem{
-			Label:      name,
+			Label:      s.Name,
 			Kind:       &kind,
 			Detail:     &detail,
-			InsertText: &name,
+			InsertText: &s.InsertText,
 		})
 	}
 
@@ -392,60 +349,30 @@ func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine i
 }
 
 // directiveCompletionItems returns completion items for @scale and @globals.field directives.
+// Delegates to features.DirectiveSuggestions then converts to protocol.CompletionItem.
 func directiveCompletionItems(snap *DocumentSnapshot, prefix string) []protocol.CompletionItem {
-	if !strings.HasPrefix(prefix, "@") {
-		return nil
-	}
-
 	fm := snap.Document.GetFrontmatter()
 	if fm == nil {
 		return nil
 	}
 
+	scaleFactor := ""
+	if fm.Scale != nil {
+		scaleFactor = fm.Scale.Factor.String()
+	}
+
+	suggestions := features.DirectiveSuggestions(prefix, scaleFactor, fm.Globals)
 	var items []protocol.CompletionItem
 	kind := protocol.CompletionItemKindConstant
 
-	// @scale
-	if fm.Scale != nil {
-		name := "@scale"
-		if features.MatchesPrefix(name, strings.ToLower(prefix)) {
-			detail := fmt.Sprintf("Scale factor (%s)", fm.Scale.Factor.String())
-			items = append(items, protocol.CompletionItem{
-				Label:      name,
-				Kind:       &kind,
-				Detail:     &detail,
-				InsertText: &name,
-			})
-		}
-	}
-
-	// @globals or @globals.field
-	if len(fm.Globals) > 0 {
-		if strings.HasPrefix("@globals", strings.ToLower(prefix)) && !strings.Contains(prefix, ".") {
-			label := "@globals"
-			detail := fmt.Sprintf("%d global(s) defined", len(fm.Globals))
-			insertText := "@globals."
-			items = append(items, protocol.CompletionItem{
-				Label:      label,
-				Kind:       &kind,
-				Detail:     &detail,
-				InsertText: &insertText,
-			})
-		} else if strings.HasPrefix(strings.ToLower(prefix), "@globals.") {
-			fieldPrefix := strings.ToLower(prefix[len("@globals."):])
-			for name, value := range fm.Globals {
-				if features.MatchesPrefix(name, fieldPrefix) {
-					fullName := "@globals." + name
-					detail := value
-					items = append(items, protocol.CompletionItem{
-						Label:      fullName,
-						Kind:       &kind,
-						Detail:     &detail,
-						InsertText: &fullName,
-					})
-				}
-			}
-		}
+	for _, s := range suggestions {
+		detail := s.Description
+		items = append(items, protocol.CompletionItem{
+			Label:      s.Name,
+			Kind:       &kind,
+			Detail:     &detail,
+			InsertText: &s.InsertText,
+		})
 	}
 
 	return items
@@ -458,54 +385,6 @@ func getLineText(source string, line int) string {
 		return ""
 	}
 	return lines[line]
-}
-
-// extractPrefix extracts the identifier prefix before the cursor position.
-// Uses rune-aware indexing for UTF-8 safety (CalcMark supports Unicode identifiers).
-// Extends to include a leading '@' for directive completion (@scale, @globals.field).
-func extractPrefix(lineText string, col int) string {
-	runes := []rune(lineText)
-	if col > len(runes) {
-		col = len(runes)
-	}
-
-	isWord := func(ch rune) bool {
-		return unicode.IsLetter(ch) || unicode.IsDigit(ch) || ch == '_'
-	}
-
-	// Walk backward from cursor to find start of identifier
-	start := col
-	for start > 0 && isWord(runes[start-1]) {
-		start--
-	}
-
-	// Extend to include '@' and dot-separated @globals.field patterns.
-	// Only include '@' when preceded by non-word char (not email@example).
-	if start > 0 && runes[start-1] == '.' {
-		// @globals.field or @globals. (no field yet)
-		dotPos := start - 1
-		wordStart := dotPos
-		for wordStart > 0 && isWord(runes[wordStart-1]) {
-			wordStart--
-		}
-		if wordStart > 0 && runes[wordStart-1] == '@' && (wordStart <= 1 || !isWord(runes[wordStart-2])) {
-			start = wordStart - 1
-		}
-	} else if start > 0 && runes[start-1] == '@' && (start <= 1 || !isWord(runes[start-2])) {
-		start--
-	} else if start >= col && col > 0 && runes[col-1] == '.' {
-		// Cursor right after dot: @globals.
-		dotPos := col - 1
-		wordStart := dotPos
-		for wordStart > 0 && isWord(runes[wordStart-1]) {
-			wordStart--
-		}
-		if wordStart > 0 && runes[wordStart-1] == '@' && (wordStart <= 1 || !isWord(runes[wordStart-2])) {
-			start = wordStart - 1
-		}
-	}
-
-	return string(runes[start:col])
 }
 
 // isMarkdownLine returns true if the line appears to be markdown (not a calculation).
