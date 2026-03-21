@@ -635,7 +635,9 @@ func evalSqrt(args []types.Type) (types.Type, error) {
 }
 
 // uniformCurrency returns the shared currency symbol if all args are
-// Currency with the same symbol. Returns ("", false) otherwise.
+// Currency with the same code. Returns ("", false) otherwise.
+// Uses Code for comparison (so $ and USD are treated as the same currency)
+// but returns the first element's Symbol for display fidelity.
 func uniformCurrency(args []types.Type) (string, bool) {
 	if len(args) == 0 {
 		return "", false
@@ -646,7 +648,7 @@ func uniformCurrency(args []types.Type) (string, bool) {
 	}
 	for _, arg := range args[1:] {
 		c, ok := arg.(*types.Currency)
-		if !ok || c.Symbol != first.Symbol {
+		if !ok || !c.IsSameCurrency(first) { // #95: compare by Code so $ and USD match
 			return "", false
 		}
 	}
