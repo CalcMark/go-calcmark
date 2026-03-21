@@ -5,7 +5,7 @@
 # Scope: which issues/PRs to analyze (GitHub search syntax).
 # Override per-run with: --scope 'label:"priority:high"'
 scope:
-  query: "repo:CalcMark/go-calcmark -label:\"duplicate\" -label:\"invalid\""
+  query: 'repo:CalcMark/go-calcmark -label:"duplicate" -label:"invalid"'
   # Excluded 2 noise label(s) detected in this repo: duplicate, invalid
 
 # Issue/PR classification — first matching category wins; unmatched = "other".
@@ -14,21 +14,21 @@ quality:
   categories:
     - name: bug
       match:
-        - "type:Bug"  # repo-configured issue type
+        - "type:Bug" # repo-configured issue type
         - "label:bug"
         - "title:/\\bfix(es|ed)?\\b/i"
         - "title:/^fix[\\(: ]/i"
         - "title:/^bug[\\(: ]/i"
     - name: feature
       match:
-        - "type:Feature"  # repo-configured issue type
+        - "type:Feature" # repo-configured issue type
         - "label:enhancement"
         - "title:/^feat[\\(: ]/i"
         - "title:/^add[\\(: ]/i"
         - "title:/^feature[\\(: ]/i"
     - name: chore
       match:
-        - "type:Task"  # repo-configured issue type
+        - "type:Task" # repo-configured issue type
         - "title:/^refactor[\\(: ]/i"
         - "title:/^chore[\\(: ]/i"
         - "title:/^ci[\\(: ]/i"
@@ -67,7 +67,7 @@ lifecycle:
 # CI/Actions: requires 'discussions: write' in workflow permissions.
 discussions:
   category: General
-  # title: "Weekly Velocity: {{.Repo}} ({{.Date}})"  # optional Go template
+  title: "Weekly Velocity: ({{.Date}})" # optional Go template
   # repo: owner/other-repo                            # optional: post to a different repo
 
 # Effort: how effort is assigned to work items (shared by velocity and WIP).
@@ -77,8 +77,8 @@ effort:
 # WIP limits: warn when work-in-progress exceeds these effort-weighted thresholds.
 # Based on 1 human items currently in progress
 wip:
-  team_limit: 5.0              # total items across all assignees
-  person_limit: 5.0             # max items per individual assignee
+  team_limit: 5.0 # total items across all assignees
+  person_limit: 5.0 # max items per individual assignee
   # bots: additional bot accounts (case-insensitive exact match)
   # bots:
   #   - "claude-assistant"
@@ -93,4 +93,3 @@ velocity:
       length: "14d"
       anchor: "2026-03-16"
     count: 3
-
