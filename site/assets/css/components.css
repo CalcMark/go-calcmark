@@ -91,6 +91,18 @@
   height: 1.1em;
 }
 
+/* Inline lark shortcode links */
+.lark-link {
+  white-space: nowrap;
+}
+
+.lark-link-icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.1em;
+  margin-right: 0.15em;
+}
+
 /* Theme toggle */
 .theme-toggle {
   background: none;

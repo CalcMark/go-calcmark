@@ -2,6 +2,7 @@
 title: "Embedded Datacenter Cost"
 summary: "CalcMark's embedded mode: live calculations inside a standard Markdown file, designed for Hugo and static-site pipelines."
 weight: 95
+calcmark_source: testdata/examples/embedded-datacenter-cost.md
 ---
 
 This example demonstrates **embedded mode** — CalcMark blocks inside a standard Markdown file. Instead of writing a `.cm` document, you write normal Markdown and tag calculation blocks with ` ```cm ` or ` ```calcmark `. Each block is evaluated independently, and the results replace the original block. Everything else passes through unchanged.
