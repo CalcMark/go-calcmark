@@ -11,7 +11,7 @@ calcmark_build: progressive
 
 A recipe is a CalcMark document waiting to happen — quantities with units, scaling by servings, cost per portion. CalcMark handles fractions (`2/3 cup`), measurement conventions (US vs Imperial), and document-wide scaling with a single frontmatter directive.
 
-**Try it now:** Open the [Recipe Scaling example in Lark](https://lark.calcmark.org) or run `cm remote recipe-scaling` in the editor.
+**Try it now:** Open the {{< lark "recipe-scaling" "Recipe Scaling example in Lark" >}} or run `cm remote recipe-scaling` in the editor.
 
 ---
 

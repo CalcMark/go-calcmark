@@ -9,7 +9,7 @@ How many servers do you need? How much bandwidth? What's the storage budget for 
 
 CalcMark is built for this. Write your assumptions in plain text, let the math flow, and change any number to see the cascade.
 
-**Try it now:** Open the [System Sizing example in Lark](https://lark.calcmark.org) or run `cm remote system-sizing` in the editor.
+**Try it now:** Open the {{< lark "system-sizing" "System Sizing example in Lark" >}} or run `cm remote system-sizing` in the editor.
 
 ---
 

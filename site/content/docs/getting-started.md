@@ -148,4 +148,4 @@ See [Sharing with GitHub Gist](/docs/user-guide/#sharing-gist) in the User Guide
 **Integrate:**
 - [Agent & API Integration](/docs/agent-integration/) — use CalcMark from code or AI agents
 - [Go Package](/docs/go-package/) — embed in your Go application
-- [CalcMark Lark](https://lark.calcmark.org) — try in your browser, no install needed
+- {{< lark "" "CalcMark Lark" >}} — try in your browser, no install needed

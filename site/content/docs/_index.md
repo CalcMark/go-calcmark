@@ -15,5 +15,5 @@ CalcMark is a calculation language that blends seamlessly with Markdown. Write y
 | Look up a specific feature | [User Guide](/docs/user-guide/) — task-oriented sub-pages |
 | Find the exact specification | [Language Reference](/docs/language-reference/) — formal spec with deep-linkable anchors |
 | Copy a working document | [Examples](/docs/examples/) — complete worked problems |
-| Try without installing | [CalcMark Lark](https://lark.calcmark.org) — browser playground |
+| Try without installing | {{< lark "" "CalcMark Lark" >}} — browser playground |
 | Contribute to CalcMark | [Contributing](/docs/contributing/) — architecture, development setup, conventions |

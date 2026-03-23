@@ -1,0 +1,11 @@
+{{- $base := site.Params.larkURL -}}
+{{- $slug := .Get 0 -}}
+{{- $text := .Get 1 -}}
+{{- if $slug -}}
+  {{- $url := printf "%s/x/%s" $base $slug -}}
+  {{- $text = $text | default (printf "Open %s in Lark" $slug) -}}
+  <a href="{{ $url }}" target="_blank" rel="noopener">{{ $text }}</a>
+{{- else -}}
+  {{- $text = $text | default "CalcMark Lark" -}}
+  <a href="{{ $base }}" target="_blank" rel="noopener">{{ $text }}</a>
+{{- end -}}
