@@ -7,7 +7,7 @@ These tutorials teach CalcMark through real-world scenarios. Each one walks thro
 
 **New to CalcMark?** Start with [Getting Started](/docs/getting-started/) for installation and core concepts, then come back here.
 
-**Want to try without installing?** Open the [CalcMark Lark playground](https://lark.calcmark.org) in your browser and paste any example.
+**Want to try without installing?** Open the {{< lark "" "CalcMark Lark playground" >}} in your browser and paste any example.
 
 ### [System Sizing & Capacity Planning](/guides/system-sizing/)
 

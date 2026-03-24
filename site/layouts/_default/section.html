@@ -27,7 +27,7 @@
     {{- $larkIcon := resources.Get "images/lark-color.svg" | fingerprint -}}
     {{- $slug := path.BaseName . -}}
     <div class="example-actions">
-      <a href="https://lark.calcmark.org/x/{{ $slug }}" class="btn btn-primary btn-lark" target="_blank" rel="noopener"><img src="{{ $larkIcon.RelPermalink }}" alt="" class="btn-lark-icon"> Edit live</a>
+      <a href="{{ site.Params.larkURL }}/x/{{ $slug }}" class="btn btn-primary btn-lark" target="_blank" rel="noopener"><img src="{{ $larkIcon.RelPermalink }}" alt="" class="btn-lark-icon"> Edit live</a>
       <span class="example-actions-or">or <a href="full/">view full document</a></span>
     </div>
     {{ end }}

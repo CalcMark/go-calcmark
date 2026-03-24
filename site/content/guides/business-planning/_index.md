@@ -7,7 +7,7 @@ calcmark_build: progressive
 
 Revenue forecasts, cost breakdowns, margin analysis, budget health checks — financial models are just calculations embedded in narrative. CalcMark makes the narrative and the math live in one document.
 
-**Try it now:** Open the [Household Budget in Lark](https://lark.calcmark.org) or run `cm remote household-budget` in the editor.
+**Try it now:** Open the {{< lark "household-budget" "Household Budget in Lark" >}} or run `cm remote household-budget` in the editor.
 
 ---
 

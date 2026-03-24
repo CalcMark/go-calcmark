@@ -4,7 +4,7 @@ summary: "Tutorials, worked examples, and feature references for CalcMark."
 weight: 900
 ---
 
-Each example page has a Larky icon you can click to open the file directly in [Lark](https://lark.calcmark.org), or copy the `cm remote` command to your terminal.
+Each example page has a Larky icon you can click to open the file directly in {{< lark "" "Lark" >}}, or copy the `cm remote` command to your terminal.
 
 ## Tutorials
 

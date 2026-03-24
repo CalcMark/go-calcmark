@@ -1,0 +1,12 @@
+{{- $base := site.Params.larkURL -}}
+{{- $slug := .Get 0 -}}
+{{- $text := .Get 1 -}}
+{{- $larkIcon := resources.Get "images/lark-color.svg" | fingerprint -}}
+{{- if $slug -}}
+  {{- $url := printf "%s/x/%s" $base $slug -}}
+  {{- $text = $text | default (printf "Open %s in Lark" $slug) -}}
+  <a href="{{ $url }}" class="lark-link" target="_blank" rel="noopener"><img src="{{ $larkIcon.RelPermalink }}" alt="" class="lark-link-icon" aria-hidden="true">{{ $text }}</a>
+{{- else -}}
+  {{- $text = $text | default "CalcMark Lark" -}}
+  <a href="{{ $base }}" class="lark-link" target="_blank" rel="noopener"><img src="{{ $larkIcon.RelPermalink }}" alt="" class="lark-link-icon" aria-hidden="true">{{ $text }}</a>
+{{- end -}}
