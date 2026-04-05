@@ -5,8 +5,8 @@ Uses CalcMark's date arithmetic and compound durations.
 
 ## Key Dates
 
+kickoff = Jan 6 2025
 launch_date = Mar 15 2025
-kickoff = today
 
 Days until launch:
 

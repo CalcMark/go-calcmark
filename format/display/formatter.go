@@ -194,13 +194,22 @@ func (f Formatter) formatExplicitQuantity(q *types.Quantity) string {
 }
 
 // FormatRate formats a rate (quantity per time) in human-readable form.
+// When the rate's amount unit is a currency symbol ($, €, £, ¥), the symbol
+// is rendered as a prefix (e.g., "$363.46/day") matching FormatCurrency style.
 func (f Formatter) FormatRate(r *types.Rate) string {
 	if r == nil || r.Amount == nil {
 		return "0/s"
 	}
 
-	normValue, normUnit := NormalizeForDisplay(r.Amount.Value, r.Amount.Unit)
 	timeAbbrev := abbreviateTimeUnit(r.PerUnit)
+
+	// Currency-symbol rates: format like "$363.46/day" not "363.46 $/day"
+	if _, isCurrencySymbol := types.SymbolToCode[r.Amount.Unit]; isCurrencySymbol {
+		cur := types.NewCurrency(r.Amount.Value, r.Amount.Unit)
+		return fmt.Sprintf("%s/%s", f.FormatCurrency(cur), timeAbbrev)
+	}
+
+	normValue, normUnit := NormalizeForDisplay(r.Amount.Value, r.Amount.Unit)
 
 	if normUnit != r.Amount.Unit {
 		numStr := f.formatNormalizedQuantity(normValue, normUnit)

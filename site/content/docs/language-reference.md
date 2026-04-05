@@ -484,6 +484,7 @@ Currency + Currency (different symbols) -> Number  (units dropped)
 Quantity + Quantity (same unit) -> Quantity
 Date + Duration -> Date
 Date - Date -> Duration
+Currency / Duration -> Rate  ($1000 / 4 days = $250/day)
 Rate * Duration -> Quantity  (via "over" keyword)
 Speed * Duration -> Quantity  (bridge: 60 mph * 2 hours = 120 mi)
 Number * Rate -> Rate        (scaling: 3 * 10 MB/s = 30 MB/s)

@@ -81,7 +81,18 @@ func (p *RecursiveDescentParser) parseCapacityValue() (ast.Node, error) {
 // tryParseRateFromDivision attempts to parse a rate from a division operator followed by a time unit.
 // Returns (rateNode, true) if successful, (nil, false) otherwise.
 // This is a pure function that doesn't modify parser state except for advancing tokens if successful.
+//
+// When the left operand is a bare identifier (variable reference), the division
+// is NOT parsed as a rate. Variables like "total / days" should be arithmetic
+// division, not rate construction. Users should write "total per day" for rates
+// with variables.
 func (p *RecursiveDescentParser) tryParseRateFromDivision(left ast.Node) (*ast.RateLiteral, bool) {
+	// Don't create rates when the left side is a variable reference.
+	// "total / days" is division, not "$total per day".
+	if _, isIdent := left.(*ast.Identifier); isIdent {
+		return nil, false
+	}
+
 	// Check if next token is a time unit identifier (e.g., "s" in "100 MB/s")
 	if !p.check(lexer.IDENTIFIER) {
 		return nil, false
