@@ -283,8 +283,8 @@ end = April 26
 			wantDiagInLine: "end = April 26",
 		},
 		{
-			name:   "reserved keyword diagnostic has helpful message",
-			source: "end = April 26\n",
+			name:           "reserved keyword diagnostic has helpful message",
+			source:         "end = April 26\n",
 			wantDiagCount:  1,
 			wantDiagCode:   DiagLikelyCalculation,
 			wantDiagInLine: "end = April 26",
