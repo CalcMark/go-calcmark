@@ -119,56 +119,67 @@ func TestRateParsing(t *testing.T) {
 	}
 }
 
-// TestIdentifierDivisionNotRate verifies that identifier / time_unit is parsed
-// as a division (BinaryOp), not a rate literal. When a variable reference is on
-// the left side of /, the parser should not greedily consume the time-unit
-// denominator as a rate. Users should use "per" for rates with variables.
-func TestIdentifierDivisionNotRate(t *testing.T) {
-	tests := []struct {
+// TestIdentifierSlashDisambiguation verifies that whitespace around / controls
+// whether identifier/time_unit is parsed as a rate or division.
+//
+//	"weekly_posts/week"  → tight slash → RateLiteral (rate intent)
+//	"total / days"       → spaced slash → BinaryOp (division intent)
+func TestIdentifierSlashDisambiguation(t *testing.T) {
+	// Spaced slash: identifier / time_unit → division
+	divisionTests := []struct {
 		name  string
 		input string
 	}{
-		{
-			name:  "variable / days is division not rate",
-			input: "total / days\n",
-		},
-		{
-			name:  "variable / hours is division not rate",
-			input: "cost / hours\n",
-		},
-		{
-			name:  "variable / month is division not rate",
-			input: "revenue / month\n",
-		},
+		{name: "spaced: total / days", input: "total / days\n"},
+		{name: "spaced: cost / hours", input: "cost / hours\n"},
+		{name: "spaced: revenue / month", input: "revenue / month\n"},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range divisionTests {
 		t.Run(tt.name, func(t *testing.T) {
 			nodes, err := Parse(tt.input)
 			if err != nil {
 				t.Fatalf("Unexpected parse error: %v", err)
 			}
-
 			if len(nodes) != 1 {
 				t.Fatalf("Expected 1 node, got %d", len(nodes))
 			}
-
-			// Should be BinaryOp (division), NOT RateLiteral
 			binOp, ok := nodes[0].(*ast.BinaryOp)
 			if !ok {
-				t.Fatalf("Expected BinaryOp for variable division, got %T (parser incorrectly created rate literal)", nodes[0])
+				t.Fatalf("Expected BinaryOp for spaced division, got %T", nodes[0])
 			}
-
 			if binOp.Operator != "/" {
 				t.Errorf("Expected operator '/', got '%s'", binOp.Operator)
 			}
+		})
+	}
 
-			// Both sides should be identifiers
-			if _, ok := binOp.Left.(*ast.Identifier); !ok {
-				t.Errorf("Expected left side to be Identifier, got %T", binOp.Left)
+	// Tight slash: identifier/time_unit → rate
+	rateTests := []struct {
+		name    string
+		input   string
+		perUnit string
+	}{
+		{name: "tight: weekly_posts/week", input: "weekly_posts/week\n", perUnit: "week"},
+		{name: "tight: count/day", input: "count/day\n", perUnit: "day"},
+		{name: "tight: bandwidth/s", input: "bandwidth/s\n", perUnit: "s"},
+	}
+
+	for _, tt := range rateTests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
 			}
-			if _, ok := binOp.Right.(*ast.Identifier); !ok {
-				t.Errorf("Expected right side to be Identifier, got %T", binOp.Right)
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+			rate, ok := nodes[0].(*ast.RateLiteral)
+			if !ok {
+				t.Fatalf("Expected RateLiteral for tight slash, got %T", nodes[0])
+			}
+			if rate.PerUnit != tt.perUnit {
+				t.Errorf("Expected per unit '%s', got '%s'", tt.perUnit, rate.PerUnit)
 			}
 		})
 	}
