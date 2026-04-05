@@ -59,6 +59,24 @@ func TestReservedKeywords(t *testing.T) {
 	}
 }
 
+// TestIsReservedKeywordToken tests the IsReservedKeywordToken helper.
+func TestIsReservedKeywordToken(t *testing.T) {
+	// All values in ReservedKeywords should return true
+	for keyword, tokenType := range ReservedKeywords {
+		if !IsReservedKeywordToken(tokenType) {
+			t.Errorf("IsReservedKeywordToken(%s) = false for reserved keyword %q", tokenType, keyword)
+		}
+	}
+
+	// Non-keyword token types should return false
+	nonKeywords := []TokenType{IDENTIFIER, NUMBER, ASSIGN, PLUS, MINUS, LPAREN, RPAREN, EOF, NEWLINE}
+	for _, tt := range nonKeywords {
+		if IsReservedKeywordToken(tt) {
+			t.Errorf("IsReservedKeywordToken(%s) = true, want false", tt)
+		}
+	}
+}
+
 // TestReservedKeywordsNotIdentifiers tests that reserved keywords cannot be used as identifiers
 func TestReservedKeywordsNotIdentifiers(t *testing.T) {
 	tests := []struct {

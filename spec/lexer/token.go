@@ -304,6 +304,25 @@ type Token struct {
 	EndPos       int // Byte offset in source where token ends
 }
 
+// reservedKeywordTokens is the set of token types that correspond to reserved keywords.
+// Built at init time from ReservedKeywords for O(1) lookup.
+var reservedKeywordTokens map[TokenType]bool
+
+func init() {
+	reservedKeywordTokens = make(map[TokenType]bool, len(ReservedKeywords))
+	for _, tt := range ReservedKeywords {
+		reservedKeywordTokens[tt] = true
+	}
+}
+
+// IsReservedKeywordToken reports whether the given token type corresponds
+// to a reserved keyword (e.g., END, IF, FOR). This is useful for diagnostics
+// that need to detect when a user attempts to use a reserved keyword as a
+// variable name.
+func IsReservedKeywordToken(t TokenType) bool {
+	return reservedKeywordTokens[t]
+}
+
 // String returns a string representation of the token
 func (t Token) String() string {
 	return fmt.Sprintf("Token(%s, %q, %d:%d)", t.Type, t.Value, t.Line, t.Column)

@@ -224,13 +224,29 @@ func (m *Model) GetLineResults() []LineResult {
 			// Use InterpolatedSource so {{var}}, {{@scale}}, and {{@globals.field}}
 			// are resolved in the Side-by-Side preview. InterpolatedSource falls
 			// back to raw Source when no interpolation has been applied.
-			for _, line := range b.InterpolatedSource() {
-				results = append(results, LineResult{
+
+			// Build diagnostic map (same pattern as CalcBlock)
+			textDiags := b.Diagnostics()
+			textDiagByLine := make(map[int]*document.Diagnostic)
+			for i := range textDiags {
+				d := &textDiags[i]
+				if d.Line > 0 {
+					textDiagByLine[d.Line] = d
+				}
+			}
+
+			for i, line := range b.InterpolatedSource() {
+				lr := LineResult{
 					LineNum: lineNum,
 					Source:  line,
 					IsCalc:  false,
 					BlockID: node.ID,
-				})
+				}
+				if diag, ok := textDiagByLine[i+1]; ok {
+					lr.Diagnostic = diag
+					lr.Error = diag.Code + ": " + diag.Message
+				}
+				results = append(results, lr)
 				lineNum++
 			}
 		}

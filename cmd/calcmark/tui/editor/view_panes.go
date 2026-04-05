@@ -591,7 +591,7 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 
 	pvBg := m.previewPaneBg()
 
-	if r.Error != "" && isActuallyCalc {
+	if r.Error != "" && (isActuallyCalc || r.Diagnostic != nil) {
 		// Show full error message - per CONTEXT.md decision
 		// "Show full error message in preview (not abbreviated)"
 		errStyle := lipgloss.NewStyle().

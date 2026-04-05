@@ -251,10 +251,13 @@ func (s *Server) evaluate(source string) *DocumentSnapshot {
 	eval.Evaluate(doc)
 	snap.Evaluator = eval
 
-	// Collect diagnostics from all calc blocks
+	// Collect diagnostics from all blocks
 	for _, node := range doc.GetBlocks() {
-		if cb, ok := node.Block.(*specDoc.CalcBlock); ok {
-			snap.Diagnostics = append(snap.Diagnostics, cb.Diagnostics()...)
+		switch b := node.Block.(type) {
+		case *specDoc.CalcBlock:
+			snap.Diagnostics = append(snap.Diagnostics, b.Diagnostics()...)
+		case *specDoc.TextBlock:
+			snap.Diagnostics = append(snap.Diagnostics, b.Diagnostics()...)
 		}
 	}
 

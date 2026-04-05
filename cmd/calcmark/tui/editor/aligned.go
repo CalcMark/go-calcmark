@@ -439,6 +439,10 @@ func resolvePreviewLines(
 	switch {
 	case isCalcBlock && renderCalcLine != nil:
 		lines = wrapStyledLine(renderCalcLine(lr, input.PreviewWidth), input.PreviewWidth)
+	case !isCalcBlock && lr.Diagnostic != nil && renderCalcLine != nil:
+		// Text block line with a diagnostic (e.g., reserved keyword as variable name)
+		// — render through the calc line renderer to show the warning.
+		lines = wrapStyledLine(renderCalcLine(lr, input.PreviewWidth), input.PreviewWidth)
 	case !isCalcBlock && textCache != nil:
 		lines = textCache[blockLineIdx]
 	case renderMarkdown != nil:

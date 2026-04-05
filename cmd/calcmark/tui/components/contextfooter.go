@@ -80,10 +80,10 @@ func RenderContextFooter(state ContextFooterState, width int, bg color.Color, ma
 		return strings.Join(lines, "\n")
 	}
 
-	// Empty footer for non-calc lines (unless autocomplete or function help is showing).
-	// Incomplete function calls like "accumulate(" aren't parsed as calc lines,
-	// but should still show parameter help.
-	if !state.IsCalcLine && !state.AutocompleteActive && !state.InFunctionCall {
+	// Empty footer for non-calc lines (unless there's an error, autocomplete,
+	// or function help showing). Text block lines with diagnostics (e.g.,
+	// reserved keyword used as variable name) should still display their error.
+	if !state.IsCalcLine && !state.HasError && !state.AutocompleteActive && !state.InFunctionCall {
 		return padToHeight("")
 	}
 

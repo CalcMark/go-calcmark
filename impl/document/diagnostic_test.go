@@ -19,6 +19,13 @@ func TestLooksLikeFailedCalculation(t *testing.T) {
 		{"assignment with incomplete expression", "y = 5 +", true},
 		{"assignment missing value", "z =", true},
 
+		// Reserved keyword used as variable name
+		{"reserved keyword end", "end = April 26", true},
+		{"reserved keyword for", "for = 10", true},
+		{"reserved keyword if", "if = 5", true},
+		{"reserved keyword while", "while = true", true},
+		{"reserved keyword let", "let = 100", true},
+
 		// Should NOT detect as failed calculation (valid markdown/text)
 		{"markdown heading", "# This is a heading", false},
 		{"plain text", "This is just text", false},
@@ -266,6 +273,22 @@ b = # also broken
 			wantDiagCount: 2,
 			wantDiagCode:  DiagLikelyCalculation,
 		},
+		{
+			name: "detects reserved keyword as variable name",
+			source: `start = Apr 22
+end = April 26
+`,
+			wantDiagCount:  1,
+			wantDiagCode:   DiagLikelyCalculation,
+			wantDiagInLine: "end = April 26",
+		},
+		{
+			name:   "reserved keyword diagnostic has helpful message",
+			source: "end = April 26\n",
+			wantDiagCount:  1,
+			wantDiagCode:   DiagLikelyCalculation,
+			wantDiagInLine: "end = April 26",
+		},
 	}
 
 	for _, tt := range tests {
@@ -399,6 +422,102 @@ func TestAssignmentIndicator(t *testing.T) {
 				t.Errorf("assignment indicator for %q = %v, want %v", tt.line, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestReservedKeywordIndicator(t *testing.T) {
+	indicators := GetCalculationIndicators()
+
+	var indicator *CalculationIndicator
+	for i := range indicators {
+		if indicators[i].Name == "reserved_keyword_assignment" {
+			indicator = &indicators[i]
+			break
+		}
+	}
+
+	if indicator == nil {
+		t.Fatal("reserved_keyword_assignment indicator not found")
+	}
+
+	tests := []struct {
+		name string
+		line string
+		want bool
+	}{
+		{"end assignment", "end = April 26", true},
+		{"for assignment", "for = 10", true},
+		{"if assignment", "if = 5", true},
+		{"let assignment", "let = 100", true},
+
+		// Should NOT match
+		{"normal identifier", "x = 10", false},
+		{"keyword without assign", "end", false},
+		{"plain number", "42", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lex := lexer.NewLexer(tt.line)
+			tokens, err := lex.Tokenize()
+			if err != nil {
+				t.Skipf("line %q failed to tokenize: %v", tt.line, err)
+			}
+
+			meaningful := filterMeaningful(tokens)
+			got := indicator.Check(meaningful)
+			if got != tt.want {
+				t.Errorf("reserved_keyword_assignment indicator for %q = %v, want %v", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReservedKeywordDiagnosticMessage(t *testing.T) {
+	source := "end = April 26\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument error: %v", err)
+	}
+
+	evaluator := NewEvaluator()
+	_ = evaluator.Evaluate(doc)
+
+	// Check evaluator-level diagnostics
+	evalDiags := evaluator.Diagnostics()
+	if len(evalDiags) != 1 {
+		t.Fatalf("got %d evaluator diagnostics, want 1", len(evalDiags))
+	}
+
+	msg := evalDiags[0].Message
+	if !strings.Contains(msg, "reserved keyword") {
+		t.Errorf("diagnostic message should mention 'reserved keyword', got: %s", msg)
+	}
+	if !strings.Contains(msg, `"end"`) {
+		t.Errorf("diagnostic message should mention the keyword name, got: %s", msg)
+	}
+
+	// Check TextBlock-level diagnostics (used by TUI footer)
+	var tb *document.TextBlock
+	for _, node := range doc.GetBlocks() {
+		if b, ok := node.Block.(*document.TextBlock); ok {
+			tb = b
+			break
+		}
+	}
+	if tb == nil {
+		t.Fatal("expected a text block")
+	}
+	blockDiags := tb.Diagnostics()
+	if len(blockDiags) != 1 {
+		t.Fatalf("got %d block diagnostics, want 1", len(blockDiags))
+	}
+	if blockDiags[0].Detailed == "" {
+		t.Error("diagnostic Detailed field should not be empty")
+	}
+	if !strings.Contains(blockDiags[0].Detailed, "end_val") {
+		t.Errorf("diagnostic hint should suggest an alternative name, got: %s", blockDiags[0].Detailed)
 	}
 }
 

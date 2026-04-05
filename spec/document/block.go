@@ -202,10 +202,11 @@ func (cb *CalcBlock) SetConvertApplied(applied []bool) {
 // TextBlock represents markdown text.
 // Like a Jupyter markdown cell.
 type TextBlock struct {
-	source                 []string // Raw source lines (immutable after creation)
-	interpolatedSource     []string // Post-interpolation lines (nil = no interpolation)
-	interpolatedHTMLSource []string // Sentinel-wrapped lines for HTML rendering (nil = use interpolatedSource)
-	html                   string   // Rendered HTML
+	source                 []string     // Raw source lines (immutable after creation)
+	interpolatedSource     []string     // Post-interpolation lines (nil = no interpolation)
+	interpolatedHTMLSource []string     // Sentinel-wrapped lines for HTML rendering (nil = use interpolatedSource)
+	html                   string       // Rendered HTML
+	diagnostics            []Diagnostic // Warnings (e.g., reserved keyword used as variable name)
 	dirty                  bool
 }
 
@@ -285,4 +286,19 @@ func (tb *TextBlock) InterpolatedHTMLSourceText() string {
 		return strings.Join(tb.interpolatedHTMLSource, "\n")
 	}
 	return tb.InterpolatedSourceText()
+}
+
+// Diagnostics returns warnings for this text block.
+func (tb *TextBlock) Diagnostics() []Diagnostic {
+	return tb.diagnostics
+}
+
+// AddDiagnostic adds a single diagnostic to this text block.
+func (tb *TextBlock) AddDiagnostic(diag Diagnostic) {
+	tb.diagnostics = append(tb.diagnostics, diag)
+}
+
+// ClearDiagnostics removes all diagnostics from this text block.
+func (tb *TextBlock) ClearDiagnostics() {
+	tb.diagnostics = nil
 }

@@ -1,6 +1,7 @@
 package document
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/lexer"
@@ -64,6 +65,16 @@ var calculationIndicators = []CalculationIndicator{
 				return false
 			}
 			return tokens[0].Type == lexer.IDENTIFIER && tokens[1].Type == lexer.ASSIGN
+		},
+	},
+	{
+		Name:        "reserved_keyword_assignment",
+		Description: "Line starts with a reserved keyword followed by = (e.g., 'end = April 26')",
+		Check: func(tokens []lexer.Token) bool {
+			if len(tokens) < 2 {
+				return false
+			}
+			return lexer.IsReservedKeywordToken(tokens[0].Type) && tokens[1].Type == lexer.ASSIGN
 		},
 	},
 	// Future indicators can be added here:
@@ -153,6 +164,35 @@ func startsLikeAssignment(s string) bool {
 
 	first := rune(before[0])
 	return (first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_'
+}
+
+// reservedKeywordDiagnostic checks if a line starts with a reserved keyword
+// followed by = and returns the short message and detailed hint.
+// Returns ("", "") if the line doesn't match this pattern.
+func reservedKeywordDiagnostic(line string) (msg, hint string) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return "", ""
+	}
+
+	lex := lexer.NewLexer(trimmed)
+	tokens, err := lex.Tokenize()
+	if err != nil {
+		return "", ""
+	}
+
+	meaningful := filterMeaningful(tokens)
+	if len(meaningful) < 2 {
+		return "", ""
+	}
+
+	if lexer.IsReservedKeywordToken(meaningful[0].Type) && meaningful[1].Type == lexer.ASSIGN {
+		keyword := meaningful[0].Value
+		msg = fmt.Sprintf("%q is a reserved keyword and cannot be used as a variable name", keyword)
+		hint = fmt.Sprintf("Use a different variable name, e.g. %q", keyword+"_val")
+		return msg, hint
+	}
+	return "", ""
 }
 
 // filterMeaningful returns tokens excluding NEWLINE and EOF.

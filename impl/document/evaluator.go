@@ -150,21 +150,36 @@ func (e *Evaluator) GetEnvironment() *interpreter.Environment {
 
 // checkTextBlockForLikelyCalculations scans a TextBlock for lines that
 // appear to be intended calculations but failed to parse.
+// Diagnostics are stored both on the TextBlock (for TUI/LSP consumption)
+// and on the evaluator (for backwards compatibility with evaluator.Diagnostics()).
 func (e *Evaluator) checkTextBlockForLikelyCalculations(blockID string, block *document.TextBlock) {
+	block.ClearDiagnostics()
 	for i, line := range block.Source() {
 		isLikely, parseErr := looksLikeFailedCalculation(line)
 		if isLikely {
-			msg := "line looks like an assignment but failed to parse"
-			if parseErr != nil {
-				msg = fmt.Sprintf("line looks like an assignment: %v", parseErr)
+			msg, detailed := reservedKeywordDiagnostic(line)
+			if msg == "" {
+				msg = "line looks like an assignment but failed to parse"
+				if parseErr != nil {
+					msg = fmt.Sprintf("line looks like an assignment: %v", parseErr)
+				}
 			}
-			e.diagnostics = append(e.diagnostics, BlockDiagnostic{
+			diag := BlockDiagnostic{
 				BlockID:  blockID,
 				Line:     i + 1, // 1-indexed
 				Severity: Warning,
 				Code:     DiagLikelyCalculation,
 				Message:  msg,
 				Source:   line,
+			}
+			e.diagnostics = append(e.diagnostics, diag)
+			block.AddDiagnostic(document.Diagnostic{
+				BlockID:  blockID,
+				Severity: "warning",
+				Code:     DiagLikelyCalculation,
+				Message:  msg,
+				Detailed: detailed,
+				Line:     i + 1,
 			})
 		}
 	}
