@@ -82,17 +82,11 @@ func (p *RecursiveDescentParser) parseCapacityValue() (ast.Node, error) {
 // Returns (rateNode, true) if successful, (nil, false) otherwise.
 // This is a pure function that doesn't modify parser state except for advancing tokens if successful.
 //
-// When the left operand is a bare identifier (variable reference), the division
-// is NOT parsed as a rate. Variables like "total / days" should be arithmetic
-// division, not rate construction. Users should write "total per day" for rates
-// with variables.
-func (p *RecursiveDescentParser) tryParseRateFromDivision(left ast.Node) (*ast.RateLiteral, bool) {
-	// Don't create rates when the left side is a variable reference.
-	// "total / days" is division, not "$total per day".
-	if _, isIdent := left.(*ast.Identifier); isIdent {
-		return nil, false
-	}
-
+// When the left operand is a bare identifier (variable reference) AND the slash
+// is spaced ("total / days"), the expression is treated as division, not a rate.
+// Tight slash syntax ("weekly_posts/week") is still parsed as a rate even with
+// an identifier on the left — the lack of whitespace signals rate intent.
+func (p *RecursiveDescentParser) tryParseRateFromDivision(left ast.Node, divideOp lexer.Token) (*ast.RateLiteral, bool) {
 	// Check if next token is a time unit identifier (e.g., "s" in "100 MB/s")
 	if !p.check(lexer.IDENTIFIER) {
 		return nil, false
@@ -101,6 +95,15 @@ func (p *RecursiveDescentParser) tryParseRateFromDivision(left ast.Node) (*ast.R
 	timeUnit := string(p.peek().Value)
 	if !isTimeUnit(timeUnit) {
 		return nil, false
+	}
+
+	// When the left side is an identifier, use whitespace to disambiguate:
+	//   "weekly_posts/week"  → tight slash → rate (no space between / and time unit)
+	//   "total / days"       → spaced slash → division (variable reference)
+	if _, isIdent := left.(*ast.Identifier); isIdent {
+		if divideOp.EndPos != p.peek().StartPos {
+			return nil, false
+		}
 	}
 
 	// Success - consume the time unit and create rate

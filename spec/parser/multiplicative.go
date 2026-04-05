@@ -23,7 +23,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		// Special case: Check if DIVIDE might be a rate (e.g., "100 MB/s")
 		// Use helper to try parsing as a rate first
 		if op.Type == lexer.DIVIDE {
-			if rate, ok := p.tryParseRateFromDivision(left); ok {
+			if rate, ok := p.tryParseRateFromDivision(left, op); ok {
 				left = rate
 				// Continue to allow further operations: (100 MB/s * 3600)
 				// This works because the rate is now 'left' and the loop continues
@@ -40,7 +40,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 		// After parsing right operand for division, check if it should be a rate too
 		// This handles expressions like (10 req/s / 5 req/s)
 		if op.Type == lexer.DIVIDE {
-			if rate, ok := p.tryParseRateFromDivision(right); ok {
+			if rate, ok := p.tryParseRateFromDivision(right, op); ok {
 				right = rate
 			}
 		}
