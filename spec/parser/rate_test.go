@@ -119,6 +119,61 @@ func TestRateParsing(t *testing.T) {
 	}
 }
 
+// TestIdentifierDivisionNotRate verifies that identifier / time_unit is parsed
+// as a division (BinaryOp), not a rate literal. When a variable reference is on
+// the left side of /, the parser should not greedily consume the time-unit
+// denominator as a rate. Users should use "per" for rates with variables.
+func TestIdentifierDivisionNotRate(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "variable / days is division not rate",
+			input: "total / days\n",
+		},
+		{
+			name:  "variable / hours is division not rate",
+			input: "cost / hours\n",
+		},
+		{
+			name:  "variable / month is division not rate",
+			input: "revenue / month\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
+			}
+
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+
+			// Should be BinaryOp (division), NOT RateLiteral
+			binOp, ok := nodes[0].(*ast.BinaryOp)
+			if !ok {
+				t.Fatalf("Expected BinaryOp for variable division, got %T (parser incorrectly created rate literal)", nodes[0])
+			}
+
+			if binOp.Operator != "/" {
+				t.Errorf("Expected operator '/', got '%s'", binOp.Operator)
+			}
+
+			// Both sides should be identifiers
+			if _, ok := binOp.Left.(*ast.Identifier); !ok {
+				t.Errorf("Expected left side to be Identifier, got %T", binOp.Left)
+			}
+			if _, ok := binOp.Right.(*ast.Identifier); !ok {
+				t.Errorf("Expected right side to be Identifier, got %T", binOp.Right)
+			}
+		})
+	}
+}
+
 // TestIdentifierPerDesugarsToConvertRate tests that "identifier per time_unit"
 // desugars to convert_rate(identifier, time_unit) at parse time (issue #87).
 func TestIdentifierPerDesugarsToConvertRate(t *testing.T) {

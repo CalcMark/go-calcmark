@@ -332,24 +332,22 @@ func TestDateLiteralArithmetic(t *testing.T) {
 }
 
 // TestDateDifference tests date - date expressions.
-// NOTE: Current implementation has inverted subtraction order.
-// Jan 2 - Jan 1 returns -1 day instead of +1 day.
-// This test documents current behavior; fix the implementation if this is wrong.
+// left - right should produce (left - right) days with correct sign.
 func TestDateDifference(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		wantDays int64 // In days (may be negative due to subtraction order)
+		wantDays int64
 	}{
 		{
-			name:     "Jan 2 2025 - Jan 1 2025 (returns negative due to impl)",
+			name:     "Jan 2 2025 - Jan 1 2025 = 1 day",
 			input:    "d = Jan 2 2025 - Jan 1 2025\n",
-			wantDays: -1, // Implementation computes right - left
+			wantDays: 1, // Later date - earlier date = positive
 		},
 		{
-			name:     "Jan 1 2025 - Jan 8 2025 (returns positive)",
+			name:     "Jan 1 2025 - Jan 8 2025 = -7 days",
 			input:    "d = Jan 1 2025 - Jan 8 2025\n",
-			wantDays: 7, // Implementation computes right - left = Jan 8 - Jan 1
+			wantDays: -7, // Earlier date - later date = negative
 		},
 	}
 
@@ -381,6 +379,50 @@ func TestDateDifference(t *testing.T) {
 				t.Errorf("Got %d days, want %d days", gotDays, tt.wantDays)
 			}
 		})
+	}
+}
+
+// TestCurrencyDividedByDurationVariable tests that dividing a currency by a
+// duration variable produces a rate: $1453.84 / 4 days = $363.46/day.
+// Using number(days) gives plain currency division instead.
+func TestCurrencyDividedByDurationVariable(t *testing.T) {
+	input := `arrive = Apr 22
+depart = April 26
+days = depart - arrive
+total = $1,453.84
+daily = total / days
+`
+	interp := NewInterpreter()
+
+	nodes, err := parser.Parse(input)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+
+	results, err := interp.Eval(nodes)
+	if err != nil {
+		t.Fatalf("Eval error: %v", err)
+	}
+
+	// Find the "daily" result (last one)
+	daily := results[len(results)-1]
+
+	rate, ok := daily.(*types.Rate)
+	if !ok {
+		t.Fatalf("Expected daily to be *types.Rate, got %T (%v)", daily, daily)
+	}
+
+	// $1,453.84 / 4 days = $363.46/day
+	expected := "363.46"
+	got := rate.Amount.Value.StringFixed(2)
+	if got != expected {
+		t.Errorf("Expected rate amount = %s, got %s", expected, got)
+	}
+	if rate.Amount.Unit != "$" {
+		t.Errorf("Expected rate unit '$', got '%s'", rate.Amount.Unit)
+	}
+	if rate.PerUnit != "day" {
+		t.Errorf("Expected per unit 'day', got '%s'", rate.PerUnit)
 	}
 }
 

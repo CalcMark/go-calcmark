@@ -175,7 +175,7 @@ monthly_commute = fare over 1 month
 {{< /tab >}}
 {{< tab name="Editor" >}}
 ```text
-fare = $5.50/day                     5.5 $/day
+fare = $5.50/day                     $5.50/day
 monthly_commute = fare over 1 ...    $165.00
 ```
 {{< /tab >}}
@@ -184,7 +184,7 @@ monthly_commute = fare over 1 ...    $165.00
 [
   {
     "source": "fare = $5.50/day",
-    "value": "5.5 $/day",
+    "value": "$5.50/day",
     "type": "rate",
     "numeric_value": 5.5,
     "unit": "$/day",

@@ -110,6 +110,17 @@ func TestFormatRate(t *testing.T) {
 		{"1.5M bytes/s normalized", "1500000", "bytes", "second", "1.43 MB/s"}, // known unit: normalized
 		{"small rate", "100", "requests", "minute", "100 requests/min"},        // arbitrary unit
 		{"1000 meters/hour", "1000", "m", "hour", "1 km/h"},                    // meters → km
+		// Currency-symbol rates: prefix symbol, no space
+		{"dollar rate", "363.46", "$", "day", "$363.46/day"},
+		{"euro rate", "50", "€", "hour", "€50.00/h"},
+		{"pound rate", "1200", "£", "month", "£1,200.00/month"},
+		{"yen rate", "5000", "¥", "year", "¥5,000/year"},
+		// ISO code rates: postfix code with space
+		{"EUR code rate", "100", "EUR", "day", "100 EUR/day"},
+		// Large currency rate with suffix
+		{"large dollar rate", "50000", "$", "month", "$50K/month"},
+		// Negative currency rate
+		{"negative dollar rate", "-363.46", "$", "day", "-$363.46/day"},
 	}
 
 	for _, tt := range tests {

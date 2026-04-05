@@ -231,6 +231,20 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 				return types.NewCurrency(leftCur.Value.Div(rightNum.Value), leftCur.Symbol), nil
 			}
 		}
+		// Currency / Duration → Rate (divide value by duration magnitude)
+		// e.g., "$1000 / 4 days" = "$250/day"
+		if rightDur, ok := right.(*types.Duration); ok && operator == "/" {
+			if rightDur.Value.IsZero() {
+				return nil, fmt.Errorf("division by zero")
+			}
+			return &types.Rate{
+				Amount: &types.Quantity{
+					Value: leftCur.Value.Div(rightDur.Value),
+					Unit:  leftCur.Symbol,
+				},
+				PerUnit: types.NormalizeTimeUnit(rightDur.Unit),
+			}, nil
+		}
 		// Currency op Currency (same type)
 		if rightCur, ok := right.(*types.Currency); ok {
 			if !leftCur.IsSameCurrency(rightCur) { // #95: compare by Code so $ and USD match

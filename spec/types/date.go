@@ -59,8 +59,8 @@ func (d *Date) AddDays(days int) *Date {
 	return &Date{Time: newTime}
 }
 
-// DaysBetween returns the number of days between this date and another.
+// DaysBetween returns the number of days from other to this date (d - other).
 func (d *Date) DaysBetween(other *Date) int {
-	duration := other.Time.Sub(d.Time)
+	duration := d.Time.Sub(other.Time)
 	return int(duration.Hours() / 24)
 }

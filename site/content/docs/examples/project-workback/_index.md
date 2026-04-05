@@ -14,20 +14,20 @@ The complete CalcMark file is available at {{< repo-file path="testdata/examples
 
 ## Key Dates
 
-Start by pinning the two anchors of your schedule: the launch date and today. Subtracting one date from another gives you a duration.
+Start by pinning the two anchors of your schedule: the kickoff date and the launch date. Subtracting one date from another gives you a duration.
 
 ```calcmark
+kickoff = Jan 6 2025
 launch_date = Mar 15 2025
-kickoff = today
 
 Days until launch:
 
 days_to_launch = launch_date - kickoff
 ```
 
-`Mar 15 2025` is a date literal -- CalcMark parses it directly. The `today` keyword resolves to the current date at runtime. Subtracting two dates produces a duration in days.
+`Mar 15 2025` and `Jan 6 2025` are date literals -- CalcMark parses them directly. Subtracting two dates produces a duration in days.
 
-**CalcMark features:** Date literals (`Mar 15 2025`); `today` keyword; date subtraction producing a duration.
+**CalcMark features:** Date literals (`Mar 15 2025`); date subtraction producing a duration.
 
 ---
 
@@ -224,8 +224,8 @@ If `needed_time` exceeds `available_time`, you need to cut scope or extend the d
 
 This example showcases the following CalcMark features:
 
-- **Date literals** -- `Mar 15 2025`
-- **`today` keyword** -- resolves to the current date at runtime
+- **Date literals** -- `Jan 6 2025`, `Mar 15 2025`
+- **`today` keyword** -- resolves to the current date at runtime (used with `from`)
 - **Date arithmetic** -- subtracting dates, adding/subtracting durations from dates
 - **Duration literals** -- `weeks`, `days`, `month`
 - **Duration arithmetic** -- adding and subtracting mixed-unit durations

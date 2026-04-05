@@ -134,11 +134,16 @@ func TestDateArithmetic(t *testing.T) {
 		t.Errorf("AddDays(5) from Dec 25 should be Dec 30, got day %d", d2.Time.Day())
 	}
 
-	// Test days between
+	// Test days between: d1.DaysBetween(d3) computes d1 - d3
 	d3, _ := NewDate(2024, 12, 31)
 	days := d1.DaysBetween(d3)
-	if days != 6 {
-		t.Errorf("Days between Dec 25 and Dec 31 should be 6, got %d", days)
+	if days != -6 {
+		t.Errorf("Dec 25 - Dec 31 should be -6, got %d", days)
+	}
+	// Reverse order: Dec 31 - Dec 25 = +6
+	daysReverse := d3.DaysBetween(d1)
+	if daysReverse != 6 {
+		t.Errorf("Dec 31 - Dec 25 should be 6, got %d", daysReverse)
 	}
 }
 
