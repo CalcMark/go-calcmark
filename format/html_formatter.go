@@ -68,12 +68,13 @@ func (f *HTMLFormatter) Extensions() []string {
 
 // TemplateBlock represents a block for template rendering
 type TemplateBlock struct {
-	Type        string
-	SourceLines []TemplateLine // For calc blocks with per-line results
-	Error       string
-	Warnings    []string      // Diagnostic warnings (e.g., reserved keyword as variable name)
-	HTML        template.HTML // For text blocks
-	DocLine     int           // 1-indexed document-absolute start line (for scroll sync)
+	Type              string
+	SourceLines       []TemplateLine // For calc blocks with per-line results
+	Error             string
+	HasLineDiagnostic bool          // True if any SourceLine has a per-line Error
+	Warnings          []string      // Diagnostic warnings (e.g., reserved keyword as variable name)
+	HTML              template.HTML // For text blocks
+	DocLine           int           // 1-indexed document-absolute start line (for scroll sync)
 }
 
 // TemplateLine represents a single source line with its result
@@ -243,6 +244,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				} else if d, ok := diagByLine[lineNum]; ok {
 					tl.Error = d.Message
 					tl.IsCascading = d.Code == "cascading_error"
+					tb.HasLineDiagnostic = true
 				}
 				tb.SourceLines = append(tb.SourceLines, tl)
 			}

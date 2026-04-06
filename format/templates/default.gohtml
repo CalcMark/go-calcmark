@@ -65,7 +65,7 @@
         <div class="calc-line-diagnostic{{if $line.IsCascading}} calc-cascading{{end}}">{{$line.Error}}</div>
         {{- end}}
         {{end}}
-        {{if .Error}}
+        {{if and .Error (not .HasLineDiagnostic)}}
         <div class="calc-error"><strong>Error:</strong> {{.Error}}</div>
         {{end}}
     </div>

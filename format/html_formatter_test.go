@@ -814,20 +814,16 @@ func TestHTMLFormatter_SemanticErrorShowsOnCorrectLine(t *testing.T) {
 
 	output := buf.String()
 
-	// The redefinition error should appear as a diagnostic
+	// The redefinition error should appear as a per-line diagnostic (below line 2)
 	if !strings.Contains(output, "calc-line-diagnostic") {
-		t.Errorf("expected redefinition error diagnostic, but HTML output was:\n%s", output)
+		t.Errorf("expected per-line diagnostic for redefinition, but HTML output was:\n%s", output)
 	}
-	if !strings.Contains(output, "variable_redefinition") || !strings.Contains(output, "immutable") {
-		t.Error("expected redefinition error message in diagnostic")
+	if !strings.Contains(output, "immutable") {
+		t.Errorf("expected 'immutable' in diagnostic message, output:\n%s", output)
 	}
 
-	// Line 1 (a = 1 / 0) has no per-line diagnostic (semantic error is on line 2),
-	// but it should not appear silently successful — it has no result either.
-	// At minimum, the block should visually indicate an error state.
-	// Count how many calc-line-error or calc-line-diagnostic elements exist.
-	diagCount := strings.Count(output, "calc-line-diagnostic")
-	if diagCount < 1 {
-		t.Errorf("expected at least 1 diagnostic line, got %d", diagCount)
+	// Block-level error div should NOT be shown when per-line diagnostics cover it
+	if strings.Contains(output, `<div class="calc-error">`) {
+		t.Error("block-level error div should be suppressed when per-line diagnostics exist")
 	}
 }
