@@ -827,3 +827,230 @@ func TestHTMLFormatter_SemanticErrorShowsOnCorrectLine(t *testing.T) {
 		t.Error("block-level error div should be suppressed when per-line diagnostics exist")
 	}
 }
+
+// TestHTMLFormatterCustomTemplateWithPartials verifies that a custom template
+// can call shared partials (cm-content, cm-frontmatter, cm-blocks).
+func TestHTMLFormatterCustomTemplateWithPartials(t *testing.T) {
+	source := "x = 42\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	customTemplate := `<!DOCTYPE html>
+<html><head><title>Custom</title><style>{{.Style}}</style></head>
+<body class="custom">{{template "cm-content" .}}</body></html>`
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Template: customTemplate}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format with custom template failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Custom wrapper is present
+	if !strings.Contains(output, `<body class="custom">`) {
+		t.Error("expected custom body class")
+	}
+	// Partials rendered the calc block
+	if !strings.Contains(output, "calc-block") {
+		t.Error("expected calc-block from cm-content partial")
+	}
+	if !strings.Contains(output, "42") {
+		t.Error("expected result '42' from cm-content partial")
+	}
+	// No ZgotmplZ escaping
+	if strings.Contains(output, "ZgotmplZ") {
+		t.Error("ZgotmplZ found — template.CSS safety issue")
+	}
+}
+
+// TestHTMLFormatterCustomTemplateIndividualPartials verifies that a custom template
+// can call cm-frontmatter and cm-blocks individually for layout control.
+func TestHTMLFormatterCustomTemplateIndividualPartials(t *testing.T) {
+	source := "x = 42\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	// Custom template calls individual partials in a custom order
+	customTemplate := `<div id="blocks">{{template "cm-blocks" .}}</div>
+<div id="fm">{{template "cm-frontmatter" .}}</div>`
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Template: customTemplate}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format with individual partials failed: %v", err)
+	}
+
+	output := buf.String()
+	blocksIdx := strings.Index(output, `<div id="blocks">`)
+	fmIdx := strings.Index(output, `<div id="fm">`)
+
+	if blocksIdx < 0 || fmIdx < 0 {
+		t.Fatalf("expected both wrapper divs in output:\n%s", output)
+	}
+	// Blocks should come before frontmatter (custom order)
+	if blocksIdx > fmIdx {
+		t.Error("expected blocks div before frontmatter div (custom partial order)")
+	}
+	if !strings.Contains(output, "calc-block") {
+		t.Error("expected calc-block from cm-blocks partial")
+	}
+}
+
+// TestHTMLFormatterLegacyCustomTemplateStillWorks verifies that an existing custom
+// template that doesn't use partials (defines its own rendering) still works.
+func TestHTMLFormatterLegacyCustomTemplateStillWorks(t *testing.T) {
+	source := "x = 42\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	// Legacy template: does its own rendering, ignores partials
+	legacyTemplate := `<html><body>
+{{range .Blocks}}{{if eq .Type "calculation"}}
+<pre>{{range .SourceLines}}{{.Source}} = {{.Result}}
+{{end}}</pre>
+{{end}}{{end}}
+</body></html>`
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Template: legacyTemplate}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format with legacy template failed: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "42") {
+		t.Errorf("expected result '42' in legacy template output:\n%s", output)
+	}
+}
+
+// TestHTMLFormatterLarkThemeValidation exercises the new template architecture
+// with a Lark-style custom template: own page shell, custom accent, custom script,
+// and CSS variable overrides for light/dark theming — all in <15 lines of custom code.
+func TestHTMLFormatterLarkThemeValidation(t *testing.T) {
+	source := "budget = 1000\nrent = budget * 0.3\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	// Lark-style custom template: 12 lines of custom code.
+	// Own page shell, custom script, purple accent via CSS variable override.
+	larkTemplate := `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lark Playground</title>
+<style>{{.Style}}
+:root { --cm-accent: #7c3aed; --cm-font-sans: 'Inter', sans-serif; }
+.dark { --cm-accent: #a78bfa; --cm-bg: #1e1e2e; --cm-text: #cdd6f4; --cm-text-code: #cdd6f4; --cm-bg-subtle: #313244; --cm-border: #45475a; }
+</style>
+<script src="/lark.js" defer></script>
+</head>
+<body><main>{{template "cm-content" .}}</main></body>
+</html>`
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Template: larkTemplate}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Lark template format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Custom page shell
+	if !strings.Contains(output, "<title>Lark Playground</title>") {
+		t.Error("expected Lark title")
+	}
+	if !strings.Contains(output, `<script src="/lark.js"`) {
+		t.Error("expected Lark script tag")
+	}
+
+	// Purple accent override
+	if !strings.Contains(output, "--cm-accent: #7c3aed") {
+		t.Error("expected purple accent override in light theme")
+	}
+
+	// Dark theme variables
+	if !strings.Contains(output, ".dark {") {
+		t.Error("expected dark theme class with variable overrides")
+	}
+	if !strings.Contains(output, "--cm-accent: #a78bfa") {
+		t.Error("expected lighter purple in dark theme")
+	}
+
+	// Partials rendered the content correctly
+	if !strings.Contains(output, "calc-block") {
+		t.Error("expected calc-block from partials")
+	}
+	if !strings.Contains(output, "300") {
+		t.Error("expected computed result (1000 * 0.3 = 300)")
+	}
+
+	// No ZgotmplZ
+	if strings.Contains(output, "ZgotmplZ") {
+		t.Error("ZgotmplZ escaping detected")
+	}
+
+	// Template is concise — count non-empty lines in the custom template
+	lines := 0
+	for line := range strings.SplitSeq(larkTemplate, "\n") {
+		if strings.TrimSpace(line) != "" {
+			lines++
+		}
+	}
+	if lines > 15 {
+		t.Errorf("Lark template should be <15 lines of custom code, got %d", lines)
+	}
+}
+
+// TestHTMLFormatterPartialsAccessor verifies the PartialsTemplate accessor works.
+func TestHTMLFormatterPartialsAccessor(t *testing.T) {
+	p := PartialsTemplate()
+	if p == "" {
+		t.Fatal("PartialsTemplate() returned empty string")
+	}
+	if !strings.Contains(p, "cm-content") {
+		t.Error("PartialsTemplate() should contain cm-content definition")
+	}
+	if !strings.Contains(p, "cm-frontmatter") {
+		t.Error("PartialsTemplate() should contain cm-frontmatter definition")
+	}
+	if !strings.Contains(p, "cm-blocks") {
+		t.Error("PartialsTemplate() should contain cm-blocks definition")
+	}
+}

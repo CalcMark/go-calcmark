@@ -31,6 +31,9 @@ func htmlSanitizer() *bluemonday.Policy {
 //go:embed templates/calcmark.css
 var styleCSS string
 
+//go:embed templates/partials.gohtml
+var partialsTemplate string
+
 //go:embed templates/default.gohtml
 var defaultHTMLTemplate string
 
@@ -42,6 +45,14 @@ var previewHTMLTemplate string
 // that needs CalcMark-styled HTML output.
 func StyleCSS() string {
 	return styleCSS
+}
+
+// PartialsTemplate returns the embedded shared template partials.
+// These define cm-content, cm-frontmatter, cm-blocks, cm-calc-block, and cm-text-block.
+// Custom templates are automatically parsed with these partials so they can call them
+// via {{template "cm-content" .}} or individual partials for layout control.
+func PartialsTemplate() string {
+	return partialsTemplate
 }
 
 // DefaultHTMLTemplate returns the embedded default HTML template.
@@ -122,8 +133,14 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		templateContent = opts.Template
 	}
 
-	tmpl, err := template.New("html").Parse(templateContent)
+	// Parse shared partials first, then the page template into the same set.
+	// This makes cm-content, cm-frontmatter, cm-blocks, etc. available to
+	// both internal and custom templates via {{template "cm-..." .}}.
+	tmpl, err := template.New("html").Parse(partialsTemplate)
 	if err != nil {
+		return fmt.Errorf("partials parse error: %w", err)
+	}
+	if _, err := tmpl.Parse(templateContent); err != nil {
 		return err
 	}
 

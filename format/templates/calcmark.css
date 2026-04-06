@@ -2,15 +2,53 @@
  * CM mode uses .calc-block, .text-block, .frontmatter wrappers.
  * Embedded mode uses bare HTML elements (h1, pre, table, etc.).
  * The #content-scoped rules handle embedded mode in the watch page.
+ *
+ * Theme customization: override --cm-* variables in :root or a scoped selector.
+ * Example (dark theme):
+ *   :root { --cm-bg: #1e1e1e; --cm-text: #d4d4d4; --cm-accent: #569cd6; }
+ * Example (brand override):
+ *   :root { --cm-accent: purple; --cm-font-sans: 'Inter', sans-serif; }
  */
 
+:root {
+    /* Brand / accent */
+    --cm-accent: #0066cc;
+    --cm-accent-light: #0550ae;
+
+    /* Text */
+    --cm-text: #333;
+    --cm-text-secondary: #57606a;
+    --cm-text-code: #24292e;
+    --cm-text-muted: #6e7781;
+
+    /* Backgrounds */
+    --cm-bg: #f8f9fa;
+    --cm-bg-subtle: #f6f8fa;
+    --cm-bg-frontmatter: #f0f4f8;
+
+    /* Borders */
+    --cm-border: #d0d7de;
+
+    /* Diagnostics */
+    --cm-error: #b91c1c;
+    --cm-error-bg: #ffeef0;
+    --cm-warning: #866100;
+    --cm-warning-bg: #fff8e1;
+    --cm-warning-border: #e6a817;
+    --cm-cascading: #7c5c00;
+
+    /* Typography */
+    --cm-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --cm-font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--cm-font-sans);
     max-width: 900px;
     margin: 0 auto;
     padding: 0.5rem 2rem;
     line-height: 1.6;
-    color: #333;
+    color: var(--cm-text);
 }
 
 /* --- CM mode: calculation blocks --- */
@@ -18,8 +56,8 @@ body {
 .calc-block {
     margin: 1.5em 0;
     padding: 1em;
-    background: #f8f9fa;
-    border-left: 4px solid #0066cc;
+    background: var(--cm-bg);
+    border-left: 4px solid var(--cm-accent);
     border-radius: 4px;
 }
 
@@ -31,15 +69,15 @@ body {
 }
 
 .calc-source {
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-family: var(--cm-font-mono);
     font-size: 0.95em;
-    color: #24292e;
+    color: var(--cm-text-code);
     flex: 1;
 }
 
 .calc-inline-result {
     font-weight: 600;
-    color: #0066cc;
+    color: var(--cm-accent);
     margin-left: 2em;
     font-size: 0.9em;
 }
@@ -50,7 +88,7 @@ body {
 
 .calc-result {
     font-weight: 600;
-    color: #0066cc;
+    color: var(--cm-accent);
     margin-top: 0.5em;
     padding: 0.5em;
     background: white;
@@ -58,17 +96,17 @@ body {
 }
 
 .calc-error {
-    color: #d73a49;
-    background: #ffeef0;
+    color: var(--cm-error);
+    background: var(--cm-error-bg);
     padding: 0.5em;
     border-radius: 3px;
-    border-left: 3px solid #d73a49;
+    border-left: 3px solid var(--cm-error);
     margin-top: 0.5em;
 }
 
 .calc-line-diagnostic {
     font-size: 0.82em;
-    color: #d73a49;
+    color: var(--cm-error);
     padding: 0.15em 0 0.3em 1.5em;
 }
 
@@ -77,7 +115,7 @@ body {
 }
 
 .calc-line-diagnostic.calc-cascading {
-    color: #8b6914;
+    color: var(--cm-cascading);
 }
 
 .calc-line-diagnostic.calc-cascading::before {
@@ -85,11 +123,11 @@ body {
 }
 
 .calc-warning {
-    color: #b08800;
-    background: #fff8e1;
+    color: var(--cm-warning);
+    background: var(--cm-warning-bg);
     padding: 0.5em;
     border-radius: 3px;
-    border-left: 3px solid #e6a817;
+    border-left: 3px solid var(--cm-warning-border);
     margin-top: 0.5em;
     font-size: 0.9em;
 }
@@ -121,15 +159,15 @@ body {
 }
 
 .text-block code {
-    background: #f6f8fa;
+    background: var(--cm-bg-subtle);
     padding: 0.2em 0.4em;
     border-radius: 3px;
-    font-family: 'SF Mono', Monaco, monospace;
+    font-family: var(--cm-font-mono);
     font-size: 0.9em;
 }
 
 .text-block pre {
-    background: #f6f8fa;
+    background: var(--cm-bg-subtle);
     padding: 1em;
     border-radius: 6px;
     overflow-x: auto;
@@ -141,9 +179,9 @@ body {
 }
 
 .text-block blockquote {
-    border-left: 3px solid #0066cc;
+    border-left: 3px solid var(--cm-accent);
     padding-left: 1em;
-    color: #57606a;
+    color: var(--cm-text-secondary);
     margin: 1em 0;
 }
 
@@ -158,13 +196,13 @@ body {
 }
 
 .text-block th, .text-block td {
-    border: 1px solid #d0d7de;
+    border: 1px solid var(--cm-border);
     padding: 0.5em 0.75em;
     text-align: left;
 }
 
 .text-block th {
-    background: #f0f4f8;
+    background: var(--cm-bg-frontmatter);
     font-weight: 600;
 }
 
@@ -173,15 +211,15 @@ body {
 .frontmatter {
     margin-bottom: 2em;
     padding: 1em 1.5em;
-    background: #f0f4f8;
+    background: var(--cm-bg-frontmatter);
     border-radius: 6px;
-    border: 1px solid #d0d7de;
+    border: 1px solid var(--cm-border);
 }
 
 .frontmatter h3 {
     margin: 0 0 0.75em 0;
     font-size: 0.9em;
-    color: #57606a;
+    color: var(--cm-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -194,21 +232,21 @@ body {
 }
 
 .frontmatter dt {
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-family: var(--cm-font-mono);
     font-size: 0.9em;
-    color: #0550ae;
+    color: var(--cm-accent-light);
 }
 
 .frontmatter dt::before {
     content: "@";
-    color: #6e7781;
+    color: var(--cm-text-muted);
 }
 
 .frontmatter dd {
     margin: 0;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-family: var(--cm-font-mono);
     font-size: 0.9em;
-    color: #24292e;
+    color: var(--cm-text-code);
 }
 
 .frontmatter .exchange dt::before {
@@ -216,20 +254,20 @@ body {
 }
 
 .frontmatter .exchange dt {
-    color: #6e7781;
+    color: var(--cm-text-muted);
 }
 
 .frontmatter hr {
     border: none;
-    border-top: 1px solid #d0d7de;
+    border-top: 1px solid var(--cm-border);
     margin: 0.75em 0;
 }
 
 .frontmatter-value {
     margin: 0;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-family: var(--cm-font-mono);
     font-size: 0.9em;
-    color: #24292e;
+    color: var(--cm-text-code);
 }
 
 .frontmatter .extra dt::before {
@@ -237,7 +275,7 @@ body {
 }
 
 .frontmatter .extra dt {
-    color: #57606a;
+    color: var(--cm-text-secondary);
 }
 
 /* --- Embedded mode: bare HTML elements (goldmark output without wrappers) ---
@@ -261,15 +299,15 @@ body {
 }
 
 #content code {
-    background: #f6f8fa;
+    background: var(--cm-bg-subtle);
     padding: 0.2em 0.4em;
     border-radius: 3px;
-    font-family: 'SF Mono', Monaco, monospace;
+    font-family: var(--cm-font-mono);
     font-size: 0.9em;
 }
 
 #content pre {
-    background: #f6f8fa;
+    background: var(--cm-bg-subtle);
     padding: 1em;
     border-radius: 6px;
     overflow-x: auto;
@@ -281,9 +319,9 @@ body {
 }
 
 #content blockquote {
-    border-left: 3px solid #0066cc;
+    border-left: 3px solid var(--cm-accent);
     padding-left: 1em;
-    color: #57606a;
+    color: var(--cm-text-secondary);
     margin: 1em 0;
 }
 
@@ -298,24 +336,24 @@ body {
 }
 
 #content th, #content td {
-    border: 1px solid #d0d7de;
+    border: 1px solid var(--cm-border);
     padding: 0.5em 0.75em;
     text-align: left;
 }
 
 #content th {
-    background: #f0f4f8;
+    background: var(--cm-bg-frontmatter);
     font-weight: 600;
 }
 
 /* Embedded calcmark code blocks get the same visual treatment as CM mode calc blocks */
 #content pre:has(> .language-calcmark),
 #content pre:has(> .language-cm) {
-    border-left: 4px solid #0066cc;
+    border-left: 4px solid var(--cm-accent);
 }
 
 #content .language-calcmark,
 #content .language-cm {
-    color: #24292e;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    color: var(--cm-text-code);
+    font-family: var(--cm-font-mono);
 }

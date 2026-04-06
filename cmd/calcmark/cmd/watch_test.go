@@ -130,6 +130,31 @@ func TestStyleCSS_UsedByDefaultTemplate(t *testing.T) {
 	}
 }
 
+func TestStyleCSS_HasCustomProperties(t *testing.T) {
+	css := format.StyleCSS()
+
+	// CSS custom properties must be present for theming
+	vars := []string{
+		"--cm-accent",
+		"--cm-error",
+		"--cm-warning",
+		"--cm-text",
+		"--cm-bg",
+		"--cm-font-sans",
+		"--cm-font-mono",
+	}
+	for _, v := range vars {
+		if !strings.Contains(css, v) {
+			t.Errorf("format.StyleCSS() missing CSS custom property %s", v)
+		}
+	}
+
+	// Variables should be used (not just defined)
+	if !strings.Contains(css, "var(--cm-accent)") {
+		t.Error("CSS rules should use var(--cm-accent), not hardcoded values")
+	}
+}
+
 func TestHandlePage_EmbeddedModeTypography(t *testing.T) {
 	// Embedded mode produces bare HTML (h1, p, pre>code, table, blockquote)
 	// without .text-block wrappers. The watch page CSS must style these bare elements.

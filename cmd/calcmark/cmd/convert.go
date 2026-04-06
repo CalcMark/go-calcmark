@@ -41,6 +41,12 @@ Examples:
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if convertShowTemplate {
+			fmt.Println("{{/* === CalcMark shared partials (parsed automatically) ===")
+			fmt.Println("   Available: cm-content, cm-frontmatter, cm-blocks, cm-calc-block, cm-text-block")
+			fmt.Println("   Call via {{template \"cm-content\" .}} or individual partials.")
+			fmt.Println("   Data model: .Style (template.CSS), .Frontmatter, .Blocks []TemplateBlock")
+			fmt.Println("*/}}")
+			fmt.Println()
 			fmt.Print(format.DefaultHTMLTemplate())
 			return nil
 		}
