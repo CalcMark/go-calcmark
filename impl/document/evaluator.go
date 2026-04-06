@@ -1,6 +1,7 @@
 package document
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,6 +15,16 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/transform"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
+)
+
+// ErrPartialEvaluation is returned when evaluation continued past errors.
+// Callers can check errors.Is(err, ErrPartialEvaluation) to distinguish
+// partial evaluation (some blocks failed) from total failure.
+var ErrPartialEvaluation = errors.New("partial evaluation: one or more blocks had errors")
+
+// Diagnostic codes for error recovery.
+const (
+	diagCodeCascadingError = "cascading_error"
 )
 
 // NewDirectiveResolver creates an interpreter.DirectiveResolver that adapts
