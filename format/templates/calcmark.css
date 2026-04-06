@@ -66,6 +66,24 @@ body {
     margin-top: 0.5em;
 }
 
+.calc-line-diagnostic {
+    font-size: 0.82em;
+    color: #d73a49;
+    padding: 0.15em 0 0.3em 1.5em;
+}
+
+.calc-line-diagnostic::before {
+    content: "✗ ";
+}
+
+.calc-line-diagnostic.calc-cascading {
+    color: #8b6914;
+}
+
+.calc-line-diagnostic.calc-cascading::before {
+    content: "⚠ ";
+}
+
 .calc-warning {
     color: #b08800;
     background: #fff8e1;

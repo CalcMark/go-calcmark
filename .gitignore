@@ -63,3 +63,4 @@ tiny.cm
 
 # Hugo dev server output at repo root (not site/public/)
 /public/
+doceval

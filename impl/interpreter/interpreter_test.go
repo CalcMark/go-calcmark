@@ -1,6 +1,8 @@
 package interpreter
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -276,5 +278,139 @@ func TestBuiltinConstantsUsage(t *testing.T) {
 	val := num.Value.InexactFloat64()
 	if val < 6.28 || val > 6.29 {
 		t.Errorf("2 * PI = %v, want ~6.28", val)
+	}
+}
+
+// Test CascadingError type
+
+func TestCascadingError_ErrorMessage(t *testing.T) {
+	cause := fmt.Errorf("division by zero")
+	ce := &CascadingError{VarName: "x", Cause: cause}
+
+	want := `depends on errored variable "x": division by zero`
+	if got := ce.Error(); got != want {
+		t.Errorf("CascadingError.Error() = %q, want %q", got, want)
+	}
+}
+
+func TestCascadingError_Unwrap(t *testing.T) {
+	cause := fmt.Errorf("division by zero")
+	ce := &CascadingError{VarName: "x", Cause: cause}
+
+	if unwrapped := ce.Unwrap(); unwrapped != cause {
+		t.Errorf("CascadingError.Unwrap() = %v, want %v", unwrapped, cause)
+	}
+}
+
+func TestCascadingError_ErrorsAs(t *testing.T) {
+	cause := fmt.Errorf("division by zero")
+	var err error = &CascadingError{VarName: "x", Cause: cause}
+
+	var ce *CascadingError
+	if !errors.As(err, &ce) {
+		t.Fatal("errors.As failed to match CascadingError")
+	}
+	if ce.VarName != "x" {
+		t.Errorf("VarName = %q, want %q", ce.VarName, "x")
+	}
+}
+
+// Test evalIdentifier with errored variables
+
+func TestEvalIdentifier_ErroredVariable(t *testing.T) {
+	interp := NewInterpreter()
+	cause := fmt.Errorf("division by zero")
+	interp.env.SetError("x", cause)
+
+	id := &ast.Identifier{Name: "x"}
+	_, err := interp.evalIdentifier(id)
+	if err == nil {
+		t.Fatal("expected error for errored variable, got nil")
+	}
+
+	var ce *CascadingError
+	if !errors.As(err, &ce) {
+		t.Fatalf("expected CascadingError, got %T: %v", err, err)
+	}
+	if ce.VarName != "x" {
+		t.Errorf("VarName = %q, want %q", ce.VarName, "x")
+	}
+	if ce.Cause != cause {
+		t.Errorf("Cause = %v, want %v", ce.Cause, cause)
+	}
+}
+
+func TestEvalIdentifier_NormalVariable_Unchanged(t *testing.T) {
+	interp := NewInterpreter()
+	interp.env.Set("y", types.NewNumber(decimal.NewFromInt(42)))
+
+	id := &ast.Identifier{Name: "y"}
+	result, err := interp.evalIdentifier(id)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.String() != "42" {
+		t.Errorf("result = %v, want 42", result.String())
+	}
+}
+
+func TestEvalIdentifier_ErroredTakesPrecedenceOverValue(t *testing.T) {
+	interp := NewInterpreter()
+	cause := fmt.Errorf("some error")
+	// Variable has both a value and an error; error should take precedence
+	interp.env.Set("x", types.NewNumber(decimal.NewFromInt(10)))
+	interp.env.SetError("x", cause)
+
+	id := &ast.Identifier{Name: "x"}
+	_, err := interp.evalIdentifier(id)
+	if err == nil {
+		t.Fatal("expected CascadingError when variable is errored, even if value exists")
+	}
+
+	var ce *CascadingError
+	if !errors.As(err, &ce) {
+		t.Fatalf("expected CascadingError, got %T: %v", err, err)
+	}
+}
+
+func TestEvalIdentifier_CascadingErrorInBinaryOp(t *testing.T) {
+	interp := NewInterpreter()
+	cause := fmt.Errorf("division by zero")
+	interp.env.SetError("a", cause)
+	interp.env.Set("b", types.NewNumber(decimal.NewFromInt(5)))
+
+	// Expression: a + b (where a is errored)
+	node := &ast.BinaryOp{
+		Operator: "+",
+		Left:     &ast.Identifier{Name: "a"},
+		Right:    &ast.Identifier{Name: "b"},
+	}
+
+	_, err := interp.evalBinaryOp(node)
+	if err == nil {
+		t.Fatal("expected error from binary op with errored variable")
+	}
+
+	var ce *CascadingError
+	if !errors.As(err, &ce) {
+		t.Fatalf("expected CascadingError, got %T: %v", err, err)
+	}
+	if ce.VarName != "a" {
+		t.Errorf("VarName = %q, want %q", ce.VarName, "a")
+	}
+}
+
+func TestEvalIdentifier_UndefinedVariable_NotCascading(t *testing.T) {
+	interp := NewInterpreter()
+
+	id := &ast.Identifier{Name: "nonexistent"}
+	_, err := interp.evalIdentifier(id)
+	if err == nil {
+		t.Fatal("expected error for undefined variable")
+	}
+
+	var ce *CascadingError
+	if errors.As(err, &ce) {
+		t.Error("undefined variable error should NOT be a CascadingError")
 	}
 }

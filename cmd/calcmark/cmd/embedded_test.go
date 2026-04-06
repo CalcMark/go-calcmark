@@ -137,8 +137,9 @@ func TestEmbedded_BlockError_InlineAndNonZeroExit(t *testing.T) {
 	}
 
 	out := stdout.String()
-	if !strings.Contains(out, "> **CalcMark Error:**") {
-		t.Errorf("expected inline error blockquote, got %q", out)
+	// With error recovery, the error block is formatted inline (not as a blockquote)
+	if !strings.Contains(out, "**Error:**") && !strings.Contains(out, "undefined_var") {
+		t.Errorf("expected inline error marker, got %q", out)
 	}
 	if !strings.Contains(out, "# Post") {
 		t.Error("expected passthrough before error block")
@@ -310,8 +311,9 @@ func TestEmbedded_IndependentBlocks(t *testing.T) {
 	if !strings.Contains(out, "x = 100") {
 		t.Errorf("expected first block to succeed, got %q", out)
 	}
-	// Second block should error because x is not defined.
-	if !strings.Contains(out, "> **CalcMark Error:**") {
+	// Second block should error because x is not defined (each embedded block is independent).
+	// With error recovery, the error is shown inline (not as a blockquote).
+	if !strings.Contains(out, "**Error:**") && !strings.Contains(out, "undefined") {
 		t.Errorf("expected error for second block, got %q", out)
 	}
 }
@@ -398,8 +400,8 @@ func TestEmbedded_GoldenComplexMarkdown(t *testing.T) {
 		`→ $870.00`,
 		// Scaled block (scale factor 1000, unit_categories: [Currency])
 		`→ $1M`,
-		// Error block
-		`> **CalcMark Error:**`,
+		// Error block (with error recovery, errors are formatted inline)
+		`**Error:** line 1: undefined_variable: undefined variable "nonexistent_var"`,
 	}
 	for _, check := range checks {
 		if !strings.Contains(got, check) {

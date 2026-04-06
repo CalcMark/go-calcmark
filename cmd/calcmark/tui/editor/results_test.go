@@ -2,6 +2,7 @@ package editor
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/document"
@@ -130,5 +131,137 @@ func TestIssue10_EURNotMatchedAsE(t *testing.T) {
 	refs := results[0].ReferencedVars
 	if len(refs) != 0 {
 		t.Errorf("expected no variable references for currency arithmetic, got %v", refs)
+	}
+}
+
+// TestCascadingErrorDiagnosticSetsIsBlocked verifies that a cascading_error
+// diagnostic code from the evaluator causes IsBlocked=true on the affected line.
+func TestCascadingErrorDiagnosticSetsIsBlocked(t *testing.T) {
+	// Block 1: a = 1/0 (root cause error)
+	// Block 2: b = a * 2 (cascading error - depends on errored "a")
+	source := "a = 1 / 0\n\nSome text\n\nb = a * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+	m := New(doc)
+	results := m.GetLineResults()
+
+	// Find the line for "b = a * 2"
+	var bResult *LineResult
+	for i := range results {
+		if strings.Contains(results[i].Source, "b = a * 2") {
+			bResult = &results[i]
+			break
+		}
+	}
+	if bResult == nil {
+		t.Fatal("could not find result for 'b = a * 2'")
+	}
+
+	if !bResult.IsBlocked {
+		t.Errorf("expected IsBlocked=true for cascading error on 'b = a * 2', got false; error=%q", bResult.Error)
+	}
+
+	// Find the line for "a = 1 / 0" - root cause should NOT be blocked
+	var aResult *LineResult
+	for i := range results {
+		if strings.Contains(results[i].Source, "a = 1 / 0") {
+			aResult = &results[i]
+			break
+		}
+	}
+	if aResult == nil {
+		t.Fatal("could not find result for 'a = 1 / 0'")
+	}
+	if aResult.IsBlocked {
+		t.Error("expected IsBlocked=false for root-cause error on 'a = 1 / 0'")
+	}
+}
+
+// TestCascadingErrorWithinSameBlock verifies cascading detection within a single block.
+func TestCascadingErrorWithinSameBlock(t *testing.T) {
+	// Both statements in one block: a = 1/0 fails, b = a*2 cascading
+	source := "a = 1 / 0\nb = a * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+	m := New(doc)
+	results := m.GetLineResults()
+
+	var aResult, bResult *LineResult
+	for i := range results {
+		switch {
+		case strings.Contains(results[i].Source, "a = 1 / 0"):
+			aResult = &results[i]
+		case strings.Contains(results[i].Source, "b = a * 2"):
+			bResult = &results[i]
+		}
+	}
+
+	if aResult == nil || bResult == nil {
+		t.Fatalf("could not find both results; a=%v b=%v", aResult, bResult)
+	}
+
+	if aResult.IsBlocked {
+		t.Error("root-cause 'a = 1 / 0' should NOT be blocked")
+	}
+	if !bResult.IsBlocked {
+		t.Errorf("cascading 'b = a * 2' should be blocked; error=%q", bResult.Error)
+	}
+}
+
+// TestCascadingErrorNilResultPlaceholder verifies that nil result placeholders
+// (for failed statements) are handled gracefully without panics.
+func TestCascadingErrorNilResultPlaceholder(t *testing.T) {
+	// a = 1/0 produces a nil result placeholder; b = a * 2 also nil
+	source := "a = 1 / 0\nb = a * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+	m := New(doc)
+	// Should not panic
+	results := m.GetLineResults()
+
+	// Both lines should have errors (not blank values)
+	for _, r := range results {
+		if r.IsCalc && strings.TrimSpace(r.Source) != "" {
+			if r.Error == "" && r.Value == "" {
+				t.Errorf("line %q has neither error nor value", r.Source)
+			}
+		}
+	}
+}
+
+// TestMultipleCascadingErrorsAcrossBlocks verifies that cascading errors
+// from multiple blocks all show as blocked.
+func TestMultipleCascadingErrorsAcrossBlocks(t *testing.T) {
+	// Block 1: a = 1/0
+	// Block 2: b = a * 2
+	// Block 3: c = a + 1
+	source := "a = 1 / 0\n\ntext\n\nb = a * 2\n\ntext\n\nc = a + 1\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+	m := New(doc)
+	results := m.GetLineResults()
+
+	blocked := 0
+	for _, r := range results {
+		if r.IsBlocked {
+			blocked++
+		}
+	}
+
+	if blocked < 2 {
+		t.Errorf("expected at least 2 blocked lines (b and c), got %d", blocked)
+		for _, r := range results {
+			if r.IsCalc && r.Error != "" {
+				t.Logf("  line=%q error=%q blocked=%v", r.Source, r.Error, r.IsBlocked)
+			}
+		}
 	}
 }

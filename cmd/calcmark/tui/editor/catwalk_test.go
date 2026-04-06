@@ -100,6 +100,7 @@ z = 30`
 			"scale_invalid_category",              // TestEditorCatwalkScaleInvalidCategory
 			"scale_invalid_view",                  // TestEditorCatwalkScaleInvalidView
 			"fraction_results",                    // TestEditorCatwalkFractionResults
+			"error_recovery_cascading",            // TestEditorCatwalkErrorRecoveryCascading
 		}
 		for _, skip := range skipTests {
 			if strings.HasSuffix(path, skip) {

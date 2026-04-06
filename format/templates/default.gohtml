@@ -55,14 +55,17 @@
     {{if eq .Type "calculation"}}
     <div class="calc-block">
         {{range $i, $line := .SourceLines}}
-        <div class="calc-line" data-source-line="{{$line.DocLine}}">
+        <div class="calc-line{{if $line.Error}} calc-line-error{{end}}{{if $line.IsCascading}} calc-line-cascading{{end}}" data-source-line="{{$line.DocLine}}">
             <code class="calc-source">{{$line.Source}}</code>
             {{if $line.Result}}
             <span class="calc-inline-result">{{$line.Result}}</span>
             {{end}}
         </div>
+        {{- if $line.Error}}
+        <div class="calc-line-diagnostic{{if $line.IsCascading}} calc-cascading{{end}}">{{$line.Error}}</div>
+        {{- end}}
         {{end}}
-        {{if .Error}}
+        {{if and .Error (not .HasLineDiagnostic)}}
         <div class="calc-error"><strong>Error:</strong> {{.Error}}</div>
         {{end}}
     </div>

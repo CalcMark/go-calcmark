@@ -1,0 +1,17 @@
+# Multi-Error Recovery
+
+Error recovery allows the evaluator to continue past errors and show all diagnostics simultaneously.
+
+## Block 1: Division by zero
+
+a = 1 / 0
+b = 10
+
+## Block 2: References errored variable from block 1
+
+c = a * 2
+
+## Block 3: Independent (no errors)
+
+d = 42
+e = d + 8

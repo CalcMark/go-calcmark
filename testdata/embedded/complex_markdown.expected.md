@@ -79,7 +79,11 @@ monthly_bandwidth = bandwidth_gbps * cost_per_gbps → $600.00
 This block references an undefined variable. The preprocessor should emit
 an inline error and continue processing the rest of the document.
 
-> **CalcMark Error:** line 1: undefined_variable: undefined variable "nonexistent_var" (line 83)
+```calcmark
+broken_total = nonexistent_var + 100
+```
+
+**Error:** line 1: undefined_variable: undefined variable "nonexistent_var"
 
 
 ## Markdown Feature Showcase

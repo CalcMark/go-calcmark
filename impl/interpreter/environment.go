@@ -13,6 +13,7 @@ import (
 type Environment struct {
 	vars          map[string]types.Type
 	exchangeRates map[string]decimal.Decimal // "USD_EUR" -> rate
+	erroredVars   map[string]error           // variables that failed evaluation
 }
 
 // NewEnvironment creates a new empty environment with built-in constants.
@@ -20,6 +21,7 @@ func NewEnvironment() *Environment {
 	env := &Environment{
 		vars:          make(map[string]types.Type),
 		exchangeRates: make(map[string]decimal.Decimal),
+		erroredVars:   make(map[string]error),
 	}
 
 	// Add built-in constants
@@ -64,15 +66,49 @@ func (e *Environment) Clone() *Environment {
 	newEnv := &Environment{
 		vars:          make(map[string]types.Type),
 		exchangeRates: make(map[string]decimal.Decimal),
+		erroredVars:   make(map[string]error),
 	}
 	maps.Copy(newEnv.vars, e.vars)
 	maps.Copy(newEnv.exchangeRates, e.exchangeRates)
+	maps.Copy(newEnv.erroredVars, e.erroredVars)
 	return newEnv
 }
 
-// GetAllVariables returns the map of all variables (for sync with semantic checker).
+// GetAllVariables returns a snapshot copy of all variables.
+// The returned map is safe to iterate without concern for concurrent mutation.
 func (e *Environment) GetAllVariables() map[string]types.Type {
-	return e.vars
+	result := make(map[string]types.Type, len(e.vars))
+	maps.Copy(result, e.vars)
+	return result
+}
+
+// SetError marks a variable as having failed evaluation.
+func (e *Environment) SetError(name string, err error) {
+	e.erroredVars[name] = err
+}
+
+// GetError checks if a variable has a recorded evaluation error.
+// Returns the error and true if found, nil and false otherwise.
+func (e *Environment) GetError(name string) (error, bool) {
+	err, ok := e.erroredVars[name]
+	return err, ok
+}
+
+// ClearError removes a single variable's error state.
+func (e *Environment) ClearError(name string) {
+	delete(e.erroredVars, name)
+}
+
+// ClearErrors removes all tracked variable errors.
+func (e *Environment) ClearErrors() {
+	clear(e.erroredVars)
+}
+
+// GetAllErroredVars returns a copy of the errored variables map.
+func (e *Environment) GetAllErroredVars() map[string]error {
+	result := make(map[string]error, len(e.erroredVars))
+	maps.Copy(result, e.erroredVars)
+	return result
 }
 
 // SetExchangeRate sets an exchange rate for currency conversion.

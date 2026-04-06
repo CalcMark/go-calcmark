@@ -68,19 +68,22 @@ func (f *HTMLFormatter) Extensions() []string {
 
 // TemplateBlock represents a block for template rendering
 type TemplateBlock struct {
-	Type        string
-	SourceLines []TemplateLine // For calc blocks with per-line results
-	Error       string
-	Warnings    []string      // Diagnostic warnings (e.g., reserved keyword as variable name)
-	HTML        template.HTML // For text blocks
-	DocLine     int           // 1-indexed document-absolute start line (for scroll sync)
+	Type              string
+	SourceLines       []TemplateLine // For calc blocks with per-line results
+	Error             string
+	HasLineDiagnostic bool          // True if any SourceLine has a per-line Error
+	Warnings          []string      // Diagnostic warnings (e.g., reserved keyword as variable name)
+	HTML              template.HTML // For text blocks
+	DocLine           int           // 1-indexed document-absolute start line (for scroll sync)
 }
 
 // TemplateLine represents a single source line with its result
 type TemplateLine struct {
-	Source  string
-	Result  string // Formatted result for this line
-	DocLine int    // 1-indexed document-absolute line number (for scroll sync)
+	Source      string
+	Result      string // Formatted result for this line
+	Error       string // Error message for this line (empty if successful)
+	IsCascading bool   // True if this is a cascading error (hint severity)
+	DocLine     int    // 1-indexed document-absolute line number (for scroll sync)
 }
 
 // TemplateFrontmatter represents frontmatter for template rendering
@@ -217,19 +220,31 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			tb.Type = "calculation"
 			tb.DocLine = blockStartLine
 
+			// Build diagnostic-by-line map for per-line error display
+			diagByLine := make(map[int]document.Diagnostic)
+			for _, d := range block.Diagnostics() {
+				if d.Line > 0 {
+					diagByLine[d.Line] = d
+				}
+			}
+
 			stmts := AlignResults(block)
-			lineIdx := 0
+			lineNum := 0
 			for _, stmt := range stmts {
-				lineIdx++ // every aligned statement is a source line
+				lineNum++ // count every source line (including blanks) to match diagnostic Line numbers
 				if stmt.IsBlank || stmt.IsResultLine {
 					continue
 				}
 				tl := TemplateLine{
 					Source:  stmt.Source,
-					DocLine: blockStartLine + lineIdx - 1,
+					DocLine: blockStartLine + lineNum - 1,
 				}
 				if stmt.Result != nil {
 					tl.Result = df.Format(stmt.Result)
+				} else if d, ok := diagByLine[lineNum]; ok {
+					tl.Error = d.Message
+					tl.IsCascading = d.Code == "cascading_error"
+					tb.HasLineDiagnostic = true
 				}
 				tb.SourceLines = append(tb.SourceLines, tl)
 			}

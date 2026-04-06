@@ -747,3 +747,83 @@ func TestHTMLFormatterDataSourceLineWithFrontmatter(t *testing.T) {
 		t.Errorf("Expected calc line with data-source-line=\"6\" after frontmatter, output:\n%s", output)
 	}
 }
+
+// TestHTMLFormatter_ErrorAfterBlankLine verifies that an error on a line
+// after a blank line within a calc block shows an inline error in the HTML.
+// Diagnostic Line numbers count all source lines (including blanks), so the
+// formatter's line counter must also count blanks to match diagnostics correctly.
+func TestHTMLFormatter_ErrorAfterBlankLine(t *testing.T) {
+	// Blank line between b and a means they're in the same block but
+	// the diagnostic for a=1/0 is on line 3 (counting the blank).
+	source := "b = $23\n\na = 1 / 0\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	_ = eval.Evaluate(doc) // ErrPartialEvaluation expected
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format: %v", err)
+	}
+
+	output := buf.String()
+
+	// b = $23 should have a result
+	if !strings.Contains(output, "calc-inline-result") {
+		t.Error("expected b = $23 to have calc-inline-result")
+	}
+
+	// a = 1 / 0 should have a diagnostic below the source line
+	if !strings.Contains(output, "calc-line-diagnostic") {
+		t.Errorf("expected a = 1 / 0 to have calc-line-diagnostic, but HTML output was:\n%s", output)
+	}
+	if !strings.Contains(output, "division by zero") {
+		t.Error("expected 'division by zero' in diagnostic")
+	}
+}
+
+// TestHTMLFormatter_SemanticErrorShowsOnCorrectLine verifies that when a
+// semantic error (like variable redefinition) aborts a block, the diagnostic
+// appears on the correct line AND lines without per-line diagnostics still
+// show the block-level error so no line appears silently blank.
+func TestHTMLFormatter_SemanticErrorShowsOnCorrectLine(t *testing.T) {
+	source := "a = 1 / 0\na = 2\nc = 3\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	_ = eval.Evaluate(doc) // ErrPartialEvaluation expected
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format: %v", err)
+	}
+
+	output := buf.String()
+
+	// The redefinition error should appear as a per-line diagnostic (below line 2)
+	if !strings.Contains(output, "calc-line-diagnostic") {
+		t.Errorf("expected per-line diagnostic for redefinition, but HTML output was:\n%s", output)
+	}
+	if !strings.Contains(output, "immutable") {
+		t.Errorf("expected 'immutable' in diagnostic message, output:\n%s", output)
+	}
+
+	// Block-level error div should NOT be shown when per-line diagnostics cover it
+	if strings.Contains(output, `<div class="calc-error">`) {
+		t.Error("block-level error div should be suppressed when per-line diagnostics exist")
+	}
+}

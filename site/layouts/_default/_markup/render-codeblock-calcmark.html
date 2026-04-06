@@ -21,33 +21,39 @@
 {{ transform.Highlight $raw "text" (dict "lineNos" false) }}
 
 {{- with $results -}}
-  {{- if .error -}}
+  {{- /* Check if there are any displayable results or errors */ -}}
+  {{- $hasResults := false -}}
+  {{- range .lines -}}
+    {{- if or .result .error -}}{{ $hasResults = true }}{{- end -}}
+  {{- end -}}
+
+  {{- if $hasResults -}}
+  <div class="cm-results{{ if .error }} cm-partial-error{{ end }}">
+    <div class="cm-results-header">Results</div>
+    <table class="cm-results-table">
+      {{- range .lines -}}
+        {{- if .result -}}
+        <tr>
+          <td class="cm-result-source">{{ .source }}</td>
+          <td class="cm-result-arrow">&rarr;</td>
+          <td class="cm-result-value">{{ .result }}</td>
+        </tr>
+        {{- else if .error -}}
+        <tr class="cm-result-error">
+          <td class="cm-result-source">{{ .source }}</td>
+          <td class="cm-result-arrow">&rarr;</td>
+          <td class="cm-result-value cm-error-value">{{ .error }}</td>
+        </tr>
+        {{- end -}}
+      {{- end -}}
+    </table>
+  </div>
+  {{- else if .error -}}
+    {{- /* Fatal error with no results at all */ -}}
     <div class="cm-results cm-error">
       <div class="cm-results-header">Error</div>
       <pre><code>{{ .error }}</code></pre>
     </div>
-  {{- else -}}
-    {{- /* Only show results div if there are actual results */ -}}
-    {{- $hasResults := false -}}
-    {{- range .lines -}}
-      {{- if .result -}}{{ $hasResults = true }}{{- end -}}
-    {{- end -}}
-    {{- if $hasResults -}}
-    <div class="cm-results">
-      <div class="cm-results-header">Results</div>
-      <table class="cm-results-table">
-        {{- range .lines -}}
-          {{- if .result -}}
-          <tr>
-            <td class="cm-result-source">{{ .source }}</td>
-            <td class="cm-result-arrow">→</td>
-            <td class="cm-result-value">{{ .result }}</td>
-          </tr>
-          {{- end -}}
-        {{- end -}}
-      </table>
-    </div>
-    {{- end -}}
   {{- end -}}
 {{- end -}}
 </div>

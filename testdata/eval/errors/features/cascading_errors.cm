@@ -1,0 +1,17 @@
+# Cascading Errors
+
+When a variable fails, all downstream variables that reference it get cascading errors with hint severity, distinguishing them from root-cause errors.
+
+## Root cause and cascade within one block
+
+x = 1 / 0
+y = x + 10
+z = y * 2
+
+## Independent success
+
+ok = 100
+
+## Multi-level cascade across blocks
+
+result = z + ok

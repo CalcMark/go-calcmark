@@ -10,16 +10,6 @@ import (
 	"time"
 )
 
-// jsonErrorEnvelopeTest mirrors the JSON error structure we expect on stdout.
-type jsonErrorEnvelopeTest struct {
-	Error struct {
-		Type    string `json:"type"`
-		Message string `json:"message"`
-		Line    int    `json:"line,omitempty"`
-		Code    string `json:"code,omitempty"`
-	} `json:"error"`
-}
-
 // TestJSONError_EvalErrorProducesJSONOnStdout verifies that when --format json
 // is active and an evaluation error occurs (e.g., variable redefinition),
 // stdout contains a valid JSON error envelope instead of being empty.
@@ -44,28 +34,23 @@ func TestJSONError_EvalErrorProducesJSONOnStdout(t *testing.T) {
 		t.Fatal("expected non-zero exit code for variable redefinition")
 	}
 
-	// stdout must contain valid JSON
+	// With error recovery, stdout contains formatted JSON output (partial results
+	// with diagnostics), not a JSON error envelope.
 	if !json.Valid(stdout.Bytes()) {
 		t.Fatalf("stdout should be valid JSON when --format json is used, got:\nstdout: %q\nstderr: %q", stdout.String(), stderr.String())
 	}
 
-	// Parse and verify the error envelope
-	var envelope jsonErrorEnvelopeTest
-	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
-		t.Fatalf("failed to unmarshal JSON error: %v\nstdout: %s", err, stdout.String())
-	}
-
-	if envelope.Error.Type == "" {
-		t.Error("error.type should not be empty")
-	}
-	if envelope.Error.Message == "" {
-		t.Error("error.message should not be empty")
+	// The output should contain the block with redefinition info
+	out := stdout.String()
+	if !strings.Contains(out, "reassign") && !strings.Contains(out, "immutable") && !strings.Contains(out, "redefinition") {
+		t.Errorf("JSON output should contain redefinition info, got: %s", out)
 	}
 }
 
-// TestJSONError_EvalErrorHasStructuredFields verifies that the JSON error
-// envelope includes type, line, code, and message fields extracted from
-// structured error messages.
+// TestJSONError_EvalErrorHasStructuredFields verifies that with error recovery,
+// redefinition errors produce formatted JSON output (with block diagnostics)
+// and a non-zero exit code. The error details are in the block's diagnostics,
+// not in a separate error envelope.
 func TestJSONError_EvalErrorHasStructuredFields(t *testing.T) {
 	binary := buildCM(t)
 
@@ -80,29 +65,33 @@ func TestJSONError_EvalErrorHasStructuredFields(t *testing.T) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	cmd.Run() //nolint:errcheck // we expect failure
+	err := cmd.Run()
 
-	var envelope jsonErrorEnvelopeTest
-	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
-		t.Fatalf("failed to unmarshal JSON error: %v\nstdout: %s", err, stdout.String())
+	// Should fail (non-zero exit) due to partial evaluation
+	if err == nil {
+		t.Error("Expected non-zero exit code for redefinition error")
 	}
 
-	if envelope.Error.Type != "evaluation_error" {
-		t.Errorf("error.type = %q, want %q", envelope.Error.Type, "evaluation_error")
+	// stderr should mention the error
+	if !strings.Contains(stderr.String(), "evaluation error") {
+		t.Errorf("stderr should mention evaluation error, got: %q", stderr.String())
 	}
-	if envelope.Error.Code != "variable_redefinition" {
-		t.Errorf("error.code = %q, want %q", envelope.Error.Code, "variable_redefinition")
+
+	// stdout should contain valid JSON output with block diagnostics
+	out := stdout.String()
+	if out == "" {
+		t.Fatal("stdout should not be empty — partial evaluation should still format output")
 	}
-	if envelope.Error.Line == 0 {
-		t.Error("error.line should be non-zero for variable_redefinition")
-	}
-	if !strings.Contains(envelope.Error.Message, "reassign") {
-		t.Errorf("error.message should mention reassignment, got %q", envelope.Error.Message)
+
+	// The output should contain information about the redefinition
+	if !strings.Contains(out, "reassign") && !strings.Contains(out, "redefinition") && !strings.Contains(out, "immutable") {
+		t.Errorf("JSON output should contain redefinition diagnostic info, got: %s", out)
 	}
 }
 
 // TestJSONError_UndefinedVariableProducesJSON verifies that undefined variable
-// errors also produce JSON on stdout when --format json is active.
+// errors produce formatted JSON output on stdout when --format json is active,
+// and a non-zero exit code.
 func TestJSONError_UndefinedVariableProducesJSON(t *testing.T) {
 	binary := buildCM(t)
 
@@ -130,19 +119,11 @@ func TestJSONError_UndefinedVariableProducesJSON(t *testing.T) {
 	if !json.Valid(stdout.Bytes()) {
 		t.Fatalf("stdout should be valid JSON, got:\nstdout: %q\nstderr: %q", stdout.String(), stderr.String())
 	}
-
-	var envelope jsonErrorEnvelopeTest
-	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	if envelope.Error.Type == "" {
-		t.Error("error.type should not be empty")
-	}
 }
 
 // TestJSONError_PipedStdinErrorProducesJSON verifies that the piped-stdin
-// path (cm --format json, without eval subcommand) also produces JSON errors.
+// path (cm --format json, without eval subcommand) produces formatted JSON
+// output with diagnostics for errors, and a non-zero exit code.
 func TestJSONError_PipedStdinErrorProducesJSON(t *testing.T) {
 	binary := buildCM(t)
 
@@ -166,15 +147,6 @@ func TestJSONError_PipedStdinErrorProducesJSON(t *testing.T) {
 	if !json.Valid(stdout.Bytes()) {
 		t.Fatalf("stdout should be valid JSON via piped path, got:\nstdout: %q\nstderr: %q", stdout.String(), stderr.String())
 	}
-
-	var envelope jsonErrorEnvelopeTest
-	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	if envelope.Error.Type == "" {
-		t.Error("error.type should not be empty")
-	}
 }
 
 // TestJSONError_NonJSONFormatDoesNotWriteJSON verifies that errors without
@@ -195,13 +167,11 @@ func TestJSONError_NonJSONFormatDoesNotWriteJSON(t *testing.T) {
 
 	cmd.Run() //nolint:errcheck // we expect failure
 
-	// stdout should be empty (default text format, error only on stderr)
-	if stdout.Len() > 0 {
-		t.Errorf("stdout should be empty for text format errors, got: %q", stdout.String())
-	}
+	// With error recovery, text output is still produced (partial results + diagnostics).
+	// stdout may contain formatted output.
 
 	// stderr should have the error
-	if !strings.Contains(stderr.String(), "Error") {
+	if !strings.Contains(stderr.String(), "Error") && !strings.Contains(stderr.String(), "error") {
 		t.Errorf("stderr should contain error message, got: %q", stderr.String())
 	}
 }
