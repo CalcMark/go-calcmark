@@ -747,3 +747,44 @@ func TestHTMLFormatterDataSourceLineWithFrontmatter(t *testing.T) {
 		t.Errorf("Expected calc line with data-source-line=\"6\" after frontmatter, output:\n%s", output)
 	}
 }
+
+// TestHTMLFormatter_ErrorAfterBlankLine verifies that an error on a line
+// after a blank line within a calc block shows an inline error in the HTML.
+// Diagnostic Line numbers count all source lines (including blanks), so the
+// formatter's line counter must also count blanks to match diagnostics correctly.
+func TestHTMLFormatter_ErrorAfterBlankLine(t *testing.T) {
+	// Blank line between b and a means they're in the same block but
+	// the diagnostic for a=1/0 is on line 3 (counting the blank).
+	source := "b = $23\n\na = 1 / 0\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	_ = eval.Evaluate(doc) // ErrPartialEvaluation expected
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	opts := Options{Verbose: true}
+
+	if err := formatter.Format(&buf, doc, opts); err != nil {
+		t.Fatalf("Format: %v", err)
+	}
+
+	output := buf.String()
+
+	// b = $23 should have a result
+	if !strings.Contains(output, "calc-inline-result") {
+		t.Error("expected b = $23 to have calc-inline-result")
+	}
+
+	// a = 1 / 0 should have an inline error, not be blank
+	if !strings.Contains(output, "calc-inline-error") {
+		t.Errorf("expected a = 1 / 0 to have calc-inline-error, but HTML output was:\n%s", output)
+	}
+	if !strings.Contains(output, "division by zero") {
+		t.Error("expected 'division by zero' in inline error")
+	}
+}

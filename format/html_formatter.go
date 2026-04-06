@@ -230,9 +230,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			stmts := AlignResults(block)
 			lineNum := 0
 			for _, stmt := range stmts {
-				if !stmt.IsBlank && !stmt.IsResultLine {
-					lineNum++
-				}
+				lineNum++ // count every source line (including blanks) to match diagnostic Line numbers
 				if stmt.IsBlank || stmt.IsResultLine {
 					continue
 				}

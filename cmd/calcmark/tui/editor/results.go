@@ -123,8 +123,13 @@ func (m *Model) GetLineResults() []LineResult {
 					lr.Diagnostic = diag
 					lr.Error = diag.Code + ": " + diag.Message // Legacy string for backwards compat
 
-					// Check if this is a cascading (blocked) error
-					if isUndefinedVarError(lr.Error) {
+					// Check if this is a cascading (blocked) error.
+					// The evaluator marks cascading errors with diagnostic code
+					// "cascading_error" and hint severity. Also check the legacy
+					// string-match path for undefined variable errors.
+					if diag.Code == "cascading_error" {
+						lr.IsBlocked = true
+					} else if isUndefinedVarError(lr.Error) {
 						varName := extractVarFromUndefinedError(lr.Error)
 						if varName != "" && blockedVars[varName] {
 							lr.IsBlocked = true
@@ -158,8 +163,12 @@ func (m *Model) GetLineResults() []LineResult {
 					if showErrorHere {
 						lr.Error = blockError.Error()
 
-						// Check if this is a cascading (blocked) error
-						if isUndefinedVarError(lr.Error) {
+						// Check if this is a cascading (blocked) error.
+						// In the fallback path we don't have a diagnostic code,
+						// so check the error message for the cascading pattern.
+						if isCascadingErrorMessage(lr.Error) {
+							lr.IsBlocked = true
+						} else if isUndefinedVarError(lr.Error) {
 							varName := extractVarFromUndefinedError(lr.Error)
 							if varName != "" && blockedVars[varName] {
 								lr.IsBlocked = true
@@ -307,6 +316,13 @@ func isUndefinedVarError(errMsg string) bool {
 	lowerErr := strings.ToLower(errMsg)
 	return strings.Contains(lowerErr, "undefined variable") ||
 		strings.Contains(lowerErr, "undefined_variable")
+}
+
+// isCascadingErrorMessage checks if an error message matches the cascading error
+// pattern produced by CascadingError ("depends on errored variable ...").
+// Used in the blockError fallback path where no structured diagnostic code is available.
+func isCascadingErrorMessage(errMsg string) bool {
+	return strings.Contains(errMsg, "depends on errored variable")
 }
 
 // extractVarFromUndefinedError extracts the variable name from an undefined variable error.

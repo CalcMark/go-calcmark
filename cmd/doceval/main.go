@@ -391,10 +391,8 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 			stmts := format.AlignResults(block)
 			lineNum := 0
 			for _, stmt := range stmts {
+				lineNum++ // count every source line (including blanks) to match diagnostic Line numbers
 				lr := LineResult{Source: stmt.Source, IsBlank: stmt.IsBlank, Variable: stmt.Variable}
-				if !stmt.IsBlank && !stmt.IsResultLine {
-					lineNum++
-				}
 				if stmt.Result != nil {
 					lr.Result = df.Format(stmt.Result)
 				} else if d, ok := diagByLine[lineNum]; ok {
