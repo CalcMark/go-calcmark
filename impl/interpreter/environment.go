@@ -74,9 +74,12 @@ func (e *Environment) Clone() *Environment {
 	return newEnv
 }
 
-// GetAllVariables returns the map of all variables (for sync with semantic checker).
+// GetAllVariables returns a snapshot copy of all variables.
+// The returned map is safe to iterate without concern for concurrent mutation.
 func (e *Environment) GetAllVariables() map[string]types.Type {
-	return e.vars
+	result := make(map[string]types.Type, len(e.vars))
+	maps.Copy(result, e.vars)
+	return result
 }
 
 // SetError marks a variable as having failed evaluation.

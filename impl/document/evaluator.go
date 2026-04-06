@@ -568,6 +568,8 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 		}
 		if len(nodeResults) > 0 {
 			results = append(results, nodeResults[0])
+		} else {
+			results = append(results, nil) // placeholder for zero-result statements (e.g., directives)
 		}
 	}
 
@@ -789,6 +791,8 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 		}
 		if len(nodeResults) > 0 {
 			results = append(results, nodeResults[0])
+		} else {
+			results = append(results, nil) // placeholder for zero-result statements (e.g., directives)
 		}
 	}
 
