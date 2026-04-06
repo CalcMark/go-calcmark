@@ -89,7 +89,7 @@ func interpolateLine(line string, env map[string]types.Type, df display.Formatte
 		if wrapHTML {
 			return "\x02" + formatted + "\x03"
 		}
-		return "**" + formatted + "**"
+		return formatted
 	})
 }
 

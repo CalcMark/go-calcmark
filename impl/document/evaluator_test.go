@@ -593,7 +593,7 @@ func TestEvaluateForwardReference(t *testing.T) {
 		}
 		interp := tb.InterpolatedSource()
 		for _, line := range interp {
-			if strings.Contains(line, "**42**") {
+			if strings.Contains(line, "42") && !strings.Contains(line, "{{") {
 				return // Success — forward reference resolved
 			}
 		}
@@ -1433,9 +1433,8 @@ func TestBlockRecovery_InterpolationResolveSuccessLeavesErrored(t *testing.T) {
 		}
 		interp := tb.InterpolatedSource()
 		for _, line := range interp {
-			// b should be resolved
-			if strings.Contains(line, "**42**") {
-				// a should remain unresolved ({{a}})
+			// b should be resolved to "42", a should remain as {{a}}
+			if strings.Contains(line, "Result b: 42") {
 				if strings.Contains(line, "{{a}}") {
 					return // Success
 				}
