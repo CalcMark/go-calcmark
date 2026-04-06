@@ -51,9 +51,9 @@ if err != nil {
 w.Write([]byte(html))
 ```
 
-For custom styling, pass a Go `html/template` string via the `Template` option. Lark uses this to wrap CalcMark output in its own page layout — see [template.go](https://github.com/CalcMark/calcmark-lark/blob/main/template.go) for a working example.
+For custom styling, pass a Go `html/template` string via the `Template` option. Custom templates automatically have access to shared partials (`cm-content`, `cm-frontmatter`, `cm-blocks`) — no need to duplicate rendering logic. Override `--cm-*` CSS variables for theming.
 
-The template receives a data struct with `.Style` (shared CSS), `.Frontmatter`, `.Blocks`, and `.Content` fields. Use `format.DefaultHTMLTemplate()` as a starting point, or `format.StyleCSS()` to get just the stylesheet.
+See [Custom HTML Templates]({{< ref "docs/custom-templates" >}}) for the full guide, including CSS variable reference, dark mode, and real-world examples like Lark.
 
 ## Example: A Minimal REPL
 

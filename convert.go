@@ -279,16 +279,22 @@ func markdownToHTML(markdown string) (string, error) {
 // Content is typed as template.HTML because it has already been sanitized
 // by bluemonday before reaching this function.
 func wrapEmbeddedHTML(htmlContent string, templateContent string) (string, error) {
-	tmpl, err := template.New("embedded").Parse(templateContent)
+	// Parse shared partials first so custom templates can call cm-content etc.
+	tmpl, err := template.New("embedded").Parse(format.PartialsTemplate())
 	if err != nil {
+		return "", fmt.Errorf("partials parse error: %w", err)
+	}
+	if _, err := tmpl.Parse(templateContent); err != nil {
 		return "", err
 	}
 
 	data := struct {
+		Style       template.CSS
 		Frontmatter *format.TemplateFrontmatter
 		Blocks      []format.TemplateBlock
 		Content     template.HTML
 	}{
+		Style:   template.CSS(format.StyleCSS()),
 		Content: template.HTML(htmlContent),
 	}
 
