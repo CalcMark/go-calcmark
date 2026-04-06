@@ -309,8 +309,13 @@ type Token struct {
 var reservedKeywordTokens map[TokenType]bool
 
 func init() {
-	reservedKeywordTokens = make(map[TokenType]bool, len(ReservedKeywords))
+	reservedKeywordTokens = make(map[TokenType]bool, len(ReservedKeywords)+len(DateKeywords))
 	for _, tt := range ReservedKeywords {
+		reservedKeywordTokens[tt] = true
+	}
+	// Date keywords (today, tomorrow, yesterday) are also reserved —
+	// they cannot be used as variable names.
+	for _, tt := range DateKeywords {
 		reservedKeywordTokens[tt] = true
 	}
 }

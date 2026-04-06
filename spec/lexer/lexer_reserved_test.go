@@ -68,6 +68,13 @@ func TestIsReservedKeywordToken(t *testing.T) {
 		}
 	}
 
+	// Date keywords should also return true
+	for keyword, tokenType := range DateKeywords {
+		if !IsReservedKeywordToken(tokenType) {
+			t.Errorf("IsReservedKeywordToken(%s) = false for date keyword %q", tokenType, keyword)
+		}
+	}
+
 	// Non-keyword token types should return false
 	nonKeywords := []TokenType{IDENTIFIER, NUMBER, ASSIGN, PLUS, MINUS, LPAREN, RPAREN, EOF, NEWLINE}
 	for _, tt := range nonKeywords {

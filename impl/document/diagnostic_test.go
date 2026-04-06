@@ -283,11 +283,32 @@ end = April 26
 			wantDiagInLine: "end = April 26",
 		},
 		{
-			name:   "reserved keyword diagnostic has helpful message",
-			source: "end = April 26\n",
+			name:           "reserved keyword diagnostic has helpful message",
+			source:         "end = April 26\n",
 			wantDiagCount:  1,
 			wantDiagCode:   DiagLikelyCalculation,
 			wantDiagInLine: "end = April 26",
+		},
+		{
+			name:           "today keyword warns when used as variable",
+			source:         "today = Mar 3 2021\n",
+			wantDiagCount:  1,
+			wantDiagCode:   DiagLikelyCalculation,
+			wantDiagInLine: "today = Mar 3 2021",
+		},
+		{
+			name:           "tomorrow keyword warns when used as variable",
+			source:         "tomorrow = Mar 4 2021\n",
+			wantDiagCount:  1,
+			wantDiagCode:   DiagLikelyCalculation,
+			wantDiagInLine: "tomorrow = Mar 4 2021",
+		},
+		{
+			name:           "yesterday keyword warns when used as variable",
+			source:         "yesterday = Mar 2 2021\n",
+			wantDiagCount:  1,
+			wantDiagCode:   DiagLikelyCalculation,
+			wantDiagInLine: "yesterday = Mar 2 2021",
 		},
 	}
 
@@ -518,6 +539,61 @@ func TestReservedKeywordDiagnosticMessage(t *testing.T) {
 	}
 	if !strings.Contains(blockDiags[0].Detailed, "end_val") {
 		t.Errorf("diagnostic hint should suggest an alternative name, got: %s", blockDiags[0].Detailed)
+	}
+}
+
+func TestDateKeywordDiagnosticHints(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   string
+		keyword  string
+		wantHint string
+	}{
+		{"today suggests start_date", "today = Mar 3 2021\n", "today", "start_date"},
+		{"tomorrow suggests next_day", "tomorrow = Mar 4 2021\n", "tomorrow", "next_day"},
+		{"yesterday suggests prev_day", "yesterday = Mar 2 2021\n", "yesterday", "prev_day"},
+		{"end still suggests end_val", "end = April 26\n", "end", "end_val"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := document.NewDocument(tt.source)
+			if err != nil {
+				t.Fatalf("NewDocument error: %v", err)
+			}
+			evaluator := NewEvaluator()
+			_ = evaluator.Evaluate(doc)
+
+			diags := evaluator.Diagnostics()
+			if len(diags) != 1 {
+				t.Fatalf("got %d diagnostics, want 1", len(diags))
+			}
+			if !strings.Contains(diags[0].Message, "reserved keyword") {
+				t.Errorf("message should mention 'reserved keyword', got: %s", diags[0].Message)
+			}
+			if !strings.Contains(diags[0].Message, tt.keyword) {
+				t.Errorf("message should mention %q, got: %s", tt.keyword, diags[0].Message)
+			}
+
+			// Check the hint in the text block diagnostic
+			var tb *document.TextBlock
+			for _, node := range doc.GetBlocks() {
+				if b, ok := node.Block.(*document.TextBlock); ok {
+					tb = b
+					break
+				}
+			}
+			if tb == nil {
+				t.Fatal("expected a text block")
+			}
+			blockDiags := tb.Diagnostics()
+			if len(blockDiags) != 1 {
+				t.Fatalf("got %d block diagnostics, want 1", len(blockDiags))
+			}
+			if !strings.Contains(blockDiags[0].Detailed, tt.wantHint) {
+				t.Errorf("hint should suggest %q, got: %s", tt.wantHint, blockDiags[0].Detailed)
+			}
+		})
 	}
 }
 
