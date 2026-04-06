@@ -127,6 +127,18 @@ func TestEvalWithLocale_EndToEnd(t *testing.T) {
 			input:  "d = Dec 25 2025",
 			want:   "Thu, Dec 25, 2025",
 		},
+		{
+			name:   "en-GB date (day-month order)",
+			locale: "en-GB",
+			input:  "d = Dec 25 2025",
+			want:   "Thu, 25 Dec 2025",
+		},
+		{
+			name:   "fr-FR date",
+			locale: "fr-FR",
+			input:  "d = Dec 25 2025",
+			want:   "jeu. 25 déc. 2025",
+		},
 	}
 
 	for _, tt := range tests {

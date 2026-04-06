@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"golang.org/x/text/language"
 )
 
@@ -37,30 +38,78 @@ func TestGetDateFormat(t *testing.T) {
 			t.Errorf("expected en_US fallback, got %s", df.locale)
 		}
 	})
+
+	t.Run("monday-supported locale not in dateFormats falls back gracefully", func(t *testing.T) {
+		// hu-HU is supported by monday but not in our dateFormats map
+		tag, _ := language.Parse("hu-HU")
+		df := getDateFormat(tag)
+		if df.locale != "en_US" {
+			t.Errorf("expected en_US fallback for hu-HU, got %s", df.locale)
+		}
+	})
 }
 
-func TestFormatDate_Locales(t *testing.T) {
-	// Thu, Dec 25, 2025 — a known reference date
+// TestFormatDate_AllLocales verifies every locale entry in dateFormats produces
+// the expected output for a known reference date (Thu, Dec 25, 2025).
+// These expected values are the actual output from monday — if a layout string
+// is wrong, the assertion catches it.
+func TestFormatDate_AllLocales(t *testing.T) {
 	ref := time.Date(2025, time.December, 25, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name     string
-		tag      language.Tag
+		locale   string
 		expected string
 	}{
-		{"en-US", language.AmericanEnglish, "Thu, Dec 25, 2025"},
-		{"en-GB", language.BritishEnglish, "Thu, 25 Dec 2025"},
-		{"de-DE", language.German, "Do. 25. Dez. 2025"},
-		{"fr-FR", language.French, "jeu. 25 déc. 2025"},
+		{"en-US", "Thu, Dec 25, 2025"},
+		{"en-GB", "Thu, 25 Dec 2025"},
+		{"de-DE", "Do. 25. Dez. 2025"},
+		{"fr-FR", "jeu. 25 déc. 2025"},
+		{"es-ES", "jue. 25 dic. 2025"},
+		{"it-IT", "gio 25 dic 2025"},
+		{"pt-BR", "qui, 25 dez. 2025"},
+		{"pt-PT", "qui, 25 Dez. 2025"},
+		{"nl-NL", "do 25 dec. 2025"},
+		{"da-DK", "tor. 25. dec. 2025"},
+		{"sv-SE", "tors 25 dec. 2025"},
+		{"nb-NO", "to. 25. des. 2025"},
+		{"fi-FI", "to 25. joulu. 2025"},
+		{"pl-PL", "Czw, 25 gru 2025"},
+		{"ru-RU", "Чт, 25 дек. 2025"},
+		{"uk-UA", "Чт, 25 гру. 2025"},
+		{"tr-TR", "Per, 25 Ara 2025"},
+		{"ja-JP", "2025年12月25日(木)"},
+		{"zh-CN", "2025年12月25日 四"},
+		{"zh-TW", "2025年12月25日 四"},
+		{"ko-KR", "2025년 12월 25일 (목)"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			df := getDateFormat(tt.tag)
+		t.Run(tt.locale, func(t *testing.T) {
+			tag, err := language.Parse(tt.locale)
+			if err != nil {
+				t.Fatalf("language.Parse(%q): %v", tt.locale, err)
+			}
+			df := getDateFormat(tag)
 			got := formatDate(ref, df)
 			if got != tt.expected {
-				t.Errorf("formatDate() = %q, want %q", got, tt.expected)
+				t.Errorf("formatDate(%s) = %q, want %q", tt.locale, got, tt.expected)
 			}
 		})
+	}
+}
+
+// TestFormatDate_EndToEnd_EnGB verifies en-GB flows correctly through
+// the config -> formatter -> FormatDate pipeline.
+func TestFormatDate_EndToEnd_EnGB(t *testing.T) {
+	cfg, err := NewConfig("en-GB")
+	if err != nil {
+		t.Fatalf("NewConfig(en-GB): %v", err)
+	}
+	f := NewFormatter(cfg)
+
+	d, _ := types.NewDate(2025, 12, 25)
+	got := f.FormatDate(d)
+	if got != "Thu, 25 Dec 2025" {
+		t.Errorf("FormatDate(en-GB) = %q, want %q", got, "Thu, 25 Dec 2025")
 	}
 }
