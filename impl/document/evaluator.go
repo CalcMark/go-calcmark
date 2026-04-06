@@ -218,6 +218,7 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 	// Continue past block errors to collect all diagnostics.
 	e.env = interpreter.NewEnvironment()
 	allDefinedVars := make(map[string]bool)
+	nonRecoverableBlocks := make(map[string]bool) // blocks with parse/redefinition errors (skip in pass 2)
 	var hasErrors bool
 
 	for _, node := range doc.GetBlocks() {
@@ -247,6 +248,7 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 					})
 				}
 				hasErrors = true
+				nonRecoverableBlocks[node.ID] = true
 				continue
 			}
 
@@ -281,16 +283,18 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 						Code:     "variable_redefinition",
 						Message:  redefErr.Error(),
 					})
-					// Mark all variables this block would define as errored
-					for _, vn := range currentlyDefining {
-						e.env.SetError(vn, redefErr)
-					}
+					// Mark only the conflicting variable as errored;
+					// non-conflicting variables in this block will be evaluated
+					// normally if the block proceeds (or marked errored individually
+					// if evaluation fails for other reasons).
+					e.env.SetError(varName, redefErr)
 					hasErrors = true
 					blockHasRedefError = true
 					break
 				}
 			}
 			if blockHasRedefError {
+				nonRecoverableBlocks[node.ID] = true
 				// Still track variables as defined for downstream redefinition checks
 				for _, varName := range currentlyDefining {
 					allDefinedVars[varName] = true
@@ -337,9 +341,11 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 
 	for _, node := range doc.GetBlocks() {
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			// Skip blocks that already have errors from pass 1 (parse/redefinition).
-			// Re-evaluating them would clear their diagnostics.
-			if cb.Error() != nil {
+			// Skip blocks with non-recoverable errors from pass 1 (parse/redefinition).
+			// These cannot succeed in pass 2 regardless of the environment state.
+			// Runtime errors (e.g., forward references that failed in pass 1) should be
+			// retried in pass 2 since the reactive env now has all variable values.
+			if nonRecoverableBlocks[node.ID] {
 				continue
 			}
 			if err := e.evaluateCalcBlockSelective(node.ID, cb, reactiveEnv, lastDefBlock, doc); err != nil {
