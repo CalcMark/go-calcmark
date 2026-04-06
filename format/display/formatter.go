@@ -281,8 +281,8 @@ func (f Formatter) FormatDate(d *types.Date) string {
 	if d == nil {
 		return ""
 	}
-	loc := getDateLocale(f.cfg.Tag)
-	return formatDate(d.Time, loc)
+	df := getDateFormat(f.cfg.Tag)
+	return formatDate(d.Time, df)
 }
 
 // FormatPercentage formats a percentage in human-readable form.

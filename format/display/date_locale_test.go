@@ -7,63 +7,57 @@ import (
 	"golang.org/x/text/language"
 )
 
-func TestGetDateLocale(t *testing.T) {
-	t.Run("English", func(t *testing.T) {
-		loc := getDateLocale(language.AmericanEnglish)
-		if loc.shortDays[0] != "Sun" {
-			t.Errorf("expected Sun, got %s", loc.shortDays[0])
-		}
-		if len(loc.shortMonths) != 12 {
-			t.Errorf("expected 12 months, got %d", len(loc.shortMonths))
+func TestGetDateFormat(t *testing.T) {
+	t.Run("exact match en-US", func(t *testing.T) {
+		df := getDateFormat(language.AmericanEnglish)
+		if df.locale != "en_US" {
+			t.Errorf("expected en_US locale, got %s", df.locale)
 		}
 	})
 
-	t.Run("German", func(t *testing.T) {
-		loc := getDateLocale(language.German)
-		if loc.shortDays[3] != "Mi." {
-			t.Errorf("expected Mi., got %s", loc.shortDays[3])
-		}
-		if loc.shortMonths[0] != "Jan." {
-			t.Errorf("expected Jan., got %s", loc.shortMonths[0])
+	t.Run("exact match de-DE", func(t *testing.T) {
+		df := getDateFormat(language.German)
+		if df.locale != "de_DE" {
+			t.Errorf("expected de_DE locale, got %s", df.locale)
 		}
 	})
 
-	t.Run("French", func(t *testing.T) {
-		loc := getDateLocale(language.French)
-		if loc.shortDays[1] != "lun." {
-			t.Errorf("expected lun., got %s", loc.shortDays[1])
-		}
-		if loc.shortMonths[0] != "janv." {
-			t.Errorf("expected janv., got %s", loc.shortMonths[0])
+	t.Run("language-only fallback fr -> fr_FR", func(t *testing.T) {
+		tag := language.French
+		df := getDateFormat(tag)
+		if df.locale != "fr_FR" {
+			t.Errorf("expected fr_FR locale for French, got %s", df.locale)
 		}
 	})
 
-	t.Run("unsupported locale falls back to English", func(t *testing.T) {
-		loc := getDateLocale(language.Japanese)
-		if loc.shortDays[0] != "Sun" {
-			t.Errorf("expected English fallback Sun, got %s", loc.shortDays[0])
+	t.Run("unsupported locale falls back to en-US", func(t *testing.T) {
+		tag, _ := language.Parse("hi-IN")
+		df := getDateFormat(tag)
+		if df.locale != "en_US" {
+			t.Errorf("expected en_US fallback, got %s", df.locale)
 		}
 	})
 }
 
-func TestFormatDate_Ordering(t *testing.T) {
-	// Wed, Jan 12, 2025 — a known reference date
-	ref := time.Date(2025, time.January, 12, 0, 0, 0, 0, time.UTC)
+func TestFormatDate_Locales(t *testing.T) {
+	// Thu, Dec 25, 2025 — a known reference date
+	ref := time.Date(2025, time.December, 25, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
 		name     string
 		tag      language.Tag
 		expected string
 	}{
-		{"en-US: month-day-year", language.AmericanEnglish, "Sun, Jan 12, 2025"},
-		{"de-DE: day-month-year", language.German, "So. 12. Jan. 2025"},
-		{"fr-FR: day-month-year", language.French, "dim. 12 janv. 2025"},
+		{"en-US", language.AmericanEnglish, "Thu, Dec 25, 2025"},
+		{"en-GB", language.BritishEnglish, "Thu, 25 Dec 2025"},
+		{"de-DE", language.German, "Do. 25. Dez. 2025"},
+		{"fr-FR", language.French, "jeu. 25 déc. 2025"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			loc := getDateLocale(tt.tag)
-			got := formatDate(ref, loc)
+			df := getDateFormat(tt.tag)
+			got := formatDate(ref, df)
 			if got != tt.expected {
 				t.Errorf("formatDate() = %q, want %q", got, tt.expected)
 			}
