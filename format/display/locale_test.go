@@ -357,3 +357,35 @@ func TestInsertGroupSeparatorsPathological(t *testing.T) {
 		t.Error("pathological string should be returned unchanged")
 	}
 }
+
+func TestFormatterLocaleDate(t *testing.T) {
+	// Dec 25, 2025 = Thursday
+	d, err := types.NewDate(2025, 12, 25)
+	if err != nil {
+		t.Fatalf("NewDate: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		locale string
+		want   string
+	}{
+		{"en-US", "en-US", "Thu, Dec 25, 2025"},
+		{"de-DE", "de-DE", "Do. 25. Dez. 2025"},
+		{"fr-FR", "fr-FR", "jeu. 25 déc. 2025"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := NewConfig(tt.locale)
+			if err != nil {
+				t.Fatalf("NewConfig(%q): %v", tt.locale, err)
+			}
+			f := NewFormatter(cfg)
+			got := f.FormatDate(d)
+			if got != tt.want {
+				t.Errorf("FormatDate() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

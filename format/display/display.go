@@ -105,6 +105,15 @@ func FormatDuration(d *types.Duration) string {
 	return defaultFormatter.FormatDuration(d)
 }
 
+// FormatDate formats a date in locale-aware short form using en-US defaults.
+//
+// Examples:
+//
+//	FormatDate(Jan 12 2025) → "Sun, Jan 12, 2025"
+func FormatDate(d *types.Date) string {
+	return defaultFormatter.FormatDate(d)
+}
+
 // FormatPercentage formats a percentage in human-readable form.
 // Applies magnitude-based rounding to the display value (e.g., 62.166…% → 62.2%).
 //
