@@ -20,7 +20,12 @@ func (interp *Interpreter) evalAssignment(a *ast.Assignment) (types.Type, error)
 }
 
 func (interp *Interpreter) evalIdentifier(id *ast.Identifier) (types.Type, error) {
-	// Check for defined variables FIRST (variables take precedence over keywords)
+	// Check for errored variables FIRST (error recovery: variable failed in prior statement)
+	if cause, errored := interp.env.GetError(id.Name); errored {
+		return nil, &CascadingError{VarName: id.Name, Cause: cause}
+	}
+
+	// Check for defined variables (variables take precedence over keywords)
 	if value, ok := interp.env.Get(id.Name); ok {
 		return value, nil
 	}
