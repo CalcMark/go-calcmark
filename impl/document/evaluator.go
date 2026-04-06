@@ -478,9 +478,12 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	}
 
 	diagnostics := checker.Check(nodes)
+
+	// Collect ALL semantic errors (not just the first) so every
+	// redefinition or type error in the block gets a diagnostic.
+	var firstSemanticErr error
 	for _, diag := range diagnostics {
 		if diag.Severity == semantic.Error {
-			// Store structured diagnostic with position info
 			blockDiag := document.Diagnostic{
 				Severity: "error",
 				Code:     diag.Code,
@@ -496,23 +499,24 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 			}
 			block.AddDiagnostic(blockDiag)
 
-			// Also set legacy error for backwards compatibility
-			if blockDiag.DocLine > 0 {
-				err = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
-			} else {
-				err = fmt.Errorf("%s: %s", diag.Code, diag.Message)
-			}
-			block.SetError(err)
-
-			// Mark all variables defined in this block as errored
-			// so downstream blocks see them as errored
-			for _, astNode := range nodes {
-				if assign, ok := astNode.(*ast.Assignment); ok {
-					env.SetError(assign.Name, err)
+			if firstSemanticErr == nil {
+				if blockDiag.DocLine > 0 {
+					firstSemanticErr = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
+				} else {
+					firstSemanticErr = fmt.Errorf("%s: %s", diag.Code, diag.Message)
 				}
 			}
-			return err
 		}
+	}
+	if firstSemanticErr != nil {
+		block.SetError(firstSemanticErr)
+		// Mark all variables defined in this block as errored (O(n) once)
+		for _, astNode := range nodes {
+			if assign, ok := astNode.(*ast.Assignment); ok {
+				env.SetError(assign.Name, firstSemanticErr)
+			}
+		}
+		return firstSemanticErr
 	}
 
 	// 3. Interpret with a COPY of the environment, statement by statement.
@@ -692,10 +696,10 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 
 	diagnostics := checker.Check(nodes)
 
-	// Check for errors
+	// Collect ALL semantic errors (not just the first).
+	var firstSemanticErr error
 	for _, diag := range diagnostics {
 		if diag.Severity == semantic.Error {
-			// Store structured diagnostic with position info
 			blockDiag := document.Diagnostic{
 				Severity: "error",
 				Code:     diag.Code,
@@ -711,23 +715,23 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 			}
 			block.AddDiagnostic(blockDiag)
 
-			// Also set legacy error for backwards compatibility
-			if blockDiag.DocLine > 0 {
-				err = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
-			} else {
-				err = fmt.Errorf("%s: %s", diag.Code, diag.Message)
-			}
-			block.SetError(err)
-
-			// Mark all variables defined in this block as errored
-			// so downstream blocks see them as errored
-			for _, astNode := range nodes {
-				if assign, ok := astNode.(*ast.Assignment); ok {
-					e.env.SetError(assign.Name, err)
+			if firstSemanticErr == nil {
+				if blockDiag.DocLine > 0 {
+					firstSemanticErr = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
+				} else {
+					firstSemanticErr = fmt.Errorf("%s: %s", diag.Code, diag.Message)
 				}
 			}
-			return err
 		}
+	}
+	if firstSemanticErr != nil {
+		block.SetError(firstSemanticErr)
+		for _, astNode := range nodes {
+			if assign, ok := astNode.(*ast.Assignment); ok {
+				e.env.SetError(assign.Name, firstSemanticErr)
+			}
+		}
+		return firstSemanticErr
 	}
 
 	// 3. Interpret statements with shared environment

@@ -1725,3 +1725,36 @@ func TestGolden_MixedSuccessAndErrors(t *testing.T) {
 		t.Errorf("expected 3 cascading errors (subtotal, total, final), got %d", cascadeCount)
 	}
 }
+
+// TestMultipleSemanticErrors verifies that ALL semantic errors in a block
+// are reported, not just the first one. e.g., "a = 1; a = 2; c = 3; c = 5"
+// should report redefinition errors for both 'a' (line 2) and 'c' (line 4).
+func TestMultipleSemanticErrors(t *testing.T) {
+	source := "a = 1 / 0\na = 2\nc = 3\nc = 5\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := NewEvaluator()
+	_ = eval.Evaluate(doc)
+
+	blocks := doc.GetBlocks()
+	block := blocks[0].Block.(*document.CalcBlock)
+
+	diags := block.Diagnostics()
+
+	// Should have at least 2 redefinition diagnostics: one for 'a' and one for 'c'
+	redefCount := 0
+	var redefVars []string
+	for _, d := range diags {
+		if d.Code == "variable_redefinition" {
+			redefCount++
+			redefVars = append(redefVars, d.Message)
+		}
+	}
+	if redefCount < 2 {
+		t.Errorf("expected at least 2 redefinition diagnostics (for 'a' and 'c'), got %d: %v", redefCount, redefVars)
+	}
+}
