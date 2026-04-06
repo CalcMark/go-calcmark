@@ -16,6 +16,7 @@ func (interp *Interpreter) evalAssignment(a *ast.Assignment) (types.Type, error)
 	}
 
 	interp.env.Set(a.Name, value)
+	interp.env.ClearError(a.Name) // Clear any stale error from a prior failed evaluation
 	return value, nil
 }
 
