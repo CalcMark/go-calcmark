@@ -80,7 +80,7 @@ launch = deadline - 2 weeks
 #### The `from` Keyword
 
 ```calcmark
-7 days from Jan 1 2025   -> Wednesday, January 8, 2025
+7 days from Jan 1 2025   -> Wed, Jan 8, 2025
 2 weeks from today       -> (today + 14 days)
 ```
 

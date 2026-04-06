@@ -82,7 +82,7 @@ func (f Formatter) Format(t types.Type) string {
 	case *types.Duration:
 		return f.FormatDuration(v)
 	case *types.Date:
-		return v.String()
+		return f.FormatDate(v)
 	case *types.Boolean:
 		return v.String()
 	case *types.Fraction:
@@ -268,6 +268,21 @@ func (f Formatter) FormatDuration(d *types.Duration) string {
 	}
 	rounded := roundForDisplay(d.Value)
 	return fmt.Sprintf("%s %s", rounded, d.Unit)
+}
+
+// FormatDate formats a date in locale-aware short form.
+// Uses abbreviated day-of-week and month names with locale-specific ordering.
+// Examples: "Wed, Jan 12, 2025" (en-US), "Mi., 12. Jan. 2025" (de-DE).
+//
+// The machine-readable Date.String() ("Monday, January 2, 2006") is intentionally
+// different — it is the model layer's precise representation. This method is the
+// display layer's human-friendly form.
+func (f Formatter) FormatDate(d *types.Date) string {
+	if d == nil {
+		return ""
+	}
+	df := getDateFormat(f.cfg.Tag)
+	return formatDate(d.Time, df)
 }
 
 // FormatPercentage formats a percentage in human-readable form.

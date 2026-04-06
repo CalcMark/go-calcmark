@@ -135,6 +135,32 @@ func TestFormatRate(t *testing.T) {
 	}
 }
 
+func TestFormatDate(t *testing.T) {
+	t.Run("en-US default", func(t *testing.T) {
+		d, _ := types.NewDate(2025, 1, 12)
+		got := FormatDate(d)
+		if got != "Sun, Jan 12, 2025" {
+			t.Errorf("FormatDate() = %q, want %q", got, "Sun, Jan 12, 2025")
+		}
+	})
+
+	t.Run("nil date", func(t *testing.T) {
+		got := FormatDate(nil)
+		if got != "" {
+			t.Errorf("FormatDate(nil) = %q, want empty", got)
+		}
+	})
+
+	t.Run("Format dispatch uses FormatDate", func(t *testing.T) {
+		d, _ := types.NewDate(2025, 12, 25)
+		got := Format(d)
+		// Should be short format, not the old verbose "Thursday, December 25, 2025"
+		if got != "Thu, Dec 25, 2025" {
+			t.Errorf("Format(date) = %q, want %q", got, "Thu, Dec 25, 2025")
+		}
+	})
+}
+
 func TestFormatCurrency(t *testing.T) {
 	tests := []struct {
 		name     string
