@@ -1,9 +1,11 @@
 package document
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/impl/interpreter"
 	"github.com/CalcMark/go-calcmark/spec/document"
 )
 
@@ -606,4 +608,471 @@ func TestEvaluateInterpolationPreservesSource(t *testing.T) {
 		}
 	}
 	t.Error("Source() should still contain raw {{x}} tag")
+}
+
+// --- Statement-level error recovery tests (Unit 3) ---
+
+// TestErrorRecovery_DivByZeroThenSuccess tests that a block continues past
+// a division-by-zero error and evaluates subsequent independent statements.
+func TestErrorRecovery_DivByZeroThenSuccess(t *testing.T) {
+	// a = 1/0 fails, b = 10 should succeed
+	source := "a = 1 / 0\nb = 10\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	// Should return an error (first error)
+	if err == nil {
+		t.Fatal("Expected error from division by zero, got nil")
+	}
+
+	blocks := doc.GetBlocks()
+	if len(blocks) == 0 {
+		t.Fatal("Expected at least 1 block")
+	}
+
+	cb := blocks[0].Block.(*document.CalcBlock)
+
+	// Results must have exactly len(statements) entries
+	results := cb.Results()
+	stmts := cb.Statements()
+	if len(results) != len(stmts) {
+		t.Fatalf("len(results)=%d != len(statements)=%d", len(results), len(stmts))
+	}
+	if len(results) != 2 {
+		t.Fatalf("Expected 2 results, got %d", len(results))
+	}
+
+	// First result is nil (failed)
+	if results[0] != nil {
+		t.Errorf("Expected nil for failed statement, got %v", results[0])
+	}
+
+	// Second result is 10 (succeeded)
+	if results[1] == nil {
+		t.Fatal("Expected non-nil result for b = 10")
+	}
+	if results[1].String() != "10" {
+		t.Errorf("Expected b = 10, got %q", results[1].String())
+	}
+
+	// Block should have error set (first error) and stay dirty
+	if cb.Error() == nil {
+		t.Error("Expected block.Error() to be non-nil")
+	}
+	if !cb.IsDirty() {
+		t.Error("Expected block to stay dirty when statements have errors")
+	}
+
+	// Check diagnostics
+	diags := cb.Diagnostics()
+	if len(diags) == 0 {
+		t.Fatal("Expected at least 1 diagnostic")
+	}
+	found := false
+	for _, d := range diags {
+		if d.Code == "eval_error" && d.Severity == "error" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected eval_error diagnostic with error severity")
+	}
+
+	// b should be in the environment
+	env := eval.GetEnvironment()
+	if val, ok := env.Get("b"); !ok || val.String() != "10" {
+		t.Errorf("Expected b=10 in environment, got %v (ok=%v)", val, ok)
+	}
+
+	// a should be marked as errored in the environment
+	if _, errored := env.GetError("a"); !errored {
+		t.Error("Expected variable 'a' to be marked as errored")
+	}
+}
+
+// TestErrorRecovery_CascadingError tests that referencing an errored variable
+// produces a cascading_error diagnostic with hint severity.
+func TestErrorRecovery_CascadingError(t *testing.T) {
+	// a = 1/0 fails, c = a * 2 references errored "a" -> cascading error
+	source := "a = 1 / 0\nc = a * 2\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	blocks := doc.GetBlocks()
+	cb := blocks[0].Block.(*document.CalcBlock)
+
+	results := cb.Results()
+	stmts := cb.Statements()
+	if len(results) != len(stmts) {
+		t.Fatalf("len(results)=%d != len(statements)=%d", len(results), len(stmts))
+	}
+
+	// Both results should be nil (both failed)
+	if results[0] != nil {
+		t.Errorf("Expected nil for a = 1/0, got %v", results[0])
+	}
+	if results[1] != nil {
+		t.Errorf("Expected nil for c = a*2, got %v", results[1])
+	}
+
+	// Check diagnostics
+	diags := cb.Diagnostics()
+	if len(diags) < 2 {
+		t.Fatalf("Expected at least 2 diagnostics, got %d", len(diags))
+	}
+
+	// First diagnostic should be eval_error for a = 1/0
+	foundEvalError := false
+	foundCascading := false
+	for _, d := range diags {
+		if d.Code == "eval_error" && d.Severity == "error" {
+			foundEvalError = true
+		}
+		if d.Code == diagCodeCascadingError && d.Severity == "hint" {
+			foundCascading = true
+			if d.Detailed != "a" {
+				t.Errorf("Expected cascading_error Detailed='a', got %q", d.Detailed)
+			}
+		}
+	}
+	if !foundEvalError {
+		t.Error("Expected eval_error diagnostic")
+	}
+	if !foundCascading {
+		t.Error("Expected cascading_error diagnostic with hint severity")
+	}
+
+	// Both a and c should be errored
+	env := eval.GetEnvironment()
+	if _, errored := env.GetError("a"); !errored {
+		t.Error("Expected 'a' to be errored")
+	}
+	if _, errored := env.GetError("c"); !errored {
+		t.Error("Expected 'c' to be errored")
+	}
+
+	// The error for c should be a CascadingError
+	cErr, _ := env.GetError("c")
+	var cascErr *interpreter.CascadingError
+	if !errors.As(cErr, &cascErr) {
+		t.Errorf("Expected CascadingError for 'c', got %T: %v", cErr, cErr)
+	} else if cascErr.VarName != "a" {
+		t.Errorf("Expected cascading error VarName='a', got %q", cascErr.VarName)
+	}
+}
+
+// TestErrorRecovery_AllSuccess tests that a block with all successful statements
+// behaves exactly as before (no regressions).
+func TestErrorRecovery_AllSuccess(t *testing.T) {
+	source := "a = 5\nb = a + 10\nc = b * 2\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	blocks := doc.GetBlocks()
+	cb := blocks[0].Block.(*document.CalcBlock)
+
+	results := cb.Results()
+	stmts := cb.Statements()
+	if len(results) != len(stmts) {
+		t.Fatalf("len(results)=%d != len(statements)=%d", len(results), len(stmts))
+	}
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 results, got %d", len(results))
+	}
+
+	// Verify values
+	expected := []string{"5", "15", "30"}
+	for i, exp := range expected {
+		if results[i] == nil {
+			t.Errorf("Result %d is nil, expected %s", i, exp)
+			continue
+		}
+		if results[i].String() != exp {
+			t.Errorf("Result %d: expected %s, got %s", i, exp, results[i].String())
+		}
+	}
+
+	// Block should be clean
+	if cb.IsDirty() {
+		t.Error("Expected block to be clean after successful evaluation")
+	}
+	if cb.Error() != nil {
+		t.Errorf("Expected no error, got: %v", cb.Error())
+	}
+	if len(cb.Diagnostics()) != 0 {
+		t.Errorf("Expected no diagnostics, got %d", len(cb.Diagnostics()))
+	}
+}
+
+// TestErrorRecovery_AllStatementsFail tests a block where every statement fails.
+func TestErrorRecovery_AllStatementsFail(t *testing.T) {
+	// a = 1/0, b = 1/0 — both fail independently
+	source := "a = 1 / 0\nb = 1 / 0\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	blocks := doc.GetBlocks()
+	cb := blocks[0].Block.(*document.CalcBlock)
+
+	results := cb.Results()
+	stmts := cb.Statements()
+	if len(results) != len(stmts) {
+		t.Fatalf("len(results)=%d != len(statements)=%d", len(results), len(stmts))
+	}
+
+	// All results should be nil
+	for i, r := range results {
+		if r != nil {
+			t.Errorf("Expected nil for result %d, got %v", i, r)
+		}
+	}
+
+	// Block should stay dirty
+	if !cb.IsDirty() {
+		t.Error("Expected block to stay dirty when all statements fail")
+	}
+
+	// LastValue should be nil (no successful results)
+	if cb.LastValue() != nil {
+		t.Errorf("Expected nil LastValue, got %v", cb.LastValue())
+	}
+
+	// Should have 2 diagnostics
+	diags := cb.Diagnostics()
+	if len(diags) != 2 {
+		t.Fatalf("Expected 2 diagnostics, got %d", len(diags))
+	}
+}
+
+// TestErrorRecovery_MultipleErroredVarsCascade tests that a statement
+// referencing multiple errored variables produces one cascading error.
+func TestErrorRecovery_MultipleErroredVarsCascade(t *testing.T) {
+	// a = 1/0, b = 1/0, c = a + b — c depends on two errored vars
+	source := "a = 1 / 0\nb = 1 / 0\nc = a + b\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	blocks := doc.GetBlocks()
+	cb := blocks[0].Block.(*document.CalcBlock)
+
+	results := cb.Results()
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 results, got %d", len(results))
+	}
+
+	// All nil
+	for i, r := range results {
+		if r != nil {
+			t.Errorf("Expected nil for result %d, got %v", i, r)
+		}
+	}
+
+	// c should have a cascading_error diagnostic
+	diags := cb.Diagnostics()
+	foundCascading := false
+	for _, d := range diags {
+		if d.Code == diagCodeCascadingError {
+			foundCascading = true
+			// Should name one of the root-cause variables
+			if d.Detailed != "a" && d.Detailed != "b" {
+				t.Errorf("Expected Detailed to be 'a' or 'b', got %q", d.Detailed)
+			}
+		}
+	}
+	if !foundCascading {
+		t.Error("Expected cascading_error diagnostic for c = a + b")
+	}
+}
+
+// TestErrorRecovery_SuccessThenFailInSameBlock tests that a successful
+// statement's value persists in the environment even when a later statement fails.
+func TestErrorRecovery_SuccessThenFailInSameBlock(t *testing.T) {
+	source := "y = 15\nz = 1 / 0\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err == nil {
+		t.Fatal("Expected error from z = 1/0, got nil")
+	}
+
+	// y should be in the environment (succeeded)
+	env := eval.GetEnvironment()
+	if val, ok := env.Get("y"); !ok || val.String() != "15" {
+		t.Errorf("Expected y=15 in environment, got %v (ok=%v)", val, ok)
+	}
+
+	// z should be errored
+	if _, errored := env.GetError("z"); !errored {
+		t.Error("Expected 'z' to be errored")
+	}
+}
+
+// TestErrorRecovery_DiagnosticLineNumbers tests that diagnostics have
+// correct Line and DocLine values.
+func TestErrorRecovery_DiagnosticLineNumbers(t *testing.T) {
+	// Two blocks: first succeeds, second has error on its 2nd statement
+	source := "x = 10\n\n\ny = 5\nz = 1 / 0\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	// Find the block with the error
+	for _, node := range doc.GetBlocks() {
+		cb, ok := node.Block.(*document.CalcBlock)
+		if !ok || cb.Error() == nil {
+			continue
+		}
+
+		diags := cb.Diagnostics()
+		if len(diags) == 0 {
+			t.Fatal("Expected diagnostics on errored block")
+		}
+
+		// The error diagnostic should have line info
+		for _, d := range diags {
+			if d.Code == "eval_error" {
+				if d.Line == 0 {
+					t.Error("Expected non-zero Line on eval_error diagnostic")
+				}
+				// DocLine should be greater than Line (block-relative) due to preceding blocks
+				if d.DocLine == 0 {
+					t.Error("Expected non-zero DocLine on eval_error diagnostic")
+				}
+				return
+			}
+		}
+		t.Error("Expected eval_error diagnostic in errored block")
+	}
+}
+
+// TestErrorRecovery_ResultsSliceInvariant verifies that
+// len(block.Results()) == len(block.Statements()) always holds.
+func TestErrorRecovery_ResultsSliceInvariant(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{"all success", "a = 1\nb = 2\nc = 3\n"},
+		{"first fails", "a = 1 / 0\nb = 10\n"},
+		{"last fails", "a = 10\nb = 1 / 0\n"},
+		{"middle fails", "a = 10\nb = 1 / 0\nc = 20\n"},
+		{"all fail", "a = 1 / 0\nb = 1 / 0\n"},
+		{"cascading", "a = 1 / 0\nb = a + 1\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := document.NewDocument(tt.source)
+			if err != nil {
+				t.Fatalf("NewDocument failed: %v", err)
+			}
+
+			eval := NewEvaluator()
+			_ = eval.Evaluate(doc) // may or may not error
+
+			for _, node := range doc.GetBlocks() {
+				cb, ok := node.Block.(*document.CalcBlock)
+				if !ok {
+					continue
+				}
+				results := cb.Results()
+				stmts := cb.Statements()
+				if len(results) != len(stmts) {
+					t.Errorf("Invariant violated: len(results)=%d != len(statements)=%d",
+						len(results), len(stmts))
+				}
+			}
+		})
+	}
+}
+
+// TestErrorRecovery_BlockWithErrorsIsDirty verifies that blocks with
+// any error stay dirty and have block.Error() set.
+func TestErrorRecovery_BlockWithErrorsIsDirty(t *testing.T) {
+	source := "a = 10\nb = 1 / 0\nc = 20\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	_ = eval.Evaluate(doc)
+
+	blocks := doc.GetBlocks()
+	cb := blocks[0].Block.(*document.CalcBlock)
+
+	if cb.Error() == nil {
+		t.Error("Expected block.Error() to be non-nil")
+	}
+	if !cb.IsDirty() {
+		t.Error("Expected block.IsDirty() == true")
+	}
+
+	// But successful results should still be present
+	results := cb.Results()
+	if results[0] == nil || results[0].String() != "10" {
+		t.Errorf("Expected a=10, got %v", results[0])
+	}
+	if results[1] != nil {
+		t.Errorf("Expected nil for b=1/0, got %v", results[1])
+	}
+	if results[2] == nil || results[2].String() != "20" {
+		t.Errorf("Expected c=20, got %v", results[2])
+	}
 }

@@ -579,7 +579,8 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	}
 
 	// 3. Interpret statements with shared environment
-	// Evaluate statements one by one to collect partial results even if a later statement fails
+	// Evaluate statements one by one to collect partial results even if a later statement fails.
+	// Failed statements get nil placeholders to maintain 1:1 alignment with nodes.
 	interp := interpreter.NewInterpreterWithEnv(e.env)
 	if doc != nil && doc.GetFrontmatter() != nil {
 		fm := doc.GetFrontmatter()
@@ -590,37 +591,35 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 		}
 	}
 	results := make([]types.Type, 0, len(nodes))
-	var evalErr error
-	var failingNodeIdx = -1
+	var firstErr error
+	hadErrors := false
 
-	for i, node := range nodes {
+	for _, node := range nodes {
 		nodeResults, err := interp.Eval([]ast.Node{node})
 		if err != nil {
-			evalErr = err
-			failingNodeIdx = i
-			break
-		}
-		if len(nodeResults) > 0 {
-			results = append(results, nodeResults[0])
-		}
-	}
+			// Append nil placeholder to maintain 1:1 alignment with nodes
+			results = append(results, nil)
+			hadErrors = true
 
-	// Store partial results even if there was an error
-	if len(results) > 0 {
-		block.SetResults(results)
-		block.SetLastValue(results[len(results)-1])
-	}
-
-	// If there was an error, create diagnostic and return
-	if evalErr != nil {
-		// Create diagnostic with line number for the failing node
-		if failingNodeIdx >= 0 && failingNodeIdx < len(nodes) {
-			node := nodes[failingNodeIdx]
-			diag := document.Diagnostic{
-				Severity: "error",
-				Code:     "eval_error",
-				Message:  evalErr.Error(),
+			// Track first error for legacy block.SetError() compatibility
+			if firstErr == nil {
+				firstErr = err
 			}
+
+			// Create diagnostic based on error type
+			var cascErr *interpreter.CascadingError
+			diag := document.Diagnostic{
+				Message: err.Error(),
+			}
+			if errors.As(err, &cascErr) {
+				diag.Code = diagCodeCascadingError
+				diag.Severity = "hint"
+				diag.Detailed = cascErr.VarName
+			} else {
+				diag.Code = "eval_error"
+				diag.Severity = "error"
+			}
+
 			// Use node's Range if available to get line number.
 			// All AST nodes implement GetRange() via the Node interface.
 			// Guard against zero-valued ranges (some nodes use &ast.Range{}).
@@ -631,17 +630,39 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 			}
 			block.AddDiagnostic(diag)
 
-			// Include document-absolute line number in returned error
-			if diag.DocLine > 0 {
-				evalErr = fmt.Errorf("line %d: %w", diag.DocLine, evalErr)
+			// If the statement is an assignment, mark the variable as errored
+			if assign, ok := node.(*ast.Assignment); ok {
+				e.env.SetError(assign.Name, err)
 			}
-		}
 
-		block.SetError(evalErr)
-		return evalErr
+			continue
+		}
+		if len(nodeResults) > 0 {
+			results = append(results, nodeResults[0])
+		}
 	}
 
-	// Mark as clean (evaluated successfully)
+	// Store results (may contain nil entries for failed statements)
+	block.SetResults(results)
+
+	// SetLastValue with the last non-nil result
+	for i := len(results) - 1; i >= 0; i-- {
+		if results[i] != nil {
+			block.SetLastValue(results[i])
+			break
+		}
+	}
+
+	// If there were errors, set legacy error and return first error
+	if hadErrors {
+		// Include document-absolute line number in returned error
+		if firstErr != nil {
+			block.SetError(firstErr)
+		}
+		return firstErr
+	}
+
+	// Mark as clean (evaluated successfully — all statements passed)
 	block.SetDirty(false)
 
 	return nil
