@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -95,8 +96,10 @@ func runEval(args []string) error {
 
 	eval := implDoc.NewEvaluator()
 	eval.SetDisplayFormatter(localeFormatter())
-	if err := eval.Evaluate(doc); err != nil {
-		return returnError("evaluation error: %w", err)
+	evalErr := eval.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		// Fatal evaluation error (e.g., frontmatter failure) — no output
+		return returnError("evaluation error: %w", evalErr)
 	}
 
 	// Use the selected formatter for eval output (defaults to "text")
@@ -109,6 +112,13 @@ func runEval(args []string) error {
 
 	if err := formatter.Format(os.Stdout, doc, opts); err != nil {
 		return returnError("format error: %w", err)
+	}
+
+	// If partial evaluation, output was formatted with partial results + diagnostics.
+	// Return error for non-zero exit code, but don't write JSON error envelope
+	// (the formatted output already contains diagnostic information).
+	if errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		return fmt.Errorf("evaluation error: %w", evalErr)
 	}
 
 	return nil

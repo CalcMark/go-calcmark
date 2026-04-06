@@ -123,14 +123,15 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 		e.displayFormatter = &df
 	}
 
-	// Evaluate blocks in document order (top-down)
+	// Evaluate blocks in document order (top-down).
+	// Continue past block errors to collect all diagnostics across the document.
+	var hasErrors bool
 	for _, node := range doc.GetBlocks() {
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
 			// Pass doc so @global/@exchange update frontmatter
-			err := e.evaluateCalcBlockWithDoc(node.ID, block, doc)
-			if err != nil {
-				return err
+			if err := e.evaluateCalcBlockWithDoc(node.ID, block, doc); err != nil {
+				hasErrors = true
 			}
 		case *document.TextBlock:
 			// Check TextBlocks for lines that look like failed calculations
@@ -144,6 +145,9 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 	// Resolve {{var}} tags in TextBlocks against the final environment
 	interpolateTextBlocks(doc, e.env.GetAllVariables(), e.getDisplayFormatter())
 
+	if hasErrors {
+		return ErrPartialEvaluation
+	}
 	return nil
 }
 
@@ -208,11 +212,13 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 		return fmt.Errorf("block not found: %s", blockID)
 	}
 
-	// PASS 1: Evaluate all blocks to collect final variable values
+	// PASS 1: Evaluate all blocks to collect final variable values.
 	// This builds the environment with all variable assignments.
 	// We track defined variables across all blocks to detect redefinitions.
+	// Continue past block errors to collect all diagnostics.
 	e.env = interpreter.NewEnvironment()
 	allDefinedVars := make(map[string]bool)
+	var hasErrors bool
 
 	for _, node := range doc.GetBlocks() {
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
@@ -222,10 +228,26 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 			if !strings.HasSuffix(source, "\n") {
 				source += "\n"
 			}
-			nodes, err := parser.Parse(source)
-			if err != nil {
-				cb.SetError(err)
-				return err
+			nodes, parseErr := parser.Parse(source)
+			if parseErr != nil {
+				cb.SetError(parseErr)
+				// Add diagnostic but continue to next block
+				if pe, ok := parseErr.(*parser.ParseError); ok && pe.Line > 0 {
+					var lineOff int
+					if doc != nil {
+						lineOff = blockLineOffset(doc, node.ID)
+					}
+					cb.AddDiagnostic(document.Diagnostic{
+						Severity: "error",
+						Code:     "parse_error",
+						Message:  pe.Message,
+						Line:     pe.Line,
+						Column:   pe.Column,
+						DocLine:  pe.Line + lineOff,
+					})
+				}
+				hasErrors = true
+				continue
 			}
 
 			// Extract variables that THIS execution will define
@@ -244,6 +266,7 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 			hasBeenEvaluated := len(cb.Results()) > 0 && !cb.IsDirty()
 			previouslyDefined := cb.Variables()
 
+			blockHasRedefError := false
 			for _, varName := range currentlyDefining {
 				// Skip if this block previously defined this variable
 				if hasBeenEvaluated && slices.Contains(previouslyDefined, varName) {
@@ -251,20 +274,41 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 				}
 				// Check for conflict with other blocks
 				if allDefinedVars[varName] {
-					err := fmt.Errorf("variable_redefinition: variable '%s' is already defined", varName)
-					cb.SetError(err)
-					return err
+					redefErr := fmt.Errorf("variable_redefinition: variable '%s' is already defined", varName)
+					cb.SetError(redefErr)
+					cb.AddDiagnostic(document.Diagnostic{
+						Severity: "error",
+						Code:     "variable_redefinition",
+						Message:  redefErr.Error(),
+					})
+					// Mark all variables this block would define as errored
+					for _, vn := range currentlyDefining {
+						e.env.SetError(vn, redefErr)
+					}
+					hasErrors = true
+					blockHasRedefError = true
+					break
 				}
+			}
+			if blockHasRedefError {
+				// Still track variables as defined for downstream redefinition checks
+				for _, varName := range currentlyDefining {
+					allDefinedVars[varName] = true
+				}
+				continue
 			}
 
 			// Now evaluate the block
-			err = e.evaluateCalcBlockWithDoc(node.ID, cb, doc)
-			if err != nil {
-				return err
+			if err := e.evaluateCalcBlockWithDoc(node.ID, cb, doc); err != nil {
+				hasErrors = true
 			}
 
-			// Mark variables as defined
+			// Mark variables as defined (includes errored vars from evaluation)
 			for _, varName := range cb.Variables() {
+				allDefinedVars[varName] = true
+			}
+			// Also mark variables extracted from AST (for blocks that partially failed)
+			for _, varName := range currentlyDefining {
 				allDefinedVars[varName] = true
 			}
 		}
@@ -285,16 +329,21 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 		}
 	}
 
-	// PASS 2: Re-evaluate each block using the final variable values
-	// Only allow a block to SET a variable if it's the last definition
-	// This ensures earlier definitions (like a=10) don't overwrite later ones (a=20)
+	// PASS 2: Re-evaluate each block using the final variable values.
+	// Only allow a block to SET a variable if it's the last definition.
+	// This ensures earlier definitions (like a=10) don't overwrite later ones (a=20).
+	// Continue past block errors to collect all diagnostics.
 	reactiveEnv := finalEnv.Clone()
 
 	for _, node := range doc.GetBlocks() {
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			err := e.evaluateCalcBlockSelective(node.ID, cb, reactiveEnv, lastDefBlock, doc)
-			if err != nil {
-				return err
+			// Skip blocks that already have errors from pass 1 (parse/redefinition).
+			// Re-evaluating them would clear their diagnostics.
+			if cb.Error() != nil {
+				continue
+			}
+			if err := e.evaluateCalcBlockSelective(node.ID, cb, reactiveEnv, lastDefBlock, doc); err != nil {
+				hasErrors = true
 			}
 		}
 	}
@@ -308,6 +357,9 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 	// Resolve {{var}} tags in TextBlocks against the final environment
 	interpolateTextBlocks(doc, e.env.GetAllVariables(), e.getDisplayFormatter())
 
+	if hasErrors {
+		return ErrPartialEvaluation
+	}
 	return nil
 }
 
@@ -323,6 +375,7 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 // The blocks should be in dependency order (use GetBlocksInDependencyOrder).
 // The environment is NOT reset - it maintains accumulated state from previous evaluations.
 func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []string) error {
+	var hasErrors bool
 	for _, blockID := range blockIDs {
 		node, ok := doc.GetBlock(blockID)
 		if !ok {
@@ -330,9 +383,8 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 		}
 
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			err := e.evaluateCalcBlock(blockID, cb)
-			if err != nil {
-				return err
+			if err := e.evaluateCalcBlock(blockID, cb); err != nil {
+				hasErrors = true
 			}
 		}
 	}
@@ -344,6 +396,9 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 	// Re-run interpolation on all TextBlocks — variable values may have changed.
 	interpolateTextBlocks(doc, e.env.GetAllVariables(), e.getDisplayFormatter())
 
+	if hasErrors {
+		return ErrPartialEvaluation
+	}
 	return nil
 }
 
@@ -401,6 +456,14 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 			checker.GetEnvironment().Set(varName, value)
 		}
 	}
+	// Also register errored variables so the semantic checker treats them as "defined".
+	for varName := range env.GetAllErroredVars() {
+		if !slices.Contains(previouslyDefinedVars, varName) {
+			if _, alreadySet := checker.GetEnvironment().Get(varName); !alreadySet {
+				checker.GetEnvironment().Set(varName, nil)
+			}
+		}
+	}
 
 	// Provide frontmatter context for @directive validation
 	if doc != nil {
@@ -434,12 +497,20 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 				err = fmt.Errorf("%s: %s", diag.Code, diag.Message)
 			}
 			block.SetError(err)
+
+			// Mark all variables defined in this block as errored
+			// so downstream blocks see them as errored
+			for _, astNode := range nodes {
+				if assign, ok := astNode.(*ast.Assignment); ok {
+					env.SetError(assign.Name, err)
+				}
+			}
 			return err
 		}
 	}
 
-	// 3. Interpret with a COPY of the environment
-	// We'll selectively copy back only authoritative assignments
+	// 3. Interpret with a COPY of the environment, statement by statement.
+	// Failed statements get nil placeholders to maintain 1:1 alignment with nodes.
 	evalEnv := env.Clone()
 	interp := interpreter.NewInterpreterWithEnv(evalEnv)
 	if doc != nil && doc.GetFrontmatter() != nil {
@@ -450,26 +521,81 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
 		}
 	}
-	results, err := interp.Eval(nodes)
-	if err != nil {
-		block.SetError(err)
-		return err
+	results := make([]types.Type, 0, len(nodes))
+	var firstErr error
+	hadErrors := false
+
+	for _, node := range nodes {
+		nodeResults, evalErr := interp.Eval([]ast.Node{node})
+		if evalErr != nil {
+			results = append(results, nil)
+			hadErrors = true
+			if firstErr == nil {
+				firstErr = evalErr
+			}
+
+			// Create diagnostic based on error type
+			var cascErr *interpreter.CascadingError
+			diag := document.Diagnostic{
+				Message: evalErr.Error(),
+			}
+			if errors.As(evalErr, &cascErr) {
+				diag.Code = diagCodeCascadingError
+				diag.Severity = "hint"
+				diag.Detailed = cascErr.VarName
+			} else {
+				diag.Code = "eval_error"
+				diag.Severity = "error"
+			}
+			if r := node.GetRange(); r != nil && r.Start.Line > 0 {
+				diag.Line = r.Start.Line
+				diag.Column = r.Start.Column
+				diag.DocLine = r.Start.Line + lineOff
+			}
+			block.AddDiagnostic(diag)
+
+			// Mark assigned variable as errored in the cloned env
+			if assign, ok := node.(*ast.Assignment); ok {
+				evalEnv.SetError(assign.Name, evalErr)
+			}
+			continue
+		}
+		if len(nodeResults) > 0 {
+			results = append(results, nodeResults[0])
+		}
 	}
 
-	// 4. Store results
+	// 4. Store results (may contain nil entries for failed statements)
 	block.SetResults(results)
-	if len(results) > 0 {
-		block.SetLastValue(results[len(results)-1])
+
+	// SetLastValue with the last non-nil result
+	for i := len(results) - 1; i >= 0; i-- {
+		if results[i] != nil {
+			block.SetLastValue(results[i])
+			break
+		}
 	}
 
-	// 5. Only update env for variables where this block is the last definition
-	// This prevents earlier blocks (a=10) from overwriting later ones (a=20)
+	// 5. Only update env for variables where this block is the last definition.
+	// Propagate errors back to the shared environment so downstream blocks see them.
 	for _, varName := range block.Variables() {
 		if lastDefBlock[varName] == blockID {
-			if val, ok := evalEnv.Get(varName); ok {
+			if evalErrForVar, hasErr := evalEnv.GetError(varName); hasErr {
+				// Variable errored in this block — propagate error to shared env
+				env.SetError(varName, evalErrForVar)
+			} else if val, ok := evalEnv.Get(varName); ok {
 				env.Set(varName, val)
+				// Clear any previous error for this variable (it succeeded now)
+				env.ClearError(varName)
 			}
 		}
+	}
+
+	if hadErrors {
+		if firstErr != nil {
+			block.SetError(firstErr)
+		}
+		return firstErr
 	}
 
 	block.SetDirty(false)
@@ -539,6 +665,16 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 		}
 		checker.GetEnvironment().Set(varName, value)
 	}
+	// Also register errored variables so the semantic checker treats them as "defined".
+	// The interpreter will detect them as errored and produce CascadingError.
+	for varName := range e.env.GetAllErroredVars() {
+		if hasBeenEvaluated && slices.Contains(previouslyDefinedVars, varName) {
+			continue
+		}
+		if _, alreadySet := checker.GetEnvironment().Get(varName); !alreadySet {
+			checker.GetEnvironment().Set(varName, nil)
+		}
+	}
 
 	// Provide frontmatter context for @directive validation
 	if doc != nil {
@@ -574,6 +710,14 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 				err = fmt.Errorf("%s: %s", diag.Code, diag.Message)
 			}
 			block.SetError(err)
+
+			// Mark all variables defined in this block as errored
+			// so downstream blocks see them as errored
+			for _, astNode := range nodes {
+				if assign, ok := astNode.(*ast.Assignment); ok {
+					e.env.SetError(assign.Name, err)
+				}
+			}
 			return err
 		}
 	}

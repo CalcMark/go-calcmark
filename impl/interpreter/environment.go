@@ -101,6 +101,13 @@ func (e *Environment) ClearErrors() {
 	clear(e.erroredVars)
 }
 
+// GetAllErroredVars returns a copy of the errored variables map.
+func (e *Environment) GetAllErroredVars() map[string]error {
+	result := make(map[string]error, len(e.erroredVars))
+	maps.Copy(result, e.erroredVars)
+	return result
+}
+
 // SetExchangeRate sets an exchange rate for currency conversion.
 // Key format: "FROM_TO" (e.g., "USD_EUR").
 func (e *Environment) SetExchangeRate(from, to string, rate decimal.Decimal) {

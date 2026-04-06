@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -120,9 +121,25 @@ func TestRedefinitionInSingleBlock(t *testing.T) {
 
 	t.Logf("Got expected error: %v", evalErr)
 
-	// The error message should mention redefinition
-	if !strings.Contains(evalErr.Error(), "redefinition") &&
-		!strings.Contains(evalErr.Error(), "already defined") {
-		t.Errorf("Error should mention redefinition: %v", evalErr)
+	// With error recovery, Evaluate returns ErrPartialEvaluation.
+	// The specific redefinition error is on the block's diagnostics.
+	if !errors.Is(evalErr, impldoc.ErrPartialEvaluation) {
+		t.Errorf("Expected ErrPartialEvaluation, got: %v", evalErr)
+	}
+
+	// Check that the block has a redefinition error
+	docBlocks := doc.GetBlocks()
+	foundRedef := false
+	for _, node := range docBlocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			if cb.Error() != nil && (strings.Contains(cb.Error().Error(), "redefinition") ||
+				strings.Contains(cb.Error().Error(), "already defined") ||
+				strings.Contains(cb.Error().Error(), "reassign")) {
+				foundRedef = true
+			}
+		}
+	}
+	if !foundRedef {
+		t.Error("Expected a block to have redefinition error in diagnostics")
 	}
 }

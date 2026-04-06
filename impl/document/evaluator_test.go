@@ -331,8 +331,16 @@ func TestGlobalScopeEnvironmentPersistence(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error for variable redefinition, but got nil")
 	}
-	if !strings.Contains(err.Error(), "already defined") && !strings.Contains(err.Error(), "redefinition") {
-		t.Errorf("Expected redefinition error, got: %v", err)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Errorf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+	// The redefinition error should be on the block's diagnostics
+	redefNode, _ := doc.GetBlock(result.ModifiedBlockID)
+	redefBlock := redefNode.Block.(*document.CalcBlock)
+	if redefBlock.Error() == nil {
+		t.Error("Expected block to have error for variable redefinition")
+	} else if !strings.Contains(redefBlock.Error().Error(), "already defined") && !strings.Contains(redefBlock.Error().Error(), "redefinition") {
+		t.Errorf("Expected redefinition error on block, got: %v", redefBlock.Error())
 	}
 }
 
@@ -352,14 +360,25 @@ z = x + y
 		t.Fatalf("Failed to create document: %v", err)
 	}
 
-	// Evaluation should fail
+	// Evaluation should return ErrPartialEvaluation (continues past errors)
 	eval := NewEvaluator()
 	err = eval.Evaluate(doc)
 	if err == nil {
 		t.Fatal("Expected error for variable redefinition within single block, got nil")
 	}
-	if !strings.Contains(err.Error(), "already defined") && !strings.Contains(err.Error(), "redefinition") {
-		t.Errorf("Expected redefinition error, got: %v", err)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Errorf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+	// The redefinition error should be on the block's error
+	blocks := doc.GetBlocks()
+	if len(blocks) > 0 {
+		if cb, ok := blocks[0].Block.(*document.CalcBlock); ok {
+			if cb.Error() == nil {
+				t.Error("Expected block to have redefinition error")
+			} else if !strings.Contains(cb.Error().Error(), "already defined") && !strings.Contains(cb.Error().Error(), "redefinition") {
+				t.Errorf("Expected redefinition error on block, got: %v", cb.Error())
+			}
+		}
 	}
 }
 
@@ -1074,5 +1093,407 @@ func TestErrorRecovery_BlockWithErrorsIsDirty(t *testing.T) {
 	}
 	if results[2] == nil || results[2].String() != "20" {
 		t.Errorf("Expected c=20, got %v", results[2])
+	}
+}
+
+// --- Block-level error recovery tests (Unit 4) ---
+
+// TestBlockRecovery_EvaluateContinuesPastErrorBlock tests that Evaluate()
+// continues evaluating blocks after a block has errors, and returns ErrPartialEvaluation.
+func TestBlockRecovery_EvaluateContinuesPastErrorBlock(t *testing.T) {
+	// Block 1: has error (undefined var)
+	// Block 2: independent, should succeed
+	// Block 3: independent, should succeed
+	source := "a = unknown_var + 1\n\n\nb = 10\n\n\nc = 20\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+
+	// Should return ErrPartialEvaluation, not nil
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Verify block 1 has error
+	blocks := doc.GetBlocks()
+	calcBlocks := make([]*document.CalcBlock, 0)
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			calcBlocks = append(calcBlocks, cb)
+		}
+	}
+	if len(calcBlocks) != 3 {
+		t.Fatalf("Expected 3 calc blocks, got %d", len(calcBlocks))
+	}
+
+	if calcBlocks[0].Error() == nil {
+		t.Error("Block 1 should have an error")
+	}
+
+	// Block 2 should succeed
+	if calcBlocks[1].Error() != nil {
+		t.Errorf("Block 2 should not have error, got: %v", calcBlocks[1].Error())
+	}
+	if calcBlocks[1].LastValue() == nil || calcBlocks[1].LastValue().String() != "10" {
+		t.Errorf("Block 2: expected b=10, got %v", calcBlocks[1].LastValue())
+	}
+
+	// Block 3 should succeed
+	if calcBlocks[2].Error() != nil {
+		t.Errorf("Block 3 should not have error, got: %v", calcBlocks[2].Error())
+	}
+	if calcBlocks[2].LastValue() == nil || calcBlocks[2].LastValue().String() != "20" {
+		t.Errorf("Block 3: expected c=20, got %v", calcBlocks[2].LastValue())
+	}
+}
+
+// TestBlockRecovery_NoErrorsReturnsNil tests that Evaluate() returns nil when all blocks succeed.
+func TestBlockRecovery_NoErrorsReturnsNil(t *testing.T) {
+	source := "a = 10\n\n\nb = a + 5\n\n\nc = b * 2\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err != nil {
+		t.Fatalf("Expected nil error for valid document, got: %v", err)
+	}
+}
+
+// TestBlockRecovery_CascadingAcrossBlocks tests that a block referencing an errored
+// variable from a prior block gets cascading_error diagnostics.
+func TestBlockRecovery_CascadingAcrossBlocks(t *testing.T) {
+	// Block 1: a = 1/0 (div by zero error)
+	// Block 2: b = a * 2 (cascading error)
+	source := "a = 1 / 0\n\n\nb = a * 2\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Block 1 should have eval_error
+	blocks := doc.GetBlocks()
+	calcBlocks := make([]*document.CalcBlock, 0)
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			calcBlocks = append(calcBlocks, cb)
+		}
+	}
+	if len(calcBlocks) != 2 {
+		t.Fatalf("Expected 2 calc blocks, got %d", len(calcBlocks))
+	}
+
+	if calcBlocks[0].Error() == nil {
+		t.Error("Block 1 should have error")
+	}
+
+	// Block 2 should also have an error (cascading)
+	if calcBlocks[1].Error() == nil {
+		t.Error("Block 2 should have cascading error")
+	}
+
+	// Block 2's diagnostic should be cascading_error with hint severity
+	diags := calcBlocks[1].Diagnostics()
+	foundCascading := false
+	for _, d := range diags {
+		if d.Code == "cascading_error" && d.Severity == "hint" {
+			foundCascading = true
+		}
+	}
+	if !foundCascading {
+		t.Errorf("Expected cascading_error hint diagnostic on block 2, got: %v", diags)
+	}
+}
+
+// TestBlockRecovery_AllBlocksHaveErrors tests that ErrPartialEvaluation is returned
+// and all blocks have diagnostics when every block fails.
+func TestBlockRecovery_AllBlocksHaveErrors(t *testing.T) {
+	source := "a = unknown1\n\n\nb = unknown2\n\n\nc = unknown3\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Every block should have errors
+	for _, node := range doc.GetBlocks() {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			if cb.Error() == nil {
+				t.Errorf("Block %s should have error", node.ID[:8])
+			}
+		}
+	}
+}
+
+// TestBlockRecovery_EvaluateBlockPass1Recovery tests that EvaluateBlock pass 1
+// continues past parse/eval errors in one block to evaluate other blocks.
+func TestBlockRecovery_EvaluateBlockPass1Recovery(t *testing.T) {
+	source := "a = 1 / 0\n\n\nb = 10\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	// Initial evaluation to set things up
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Get block IDs
+	blocks := doc.GetBlocks()
+	var bBlockID string
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			if strings.Contains(strings.Join(cb.Source(), ""), "b = 10") {
+				bBlockID = node.ID
+			}
+		}
+	}
+
+	if bBlockID == "" {
+		t.Fatal("Could not find b block")
+	}
+
+	// Re-evaluate via EvaluateBlock — should still succeed for b even though a failed
+	err = eval.EvaluateBlock(doc, bBlockID)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation from EvaluateBlock, got: %v", err)
+	}
+
+	// Block b should have a result
+	bNode, _ := doc.GetBlock(bBlockID)
+	bBlock := bNode.Block.(*document.CalcBlock)
+	if bBlock.Error() != nil {
+		t.Errorf("Block b should not have error, got: %v", bBlock.Error())
+	}
+	if bBlock.LastValue() == nil || bBlock.LastValue().String() != "10" {
+		t.Errorf("Expected b=10, got %v", bBlock.LastValue())
+	}
+}
+
+// TestBlockRecovery_EvaluateAffectedBlocksRecovery tests that EvaluateAffectedBlocks
+// continues past a block error and evaluates the remaining blocks.
+func TestBlockRecovery_EvaluateAffectedBlocksRecovery(t *testing.T) {
+	source := "a = 10\n\n\nb = 20\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if err != nil {
+		t.Fatalf("Initial Evaluate failed: %v", err)
+	}
+
+	// Get block IDs
+	blocks := doc.GetBlocks()
+	var aBlockID, bBlockID string
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			src := strings.Join(cb.Source(), "")
+			if strings.Contains(src, "a = 10") {
+				aBlockID = node.ID
+			}
+			if strings.Contains(src, "b = 20") {
+				bBlockID = node.ID
+			}
+		}
+	}
+
+	// Change block a to have an error
+	_, err = doc.ReplaceBlockSource(aBlockID, []string{"a = unknown_var"})
+	if err != nil {
+		t.Fatalf("ReplaceBlockSource failed: %v", err)
+	}
+
+	// EvaluateAffectedBlocks for both blocks
+	err = eval.EvaluateAffectedBlocks(doc, []string{aBlockID, bBlockID})
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Block a should have error
+	aNode, _ := doc.GetBlock(aBlockID)
+	aBlock := aNode.Block.(*document.CalcBlock)
+	if aBlock.Error() == nil {
+		t.Error("Block a should have error after introducing unknown_var")
+	}
+
+	// Block b should still succeed
+	bNode, _ := doc.GetBlock(bBlockID)
+	bBlock := bNode.Block.(*document.CalcBlock)
+	if bBlock.Error() != nil {
+		t.Errorf("Block b should not have error, got: %v", bBlock.Error())
+	}
+}
+
+// TestBlockRecovery_TransformsSkipErroredBlocks tests that applyTransforms
+// skips errored blocks but transforms successful ones.
+func TestBlockRecovery_TransformsSkipErroredBlocks(t *testing.T) {
+	// scale factor 2 with unit_categories including Weight so grams get scaled
+	source := "---\nscale:\n  factor: 2\n  unit_categories: [Mass]\n---\na = unknown_var\n\n\nb = 10 grams\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Find the blocks
+	blocks := doc.GetBlocks()
+	var aBlock, bBlock *document.CalcBlock
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			src := strings.Join(cb.Source(), "")
+			if strings.Contains(src, "unknown_var") {
+				aBlock = cb
+			}
+			if strings.Contains(src, "b = 10 grams") {
+				bBlock = cb
+			}
+		}
+	}
+
+	if bBlock == nil {
+		t.Fatal("Could not find b block")
+	}
+
+	// Errored block should NOT have been transformed (applyTransforms skips errored blocks)
+	if aBlock != nil && aBlock.Error() == nil {
+		t.Error("Block a should have error")
+	}
+
+	// b = 10 grams, scaled by 2 → 20 grams
+	results := bBlock.Results()
+	if len(results) == 0 {
+		t.Fatal("b block has no results")
+	}
+	val := results[0].String()
+	if !strings.Contains(val, "20") {
+		t.Errorf("Expected b to be scaled to 20 (grams), got %q", val)
+	}
+}
+
+// TestBlockRecovery_InterpolationResolveSuccessLeavesErrored tests that
+// interpolation resolves {{var}} for successful vars but leaves unresolved
+// for errored vars.
+func TestBlockRecovery_InterpolationResolveSuccessLeavesErrored(t *testing.T) {
+	// Block 1: a = unknown (error)
+	// Block 2: b = 42 (success)
+	// TextBlock: references both
+	source := "a = unknown_var\n\n\nb = 42\n\n\nResult a: {{a}}, Result b: {{b}}\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Find the TextBlock
+	for _, node := range doc.GetBlocks() {
+		tb, ok := node.Block.(*document.TextBlock)
+		if !ok {
+			continue
+		}
+		interp := tb.InterpolatedSource()
+		for _, line := range interp {
+			// b should be resolved
+			if strings.Contains(line, "**42**") {
+				// a should remain unresolved ({{a}})
+				if strings.Contains(line, "{{a}}") {
+					return // Success
+				}
+				t.Errorf("Expected {{a}} to remain unresolved, got: %s", line)
+				return
+			}
+		}
+	}
+	t.Error("expected interpolated text block with b=42")
+}
+
+// TestBlockRecovery_SemanticErrorMarksVarsErrored tests that when a block has a semantic
+// error, the defined variables are marked as errored so downstream blocks get cascading errors.
+func TestBlockRecovery_SemanticErrorMarksVarsErrored(t *testing.T) {
+	// Block 1: x = 1, x = 2 (redefinition semantic error within single block)
+	// Block 2: y = x + 1 (should get cascading error since x is errored)
+	// Note: the semantic checker catches x = 1, x = 2 as redefinition
+	source := "x = 1\nx = 2\n\n\ny = x + 1\n"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument failed: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("Expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Block 1 should have error (redefinition)
+	blocks := doc.GetBlocks()
+	calcBlocks := make([]*document.CalcBlock, 0)
+	for _, node := range blocks {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			calcBlocks = append(calcBlocks, cb)
+		}
+	}
+	if len(calcBlocks) < 2 {
+		t.Fatalf("Expected at least 2 calc blocks, got %d", len(calcBlocks))
+	}
+
+	if calcBlocks[0].Error() == nil {
+		t.Error("Block 1 should have redefinition error")
+	}
+
+	// Block 2 should have cascading error (x is errored)
+	if calcBlocks[1].Error() == nil {
+		t.Error("Block 2 should have cascading error from errored x")
+	}
+	diags := calcBlocks[1].Diagnostics()
+	foundCascading := false
+	for _, d := range diags {
+		if d.Code == "cascading_error" {
+			foundCascading = true
+		}
+	}
+	if !foundCascading {
+		t.Errorf("Expected cascading_error diagnostic on block 2, got: %v", diags)
 	}
 }

@@ -112,8 +112,9 @@ func convertCM(input string, opts Options) (string, error) {
 
 	eval := impldoc.NewEvaluator()
 	eval.SetDisplayFormatter(localeFormatter(opts.Locale))
-	if err := eval.Evaluate(doc); err != nil {
-		return "", fmt.Errorf("evaluation error: %w", err)
+	evalErr := eval.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, impldoc.ErrPartialEvaluation) {
+		return "", fmt.Errorf("evaluation error: %w", evalErr)
 	}
 
 	formatter := format.GetFormatter(opts.Format, "")
@@ -135,6 +136,10 @@ func convertCM(input string, opts Options) (string, error) {
 		return "", fmt.Errorf("format error: %w", err)
 	}
 
+	// Return formatted output; if partial evaluation, also return error
+	if errors.Is(evalErr, impldoc.ErrPartialEvaluation) {
+		return buf.String(), fmt.Errorf("evaluation error: %w", evalErr)
+	}
 	return buf.String(), nil
 }
 
@@ -216,8 +221,9 @@ func evalEmbeddedBlock(source string, openLine int, df display.Formatter) embedd
 
 	eval := impldoc.NewEvaluator()
 	eval.SetDisplayFormatter(df)
-	if err := eval.Evaluate(doc); err != nil {
-		return embeddedBlockResult{text: formatEmbeddedBlockError(err.Error(), contentLine), isErr: true}
+	evalErr := eval.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, impldoc.ErrPartialEvaluation) {
+		return embeddedBlockResult{text: formatEmbeddedBlockError(evalErr.Error(), contentLine), isErr: true}
 	}
 
 	var buf bytes.Buffer
@@ -231,7 +237,7 @@ func evalEmbeddedBlock(source string, openLine int, df display.Formatter) embedd
 		return embeddedBlockResult{text: formatEmbeddedBlockError(err.Error(), contentLine), isErr: true}
 	}
 
-	return embeddedBlockResult{text: buf.String()}
+	return embeddedBlockResult{text: buf.String(), isErr: errors.Is(evalErr, impldoc.ErrPartialEvaluation)}
 }
 
 // formatEmbeddedBlockError returns an inline error blockquote for a failed CalcMark block.
