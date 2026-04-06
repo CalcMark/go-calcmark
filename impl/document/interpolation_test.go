@@ -18,7 +18,7 @@ func TestInterpolateLine(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("Result: {{x}}", env, df, nil, nil, false)
-	want := "Result: **42**"
+	want := "Result: 42"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
 	}
@@ -32,7 +32,7 @@ func TestInterpolateLineMultipleTags(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("{{a}} and {{b}}", env, df, nil, nil, false)
-	want := "**10** and **20**"
+	want := "10 and 20"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
 	}
@@ -74,9 +74,9 @@ func TestInterpolateLineDisplayFormatted(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"Total: {{cost}}", "Total: **$1.2M**"},
-		{"Margin: {{pct}}", "Margin: **28%**"},
-		{"Team: {{widgets}}", "Team: **14 people**"},
+		{"Total: {{cost}}", "Total: $1.2M"},
+		{"Margin: {{pct}}", "Margin: 28%"},
+		{"Team: {{widgets}}", "Team: 14 people"},
 	}
 	for _, tt := range tests {
 		got := interpolateLine(tt.input, env, df, nil, nil, false)
@@ -94,7 +94,7 @@ func TestInterpolateLineAdjacentTags(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("{{a}}{{b}}", env, df, nil, nil, false)
-	want := "**1****2**"
+	want := "12"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
 	}
@@ -107,7 +107,7 @@ func TestInterpolateLineInTable(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil, nil, false)
-	want := "| Revenue | **$4.2M** |"
+	want := "| Revenue | $4.2M |"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
 	}
@@ -120,7 +120,7 @@ func TestInterpolateLineInHeading(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("# Summary: {{total}}", env, df, nil, nil, false)
-	want := "# Summary: **500**"
+	want := "# Summary: 500"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
 	}
@@ -136,10 +136,10 @@ func TestInterpolateLineWhitespace(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"{{ x }}", "**99**"},
-		{"{{  x  }}", "**99**"},
-		{"{{ x}}", "**99**"},
-		{"{{x }}", "**99**"},
+		{"{{ x }}", "99"},
+		{"{{  x  }}", "99"},
+		{"{{ x}}", "99"},
+		{"{{x }}", "99"},
 	}
 	for _, tt := range tests {
 		got := interpolateLine(tt.input, env, df, nil, nil, false)
@@ -181,10 +181,10 @@ func TestInterpolateLineBackticks(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"`{{x}}`", "**42**"},               // Backticks stripped, bold wrapped
-		{"Value: `{{x}}`", "Value: **42**"}, // Inline backtick-wrapped
-		{"`{{ x }}`", "**42**"},             // Whitespace + backticks
-		{"{{x}}", "**42**"},                 // No backticks still works
+		{"`{{x}}`", "42"},               // Backticks stripped, bold wrapped
+		{"Value: `{{x}}`", "Value: 42"}, // Inline backtick-wrapped
+		{"`{{ x }}`", "42"},             // Whitespace + backticks
+		{"{{x}}", "42"},                 // No backticks still works
 		{"`{{unknown}}`", "`{{unknown}}`"},  // Missing var: backticks preserved
 	}
 	for _, tt := range tests {
@@ -211,7 +211,7 @@ func TestInterpolateLineWithTransform(t *testing.T) {
 
 	got := interpolateLine("Total: {{cost}}", env, df, fm, nil, false)
 	// 500 * 1000 = 500,000 → formatted as $500K
-	want := "Total: **$500K**"
+	want := "Total: $500K"
 	if got != want {
 		t.Errorf("interpolateLine() with scale = %q, want %q", got, want)
 	}
@@ -238,7 +238,7 @@ func TestInterpolateTextBlocks(t *testing.T) {
 			continue
 		}
 		got := tb.InterpolatedSource()
-		if slices.Contains(got, "Total: **42**") {
+		if slices.Contains(got, "Total: 42") {
 			// Raw source unchanged
 			if slices.Contains(tb.Source(), "Total: {{x}}") {
 				return // Success
@@ -246,7 +246,7 @@ func TestInterpolateTextBlocks(t *testing.T) {
 			t.Error("Source() should still contain {{x}}")
 			return
 		}
-		t.Errorf("InterpolatedSource() should contain 'Total: **42**', got %v", got)
+		t.Errorf("InterpolatedSource() should contain 'Total: 42', got %v", got)
 		return
 	}
 	t.Error("expected a TextBlock in document")
@@ -296,8 +296,8 @@ func TestInterpolateTextBlocksHTMLSource(t *testing.T) {
 		}
 		// Plain source should have bold wrapping
 		plain := tb.InterpolatedSource()
-		if plain[0] != "Total: **42**" {
-			t.Errorf("InterpolatedSource()[0] = %q, want %q", plain[0], "Total: **42**")
+		if plain[0] != "Total: 42" {
+			t.Errorf("InterpolatedSource()[0] = %q, want %q", plain[0], "Total: 42")
 		}
 		// HTML source should have sentinels (no bold)
 		html := tb.InterpolatedHTMLSourceText()
@@ -347,7 +347,7 @@ func TestInterpolateLineDirectiveScale(t *testing.T) {
 	}
 
 	got := interpolateLine("Scale factor: {{ @scale }}", env, df, fm, nil, false)
-	want := "Scale factor: **3**"
+	want := "Scale factor: 3"
 	if got != want {
 		t.Errorf("interpolateLine(@scale) = %q, want %q", got, want)
 	}
@@ -364,7 +364,7 @@ func TestInterpolateLineDirectiveGlobals(t *testing.T) {
 	parsed, _ := document.ParseGlobals(fm.Globals)
 
 	got := interpolateLine("Tax: {{ @globals.tax_rate }}", env, df, fm, parsed.Values, false)
-	want := "Tax: **0.32**"
+	want := "Tax: 0.32"
 	if got != want {
 		t.Errorf("interpolateLine(@globals.tax_rate) = %q, want %q", got, want)
 	}
@@ -395,8 +395,28 @@ func TestInterpolateLineDirectiveNotScaled(t *testing.T) {
 
 	got := interpolateLine("Factor: {{ @scale }}", env, df, fm, nil, false)
 	// Should be 1000 (displayed as 1K), NOT 1000*1000=1000000 (1M)
-	want := "Factor: **1K**"
+	want := "Factor: 1K"
 	if got != want {
 		t.Errorf("interpolateLine(@scale, should not double-scale) = %q, want %q", got, want)
+	}
+}
+
+// TestInterpolateLine_BoldSourceDoesNotDouble verifies that when the user
+// writes **{{ var }}** in their markdown (already bold), the interpolation
+// does not produce ****value**** (doubled bold markers).
+func TestInterpolateLine_BoldSourceDoesNotDouble(t *testing.T) {
+	env := map[string]types.Type{
+		"out": types.NewNumber(decimal.NewFromInt(42)),
+	}
+	df := display.DefaultFormatter()
+
+	got := interpolateLine("We leave on **{{ out }}**", env, df, nil, nil, false)
+	// Should be 42, not **42**
+	if strings.Contains(got, "****") {
+		t.Errorf("interpolateLine() doubled bold markers: %q", got)
+	}
+	// The value should appear bold (either from user's ** or from interpolation, not both)
+	if !strings.Contains(got, "42") {
+		t.Errorf("interpolateLine() should contain 42, got: %q", got)
 	}
 }
