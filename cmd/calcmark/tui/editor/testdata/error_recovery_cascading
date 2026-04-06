@@ -1,0 +1,10 @@
+# Error recovery: root cause vs cascading errors.
+# Given: a = 1 / 0 (root), b = 10 (ok), c = a * 2 (cascading, blocked)
+# Expected: a shows error, b shows value, c shows blocked error.
+
+run observe=results
+----
+-- results:
+Line 0 (a = 1 / 0): value=, error="eval_error: division by zero", blocked=false
+Line 1 (b = 10): value=10, error="", blocked=false
+Line 2 (c = a * 2): value=, error="cascading_error: depends on errored variable \"a\": division by zero", blocked=true
