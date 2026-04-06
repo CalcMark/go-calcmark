@@ -7,27 +7,28 @@ import (
 )
 
 var completionCmd = &cobra.Command{
-	Use:   "completion [bash|zsh|fish|powershell]",
-	Short: "Generate shell completion scripts",
+	Use:     "completion [bash|zsh|fish|powershell]",
+	Aliases: []string{"completions"},
+	Short:   "Generate shell completion scripts",
 	Long: `Generate shell completion scripts for CalcMark.
 
 To load completions:
 
 Bash:
-  $ source <(cm completion bash)
-  # Or add to ~/.bashrc for persistence:
-  $ cm completion bash >> ~/.bashrc
+  # Add to ~/.bashrc:
+  eval "$(cm completion bash)"
 
 Zsh:
-  $ cm completion zsh > "${fpath[1]}/_cm"
-  # Then restart shell or run: compinit
+  # Add to ~/.zshrc (after compinit):
+  autoload -Uz compinit && compinit
+  eval "$(cm completion zsh)"
 
 Fish:
   $ cm completion fish > ~/.config/fish/completions/cm.fish
 
 PowerShell:
-  PS> cm completion powershell | Out-String | Invoke-Expression
-  # Or add to your profile for persistence
+  # Add to your PowerShell profile:
+  cm completion powershell | Out-String | Invoke-Expression
 `,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
