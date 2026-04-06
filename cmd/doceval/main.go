@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -180,9 +181,13 @@ func generateFullDoc(parentMD, cmSource, parentTitle string) error {
 		return fmt.Errorf("parse %s: %w", cmSource, err)
 	}
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		return fmt.Errorf("eval %s: %w", cmSource, err)
+	evaluator := implDoc.NewEvaluator()
+	evalErr := evaluator.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		return fmt.Errorf("eval %s: %w", cmSource, evalErr)
+	}
+	if errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		fmt.Fprintf(os.Stderr, "warning: %s: partial evaluation (%s)\n", cmSource, evalErr)
 	}
 
 	var body bytes.Buffer
@@ -297,10 +302,13 @@ func evalProgressive(content string, blocks []string, results map[string]BlockRe
 		return []string{fmt.Sprintf("parse error: %s", err)}
 	}
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		return []string{fmt.Sprintf("eval error: %s", err)}
+	evaluator := implDoc.NewEvaluator()
+	evalErr := evaluator.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		return []string{fmt.Sprintf("eval error: %s", evalErr)}
 	}
+	// On ErrPartialEvaluation, continue with partial results —
+	// successful lines get values, errored lines get error text via diagnostics.
 
 	// Build a source-line → result map from the evaluated document.
 	// The interpreter classifies lines into CalcBlock/TextBlock, which may
@@ -356,9 +364,15 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 		return BlockResult{Error: err.Error()}
 	}
 
-	eval := implDoc.NewEvaluator()
-	if err := eval.Evaluate(doc); err != nil {
-		return BlockResult{Error: err.Error()}
+	evaluator := implDoc.NewEvaluator()
+	evalErr := evaluator.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		return BlockResult{Error: evalErr.Error()}
+	}
+
+	var partialError string
+	if errors.Is(evalErr, implDoc.ErrPartialEvaluation) {
+		partialError = evalErr.Error()
 	}
 
 	var lineResults []LineResult
@@ -383,7 +397,7 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 		}
 	}
 
-	return BlockResult{Lines: lineResults}
+	return BlockResult{Lines: lineResults, Error: partialError}
 }
 
 // extractCMFrontmatter scans for ```yaml blocks containing CalcMark
