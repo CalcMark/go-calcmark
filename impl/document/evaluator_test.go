@@ -1497,3 +1497,231 @@ func TestBlockRecovery_SemanticErrorMarksVarsErrored(t *testing.T) {
 		t.Errorf("Expected cascading_error diagnostic on block 2, got: %v", diags)
 	}
 }
+
+// --- Golden file integration tests for error recovery ---
+
+// TestGolden_MultiErrorRecovery tests the multi_error_recovery.cm golden file.
+// Block 1: a=1/0 (error), b=10 (success). Block 2: c=a*2 (cascading). Block 3: d=42, e=50 (success).
+func TestGolden_MultiErrorRecovery(t *testing.T) {
+	// Use headings to create separate blocks
+	source := "a = 1 / 0\nb = 10\n\n# Block 2\n\nc = a * 2\n\n# Block 3\n\nd = 42\ne = d + 8"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+
+	// Should return ErrPartialEvaluation
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Find CalcBlocks only
+	var calcBlocks []*document.CalcBlock
+	for _, node := range doc.GetBlocks() {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			calcBlocks = append(calcBlocks, cb)
+		}
+	}
+	if len(calcBlocks) != 3 {
+		t.Fatalf("expected 3 calc blocks, got %d", len(calcBlocks))
+	}
+
+	// Block 1: mixed success/error
+	if calcBlocks[0].Error() == nil {
+		t.Error("block 1 should have an error")
+	}
+	results1 := calcBlocks[0].Results()
+	if len(results1) != 2 {
+		t.Fatalf("block 1: expected 2 results, got %d", len(results1))
+	}
+	if results1[0] != nil {
+		t.Error("block 1: result[0] should be nil (a = 1/0)")
+	}
+	if results1[1] == nil {
+		t.Error("block 1: result[1] should be non-nil (b = 10)")
+	} else if results1[1].String() != "10" {
+		t.Errorf("block 1: result[1] = %s, want 10", results1[1].String())
+	}
+
+	// Block 2: cascading error
+	if calcBlocks[1].Error() == nil {
+		t.Error("block 2 should have an error (cascading)")
+	}
+	diags2 := calcBlocks[1].Diagnostics()
+	hasCascading := false
+	for _, d := range diags2 {
+		if d.Code == "cascading_error" && d.Severity == "hint" {
+			hasCascading = true
+		}
+	}
+	if !hasCascading {
+		t.Error("block 2 should have a cascading_error diagnostic with hint severity")
+	}
+
+	// Block 3: fully successful
+	if calcBlocks[2].Error() != nil {
+		t.Errorf("block 3 should have no error, got: %v", calcBlocks[2].Error())
+	}
+	results3 := calcBlocks[2].Results()
+	if len(results3) != 2 {
+		t.Fatalf("block 3: expected 2 results, got %d", len(results3))
+	}
+	if results3[0] == nil || results3[0].String() != "42" {
+		t.Errorf("block 3: result[0] = %v, want 42", results3[0])
+	}
+	if results3[1] == nil || results3[1].String() != "50" {
+		t.Errorf("block 3: result[1] = %v, want 50", results3[1])
+	}
+}
+
+// TestGolden_CascadingErrors tests multi-level cascading across blocks.
+// Block 1: x=1/0 (root), y=x+10 (cascade), z=y*2 (cascade).
+// Block 2: ok=100 (success). Block 3: result=z+ok (cascade).
+func TestGolden_CascadingErrors(t *testing.T) {
+	// Use headings to create separate blocks
+	source := "x = 1 / 0\ny = x + 10\nz = y * 2\n\n# ok block\n\nok = 100\n\n# result block\n\nresult = z + ok"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	// Find CalcBlocks only
+	var calcBlocks []*document.CalcBlock
+	for _, node := range doc.GetBlocks() {
+		if cb, ok := node.Block.(*document.CalcBlock); ok {
+			calcBlocks = append(calcBlocks, cb)
+		}
+	}
+	if len(calcBlocks) != 3 {
+		t.Fatalf("expected 3 calc blocks, got %d", len(calcBlocks))
+	}
+
+	// Block 1: x errors, y and z cascade
+	diags := calcBlocks[0].Diagnostics()
+	rootCauseCount := 0
+	cascadingCount := 0
+	for _, d := range diags {
+		if d.Code == "eval_error" {
+			rootCauseCount++
+		}
+		if d.Code == "cascading_error" && d.Severity == "hint" {
+			cascadingCount++
+		}
+	}
+	if rootCauseCount != 1 {
+		t.Errorf("block 1: expected 1 root-cause error, got %d", rootCauseCount)
+	}
+	if cascadingCount != 2 {
+		t.Errorf("block 1: expected 2 cascading errors (y, z), got %d", cascadingCount)
+	}
+
+	// Block 2: ok=100 succeeds
+	if calcBlocks[1].Error() != nil {
+		t.Errorf("block 2 (ok=100) should succeed, got: %v", calcBlocks[1].Error())
+	}
+	if calcBlocks[1].LastValue() == nil || calcBlocks[1].LastValue().String() != "100" {
+		t.Errorf("block 2: LastValue = %v, want 100", calcBlocks[1].LastValue())
+	}
+
+	// Block 3: result=z+ok cascades
+	if calcBlocks[2].Error() == nil {
+		t.Error("block 3 (result=z+ok) should have cascading error")
+	}
+	hasCascading := false
+	for _, d := range calcBlocks[2].Diagnostics() {
+		if d.Code == "cascading_error" {
+			hasCascading = true
+		}
+	}
+	if !hasCascading {
+		t.Error("block 3 should have cascading_error diagnostic")
+	}
+}
+
+// TestGolden_MixedSuccessAndErrors tests partial results with div-by-zero mid-document.
+func TestGolden_MixedSuccessAndErrors(t *testing.T) {
+	source := "price = 25.00\ntax_rate = 0\ntax = price / tax_rate\nsubtotal = price + tax\nshipping = 5.99\ntotal = subtotal + shipping\ndiscount = 10\nfinal = total - discount"
+
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+
+	eval := NewEvaluator()
+	err = eval.Evaluate(doc)
+	if !errors.Is(err, ErrPartialEvaluation) {
+		t.Fatalf("expected ErrPartialEvaluation, got: %v", err)
+	}
+
+	blocks := doc.GetBlocks()
+	block := blocks[0].Block.(*document.CalcBlock)
+	results := block.Results()
+
+	// 8 statements total
+	if len(results) != 8 {
+		t.Fatalf("expected 8 results, got %d", len(results))
+	}
+
+	// price=25.00 succeeds
+	if results[0] == nil {
+		t.Error("price should succeed")
+	}
+	// tax_rate=0 succeeds
+	if results[1] == nil {
+		t.Error("tax_rate should succeed")
+	}
+	// tax = price / tax_rate fails (div by zero)
+	if results[2] != nil {
+		t.Error("tax should be nil (division by zero)")
+	}
+	// subtotal cascades
+	if results[3] != nil {
+		t.Error("subtotal should be nil (cascading)")
+	}
+	// shipping=5.99 succeeds
+	if results[4] == nil {
+		t.Error("shipping should succeed")
+	}
+	// total cascades
+	if results[5] != nil {
+		t.Error("total should be nil (cascading)")
+	}
+	// discount=10 succeeds
+	if results[6] == nil {
+		t.Error("discount should succeed")
+	}
+	// final cascades
+	if results[7] != nil {
+		t.Error("final should be nil (cascading)")
+	}
+
+	// Verify diagnostics
+	diags := block.Diagnostics()
+	rootCount := 0
+	cascadeCount := 0
+	for _, d := range diags {
+		if d.Code == "eval_error" {
+			rootCount++
+		}
+		if d.Code == "cascading_error" {
+			cascadeCount++
+		}
+	}
+	if rootCount != 1 {
+		t.Errorf("expected 1 root-cause error (tax), got %d", rootCount)
+	}
+	if cascadeCount != 3 {
+		t.Errorf("expected 3 cascading errors (subtotal, total, final), got %d", cascadeCount)
+	}
+}

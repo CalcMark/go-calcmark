@@ -1,0 +1,14 @@
+# Mixed Success and Errors
+
+A document where some lines succeed and some fail, demonstrating that successful computations show values even when other lines have errors.
+
+## Calculations
+
+price = 25.00
+tax_rate = 0
+tax = price / tax_rate
+subtotal = price + tax
+shipping = 5.99
+total = subtotal + shipping
+discount = 10
+final = total - discount
