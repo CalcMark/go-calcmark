@@ -166,6 +166,14 @@ func startsLikeAssignment(s string) bool {
 	return (first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_'
 }
 
+// dateKeywordSuggestions provides meaningful alternative variable names for
+// date keywords, instead of the generic "_val" suffix.
+var dateKeywordSuggestions = map[string]string{
+	"today":     "start_date",
+	"tomorrow":  "next_day",
+	"yesterday": "prev_day",
+}
+
 // reservedKeywordDiagnostic checks if a line starts with a reserved keyword
 // followed by = and returns the short message and detailed hint.
 // Returns ("", "") if the line doesn't match this pattern.
@@ -189,7 +197,11 @@ func reservedKeywordDiagnostic(line string) (msg, hint string) {
 	if lexer.IsReservedKeywordToken(meaningful[0].Type) && meaningful[1].Type == lexer.ASSIGN {
 		keyword := meaningful[0].Value
 		msg = fmt.Sprintf("%q is a reserved keyword and cannot be used as a variable name", keyword)
-		hint = fmt.Sprintf("Use a different variable name, e.g. %q", keyword+"_val")
+		suggestion := dateKeywordSuggestions[strings.ToLower(keyword)]
+		if suggestion == "" {
+			suggestion = keyword + "_val"
+		}
+		hint = fmt.Sprintf("Use a different variable name, e.g. %q", suggestion)
 		return msg, hint
 	}
 	return "", ""
