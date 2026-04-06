@@ -782,6 +782,16 @@ h6:hover .heading-anchor {
   color: var(--color-warning);
 }
 
+.cm-results.cm-partial-error {
+  border-color: color-mix(in srgb, var(--color-warning) 50%, var(--color-border));
+}
+
+.cm-result-error .cm-error-value {
+  color: var(--color-warning);
+  font-style: italic;
+  font-weight: 400;
+}
+
 /* Repo file links with copy button */
 .repo-file {
   display: inline-flex;

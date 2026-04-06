@@ -41,6 +41,7 @@ type BlockResult struct {
 type LineResult struct {
 	Source   string `json:"source"`
 	Result   string `json:"result,omitempty"`
+	Error    string `json:"error,omitempty"`
 	IsBlank  bool   `json:"is_blank,omitempty"`
 	Variable string `json:"variable,omitempty"`
 }
@@ -379,11 +380,25 @@ func evalBlockIndependent(source string, df display.Formatter) BlockResult {
 	for _, node := range doc.GetBlocks() {
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
+			// Build diagnostic-by-line map for error display
+			diagByLine := make(map[int]document.Diagnostic)
+			for _, d := range block.Diagnostics() {
+				if d.Line > 0 {
+					diagByLine[d.Line] = d
+				}
+			}
+
 			stmts := format.AlignResults(block)
+			lineNum := 0
 			for _, stmt := range stmts {
 				lr := LineResult{Source: stmt.Source, IsBlank: stmt.IsBlank, Variable: stmt.Variable}
+				if !stmt.IsBlank && !stmt.IsResultLine {
+					lineNum++
+				}
 				if stmt.Result != nil {
 					lr.Result = df.Format(stmt.Result)
+				} else if d, ok := diagByLine[lineNum]; ok {
+					lr.Error = d.Message
 				}
 				lineResults = append(lineResults, lr)
 			}
