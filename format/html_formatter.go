@@ -71,6 +71,7 @@ type TemplateBlock struct {
 	Type        string
 	SourceLines []TemplateLine // For calc blocks with per-line results
 	Error       string
+	Warnings    []string      // Diagnostic warnings (e.g., reserved keyword as variable name)
 	HTML        template.HTML // For text blocks
 	DocLine     int           // 1-indexed document-absolute start line (for scroll sync)
 }
@@ -257,6 +258,13 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			// while stripping dangerous content (script, event handlers, data URIs).
 			renderedHTML = htmlSanitizer().Sanitize(renderedHTML)
 			tb.HTML = template.HTML(renderedHTML)
+			for _, diag := range block.Diagnostics() {
+				msg := diag.Message
+				if diag.Detailed != "" {
+					msg += " — " + diag.Detailed
+				}
+				tb.Warnings = append(tb.Warnings, msg)
+			}
 			docLine += len(block.Source())
 		}
 

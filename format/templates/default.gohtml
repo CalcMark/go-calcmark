@@ -67,7 +67,9 @@
         {{end}}
     </div>
     {{else}}
-    <div class="text-block" data-source-line="{{.DocLine}}">{{.HTML}}</div>
+    <div class="text-block" data-source-line="{{.DocLine}}">{{.HTML}}{{range .Warnings}}
+    <div class="calc-warning"><strong>Warning:</strong> {{.}}</div>
+    {{end}}</div>
     {{end}}
     {{end}}
 </body>

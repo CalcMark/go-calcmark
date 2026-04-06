@@ -106,6 +106,37 @@ func TestHTMLFormatterWithError(t *testing.T) {
 	}
 }
 
+// TestHTMLFormatterWithTextBlockWarning tests that text block diagnostics
+// (e.g., reserved keyword used as variable name) render as warnings in HTML.
+func TestHTMLFormatterWithTextBlockWarning(t *testing.T) {
+	source := "start = Apr 26\nend = Apr 27\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	eval.Evaluate(doc)
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	err = formatter.Format(&buf, doc, Options{})
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "calc-warning") {
+		t.Error("Expected calc-warning class in HTML output")
+	}
+	if !strings.Contains(output, "reserved keyword") {
+		t.Error("Expected 'reserved keyword' in warning message")
+	}
+	if !strings.Contains(output, "end_val") {
+		t.Error("Expected suggested alternative variable name in warning")
+	}
+}
+
 // TestHTMLFormatterExtensions tests file extensions
 func TestHTMLFormatterExtensions(t *testing.T) {
 	formatter := &HTMLFormatter{}

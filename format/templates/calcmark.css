@@ -66,6 +66,16 @@ body {
     margin-top: 0.5em;
 }
 
+.calc-warning {
+    color: #b08800;
+    background: #fff8e1;
+    padding: 0.5em;
+    border-radius: 3px;
+    border-left: 3px solid #e6a817;
+    margin-top: 0.5em;
+    font-size: 0.9em;
+}
+
 /* --- CM mode: text blocks (markdown rendered within .text-block wrappers) --- */
 
 .text-block {
