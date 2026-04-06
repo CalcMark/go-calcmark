@@ -780,11 +780,11 @@ func TestHTMLFormatter_ErrorAfterBlankLine(t *testing.T) {
 		t.Error("expected b = $23 to have calc-inline-result")
 	}
 
-	// a = 1 / 0 should have an inline error, not be blank
-	if !strings.Contains(output, "calc-inline-error") {
-		t.Errorf("expected a = 1 / 0 to have calc-inline-error, but HTML output was:\n%s", output)
+	// a = 1 / 0 should have a diagnostic below the source line
+	if !strings.Contains(output, "calc-line-diagnostic") {
+		t.Errorf("expected a = 1 / 0 to have calc-line-diagnostic, but HTML output was:\n%s", output)
 	}
 	if !strings.Contains(output, "division by zero") {
-		t.Error("expected 'division by zero' in inline error")
+		t.Error("expected 'division by zero' in diagnostic")
 	}
 }

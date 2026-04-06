@@ -66,22 +66,21 @@ body {
     margin-top: 0.5em;
 }
 
-.calc-inline-error {
+.calc-line-diagnostic {
+    font-size: 0.82em;
     color: #d73a49;
-    font-size: 0.9em;
-    margin-left: 2em;
+    padding: 0.15em 0 0.3em 1.5em;
 }
 
-.calc-inline-error::before {
+.calc-line-diagnostic::before {
     content: "✗ ";
 }
 
-.calc-inline-error.calc-cascading {
+.calc-line-diagnostic.calc-cascading {
     color: #8b6914;
-    font-style: italic;
 }
 
-.calc-inline-error.calc-cascading::before {
+.calc-line-diagnostic.calc-cascading::before {
     content: "⚠ ";
 }
 

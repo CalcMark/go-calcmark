@@ -47,10 +47,11 @@
         <code class="calc-source">{{$line.Source}}</code>
         {{if $line.Result}}
         <span class="calc-inline-result">{{$line.Result}}</span>
-        {{else if $line.Error}}
-        <span class="calc-inline-error{{if $line.IsCascading}} calc-cascading{{end}}">{{$line.Error}}</span>
         {{end}}
     </div>
+    {{- if $line.Error}}
+    <div class="calc-line-diagnostic{{if $line.IsCascading}} calc-cascading{{end}}">{{$line.Error}}</div>
+    {{- end}}
     {{end}}
 </div>
 {{else}}
