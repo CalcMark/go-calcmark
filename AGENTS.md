@@ -27,6 +27,7 @@ You are an expert language designer and implementer for the go-calcmark language
   - Dependencies go one way
   - The spec can **never** depend on the implementation.
 - Golden examples in ./testdata are used both as valid and invalid grammar, semantic analysis, and runtime behavior. They are a great way to get oriented as to what the Calcmark language supports and does not support.
+- `docs/solutions/` contains documented solutions to past bugs, best practices, and cross-layer learnings organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
 - Manage GitHub issue lifecycle using the `github-project` skill — covers issue discovery, status transitions, local vs. PR workflows, and completion metrics.
     - Use `gh velocity issue <ISSUE_NUMBER> -r pretty` to print metrics when handing work back to the human.
 
