@@ -124,6 +124,12 @@ const (
 	DATE_NEXT_MONTH_NAME // "next April"
 	DATE_LAST_MONTH_NAME // "last April"
 
+	// Notation tokens (prefix + number)
+	CALENDAR_QUARTER_LITERAL // Q1-Q4
+	FISCAL_QUARTER_LITERAL   // FQ1-FQ4
+	FISCAL_YEAR_LITERAL      // FY26, FY2026
+	CALENDAR_YEAR_LITERAL    // CY26, CY2026
+
 	// Duration modifier keywords
 	AGO // "ago" — as in "2 weeks ago"
 
@@ -323,6 +329,14 @@ func (tt TokenType) String() string {
 		return "DATE_NEXT_MONTH_NAME"
 	case DATE_LAST_MONTH_NAME:
 		return "DATE_LAST_MONTH_NAME"
+	case CALENDAR_QUARTER_LITERAL:
+		return "CALENDAR_QUARTER_LITERAL"
+	case FISCAL_QUARTER_LITERAL:
+		return "FISCAL_QUARTER_LITERAL"
+	case FISCAL_YEAR_LITERAL:
+		return "FISCAL_YEAR_LITERAL"
+	case CALENDAR_YEAR_LITERAL:
+		return "CALENDAR_YEAR_LITERAL"
 	case AGO:
 		return "AGO"
 	case START_OF:

@@ -1864,3 +1864,197 @@ func TestFiscalYearAndQuarterCompleteCoverage(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// FY/FQ/Q/CY notation tests
+// ---------------------------------------------------------------------------
+
+// TestCalendarQuarterNotation tests Q1-Q4 shorthand.
+func TestCalendarQuarterNotation(t *testing.T) {
+	clock := testClock // April 8, 2026
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{"Q1", "d = Q1\n", 2026, 1, 1},
+		{"Q2", "d = Q2\n", 2026, 4, 1},
+		{"Q3", "d = Q3\n", 2026, 7, 1},
+		{"Q4", "d = Q4\n", 2026, 10, 1},
+		{"q1 lowercase", "d = q1\n", 2026, 1, 1},
+		{"q3 lowercase", "d = q3\n", 2026, 7, 1},
+		{"Q1 + 30 days", "d = Q1 + 30 days\n", 2026, 1, 31},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			}
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestFiscalQuarterNotation tests FQ1-FQ4 shorthand.
+func TestFiscalQuarterNotation(t *testing.T) {
+	clock := time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// fiscal_year_starts: july → FQ1=Jul, FQ2=Oct, FQ3=Jan, FQ4=Apr
+		{"FQ1", "d = FQ1\n", 2026, 7, 1},
+		{"FQ2", "d = FQ2\n", 2026, 10, 1},
+		{"FQ3", "d = FQ3\n", 2027, 1, 1},
+		{"FQ4", "d = FQ4\n", 2027, 4, 1},
+		{"fq1 lowercase", "d = fq1\n", 2026, 7, 1},
+		{"fq4 lowercase", "d = fq4\n", 2027, 4, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			interp.SetFiscalYearStarts(7, 1)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			}
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestFiscalQuarterNotationMissingConfig tests FQ without frontmatter.
+func TestFiscalQuarterNotationMissingConfig(t *testing.T) {
+	interp := newTestInterpreterWithClock(testClock)
+	nodes, err := parser.Parse("d = FQ1\n")
+	if err != nil {
+		t.Fatalf("Parse error = %v", err)
+	}
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("Expected error for FQ1 without fiscal config")
+	}
+	if !strings.Contains(err.Error(), "fiscal_year_starts") {
+		t.Errorf("Error should mention fiscal_year_starts, got: %v", err)
+	}
+}
+
+// TestFiscalYearNotation tests FY26, FY2026 shorthand.
+// Convention: FY<N> = fiscal year starting in calendar year N at the configured start date.
+func TestFiscalYearNotation(t *testing.T) {
+	clock := time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{"FY2026 full", "d = FY2026\n", 2026, 7, 1},
+		{"FY2025 full", "d = FY2025\n", 2025, 7, 1},
+		{"FY26 short", "d = FY26\n", 2026, 7, 1},
+		{"FY25 short", "d = FY25\n", 2025, 7, 1},
+		{"fy2026 lowercase", "d = fy2026\n", 2026, 7, 1},
+		{"fy26 lowercase", "d = fy26\n", 2026, 7, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			interp.SetFiscalYearStarts(7, 1)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			}
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestCalendarYearNotation tests CY2026, CY26 shorthand.
+func TestCalendarYearNotation(t *testing.T) {
+	clock := testClock
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{"CY2026", "d = CY2026\n", 2026, 1, 1},
+		{"CY2001", "d = CY2001\n", 2001, 1, 1},
+		{"CY26 short", "d = CY26\n", 2026, 1, 1},
+		{"CY01 short", "d = CY01\n", 2001, 1, 1},
+		{"cy2026 lowercase", "d = cy2026\n", 2026, 1, 1},
+		{"CY2026 + 6 months", "d = CY2026 + 6 months\n", 2026, 7, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			}
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}

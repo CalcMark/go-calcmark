@@ -100,6 +100,70 @@ func (l *Lexer) peekThreeWords() string {
 	return strings.TrimSpace(string(result))
 }
 
+// tryReadNotation attempts to read Q1-Q4, FQ1-FQ4, FY26/FY2026, CY26/CY2026 patterns.
+// Returns token type, value string, and true if matched.
+func (l *Lexer) tryReadNotation() (TokenType, string, bool) {
+	startPos := l.pos
+	// peekWord only reads letters; we need letters+digits for notation.
+	word := l.peekAlphanumWord()
+	upper := strings.ToUpper(word)
+
+	// Q1-Q4: calendar quarter
+	if len(upper) == 2 && upper[0] == 'Q' && upper[1] >= '1' && upper[1] <= '4' {
+		l.pos = startPos + len([]rune(word))
+		return CALENDAR_QUARTER_LITERAL, string(upper[1:]), true
+	}
+
+	// FQ1-FQ4: fiscal quarter
+	if len(upper) == 3 && upper[:2] == "FQ" && upper[2] >= '1' && upper[2] <= '4' {
+		l.pos = startPos + len([]rune(word))
+		return FISCAL_QUARTER_LITERAL, string(upper[2:]), true
+	}
+
+	// FY + 2-4 digits: fiscal year
+	if len(upper) >= 4 && len(upper) <= 6 && upper[:2] == "FY" {
+		digits := upper[2:]
+		if isAllDigits(digits) {
+			l.pos = startPos + len([]rune(word))
+			return FISCAL_YEAR_LITERAL, digits, true
+		}
+	}
+
+	// CY + 2-4 digits: calendar year
+	if len(upper) >= 4 && len(upper) <= 6 && upper[:2] == "CY" {
+		digits := upper[2:]
+		if isAllDigits(digits) {
+			l.pos = startPos + len([]rune(word))
+			return CALENDAR_YEAR_LITERAL, digits, true
+		}
+	}
+
+	return 0, "", false
+}
+
+func isAllDigits(s string) bool {
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return len(s) > 0
+}
+
+// peekAlphanumWord returns the next word of letters and digits (no spaces) without advancing.
+// Used for notation patterns like Q1, FQ3, FY2026, CY26.
+func (l *Lexer) peekAlphanumWord() string {
+	var word []rune
+	pos := l.pos
+
+	for pos < len(l.text) && (unicode.IsLetter(l.text[pos]) || unicode.IsDigit(l.text[pos])) {
+		word = append(word, l.text[pos])
+		pos++
+	}
+
+	return string(word)
+}
+
 // tryReadMonthName attempts to read a month name
 // Returns canonical month name and true if matched, otherwise empty string and false
 // Performance: O(1) map lookup

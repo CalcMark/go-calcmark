@@ -324,6 +324,29 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return p.parseNaturalLanguageFunction()
 	}
 
+	// Notation: Q1-Q4, FQ1-FQ4, FY26, CY2026
+	if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
+		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL) {
+		tok := p.previous()
+		// Encode as RelativeDateLiteral with prefix+value keyword
+		// e.g., "Q:1", "FQ:3", "FY:2026", "CY:26"
+		prefix := ""
+		switch tok.Type {
+		case lexer.CALENDAR_QUARTER_LITERAL:
+			prefix = "Q"
+		case lexer.FISCAL_QUARTER_LITERAL:
+			prefix = "FQ"
+		case lexer.FISCAL_YEAR_LITERAL:
+			prefix = "FY"
+		case lexer.CALENDAR_YEAR_LITERAL:
+			prefix = "CY"
+		}
+		return &ast.RelativeDateLiteral{
+			Keyword:    prefix + ":" + string(tok.Value),
+			SourceText: string(tok.OriginalText),
+		}, nil
+	}
+
 	// "start of <period>" — explicit form, equivalent to bare period (first day)
 	// "end of <period>" — resolves to last day of the period
 	if p.match(lexer.START_OF, lexer.END_OF) {
@@ -340,6 +363,18 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			return &ast.RelativeDateLiteral{
 				Keyword:    modifier + " " + string(tok.Value),
 				SourceText: modifier + " " + string(tok.Value),
+			}, nil
+		}
+		// Also accept notation tokens: "end of Q2", "end of FQ1"
+		if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL) {
+			tok := p.previous()
+			prefix := "Q"
+			if tok.Type == lexer.FISCAL_QUARTER_LITERAL {
+				prefix = "FQ"
+			}
+			return &ast.RelativeDateLiteral{
+				Keyword:    modifier + " " + prefix + ":" + string(tok.Value),
+				SourceText: modifier + " " + string(tok.OriginalText),
 			}, nil
 		}
 		return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month')")

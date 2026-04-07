@@ -923,6 +923,22 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 				continue
 			}
 
+			// Try notation patterns (Q1, FQ1, FY26, CY2026)
+			if tokenType, value, ok := l.tryReadNotation(); ok {
+				endPos := l.pos
+				originalText := string(l.text[startPos:endPos])
+				tokens = append(tokens, Token{
+					Type:         tokenType,
+					Value:        value,
+					OriginalText: originalText,
+					Line:         l.line,
+					Column:       l.column,
+					StartPos:     startPos,
+					EndPos:       endPos,
+				})
+				continue
+			}
+
 			// Try month names (for date literals)
 			if _, ok := l.tryReadMonthName(); ok {
 				// This is a date literal

@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -132,6 +133,11 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 		return types.NewDateFromTime(t), nil
 
 	default:
+		// Notation: Q:1, FQ:3, FY:2026, CY:26
+		if d, err := interp.evalNotation(keyword, now); d != nil || err != nil {
+			return d, err
+		}
+
 		// "start of <period>" — strip prefix and evaluate the inner period
 		if strings.HasPrefix(keyword, "start of ") {
 			inner := keyword[len("start of "):]
@@ -343,6 +349,98 @@ func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, ti
 		quarterStartYear++
 	}
 	return quarterStartYear, quarterStartMonth
+}
+
+// evalNotation handles Q:N, FQ:N, FY:YYYY, CY:YYYY notation.
+// Returns (nil, nil) if keyword is not a notation pattern.
+func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Type, error) {
+	// Check for "end of" + notation
+	if strings.HasPrefix(keyword, "end of ") {
+		inner := keyword[len("end of "):]
+		return interp.evalEndOfNotation(inner, now)
+	}
+	if strings.HasPrefix(keyword, "start of ") {
+		inner := keyword[len("start of "):]
+		return interp.evalNotation(inner, now)
+	}
+
+	parts := strings.SplitN(keyword, ":", 2)
+	if len(parts) != 2 {
+		return nil, nil // not a notation
+	}
+	prefix, value := strings.ToUpper(parts[0]), parts[1]
+
+	switch prefix {
+	case "Q":
+		q, err := strconv.Atoi(value)
+		if err != nil || q < 1 || q > 4 {
+			return nil, fmt.Errorf("invalid calendar quarter: Q%s", value)
+		}
+		month := time.Month((q-1)*3 + 1) // Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct
+		return types.NewDateFromTime(time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)), nil
+
+	case "FQ":
+		if interp.fiscalYearStarts == nil {
+			return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
+		}
+		q, err := strconv.Atoi(value)
+		if err != nil || q < 1 || q > 4 {
+			return nil, fmt.Errorf("invalid fiscal quarter: FQ%s", value)
+		}
+		fc := interp.fiscalYearStarts
+		fyStartMonth := time.Month(fc.month)
+		fyStartDay := fc.day
+		// FQ1 starts at fiscal year start month, FQ2 = +3 months, etc.
+		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
+		fqMonth := time.Month(int(fyStartMonth) + (q-1)*3)
+		fqYear := fy
+		for fqMonth > 12 {
+			fqMonth -= 12
+			fqYear++
+		}
+		return types.NewDateFromTime(time.Date(fqYear, fqMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
+
+	case "FY":
+		if interp.fiscalYearStarts == nil {
+			return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
+		}
+		year, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid fiscal year: FY%s", value)
+		}
+		if year < 100 {
+			year += 2000 // 2-digit: FY26 = 2026
+		}
+		fc := interp.fiscalYearStarts
+		return types.NewDateFromTime(time.Date(year, time.Month(fc.month), fc.day, 0, 0, 0, 0, time.UTC)), nil
+
+	case "CY":
+		year, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid calendar year: CY%s", value)
+		}
+		if year < 100 {
+			year += 2000 // 2-digit: CY26 = 2026
+		}
+		return types.NewDateFromTime(time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)), nil
+	}
+
+	return nil, nil
+}
+
+// evalEndOfNotation handles "end of Q2", "end of FQ1".
+func (interp *Interpreter) evalEndOfNotation(keyword string, now time.Time) (types.Type, error) {
+	startDate, err := interp.evalNotation(keyword, now)
+	if err != nil {
+		return nil, err
+	}
+	if startDate == nil {
+		return nil, nil
+	}
+	d := startDate.(*types.Date)
+	// End of quarter = start of quarter + 3 months - 1 day
+	endDate := time.Date(d.Time.Year(), d.Time.Month()+3, d.Time.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+	return types.NewDateFromTime(endDate), nil
 }
 
 // calendarQuarterStart returns the first month of the calendar quarter containing m.
