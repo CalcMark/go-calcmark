@@ -1059,6 +1059,71 @@ func TestExtendedFromTargets(t *testing.T) {
 	}
 }
 
+// TestCalendarQuarterExpressions tests this/next/last quarter.
+func TestCalendarQuarterExpressions(t *testing.T) {
+	tests := []struct {
+		name      string
+		clock     time.Time
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// Q1 (Jan-Mar): this quarter = Jan 1
+		{"this quarter in Feb", time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC), "d = this quarter\n", 2026, 1, 1},
+		// Q2 (Apr-Jun): this quarter = Apr 1
+		{"this quarter in Apr", time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), "d = this quarter\n", 2026, 4, 1},
+		// Q3 (Jul-Sep): this quarter = Jul 1
+		{"this quarter in Jul", time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC), "d = this quarter\n", 2026, 7, 1},
+		// Q4 (Oct-Dec): this quarter = Oct 1
+		{"this quarter in Oct", time.Date(2026, 10, 31, 0, 0, 0, 0, time.UTC), "d = this quarter\n", 2026, 10, 1},
+
+		// next quarter from Q4 = Q1 next year
+		{"next quarter from Nov", time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC), "d = next quarter\n", 2027, 1, 1},
+		// next quarter from Q1 = Q2
+		{"next quarter from Feb", time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC), "d = next quarter\n", 2026, 4, 1},
+
+		// last quarter from Q1 = Q4 of previous year
+		{"last quarter from Jan", time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), "d = last quarter\n", 2025, 10, 1},
+		// last quarter from Q3 = Q2
+		{"last quarter from Aug", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), "d = last quarter\n", 2026, 4, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
 // TestWeekdayComposition tests weekday expressions compose with duration arithmetic.
 func TestWeekdayComposition(t *testing.T) {
 	clock := testClock // Wednesday, April 8, 2026

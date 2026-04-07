@@ -40,6 +40,11 @@ var RelativeDateKeywords = map[string]TokenType{
 	"last month": DATE_LAST_MONTH,
 	"last year":  DATE_LAST_YEAR,
 
+	// Calendar quarters
+	"this quarter": DATE_THIS_QUARTER,
+	"next quarter": DATE_NEXT_QUARTER,
+	"last quarter": DATE_LAST_QUARTER,
+
 	// This weekday
 	"this monday":    DATE_THIS_WEEKDAY,
 	"this tuesday":   DATE_THIS_WEEKDAY,

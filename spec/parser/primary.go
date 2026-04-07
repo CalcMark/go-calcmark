@@ -330,7 +330,8 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
 		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
 		lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
-		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME) {
+		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
+		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER) {
 		tok := p.previous()
 		return &ast.RelativeDateLiteral{
 			Keyword:    string(tok.Value),
@@ -622,6 +623,7 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 	// Try relative date expressions (weekdays, months, periods)
 	if p.match(lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
 		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
+		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
 		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
 		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
 		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {

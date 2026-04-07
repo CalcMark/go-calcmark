@@ -127,6 +127,11 @@ const (
 	// Duration modifier keywords
 	AGO // "ago" — as in "2 weeks ago"
 
+	// Quarter keywords
+	DATE_THIS_QUARTER // "this quarter"
+	DATE_NEXT_QUARTER // "next quarter"
+	DATE_LAST_QUARTER // "last quarter"
+
 	// Date/Duration literals (combined by lexer)
 	DATE_LITERAL     // "Dec 12", "December 25 2025"
 	DURATION_LITERAL // "2 days", "3 weeks and 4 days"
@@ -308,6 +313,12 @@ func (tt TokenType) String() string {
 		return "DATE_LAST_MONTH_NAME"
 	case AGO:
 		return "AGO"
+	case DATE_THIS_QUARTER:
+		return "DATE_THIS_QUARTER"
+	case DATE_NEXT_QUARTER:
+		return "DATE_NEXT_QUARTER"
+	case DATE_LAST_QUARTER:
+		return "DATE_LAST_QUARTER"
 	case DATE_LITERAL:
 		return "DATE_LITERAL"
 	case DURATION_LITERAL:

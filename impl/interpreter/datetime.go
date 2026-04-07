@@ -109,6 +109,19 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 	case "last year":
 		return types.NewDateFromTime(time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, time.UTC)), nil
 
+	// Calendar quarter expressions
+	case "this quarter":
+		q := calendarQuarterStart(now.Month())
+		return types.NewDateFromTime(time.Date(now.Year(), q, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "next quarter":
+		q := calendarQuarterStart(now.Month())
+		t := time.Date(now.Year(), q+3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes month > 12
+		return types.NewDateFromTime(t), nil
+	case "last quarter":
+		q := calendarQuarterStart(now.Month())
+		t := time.Date(now.Year(), q-3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes month < 1
+		return types.NewDateFromTime(t), nil
+
 	default:
 		// Try weekday expressions: "friday", "this friday", "next friday", "last friday"
 		if d, ok := interp.resolveWeekdayExpression(keyword, now); ok {
@@ -120,6 +133,12 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 		}
 		return nil, fmt.Errorf("unknown relative date keyword: %q", r.Keyword)
 	}
+}
+
+// calendarQuarterStart returns the first month of the calendar quarter containing m.
+// Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct.
+func calendarQuarterStart(m time.Month) time.Month {
+	return time.Month((int(m)-1)/3*3 + 1)
 }
 
 // canonicalMonths maps lowercase month names/abbreviations to time.Month.
