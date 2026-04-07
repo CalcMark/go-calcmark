@@ -115,6 +115,17 @@ var RelativeDateKeywords = map[string]TokenType{
 	"last december": DATE_LAST_MONTH_NAME, "last dec": DATE_LAST_MONTH_NAME,
 }
 
+// ThreeWordDateKeywords maps three-word fiscal phrases to token types.
+// Checked after single-word and two-word lookups fail.
+var ThreeWordDateKeywords = map[string]TokenType{
+	"this fiscal quarter": DATE_THIS_FISCAL_QUARTER,
+	"next fiscal quarter": DATE_NEXT_FISCAL_QUARTER,
+	"last fiscal quarter": DATE_LAST_FISCAL_QUARTER,
+	"this fiscal year":    DATE_THIS_FISCAL_YEAR,
+	"next fiscal year":    DATE_NEXT_FISCAL_YEAR,
+	"last fiscal year":    DATE_LAST_FISCAL_YEAR,
+}
+
 // MonthNames maps month abbreviations and full names to canonical month names
 // Performance: O(1) lookup via map
 var MonthNames = map[string]string{

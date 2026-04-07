@@ -109,6 +109,11 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 	case "last year":
 		return types.NewDateFromTime(time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, time.UTC)), nil
 
+	// Fiscal expressions (require fiscal_year_starts)
+	case "this fiscal quarter", "next fiscal quarter", "last fiscal quarter",
+		"this fiscal year", "next fiscal year", "last fiscal year":
+		return interp.evalFiscalExpression(keyword, now)
+
 	// Calendar quarter expressions
 	case "this quarter":
 		q := calendarQuarterStart(now.Month())
@@ -133,6 +138,75 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 		}
 		return nil, fmt.Errorf("unknown relative date keyword: %q", r.Keyword)
 	}
+}
+
+// evalFiscalExpression evaluates fiscal quarter and fiscal year expressions.
+// Requires fiscal_year_starts to be configured via frontmatter.
+func (interp *Interpreter) evalFiscalExpression(keyword string, now time.Time) (types.Type, error) {
+	if interp.fiscalYearStarts == nil {
+		return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
+	}
+
+	fyStart := time.Month(*interp.fiscalYearStarts)
+
+	switch keyword {
+	case "this fiscal quarter":
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
+		return types.NewDateFromTime(time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "next fiscal quarter":
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
+		t := time.Date(y, m+3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes
+		return types.NewDateFromTime(t), nil
+	case "last fiscal quarter":
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
+		t := time.Date(y, m-3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes
+		return types.NewDateFromTime(t), nil
+	case "this fiscal year":
+		y := fiscalYear(now.Year(), now.Month(), fyStart)
+		return types.NewDateFromTime(time.Date(y, fyStart, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "next fiscal year":
+		y := fiscalYear(now.Year(), now.Month(), fyStart) + 1
+		return types.NewDateFromTime(time.Date(y, fyStart, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "last fiscal year":
+		y := fiscalYear(now.Year(), now.Month(), fyStart) - 1
+		return types.NewDateFromTime(time.Date(y, fyStart, 1, 0, 0, 0, 0, time.UTC)), nil
+	default:
+		return nil, fmt.Errorf("unknown fiscal expression: %q", keyword)
+	}
+}
+
+// fiscalYear returns the calendar year in which the fiscal year begins.
+// For a FY starting in July, August 2026 is in the FY that started July 2026.
+// For a FY starting in July, May 2026 is in the FY that started July 2025.
+func fiscalYear(calYear int, calMonth, fyStartMonth time.Month) int {
+	if calMonth >= fyStartMonth {
+		return calYear
+	}
+	return calYear - 1
+}
+
+// fiscalQuarterStart returns the year and month of the first day of the
+// current fiscal quarter.
+func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, time.Month) {
+	// Calculate months since fiscal year start
+	fy := fiscalYear(calYear, calMonth, fyStartMonth)
+	fyStartDate := time.Date(fy, fyStartMonth, 1, 0, 0, 0, 0, time.UTC)
+	current := time.Date(calYear, calMonth, 1, 0, 0, 0, 0, time.UTC)
+	monthsSinceFYStart := int(current.Sub(fyStartDate).Hours() / (24 * 30.44)) // approximate
+	// More precise: count months
+	monthsSinceFYStart = (calYear-fy)*12 + int(calMonth) - int(fyStartMonth)
+	if monthsSinceFYStart < 0 {
+		monthsSinceFYStart += 12
+	}
+	quarterIndex := monthsSinceFYStart / 3
+	quarterStartMonth := time.Month(int(fyStartMonth) + quarterIndex*3)
+	quarterStartYear := fy
+	// Normalize if month > 12
+	for quarterStartMonth > 12 {
+		quarterStartMonth -= 12
+		quarterStartYear++
+	}
+	return quarterStartYear, quarterStartMonth
 }
 
 // calendarQuarterStart returns the first month of the calendar quarter containing m.

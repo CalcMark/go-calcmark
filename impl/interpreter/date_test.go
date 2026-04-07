@@ -1124,6 +1124,92 @@ func TestCalendarQuarterExpressions(t *testing.T) {
 	}
 }
 
+// TestFiscalExpressions tests fiscal quarter and fiscal year with configured start month.
+func TestFiscalExpressions(t *testing.T) {
+	tests := []struct {
+		name             string
+		clock            time.Time
+		fiscalStartMonth int
+		input            string
+		wantYear         int
+		wantMonth        int
+		wantDay          int
+	}{
+		// Microsoft FY starts July. Aug 2026 = FQ1 of FY starting Jul 2026
+		{"this fiscal quarter Aug+July", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = this fiscal quarter\n", 2026, 7, 1},
+		// Oct 2026 = FQ2 (Oct-Dec)
+		{"this fiscal quarter Oct+July", time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = this fiscal quarter\n", 2026, 10, 1},
+		// next fiscal quarter from Aug (FQ1) = Oct 1 (FQ2)
+		{"next fiscal quarter Aug+July", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = next fiscal quarter\n", 2026, 10, 1},
+		// this fiscal year in Aug with July start = Jul 1 2026
+		{"this fiscal year Aug+July", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = this fiscal year\n", 2026, 7, 1},
+		// this fiscal year in May with July start = Jul 1 2025 (previous FY)
+		{"this fiscal year May+July", time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = this fiscal year\n", 2025, 7, 1},
+		// fiscal_year_starts: january → fiscal = calendar
+		{"fiscal=calendar Jan start", time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC), 1,
+			"d = this fiscal quarter\n", 2026, 1, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
+			interp.SetFiscalYearStarts(tt.fiscalStartMonth)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestFiscalMissingConfig tests error when fiscal expressions lack frontmatter.
+func TestFiscalMissingConfig(t *testing.T) {
+	interp := newTestInterpreterWithClock(testClock)
+	// No SetFiscalYearStarts call
+
+	nodes, err := parser.Parse("d = this fiscal quarter\n")
+	if err != nil {
+		t.Fatalf("Parse error = %v", err)
+	}
+
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("Expected error for fiscal expression without frontmatter, got nil")
+	}
+	if !strings.Contains(err.Error(), "fiscal_year_starts") {
+		t.Errorf("Error should mention fiscal_year_starts, got: %v", err)
+	}
+}
+
 // TestWeekdayComposition tests weekday expressions compose with duration arithmetic.
 func TestWeekdayComposition(t *testing.T) {
 	clock := testClock // Wednesday, April 8, 2026

@@ -27,6 +27,14 @@ func (l *Lexer) tryReadDateKeyword() (TokenType, bool) {
 		return tokenType, true
 	}
 
+	// Try three-word phrases (this fiscal quarter, next fiscal year)
+	threeWords := l.peekThreeWords()
+	if tokenType, ok := ThreeWordDateKeywords[strings.ToLower(threeWords)]; ok {
+		// Consume all three words
+		l.pos = startPos + len([]rune(threeWords))
+		return tokenType, true
+	}
+
 	return 0, false
 }
 
@@ -50,6 +58,31 @@ func (l *Lexer) peekTwoWords() string {
 	wordsFound := 0
 
 	for pos < len(l.text) && wordsFound < 2 {
+		ch := l.text[pos]
+
+		if unicode.IsLetter(ch) || ch == '_' {
+			result = append(result, ch)
+			pos++
+		} else if ch == ' ' && len(result) > 0 {
+			result = append(result, ch)
+			pos++
+			wordsFound++
+		} else {
+			break
+		}
+	}
+
+	return strings.TrimSpace(string(result))
+}
+
+// peekThreeWords returns the next three words separated by spaces.
+// Used for three-word phrases like "this fiscal quarter".
+func (l *Lexer) peekThreeWords() string {
+	pos := l.pos
+	var result []rune
+	wordsFound := 0
+
+	for pos < len(l.text) && wordsFound < 3 {
 		ch := l.text[pos]
 
 		if unicode.IsLetter(ch) || ch == '_' {
