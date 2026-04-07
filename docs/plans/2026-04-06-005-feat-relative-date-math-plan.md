@@ -211,7 +211,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ### Phase 1: Foundation
 
-- [ ] **Unit 1: Clock injection for deterministic testing**
+- [x] **Unit 1: Clock injection for deterministic testing**
 
 **Goal:** Enable pinned-time testing for all date evaluation. This is the prerequisite for every subsequent unit.
 
@@ -253,7 +253,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ---
 
-- [ ] **Unit 2: Date type promotion with HasTime flag**
+- [x] **Unit 2: Date type promotion with HasTime flag**
 
 **Goal:** Enable `types.Date` to carry full time precision while preserving backward compatibility for date-only values.
 
@@ -292,7 +292,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ---
 
-- [ ] **Unit 3: Unit-aware duration arithmetic**
+- [x] **Unit 3: Unit-aware duration arithmetic**
 
 **Goal:** Replace the seconds-based duration-to-days conversion with calendar-correct unit-aware dispatch. Fixes the "1 month = 30 days" bug.
 
@@ -342,7 +342,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ### Phase 2: Expressions
 
-- [ ] **Unit 4: Weekday expressions (R1, R2)**
+- [x] **Unit 4: Weekday expressions (R1, R2)**
 
 **Goal:** Add `this/next/last <weekday>` and bare `<weekday>` expressions to lexer, parser, and evaluator.
 
@@ -398,7 +398,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ---
 
-- [ ] **Unit 5: Period evaluation + relative month expressions (R3, R4, R8)**
+- [x] **Unit 5: Period evaluation + relative month expressions (R3, R4, R8)**
 
 **Goal:** Implement evaluation for `this/next/last week/month/year` (unstub), and add `this/next/last <month>` and `next <month> <day>` expressions.
 
@@ -450,7 +450,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ---
 
-- [ ] **Unit 6: Duration-relative expressions — AGO and extended FROM (R5, R6)**
+- [x] **Unit 6: Duration-relative expressions — AGO and extended FROM (R5, R6)**
 
 **Goal:** Add `<duration> ago` syntax and extend `from` to accept all new relative date expressions as targets.
 
@@ -493,7 +493,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ---
 
-- [ ] **Unit 7: Calendar quarters, fiscal system, FY/CY notation (R9–R13)**
+- [x] **Unit 7: Calendar quarters, fiscal system, FY/CY notation (R9–R13)**
 
 **Goal:** Add calendar quarter expressions, fiscal year frontmatter, fiscal quarter/year expressions, and Q/FQ/FY/CY notation.
 
@@ -609,7 +609,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ### Phase 4: Surface Integration
 
-- [ ] **Unit 9: 12-layer integration — classifier, feature registry, autosuggest, LSP**
+- [x] **Unit 9: 12-layer integration — classifier, feature registry, autosuggest, LSP**
 
 **Goal:** Ensure all new date expressions work across every CalcMark surface: classifier, document detector, feature registry, TUI autosuggest, LSP completions, interpolation, scale exemption.
 
@@ -670,7 +670,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 
 ### Phase 5: Edge Cases and Golden Tests
 
-- [ ] **Unit 10: Calendar correctness edge cases and golden test files**
+- [x] **Unit 10: Calendar correctness edge cases and golden test files**
 
 **Goal:** Comprehensive edge case testing for calendar correctness, composition, and golden test files for regression.
 
