@@ -83,13 +83,105 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 		return types.NewDateFromTime(now.AddDate(0, 0, 1)), nil
 	case "yesterday":
 		return types.NewDateFromTime(now.AddDate(0, 0, -1)), nil
+	// Period expressions: this/next/last week/month/year
+	case "this week":
+		// Monday of current week
+		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
+		return types.NewDateFromTime(now.AddDate(0, 0, -daysFromMonday)), nil
+	case "next week":
+		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
+		monday := now.AddDate(0, 0, -daysFromMonday)
+		return types.NewDateFromTime(monday.AddDate(0, 0, 7)), nil
+	case "last week":
+		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
+		monday := now.AddDate(0, 0, -daysFromMonday)
+		return types.NewDateFromTime(monday.AddDate(0, 0, -7)), nil
+	case "this month":
+		return types.NewDateFromTime(time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)), nil
+	case "next month":
+		return types.NewDateFromTime(time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "last month":
+		return types.NewDateFromTime(time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "this year":
+		return types.NewDateFromTime(time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "next year":
+		return types.NewDateFromTime(time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC)), nil
+	case "last year":
+		return types.NewDateFromTime(time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, time.UTC)), nil
+
 	default:
 		// Try weekday expressions: "friday", "this friday", "next friday", "last friday"
 		if d, ok := interp.resolveWeekdayExpression(keyword, now); ok {
 			return d, nil
 		}
+		// Try month expressions: "this april", "next april", "last april"
+		if d, ok := resolveMonthExpression(keyword, now); ok {
+			return d, nil
+		}
 		return nil, fmt.Errorf("unknown relative date keyword: %q", r.Keyword)
 	}
+}
+
+// canonicalMonths maps lowercase month names/abbreviations to time.Month.
+var canonicalMonths = map[string]time.Month{
+	"january": time.January, "jan": time.January,
+	"february": time.February, "feb": time.February,
+	"march": time.March, "mar": time.March,
+	"april": time.April, "apr": time.April,
+	"may": time.May,
+	"june": time.June, "jun": time.June,
+	"july": time.July, "jul": time.July,
+	"august": time.August, "aug": time.August,
+	"september": time.September, "sep": time.September, "sept": time.September,
+	"october": time.October, "oct": time.October,
+	"november": time.November, "nov": time.November,
+	"december": time.December, "dec": time.December,
+}
+
+// resolveMonthExpression handles "this april", "next april", "last april".
+func resolveMonthExpression(keyword string, now time.Time) (*types.Date, bool) {
+	modifier := ""
+	monthStr := keyword
+
+	for _, prefix := range []string{"this ", "next ", "last "} {
+		if strings.HasPrefix(keyword, prefix) {
+			modifier = strings.TrimSpace(prefix)
+			monthStr = keyword[len(prefix):]
+			break
+		}
+	}
+
+	target, ok := canonicalMonths[monthStr]
+	if !ok {
+		return nil, false
+	}
+
+	currentYear := now.Year()
+	currentMonth := now.Month()
+
+	switch modifier {
+	case "this":
+		// This <month> = the 1st of that month in the current year
+		return types.NewDateFromTime(time.Date(currentYear, target, 1, 0, 0, 0, 0, time.UTC)), true
+
+	case "next":
+		// Next <month> = the 1st of that month, next occurrence strictly after current month
+		year := currentYear
+		if target <= currentMonth {
+			year++ // target month is current or past — next year
+		}
+		return types.NewDateFromTime(time.Date(year, target, 1, 0, 0, 0, 0, time.UTC)), true
+
+	case "last":
+		// Last <month> = the 1st of that month, most recent past occurrence
+		year := currentYear
+		if target >= currentMonth {
+			year-- // target month is current or future — last year
+		}
+		return types.NewDateFromTime(time.Date(year, target, 1, 0, 0, 0, 0, time.UTC)), true
+	}
+
+	return nil, false
 }
 
 // weekdayNames maps lowercase weekday names to Go's time.Weekday.

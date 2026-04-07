@@ -63,6 +63,48 @@ var RelativeDateKeywords = map[string]TokenType{
 	"last friday":    DATE_LAST_WEEKDAY,
 	"last saturday":  DATE_LAST_WEEKDAY,
 	"last sunday":    DATE_LAST_WEEKDAY,
+
+	// This month name (full + abbreviation)
+	"this january": DATE_THIS_MONTH_NAME, "this jan": DATE_THIS_MONTH_NAME,
+	"this february": DATE_THIS_MONTH_NAME, "this feb": DATE_THIS_MONTH_NAME,
+	"this march": DATE_THIS_MONTH_NAME, "this mar": DATE_THIS_MONTH_NAME,
+	"this april": DATE_THIS_MONTH_NAME, "this apr": DATE_THIS_MONTH_NAME,
+	"this may": DATE_THIS_MONTH_NAME,
+	"this june": DATE_THIS_MONTH_NAME, "this jun": DATE_THIS_MONTH_NAME,
+	"this july": DATE_THIS_MONTH_NAME, "this jul": DATE_THIS_MONTH_NAME,
+	"this august": DATE_THIS_MONTH_NAME, "this aug": DATE_THIS_MONTH_NAME,
+	"this september": DATE_THIS_MONTH_NAME, "this sep": DATE_THIS_MONTH_NAME, "this sept": DATE_THIS_MONTH_NAME,
+	"this october": DATE_THIS_MONTH_NAME, "this oct": DATE_THIS_MONTH_NAME,
+	"this november": DATE_THIS_MONTH_NAME, "this nov": DATE_THIS_MONTH_NAME,
+	"this december": DATE_THIS_MONTH_NAME, "this dec": DATE_THIS_MONTH_NAME,
+
+	// Next month name
+	"next january": DATE_NEXT_MONTH_NAME, "next jan": DATE_NEXT_MONTH_NAME,
+	"next february": DATE_NEXT_MONTH_NAME, "next feb": DATE_NEXT_MONTH_NAME,
+	"next march": DATE_NEXT_MONTH_NAME, "next mar": DATE_NEXT_MONTH_NAME,
+	"next april": DATE_NEXT_MONTH_NAME, "next apr": DATE_NEXT_MONTH_NAME,
+	"next may": DATE_NEXT_MONTH_NAME,
+	"next june": DATE_NEXT_MONTH_NAME, "next jun": DATE_NEXT_MONTH_NAME,
+	"next july": DATE_NEXT_MONTH_NAME, "next jul": DATE_NEXT_MONTH_NAME,
+	"next august": DATE_NEXT_MONTH_NAME, "next aug": DATE_NEXT_MONTH_NAME,
+	"next september": DATE_NEXT_MONTH_NAME, "next sep": DATE_NEXT_MONTH_NAME, "next sept": DATE_NEXT_MONTH_NAME,
+	"next october": DATE_NEXT_MONTH_NAME, "next oct": DATE_NEXT_MONTH_NAME,
+	"next november": DATE_NEXT_MONTH_NAME, "next nov": DATE_NEXT_MONTH_NAME,
+	"next december": DATE_NEXT_MONTH_NAME, "next dec": DATE_NEXT_MONTH_NAME,
+
+	// Last month name
+	"last january": DATE_LAST_MONTH_NAME, "last jan": DATE_LAST_MONTH_NAME,
+	"last february": DATE_LAST_MONTH_NAME, "last feb": DATE_LAST_MONTH_NAME,
+	"last march": DATE_LAST_MONTH_NAME, "last mar": DATE_LAST_MONTH_NAME,
+	"last april": DATE_LAST_MONTH_NAME, "last apr": DATE_LAST_MONTH_NAME,
+	"last may": DATE_LAST_MONTH_NAME,
+	"last june": DATE_LAST_MONTH_NAME, "last jun": DATE_LAST_MONTH_NAME,
+	"last july": DATE_LAST_MONTH_NAME, "last jul": DATE_LAST_MONTH_NAME,
+	"last august": DATE_LAST_MONTH_NAME, "last aug": DATE_LAST_MONTH_NAME,
+	"last september": DATE_LAST_MONTH_NAME, "last sep": DATE_LAST_MONTH_NAME, "last sept": DATE_LAST_MONTH_NAME,
+	"last october": DATE_LAST_MONTH_NAME, "last oct": DATE_LAST_MONTH_NAME,
+	"last november": DATE_LAST_MONTH_NAME, "last nov": DATE_LAST_MONTH_NAME,
+	"last december": DATE_LAST_MONTH_NAME, "last dec": DATE_LAST_MONTH_NAME,
 }
 
 // MonthNames maps month abbreviations and full names to canonical month names

@@ -868,6 +868,76 @@ func TestWeekdayExpressions(t *testing.T) {
 	}
 }
 
+// TestRelativeMonthExpressions tests this/next/last <month>.
+// Clock pinned to Wednesday, April 8, 2026.
+func TestRelativeMonthExpressions(t *testing.T) {
+	clock := testClock // April 8, 2026
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// this <month> = 1st of that month, current year
+		{"this April", "d = this April\n", 2026, 4, 1},
+		{"this January", "d = this January\n", 2026, 1, 1},
+		{"this December", "d = this December\n", 2026, 12, 1},
+
+		// next <month> = 1st of that month, next occurrence after current month
+		{"next April on Apr", "d = next April\n", 2027, 4, 1},     // April is current month → next year
+		{"next March on Apr", "d = next March\n", 2027, 3, 1},     // March is past → next year
+		{"next May on Apr", "d = next May\n", 2026, 5, 1},         // May is future → this year
+		{"next Jan on Apr", "d = next Jan\n", 2027, 1, 1},         // Jan is past → next year
+		{"next Dec on Apr", "d = next Dec\n", 2026, 12, 1},        // Dec is future → this year
+
+		// last <month> = 1st of that month, most recent past occurrence
+		{"last April on Apr", "d = last April\n", 2025, 4, 1},     // April is current month → last year
+		{"last March on Apr", "d = last March\n", 2026, 3, 1},     // March is past → this year
+		{"last May on Apr", "d = last May\n", 2025, 5, 1},         // May is future → last year
+		{"last Dec on Apr", "d = last Dec\n", 2025, 12, 1},        // Dec is future → last year
+
+		// Abbreviations work
+		{"next Sept", "d = next Sept\n", 2026, 9, 1},
+		{"last Feb", "d = last Feb\n", 2026, 2, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
 // TestWeekdayComposition tests weekday expressions compose with duration arithmetic.
 func TestWeekdayComposition(t *testing.T) {
 	clock := testClock // Wednesday, April 8, 2026
