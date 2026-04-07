@@ -77,8 +77,12 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 	keyword := strings.ToLower(r.Keyword)
 
 	switch keyword {
-	case "today", "now":
+	case "today":
 		return types.NewDateFromTime(now), nil
+	case "now":
+		// "now" preserves full time precision (used by "ago" desugaring for sub-day accuracy).
+		// "today" normalizes to midnight (date-only).
+		return types.NewDateTime(now), nil
 	case "tomorrow":
 		return types.NewDateFromTime(now.AddDate(0, 0, 1)), nil
 	case "yesterday":
@@ -190,11 +194,7 @@ func fiscalYear(calYear int, calMonth, fyStartMonth time.Month) int {
 func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, time.Month) {
 	// Calculate months since fiscal year start
 	fy := fiscalYear(calYear, calMonth, fyStartMonth)
-	fyStartDate := time.Date(fy, fyStartMonth, 1, 0, 0, 0, 0, time.UTC)
-	current := time.Date(calYear, calMonth, 1, 0, 0, 0, 0, time.UTC)
-	monthsSinceFYStart := int(current.Sub(fyStartDate).Hours() / (24 * 30.44)) // approximate
-	// More precise: count months
-	monthsSinceFYStart = (calYear-fy)*12 + int(calMonth) - int(fyStartMonth)
+	monthsSinceFYStart := (calYear-fy)*12 + int(calMonth) - int(fyStartMonth)
 	if monthsSinceFYStart < 0 {
 		monthsSinceFYStart += 12
 	}

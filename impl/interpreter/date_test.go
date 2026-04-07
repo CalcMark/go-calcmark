@@ -988,6 +988,59 @@ func TestAgoExpressions(t *testing.T) {
 	}
 }
 
+// TestSubDayAgoExpressions tests that "N hours/minutes ago" uses wall clock time, not midnight.
+func TestSubDayAgoExpressions(t *testing.T) {
+	// Clock at 14:30 — "10 minutes ago" should be 14:20, NOT 23:50 yesterday
+	clock := time.Date(2026, 4, 8, 14, 30, 0, 0, time.UTC)
+
+	tests := []struct {
+		name     string
+		input    string
+		wantDay  int
+		wantHour int
+		wantMin  int
+		wantHas  bool
+	}{
+		{"10 minutes ago", "d = 10 minutes ago\n", 8, 14, 20, true},
+		{"2 hours ago", "d = 2 hours ago\n", 8, 12, 30, true},
+		{"7 days ago (date-only)", "d = 7 days ago\n", 1, 0, 0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			if date.Time.Day() != tt.wantDay {
+				t.Errorf("Day = %d, want %d", date.Time.Day(), tt.wantDay)
+			}
+			if date.Time.Hour() != tt.wantHour {
+				t.Errorf("Hour = %d, want %d", date.Time.Hour(), tt.wantHour)
+			}
+			if date.Time.Minute() != tt.wantMin {
+				t.Errorf("Minute = %d, want %d", date.Time.Minute(), tt.wantMin)
+			}
+			if date.HasTime != tt.wantHas {
+				t.Errorf("HasTime = %v, want %v", date.HasTime, tt.wantHas)
+			}
+		})
+	}
+}
+
 // TestExtendedFromTargets tests "from" with new relative date targets.
 func TestExtendedFromTargets(t *testing.T) {
 	clock := testClock // Wednesday, April 8, 2026
