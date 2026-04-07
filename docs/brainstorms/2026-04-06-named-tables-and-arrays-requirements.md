@@ -98,6 +98,12 @@ The canonical use cases:
 - [Affects R5][Needs research] Should table registration happen during document parsing (new block type) or during evaluation? This affects the spec/ vs impl/ dependency boundary.
 - [Affects R15][Technical] How does array interpolation in table cells interact with the existing interpolation pass? The interpolation system needs to be table-structure-aware to map array elements to rows.
 
+## Future Considerations
+
+**Computed rows and columns**: v1 requires users to define calculations in calc blocks and use `{{interpolation}}` to display results. A future version could automatically bolt computed values onto tables — if a calc block clearly references a table (e.g., `sum(data.b)`), CalcMark could inject a summary row into the rendered output without the user adding any extra markup. The pre-processing pipeline already transforms TextBlocks before markdown-to-HTML rendering (interpolation does this today), so the architecture supports it. The key principle: avoid inventing CalcMark-specific magic syntax. If the computation is obvious from context, just do it.
+
+**NL syntax for array functions**: `sum of rates.rate` reads naturally, but `sum of rates.rate * rates.hc` is ambiguous. NL syntax for array-accepting functions is deferred until the interaction with element-wise expressions is better understood.
+
 ## Next Steps
 
 -> `/ce:plan` for structured implementation planning
