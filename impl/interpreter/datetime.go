@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -83,8 +84,70 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 	case "yesterday":
 		return types.NewDateFromTime(now.AddDate(0, 0, -1)), nil
 	default:
+		// Try weekday expressions: "friday", "this friday", "next friday", "last friday"
+		if d, ok := interp.resolveWeekdayExpression(keyword, now); ok {
+			return d, nil
+		}
 		return nil, fmt.Errorf("unknown relative date keyword: %q", r.Keyword)
 	}
+}
+
+// weekdayNames maps lowercase weekday names to Go's time.Weekday.
+var weekdayNames = map[string]time.Weekday{
+	"monday": time.Monday, "tuesday": time.Tuesday, "wednesday": time.Wednesday,
+	"thursday": time.Thursday, "friday": time.Friday, "saturday": time.Saturday,
+	"sunday": time.Sunday,
+}
+
+// resolveWeekdayExpression handles "friday", "this friday", "next friday", "last friday".
+func (interp *Interpreter) resolveWeekdayExpression(keyword string, now time.Time) (*types.Date, bool) {
+	// Parse modifier and weekday name
+	modifier := "this" // bare weekday = "this <weekday>"
+	weekdayStr := keyword
+
+	for _, prefix := range []string{"this ", "next ", "last "} {
+		if strings.HasPrefix(keyword, prefix) {
+			modifier = strings.TrimSpace(prefix)
+			weekdayStr = keyword[len(prefix):]
+			break
+		}
+	}
+
+	target, ok := weekdayNames[weekdayStr]
+	if !ok {
+		return nil, false
+	}
+
+	current := now.Weekday()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	switch modifier {
+	case "this":
+		// This <weekday> = the occurrence in the current calendar week (Mon-Sun).
+		// Calculate offset from Monday of current week.
+		daysFromMonday := (int(current) - int(time.Monday) + 7) % 7
+		monday := today.AddDate(0, 0, -daysFromMonday)
+		daysToTarget := (int(target) - int(time.Monday) + 7) % 7
+		return types.NewDateFromTime(monday.AddDate(0, 0, daysToTarget)), true
+
+	case "next":
+		// Next <weekday> = soonest future occurrence. If today IS that day, skip to next week.
+		diff := (int(target) - int(current) + 7) % 7
+		if diff == 0 {
+			diff = 7 // today is that weekday — skip to next week
+		}
+		return types.NewDateFromTime(today.AddDate(0, 0, diff)), true
+
+	case "last":
+		// Last <weekday> = most recent past occurrence. If today IS that day, go to last week.
+		diff := (int(current) - int(target) + 7) % 7
+		if diff == 0 {
+			diff = 7 // today is that weekday — go to last week
+		}
+		return types.NewDateFromTime(today.AddDate(0, 0, -diff)), true
+	}
+
+	return nil, false
 }
 
 // parseUTCOffset converts AST UTC offset to minutes.

@@ -113,6 +113,12 @@ const (
 	DATE_LAST_MONTH // "last month"
 	DATE_LAST_YEAR  // "last year"
 
+	// Weekday keywords
+	DATE_WEEKDAY      // bare "Friday" (shorthand for "this Friday")
+	DATE_THIS_WEEKDAY // "this Friday"
+	DATE_NEXT_WEEKDAY // "next Friday"
+	DATE_LAST_WEEKDAY // "last Friday"
+
 	// Date/Duration literals (combined by lexer)
 	DATE_LITERAL     // "Dec 12", "December 25 2025"
 	DURATION_LITERAL // "2 days", "3 weeks and 4 days"
@@ -278,6 +284,14 @@ func (tt TokenType) String() string {
 		return "DATE_LAST_MONTH"
 	case DATE_LAST_YEAR:
 		return "DATE_LAST_YEAR"
+	case DATE_WEEKDAY:
+		return "DATE_WEEKDAY"
+	case DATE_THIS_WEEKDAY:
+		return "DATE_THIS_WEEKDAY"
+	case DATE_NEXT_WEEKDAY:
+		return "DATE_NEXT_WEEKDAY"
+	case DATE_LAST_WEEKDAY:
+		return "DATE_LAST_WEEKDAY"
 	case DATE_LITERAL:
 		return "DATE_LITERAL"
 	case DURATION_LITERAL:

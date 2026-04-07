@@ -324,11 +324,12 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return p.parseNaturalLanguageFunction()
 	}
 
-	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year
+	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year, weekdays
 	if p.match(lexer.DATE_TODAY, lexer.DATE_TOMORROW, lexer.DATE_YESTERDAY,
 		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
 		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
-		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {
+		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
+		lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY) {
 		tok := p.previous()
 		return &ast.RelativeDateLiteral{
 			Keyword:    string(tok.Value),

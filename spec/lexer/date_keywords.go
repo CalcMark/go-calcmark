@@ -7,6 +7,15 @@ var DateKeywords = map[string]TokenType{
 	"today":     DATE_TODAY,
 	"tomorrow":  DATE_TOMORROW,
 	"yesterday": DATE_YESTERDAY,
+
+	// Bare weekday names (shorthand for "this <weekday>")
+	"monday":    DATE_WEEKDAY,
+	"tuesday":   DATE_WEEKDAY,
+	"wednesday": DATE_WEEKDAY,
+	"thursday":  DATE_WEEKDAY,
+	"friday":    DATE_WEEKDAY,
+	"saturday":  DATE_WEEKDAY,
+	"sunday":    DATE_WEEKDAY,
 }
 
 // RelativeDateKeywords maps multi-word relative date keywords to token types
@@ -27,6 +36,33 @@ var RelativeDateKeywords = map[string]TokenType{
 	"last week":  DATE_LAST_WEEK,
 	"last month": DATE_LAST_MONTH,
 	"last year":  DATE_LAST_YEAR,
+
+	// This weekday
+	"this monday":    DATE_THIS_WEEKDAY,
+	"this tuesday":   DATE_THIS_WEEKDAY,
+	"this wednesday": DATE_THIS_WEEKDAY,
+	"this thursday":  DATE_THIS_WEEKDAY,
+	"this friday":    DATE_THIS_WEEKDAY,
+	"this saturday":  DATE_THIS_WEEKDAY,
+	"this sunday":    DATE_THIS_WEEKDAY,
+
+	// Next weekday
+	"next monday":    DATE_NEXT_WEEKDAY,
+	"next tuesday":   DATE_NEXT_WEEKDAY,
+	"next wednesday": DATE_NEXT_WEEKDAY,
+	"next thursday":  DATE_NEXT_WEEKDAY,
+	"next friday":    DATE_NEXT_WEEKDAY,
+	"next saturday":  DATE_NEXT_WEEKDAY,
+	"next sunday":    DATE_NEXT_WEEKDAY,
+
+	// Last weekday
+	"last monday":    DATE_LAST_WEEKDAY,
+	"last tuesday":   DATE_LAST_WEEKDAY,
+	"last wednesday": DATE_LAST_WEEKDAY,
+	"last thursday":  DATE_LAST_WEEKDAY,
+	"last friday":    DATE_LAST_WEEKDAY,
+	"last saturday":  DATE_LAST_WEEKDAY,
+	"last sunday":    DATE_LAST_WEEKDAY,
 }
 
 // MonthNames maps month abbreviations and full names to canonical month names

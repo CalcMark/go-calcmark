@@ -792,6 +792,106 @@ func TestXFromYSyntax(t *testing.T) {
 	}
 }
 
+// TestWeekdayExpressions tests this/next/last <weekday> and bare weekday.
+// Clock pinned to Wednesday, April 8, 2026.
+func TestWeekdayExpressions(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// Bare weekday = this <weekday>
+		{"bare Friday", "d = Friday\n", 2026, 4, 10},   // this week's Friday
+		{"bare Monday", "d = Monday\n", 2026, 4, 6},    // this week's Monday (past)
+		{"bare Wednesday", "d = Wednesday\n", 2026, 4, 8}, // today
+
+		// This <weekday> = occurrence in current calendar week (Mon-Sun)
+		{"this Friday", "d = this Friday\n", 2026, 4, 10},
+		{"this Monday", "d = this Monday\n", 2026, 4, 6},    // past within week
+		{"this Sunday", "d = this Sunday\n", 2026, 4, 12},   // future within week
+		{"this Wednesday", "d = this Wednesday\n", 2026, 4, 8}, // today
+
+		// Next <weekday> = soonest future occurrence (skip today if same day)
+		{"next Friday on Wed", "d = next Friday\n", 2026, 4, 10},   // 2 days ahead
+		{"next Wednesday on Wed", "d = next Wednesday\n", 2026, 4, 15}, // skip today, next week
+		{"next Monday on Wed", "d = next Monday\n", 2026, 4, 13},   // next week
+
+		// Last <weekday> = most recent past (skip today if same day)
+		{"last Monday on Wed", "d = last Monday\n", 2026, 4, 6},     // 2 days ago
+		{"last Wednesday on Wed", "d = last Wednesday\n", 2026, 4, 1}, // skip today, last week
+		{"last Friday on Wed", "d = last Friday\n", 2026, 4, 3},     // last week
+
+		// Year boundary
+		{"next Monday on Dec 31 Wed", "d = next Monday\n", 2027, 1, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := clock
+			if strings.Contains(tt.name, "Dec 31") {
+				c = time.Date(2026, 12, 30, 0, 0, 0, 0, time.UTC) // Wednesday Dec 30
+			}
+			interp := newTestInterpreterWithClock(c)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestWeekdayComposition tests weekday expressions compose with duration arithmetic.
+func TestWeekdayComposition(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026
+
+	interp := newTestInterpreterWithClock(clock)
+
+	// next Friday + 2 weeks = April 10 + 14 = April 24
+	nodes, err := parser.Parse("d = next Friday + 2 weeks\n")
+	if err != nil {
+		t.Fatalf("Parse error = %v", err)
+	}
+
+	results, err := interp.Eval(nodes)
+	if err != nil {
+		t.Fatalf("Eval error = %v", err)
+	}
+
+	date := results[0].(*types.Date)
+	if date.Time.Year() != 2026 || date.Time.Month() != 4 || date.Time.Day() != 24 {
+		t.Errorf("next Friday + 2 weeks: got %s, want 2026-04-24",
+			date.Time.Format("2006-01-02"))
+	}
+}
+
 // TestDateStringFormat tests date output formatting with pinned clock.
 // Date.String() returns long format: "Monday, January 2, 2006"
 func TestDateStringFormat(t *testing.T) {
