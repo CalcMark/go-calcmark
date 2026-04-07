@@ -223,6 +223,12 @@ cy_start = CY2026
 
 All notation is case-insensitive: `q1`, `fq3`, `fy27`, `cy2026` all work.
 
+`FQ1` always refers to **the current fiscal year** you are in. If you need a future fiscal quarter, use `next fiscal quarter`. The distinction:
+
+- `FQ1` — first quarter of the current fiscal year (may be in the past)
+- `this fiscal quarter` — whichever fiscal quarter you are currently in
+- `next fiscal quarter` — the fiscal quarter after the current one
+
 ### Leap Year Handling {#leap-years}
 
 CalcMark delegates all calendar math to Go's `time` package for correct leap year handling:

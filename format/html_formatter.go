@@ -99,11 +99,12 @@ type TemplateLine struct {
 
 // TemplateFrontmatter represents frontmatter for template rendering
 type TemplateFrontmatter struct {
-	Globals   []TemplateGlobal
-	Exchange  []TemplateExchange
-	Scale     string // e.g. "2x" or "0.5x [Length, Mass]"
-	ConvertTo string // e.g. "imperial" or "si [Length]"
-	Extra     []TemplateExtra
+	Globals          []TemplateGlobal
+	Exchange         []TemplateExchange
+	Scale            string // e.g. "2x" or "0.5x [Length, Mass]"
+	ConvertTo        string // e.g. "imperial" or "si [Length]"
+	FiscalYearStarts string // e.g. "July" or "July 15"
+	Extra            []TemplateExtra
 }
 
 // TemplateExtra represents a non-CalcMark frontmatter field
@@ -206,6 +207,20 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 			tfm.ConvertTo = s
 		}
 
+		// Add fiscal year config
+		if fm.FiscalYearStarts != nil {
+			monthNames := []string{"", "January", "February", "March", "April", "May", "June",
+				"July", "August", "September", "October", "November", "December"}
+			fc := fm.FiscalYearStarts
+			if fc.Month >= 1 && fc.Month <= 12 {
+				s := monthNames[fc.Month]
+				if fc.Day > 1 {
+					s += fmt.Sprintf(" %d", fc.Day)
+				}
+				tfm.FiscalYearStarts = s
+			}
+		}
+
 		// Add extra (non-CalcMark) frontmatter fields
 		for _, ef := range fm.Extra {
 			tfm.Extra = append(tfm.Extra, TemplateExtra{
@@ -215,7 +230,7 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		}
 
 		// Only set if there's content
-		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 || tfm.Scale != "" || tfm.ConvertTo != "" || len(tfm.Extra) > 0 {
+		if len(tfm.Globals) > 0 || len(tfm.Exchange) > 0 || tfm.Scale != "" || tfm.ConvertTo != "" || tfm.FiscalYearStarts != "" || len(tfm.Extra) > 0 {
 			data.Frontmatter = tfm
 		}
 	}
