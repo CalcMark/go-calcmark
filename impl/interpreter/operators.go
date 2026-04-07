@@ -483,18 +483,30 @@ func evalDateDurationOperation(date *types.Date, dur *types.Duration, operator s
 	switch unit {
 	case "year", "years", "yr", "yrs":
 		result := addMonthsClipped(date.Time, sign*val*12)
+		if date.HasTime {
+			return types.NewDateTime(result), nil
+		}
 		return types.NewDateFromTime(result), nil
 
 	case "month", "months", "mo":
 		result := addMonthsClipped(date.Time, sign*val)
+		if date.HasTime {
+			return types.NewDateTime(result), nil
+		}
 		return types.NewDateFromTime(result), nil
 
 	case "week", "weeks", "wk":
 		result := date.Time.AddDate(0, 0, sign*val*7)
+		if date.HasTime {
+			return types.NewDateTime(result), nil
+		}
 		return types.NewDateFromTime(result), nil
 
 	case "day", "days":
 		result := date.Time.AddDate(0, 0, sign*val)
+		if date.HasTime {
+			return types.NewDateTime(result), nil
+		}
 		return types.NewDateFromTime(result), nil
 
 	case "hour", "hours", "hr":

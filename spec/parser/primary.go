@@ -604,9 +604,10 @@ func (p *RecursiveDescentParser) maybeCompoundModifier(arg ast.Node) ast.Node {
 func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 	// Try relative date keywords first
 	if p.match(lexer.DATE_TODAY) {
+		tok := p.previous()
 		return &ast.RelativeDateLiteral{
-			Keyword:    "today",
-			SourceText: string(p.previous().OriginalText),
+			Keyword:    string(tok.Value), // preserves "now" vs "today"
+			SourceText: string(tok.OriginalText),
 		}, nil
 	}
 	if p.match(lexer.DATE_TOMORROW) {

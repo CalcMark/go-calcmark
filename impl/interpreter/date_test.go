@@ -1003,7 +1003,7 @@ func TestSubDayAgoExpressions(t *testing.T) {
 	}{
 		{"10 minutes ago", "d = 10 minutes ago\n", 8, 14, 20, true},
 		{"2 hours ago", "d = 2 hours ago\n", 8, 12, 30, true},
-		{"7 days ago (date-only)", "d = 7 days ago\n", 1, 0, 0, false},
+		{"7 days ago (preserves time from now)", "d = 7 days ago\n", 1, 14, 30, true},
 	}
 
 	for _, tt := range tests {
@@ -1038,6 +1038,35 @@ func TestSubDayAgoExpressions(t *testing.T) {
 				t.Errorf("HasTime = %v, want %v", date.HasTime, tt.wantHas)
 			}
 		})
+	}
+}
+
+// TestFromNow tests "N units from now" syntax.
+func TestFromNow(t *testing.T) {
+	clock := time.Date(2026, 4, 8, 14, 30, 0, 0, time.UTC)
+	interp := newTestInterpreterWithClock(clock)
+
+	nodes, err := parser.Parse("d = 2 weeks from now\n")
+	if err != nil {
+		t.Fatalf("Parse error = %v", err)
+	}
+
+	results, err := interp.Eval(nodes)
+	if err != nil {
+		t.Fatalf("Eval error = %v", err)
+	}
+
+	date := results[0].(*types.Date)
+	// "now" preserves time, so 2 weeks from now at 14:30 = Apr 22 14:30
+	if date.Time.Day() != 22 || date.Time.Month() != 4 {
+		t.Errorf("2 weeks from now: got %s, want Apr 22",
+			date.Time.Format("2006-01-02"))
+	}
+	if !date.HasTime {
+		t.Error("'from now' should produce HasTime=true (now preserves time)")
+	}
+	if date.Time.Hour() != 14 || date.Time.Minute() != 30 {
+		t.Errorf("Time should be 14:30, got %s", date.Time.Format("15:04"))
 	}
 }
 

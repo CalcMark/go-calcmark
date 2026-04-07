@@ -8,6 +8,9 @@ var DateKeywords = map[string]TokenType{
 	"tomorrow":  DATE_TOMORROW,
 	"yesterday": DATE_YESTERDAY,
 
+	// Time keywords
+	"now": DATE_TODAY, // "now" tokenizes like "today" but evaluator preserves time
+
 	// Duration modifier
 	"ago": AGO,
 
