@@ -127,6 +127,10 @@ const (
 	// Duration modifier keywords
 	AGO // "ago" — as in "2 weeks ago"
 
+	// Period modifier keywords
+	START_OF // "start of" — explicit form of "this quarter" (resolves to first day)
+	END_OF   // "end of" — as in "end of this quarter" (resolves to last day)
+
 	// Quarter keywords
 	DATE_THIS_QUARTER // "this quarter"
 	DATE_NEXT_QUARTER // "next quarter"
@@ -321,6 +325,10 @@ func (tt TokenType) String() string {
 		return "DATE_LAST_MONTH_NAME"
 	case AGO:
 		return "AGO"
+	case START_OF:
+		return "START_OF"
+	case END_OF:
+		return "END_OF"
 	case DATE_THIS_QUARTER:
 		return "DATE_THIS_QUARTER"
 	case DATE_NEXT_QUARTER:

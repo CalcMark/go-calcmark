@@ -1041,6 +1041,108 @@ func TestSubDayAgoExpressions(t *testing.T) {
 	}
 }
 
+// TestEndOfExpressions tests "end of" period expressions.
+func TestEndOfExpressions(t *testing.T) {
+	tests := []struct {
+		name      string
+		clock     time.Time
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// End of month
+		{"end of this month (Apr)", testClock, "d = end of this month\n", 2026, 4, 30},
+		{"end of this month (Feb non-leap)", time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC),
+			"d = end of this month\n", 2026, 2, 28},
+		{"end of this month (Feb leap)", time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC),
+			"d = end of this month\n", 2024, 2, 29},
+		{"end of next month (Apr→May)", testClock, "d = end of next month\n", 2026, 5, 31},
+		{"end of last month (Apr→Mar)", testClock, "d = end of last month\n", 2026, 3, 31},
+
+		// End of quarter
+		{"end of this quarter (Q2 Apr)", testClock, "d = end of this quarter\n", 2026, 6, 30},
+		{"end of this quarter (Q1 Jan)", time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+			"d = end of this quarter\n", 2026, 3, 31},
+		{"end of this quarter (Q4 Dec)", time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC),
+			"d = end of this quarter\n", 2026, 12, 31},
+		{"end of next quarter from Q2", testClock, "d = end of next quarter\n", 2026, 9, 30},
+		{"end of last quarter from Q2", testClock, "d = end of last quarter\n", 2026, 3, 31},
+
+		// End of year
+		{"end of this year", testClock, "d = end of this year\n", 2026, 12, 31},
+		{"end of next year", testClock, "d = end of next year\n", 2027, 12, 31},
+		{"end of last year", testClock, "d = end of last year\n", 2025, 12, 31},
+
+		// End of week (Sunday)
+		{"end of this week (Wed)", testClock, "d = end of this week\n", 2026, 4, 12}, // Sunday
+
+		// End of named month
+		{"end of January", testClock, "d = end of this January\n", 2026, 1, 31},
+		{"end of next February (non-leap)", testClock, "d = end of next February\n", 2027, 2, 28},
+
+		// Start of (explicit, equivalent to bare period)
+		{"start of this month", testClock, "d = start of this month\n", 2026, 4, 1},
+		{"start of this quarter", testClock, "d = start of this quarter\n", 2026, 4, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestEndOfComposition tests "end of" composes with arithmetic.
+func TestEndOfComposition(t *testing.T) {
+	interp := newTestInterpreterWithClock(testClock) // April 8, 2026
+
+	// "end of this quarter - 2 weeks" = Jun 30 - 14 days = Jun 16
+	nodes, err := parser.Parse("d = end of this quarter - 2 weeks\n")
+	if err != nil {
+		t.Fatalf("Parse error = %v", err)
+	}
+
+	results, err := interp.Eval(nodes)
+	if err != nil {
+		t.Fatalf("Eval error = %v", err)
+	}
+
+	date := results[0].(*types.Date)
+	if date.Time.Month() != 6 || date.Time.Day() != 16 {
+		t.Errorf("end of this quarter - 2 weeks: got %s, want Jun 16",
+			date.Time.Format("2006-01-02"))
+	}
+}
+
 // TestFromNow tests "N units from now" syntax.
 func TestFromNow(t *testing.T) {
 	clock := time.Date(2026, 4, 8, 14, 30, 0, 0, time.UTC)

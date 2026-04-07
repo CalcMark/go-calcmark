@@ -324,6 +324,27 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return p.parseNaturalLanguageFunction()
 	}
 
+	// "start of <period>" — explicit form, equivalent to bare period (first day)
+	// "end of <period>" — resolves to last day of the period
+	if p.match(lexer.START_OF, lexer.END_OF) {
+		modifier := string(p.previous().Value) // "start of" or "end of"
+		// Parse the period expression that follows
+		if p.match(lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
+			lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
+			lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
+			lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
+			lexer.DATE_THIS_FISCAL_QUARTER, lexer.DATE_NEXT_FISCAL_QUARTER, lexer.DATE_LAST_FISCAL_QUARTER,
+			lexer.DATE_THIS_FISCAL_YEAR, lexer.DATE_NEXT_FISCAL_YEAR, lexer.DATE_LAST_FISCAL_YEAR,
+			lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME) {
+			tok := p.previous()
+			return &ast.RelativeDateLiteral{
+				Keyword:    modifier + " " + string(tok.Value),
+				SourceText: modifier + " " + string(tok.Value),
+			}, nil
+		}
+		return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month')")
+	}
+
 	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year, weekdays
 	if p.match(lexer.DATE_TODAY, lexer.DATE_TOMORROW, lexer.DATE_YESTERDAY,
 		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
