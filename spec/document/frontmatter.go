@@ -95,6 +95,11 @@ type Frontmatter struct {
 	// Measurement configures how ambiguous unit names are interpreted (nil if not present).
 	Measurement *MeasurementFrontmatter
 
+	// FiscalYearStarts configures the first month of the fiscal year (nil if not set).
+	// When set, fiscal expressions (FQ1, FY26, "this fiscal quarter") resolve relative
+	// to this configuration. When nil, fiscal expressions produce an error diagnostic.
+	FiscalYearStarts *int // 1-12, representing January-December
+
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
 	// must be processed in document order (they are *front* matter).
@@ -318,11 +323,12 @@ func (f *Frontmatter) HasExchangeRate(key string) bool {
 // frontmatterYAML is the intermediate struct for YAML unmarshaling.
 // This keeps the YAML structure separate from the normalized Frontmatter type.
 type frontmatterYAML struct {
-	Exchange    map[string]float64 `yaml:"exchange"`
-	Globals     map[string]string  `yaml:"globals"`
-	Scale       any                `yaml:"scale"`
-	ConvertTo   any                `yaml:"convert_to"`
-	Measurement any                `yaml:"measurement"`
+	Exchange         map[string]float64 `yaml:"exchange"`
+	Globals          map[string]string  `yaml:"globals"`
+	Scale            any                `yaml:"scale"`
+	ConvertTo        any                `yaml:"convert_to"`
+	Measurement      any                `yaml:"measurement"`
+	FiscalYearStarts string             `yaml:"fiscal_year_starts"`
 }
 
 // parseScaleConfig parses the scale field which can be a scalar number or a map
@@ -680,10 +686,19 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.Measurement = mc
 	}
 
+	// Parse fiscal_year_starts directive
+	if raw.FiscalYearStarts != "" {
+		month, err := parseFiscalYearStarts(raw.FiscalYearStarts)
+		if err != nil {
+			return nil, "", fmt.Errorf("frontmatter: %w", err)
+		}
+		fm.FiscalYearStarts = &month
+	}
+
 	// Capture non-CalcMark frontmatter keys in document order.
 	knownKeys := map[string]bool{
 		"exchange": true, "globals": true, "scale": true,
-		"convert_to": true, "measurement": true,
+		"convert_to": true, "measurement": true, "fiscal_year_starts": true,
 	}
 	extraOrder := extractYAMLTopLevelKeyOrder(yamlContent)
 	var rawMap map[string]any
@@ -704,6 +719,24 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	}
 
 	return fm, remaining, nil
+}
+
+// parseFiscalYearStarts parses the fiscal_year_starts value (a month name) to a month number (1-12).
+func parseFiscalYearStarts(value string) (int, error) {
+	monthNames := map[string]int{
+		"january": 1, "jan": 1, "february": 2, "feb": 2,
+		"march": 3, "mar": 3, "april": 4, "apr": 4,
+		"may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7,
+		"august": 8, "aug": 8, "september": 9, "sep": 9, "sept": 9,
+		"october": 10, "oct": 10, "november": 11, "nov": 11,
+		"december": 12, "dec": 12,
+	}
+
+	month, ok := monthNames[strings.ToLower(strings.TrimSpace(value))]
+	if !ok {
+		return 0, fmt.Errorf("fiscal_year_starts: invalid month name %q", value)
+	}
+	return month, nil
 }
 
 // parseYAMLMapping parses YAML content and returns the root mapping node.

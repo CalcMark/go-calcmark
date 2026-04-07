@@ -22,10 +22,11 @@ type DirectiveResolver interface {
 // Interpreter executes validated AST nodes and produces typed results.
 // This is a Go-specific implementation of CalcMark execution.
 type Interpreter struct {
-	env         *Environment
-	directive   DirectiveResolver
-	measurement *units.MeasurementConfig
-	timeFunc    func() time.Time
+	env              *Environment
+	directive        DirectiveResolver
+	measurement      *units.MeasurementConfig
+	fiscalYearStarts *int // 1-12, nil if not configured
+	timeFunc         func() time.Time
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
@@ -65,6 +66,13 @@ func (interp *Interpreter) SetDirectiveResolver(dr DirectiveResolver) {
 // before any evaluation occurs (unlike convert_to which is post-evaluation).
 func (interp *Interpreter) SetMeasurement(mc *units.MeasurementConfig) {
 	interp.measurement = mc
+}
+
+// SetFiscalYearStarts configures the first month of the fiscal year.
+// When set, fiscal expressions (FQ1, FY26, "this fiscal quarter") resolve
+// relative to this configuration. Month is 1-12 (January-December).
+func (interp *Interpreter) SetFiscalYearStarts(month int) {
+	interp.fiscalYearStarts = &month
 }
 
 // resolveUnit maps a bare ambiguous unit name to its qualified form using
