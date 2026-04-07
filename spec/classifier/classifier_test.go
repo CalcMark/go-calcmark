@@ -393,3 +393,37 @@ savings = salary + bonus - expenses`
 		}
 	}
 }
+
+// TestDateExpressionClassification verifies date expressions classify as calculations.
+func TestDateExpressionClassification(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want LineType
+	}{
+		{"today", "d = today", Calculation},
+		{"next Friday", "d = next Friday", Calculation},
+		{"this quarter", "d = this quarter", Calculation},
+		{"2 weeks ago", "d = 2 weeks ago", Calculation},
+		{"end of this month", "d = end of this month", Calculation},
+		{"this fiscal quarter", "d = this fiscal quarter", Calculation},
+		{"next April", "d = next April", Calculation},
+		{"last year", "d = last year", Calculation},
+		{"next Monday + 2 weeks", "d = next Monday + 2 weeks", Calculation},
+		{"3 days from next Friday", "d = 3 days from next Friday", Calculation},
+		// Bare weekday without assignment — should still be calculation
+		{"bare next Friday", "next Friday", Calculation},
+		// Markdown should still be markdown
+		{"heading", "# Next Friday Meeting", Markdown},
+		{"prose", "The meeting is next Friday", Markdown},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := classifyLineTest(t, tt.line, nil)
+			if got != tt.want {
+				t.Errorf("ClassifyLine(%q) = %s, want %s", tt.line, got, tt.want)
+			}
+		})
+	}
+}

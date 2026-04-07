@@ -1035,3 +1035,73 @@ func TestDirectiveSuggestionSource_FrontmatterUpdate(t *testing.T) {
 		}
 	}
 }
+
+// TestDateSuggestions verifies date keywords appear in autocomplete.
+func TestDateSuggestions(t *testing.T) {
+	tests := []struct {
+		name       string
+		prefix     string
+		wantAny    bool // expect at least one Date suggestion
+		wantNames  []string // expect these specific names in results
+	}{
+		{"to prefix", "to", true, []string{"today", "tomorrow"}},
+		{"ye prefix", "ye", true, []string{"yesterday", "years"}},
+		{"ag prefix", "ag", true, []string{"ago"}},
+		{"thi prefix", "thi", true, []string{"this quarter"}},
+		{"ne prefix", "ne", true, []string{"next weekday", "next month name"}},
+		{"fi prefix", "fi", true, []string{"fiscal quarter", "fiscal year"}},
+		{"xx prefix (no match)", "xx", false, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestions := features.DateSuggestions(tt.prefix)
+
+			if tt.wantAny && len(suggestions) == 0 {
+				t.Errorf("DateSuggestions(%q) returned no results, expected some", tt.prefix)
+			}
+			if !tt.wantAny && len(suggestions) > 0 {
+				t.Errorf("DateSuggestions(%q) returned %d results, expected none", tt.prefix, len(suggestions))
+			}
+
+			for _, wantName := range tt.wantNames {
+				found := false
+				for _, s := range suggestions {
+					if s.Name == wantName {
+						found = true
+						if s.Category != "Date" {
+							t.Errorf("suggestion %q has category %q, want 'Date'", s.Name, s.Category)
+						}
+						break
+					}
+				}
+				if !found {
+					names := make([]string, len(suggestions))
+					for i, s := range suggestions {
+						names[i] = s.Name
+					}
+					t.Errorf("DateSuggestions(%q) missing %q; got %v", tt.prefix, wantName, names)
+				}
+			}
+		})
+	}
+}
+
+// TestCombinedSourceIncludesDateSuggestions verifies date keywords appear in combined source.
+func TestCombinedSourceIncludesDateSuggestions(t *testing.T) {
+	source := NewCombinedSuggestionSource(
+		nil, nil, nil,
+	)
+
+	suggestions := source.GetSuggestions("to")
+
+	var dateCount int
+	for _, s := range suggestions {
+		if s.Category == "Date" {
+			dateCount++
+		}
+	}
+	if dateCount == 0 {
+		t.Error("CombinedSuggestionSource.GetSuggestions(\"to\") returned no Date suggestions; expected today/tomorrow")
+	}
+}

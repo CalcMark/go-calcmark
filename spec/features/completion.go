@@ -233,6 +233,41 @@ func DirectiveSuggestions(prefix string, scaleFactor string, globals map[string]
 	return suggestions
 }
 
+// DateSuggestions returns date keyword suggestions matching prefix.
+// Surfaces date-related features like "today", "next Friday", "this quarter", "ago", "end of".
+func DateSuggestions(prefix string) []Suggestion {
+	prefix = strings.ToLower(prefix)
+	var suggestions []Suggestion
+
+	registry := DefaultRegistry()
+
+	for _, f := range registry.ByCategory(CategoryDate) {
+		if MatchesPrefix(f.Name, prefix) {
+			suggestions = append(suggestions, Suggestion{
+				Name:        f.Name,
+				Category:    "Date",
+				Description: f.Description,
+				Syntax:      f.Syntax,
+				InsertText:  f.Name,
+			})
+		}
+		// Also check aliases for parseable date expressions
+		for _, alias := range f.Aliases {
+			if alias.Parseable && MatchesPrefix(alias.Name, prefix) {
+				suggestions = append(suggestions, Suggestion{
+					Name:        alias.Name,
+					Category:    "Date",
+					Description: f.Description,
+					Syntax:      f.Syntax,
+					InsertText:  alias.Name,
+				})
+			}
+		}
+	}
+
+	return suggestions
+}
+
 // ExtractPrefix extracts the completion prefix from a line at the given column.
 // Handles @globals.field patterns and word boundaries.
 // Uses rune-aware indexing for UTF-8 safety.
