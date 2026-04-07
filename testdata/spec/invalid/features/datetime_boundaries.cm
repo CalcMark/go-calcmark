@@ -1,0 +1,26 @@
+# DateTime Boundaries — What Does NOT Create a Date
+
+These expressions should NOT parse as dates. They demonstrate
+the boundaries of CalcMark's date type system.
+
+## Bare numbers are never dates
+
+year = 2019
+not_a_date = 2025
+also_not = 1990
+
+## Date+time in a single literal is not supported
+
+meeting = Apr 1 2019 12:30PM
+event = January 15 2026 3:00 PM
+
+## CY/FY/Q notation not yet implemented
+
+cy_test = CY2019
+fy_test = FY26
+q_test = Q1
+
+## Fiscal without frontmatter produces error
+
+fq_test = FQ1
+fiscal_test = this fiscal quarter
