@@ -234,6 +234,12 @@ after = Feb 29 2024 + 1 year
 
 `Feb 29 2024 + 1 year` = February 28, 2025 (clipped to the last day of February in a non-leap year).
 
+### Timezone Behavior {#timezone}
+
+`today` and `now` use your machine's local timezone, the same as Excel and most spreadsheet tools. If your machine says it's Wednesday, CalcMark's `today` returns Wednesday.
+
+On servers or CI pipelines running in UTC, `today` may differ from your local date during timezone overlap windows. A future `timezone` configuration option is planned but not yet available.
+
 ### Year Range {#year-range}
 
 CalcMark validates years to the range **1900-2100**. Dates outside this range produce an error. BCE dates are not supported. CalcMark is designed for technical, business, and personal planning -- not historical research.
