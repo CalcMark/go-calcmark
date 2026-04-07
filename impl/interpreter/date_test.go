@@ -697,9 +697,7 @@ func TestExtendedRelativeDates(t *testing.T) {
 
 			results, err := interp.Eval(nodes)
 			if err != nil {
-				// Expected: evaluation not yet implemented for extended keywords.
-				// This test documents the expected behavior for when it is.
-				t.Skipf("Evaluation not yet implemented: %v", err)
+				t.Fatalf("Eval error = %v", err)
 			}
 
 			if len(results) != 1 {
@@ -1269,6 +1267,159 @@ func TestDateStringFormat(t *testing.T) {
 			str := results[0].String()
 			if !strings.Contains(str, tt.wantContain) {
 				t.Errorf("String() = %q, want to contain %q", str, tt.wantContain)
+			}
+		})
+	}
+}
+
+// TestAddMonthsClipped tests the month-clipping helper directly.
+func TestAddMonthsClipped(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    time.Time
+		months   int
+		wantDate string // "2006-01-02"
+	}{
+		{"Jan 31 + 1 month = Feb 28 (non-leap)", time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC), 1, "2026-02-28"},
+		{"Jan 31 + 1 month = Feb 29 (leap)", time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC), 1, "2024-02-29"},
+		{"Mar 31 - 1 month = Feb 28", time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC), -1, "2026-02-28"},
+		{"Jan 15 + 12 months = Jan 15 next year", time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), 12, "2027-01-15"},
+		{"Feb 29 + 12 months = Feb 28 (leap to non-leap)", time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC), 12, "2025-02-28"},
+		{"Jan 31 - 14 months = Nov 30 (large negative)", time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC), -14, "2024-11-30"},
+		{"Jul 31 + 25 months = Aug 31 (multi-year)", time.Date(2026, 7, 31, 0, 0, 0, 0, time.UTC), 25, "2028-08-31"},
+		{"Dec 31 + 2 months = Feb 28 (year rollover + clip)", time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC), 2, "2026-02-28"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := addMonthsClipped(tt.input, tt.months)
+			got := result.Format("2006-01-02")
+			if got != tt.wantDate {
+				t.Errorf("addMonthsClipped(%s, %d) = %s, want %s",
+					tt.input.Format("2006-01-02"), tt.months, got, tt.wantDate)
+			}
+		})
+	}
+}
+
+// TestSubDayDurationArithmetic tests date + sub-day duration produces HasTime=true.
+func TestSubDayDurationArithmetic(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026 14:30 UTC
+
+	tests := []struct {
+		name     string
+		input    string
+		wantHour int
+		wantDay  int
+		wantHas  bool
+	}{
+		{
+			name:     "today + 2 hours",
+			input:    "d = today + 2 hours\n",
+			wantHour: 2,
+			wantDay:  8,
+			wantHas:  true,
+		},
+		{
+			name:     "today + 30 minutes",
+			input:    "d = today + 30 minutes\n",
+			wantHour: 0,
+			wantDay:  8,
+			wantHas:  true,
+		},
+		{
+			name:     "today + 1 day (remains date-only)",
+			input:    "d = today + 1 day\n",
+			wantHour: 0,
+			wantDay:  9,
+			wantHas:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			if date.HasTime != tt.wantHas {
+				t.Errorf("HasTime = %v, want %v", date.HasTime, tt.wantHas)
+			}
+			if date.Time.Hour() != tt.wantHour {
+				t.Errorf("Hour = %d, want %d", date.Time.Hour(), tt.wantHour)
+			}
+			if date.Time.Day() != tt.wantDay {
+				t.Errorf("Day = %d, want %d", date.Time.Day(), tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestFiscalYearAndQuarterCompleteCoverage tests all fiscal modifier combinations.
+func TestFiscalYearAndQuarterCompleteCoverage(t *testing.T) {
+	tests := []struct {
+		name             string
+		clock            time.Time
+		fiscalStartMonth int
+		input            string
+		wantYear         int
+		wantMonth        int
+		wantDay          int
+	}{
+		// next fiscal year from Aug 2026 with July start = Jul 1, 2027
+		{"next fiscal year", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = next fiscal year\n", 2027, 7, 1},
+		// last fiscal year from Aug 2026 with July start = Jul 1, 2025
+		{"last fiscal year", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = last fiscal year\n", 2025, 7, 1},
+		// last fiscal quarter from Aug (FQ1=Jul-Sep) = Apr 1 (FQ4 of previous FY)
+		{"last fiscal quarter from Aug", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = last fiscal quarter\n", 2026, 4, 1},
+		// next fiscal quarter from Jan (FQ3=Jan-Mar) with July start = Apr 1 (FQ4)
+		{"next fiscal quarter from Jan", time.Date(2027, 1, 15, 0, 0, 0, 0, time.UTC), 7,
+			"d = next fiscal quarter\n", 2027, 4, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
+			interp.SetFiscalYearStarts(tt.fiscalStartMonth)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
 			}
 		})
 	}
