@@ -1,0 +1,60 @@
+# CalcMark Relative Date Features
+
+Tests for relative weekday, month, period, quarter, ago, and fiscal expressions.
+
+## Weekday Expressions
+
+wd1 = Friday
+wd2 = this Friday
+wd3 = next Friday
+wd4 = last Friday
+wd5 = next Monday
+wd6 = this Wednesday
+wd7 = last Sunday
+
+## Period Expressions (Week / Month / Year)
+
+p1 = this week
+p2 = next week
+p3 = last week
+p4 = this month
+p5 = next month
+p6 = last month
+p7 = this year
+p8 = next year
+p9 = last year
+
+## Relative Month Expressions
+
+m1 = this April
+m2 = next April
+m3 = last April
+m4 = next Jan
+m5 = last Dec
+m6 = this September
+
+## Calendar Quarter Expressions
+
+q1 = this quarter
+q2 = next quarter
+q3 = last quarter
+
+## AGO Expressions
+
+a1 = 2 weeks ago
+a2 = 3 months ago
+a3 = 1 year ago
+a4 = 7 days ago
+
+## Extended FROM Targets
+
+f1 = 3 days from next Friday
+f2 = 2 weeks from next month
+f3 = 1 month from this year
+
+## Composition with Duration Arithmetic
+
+c1 = next Friday + 2 weeks
+c2 = this quarter + 30 days
+c3 = next month - 1 week
+c4 = last year + 6 months
