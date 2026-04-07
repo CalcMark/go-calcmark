@@ -2063,3 +2063,109 @@ func TestCalendarYearNotation(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Period duration conversion: "FQ1 in days", "this month in weeks"
+// ---------------------------------------------------------------------------
+
+// TestPeriodInDays tests period expressions with "in days" conversion.
+func TestPeriodInDays(t *testing.T) {
+	tests := []struct {
+		name             string
+		clock            time.Time
+		fiscalStartMonth int
+		input            string
+		wantDays         int64
+	}{
+		// Calendar quarters
+		{"Q1 in days", testClock, 0, "d = Q1 in days\n", 90},  // Jan 1 - Mar 31
+		{"Q2 in days", testClock, 0, "d = Q2 in days\n", 91},  // Apr 1 - Jun 30
+		{"Q3 in days", testClock, 0, "d = Q3 in days\n", 92},  // Jul 1 - Sep 30
+		{"Q4 in days", testClock, 0, "d = Q4 in days\n", 92},  // Oct 1 - Dec 31
+
+		// Fiscal quarters (July start)
+		{"FQ1 in days", testClock, 7, "d = FQ1 in days\n", 92}, // Jul 1 - Sep 30
+		{"FQ3 in days", testClock, 7, "d = FQ3 in days\n", 90}, // Jan 1 - Mar 31
+
+		// Periods
+		{"this month in days (April)", testClock, 0, "d = this month in days\n", 30},
+		{"this year in days (2026)", testClock, 0, "d = this year in days\n", 365},
+
+		// Leap year February
+		{"Feb 2024 in days (leap)", time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), 0,
+			"d = this month in days\n", 29},
+		{"Feb 2025 in days (non-leap)", time.Date(2025, 2, 15, 0, 0, 0, 0, time.UTC), 0,
+			"d = this month in days\n", 28},
+
+		// Named months
+		{"this April in days", testClock, 0, "d = this April in days\n", 30},
+		{"this January in days", testClock, 0, "d = this January in days\n", 31},
+
+		// Weeks conversion
+		{"Q1 in weeks", testClock, 0, "d = Q1 in weeks\n", 12}, // 90/7 ≈ 12.86, truncated
+
+		// this week
+		{"this week in days", testClock, 0, "d = this week in days\n", 7},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
+			if tt.fiscalStartMonth > 0 {
+				interp.SetFiscalYearStarts(tt.fiscalStartMonth, 1)
+			}
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+
+			dur, ok := results[0].(*types.Duration)
+			if !ok {
+				t.Fatalf("Expected *types.Duration, got %T (%v)", results[0], results[0])
+			}
+
+			got := dur.Value.IntPart()
+			if got != tt.wantDays {
+				t.Errorf("Got %d %s, want %d", got, dur.Unit, tt.wantDays)
+			}
+		})
+	}
+}
+
+// TestPointDateInDaysError tests that non-period dates error on "in days".
+func TestPointDateInDaysError(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"today in days", "d = today in days\n"},
+		{"tomorrow in days", "d = tomorrow in days\n"},
+		{"next Friday in days", "d = next Friday in days\n"},
+		{"date literal in days", "d = Jan 1 2025 in days\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(testClock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			_, err = interp.Eval(nodes)
+			if err == nil {
+				t.Fatalf("Expected error for %q, got nil", tt.input)
+			}
+			if !strings.Contains(err.Error(), "period") {
+				t.Errorf("Error should mention 'period', got: %v", err)
+			}
+		})
+	}
+}

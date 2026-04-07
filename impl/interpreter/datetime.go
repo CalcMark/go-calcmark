@@ -8,6 +8,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
 
 // Date and time literal evaluation.
@@ -448,6 +449,85 @@ func (interp *Interpreter) evalEndOfNotation(keyword string, now time.Time) (typ
 	// End of quarter = start of quarter + 3 months - 1 day
 	endDate := time.Date(d.Time.Year(), d.Time.Month()+3, d.Time.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
 	return types.NewDateFromTime(endDate), nil
+}
+
+// periodToDuration converts a period expression AST node to its duration in days.
+// Returns an error if the node is a point (today, next Friday) rather than a period.
+func (interp *Interpreter) periodToDuration(node ast.Node) (*types.Duration, error) {
+	rel, ok := node.(*ast.RelativeDateLiteral)
+	if !ok {
+		return nil, fmt.Errorf("cannot convert date to duration — use a period expression like 'this month', 'Q1', or 'FQ1'")
+	}
+
+	keyword := strings.ToLower(rel.Keyword)
+	if !isPeriodExpression(keyword) {
+		return nil, fmt.Errorf("cannot convert '%s' to duration — it is a point in time, not a period. Use a period like 'this month', 'Q1', or 'FQ1'",
+			rel.SourceText)
+	}
+
+	now := interp.now()
+
+	// Get start date
+	startResult, err := interp.evalRelativeDateLiteral(rel)
+	if err != nil {
+		return nil, err
+	}
+	startDate := startResult.(*types.Date)
+
+	// Get end date via evalEndOf
+	endResult, err := interp.evalEndOfForKeyword(keyword, now)
+	if err != nil {
+		return nil, err
+	}
+	endDate := endResult.(*types.Date)
+
+	// Duration = end - start + 1 day
+	days := endDate.DaysBetween(startDate) + 1
+	return &types.Duration{
+		Value: decimal.NewFromInt(int64(days)),
+		Unit:  "day",
+	}, nil
+}
+
+// isPeriodExpression returns true if the keyword represents a span (not a point).
+func isPeriodExpression(keyword string) bool {
+	// Periods: this/next/last week/month/year/quarter, fiscal quarter/year, named months, Q/FQ notation
+	switch keyword {
+	case "this week", "next week", "last week",
+		"this month", "next month", "last month",
+		"this year", "next year", "last year",
+		"this quarter", "next quarter", "last quarter",
+		"this fiscal quarter", "next fiscal quarter", "last fiscal quarter",
+		"this fiscal year", "next fiscal year", "last fiscal year":
+		return true
+	}
+	// Named months: "this april", "next dec", etc.
+	for _, prefix := range []string{"this ", "next ", "last "} {
+		if strings.HasPrefix(keyword, prefix) {
+			rest := keyword[len(prefix):]
+			if _, ok := canonicalMonths[rest]; ok {
+				return true
+			}
+		}
+	}
+	// Q/FQ notation
+	upper := strings.ToUpper(keyword)
+	if strings.HasPrefix(upper, "Q:") || strings.HasPrefix(upper, "FQ:") {
+		return true
+	}
+	return false
+}
+
+// evalEndOfForKeyword resolves the end date for a period keyword.
+// Delegates to evalEndOf for period expressions, and handles notation.
+func (interp *Interpreter) evalEndOfForKeyword(keyword string, now time.Time) (types.Type, error) {
+	// Handle notation (Q:1, FQ:3)
+	upper := strings.ToUpper(keyword)
+	if strings.HasPrefix(upper, "Q:") || strings.HasPrefix(upper, "FQ:") {
+		return interp.evalEndOfNotation(keyword, now)
+	}
+	// Handle period expressions
+	return interp.evalEndOf(keyword, now)
 }
 
 // calendarQuarterStart returns the first month of the calendar quarter containing m.
