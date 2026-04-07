@@ -3,6 +3,8 @@ package interpreter
 import (
 	"fmt"
 	"math/big"
+	"strings"
+	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -463,18 +465,63 @@ func evalPercentageWidening(left types.Type, pct *types.Percentage, operator str
 	}
 }
 
-// evalDateDurationOperation handles date ± duration.
+// evalDateDurationOperation handles date ± duration with unit-aware dispatch.
+// Calendar units (year, month) use time.AddDate for correct month/year arithmetic.
+// Day/week units use time.AddDate for exact day addition.
+// Sub-day units (hour, minute, second, ms) use time.Add for nanosecond precision.
 func evalDateDurationOperation(date *types.Date, dur *types.Duration, operator string) (types.Type, error) {
-	// Convert duration to days (approximate for non-day units)
-	days := durationToDays(dur)
-
-	switch operator {
-	case "+":
-		return types.NewDateFromTime(date.Time.AddDate(0, 0, days)), nil
-	case "-":
-		return types.NewDateFromTime(date.Time.AddDate(0, 0, -days)), nil
-	default:
+	sign := 1
+	if operator == "-" {
+		sign = -1
+	} else if operator != "+" {
 		return nil, fmt.Errorf("unsupported date-duration operation: %s", operator)
+	}
+
+	unit := strings.ToLower(dur.Unit)
+	val := int(dur.Value.IntPart())
+
+	switch unit {
+	case "year", "years", "yr", "yrs":
+		result := addMonthsClipped(date.Time, sign*val*12)
+		return types.NewDateFromTime(result), nil
+
+	case "month", "months", "mo":
+		result := addMonthsClipped(date.Time, sign*val)
+		return types.NewDateFromTime(result), nil
+
+	case "week", "weeks", "wk":
+		result := date.Time.AddDate(0, 0, sign*val*7)
+		return types.NewDateFromTime(result), nil
+
+	case "day", "days":
+		result := date.Time.AddDate(0, 0, sign*val)
+		return types.NewDateFromTime(result), nil
+
+	case "hour", "hours", "hr":
+		d := time.Duration(sign*val) * time.Hour
+		return types.NewDateTime(date.Time.Add(d)), nil
+
+	case "minute", "minutes", "min":
+		d := time.Duration(sign*val) * time.Minute
+		return types.NewDateTime(date.Time.Add(d)), nil
+
+	case "second", "seconds", "sec":
+		d := time.Duration(sign*val) * time.Second
+		return types.NewDateTime(date.Time.Add(d)), nil
+
+	case "millisecond", "milliseconds", "ms":
+		d := time.Duration(sign*val) * time.Millisecond
+		return types.NewDateTime(date.Time.Add(d)), nil
+
+	default:
+		// Fallback: convert to days using legacy path for unknown units
+		days := durationToDays(dur)
+		switch operator {
+		case "+":
+			return types.NewDateFromTime(date.Time.AddDate(0, 0, days)), nil
+		default:
+			return types.NewDateFromTime(date.Time.AddDate(0, 0, -days)), nil
+		}
 	}
 }
 
@@ -698,6 +745,29 @@ func compareNumbers(left, right decimal.Decimal, operator string) *types.Boolean
 }
 
 // Helper functions
+
+// addMonthsClipped adds months to a time, clipping to the last day of the target
+// month when the source day exceeds it. This fixes Go's time.AddDate behavior where
+// Jan 31 + 1 month = March 3 (via Feb 31 normalization). Instead, we get Feb 28/29.
+func addMonthsClipped(t time.Time, months int) time.Time {
+	y, m, d := t.Date()
+	targetMonth := time.Month(int(m) + months)
+	// Normalize year/month
+	targetYear := y + int(targetMonth-1)/12
+	targetMonth = (targetMonth-1)%12 + 1
+	if targetMonth <= 0 {
+		targetMonth += 12
+		targetYear--
+	}
+
+	// Find last day of target month
+	lastDay := time.Date(targetYear, targetMonth+1, 0, 0, 0, 0, 0, time.UTC).Day()
+	if d > lastDay {
+		d = lastDay
+	}
+
+	return time.Date(targetYear, targetMonth, d, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
+}
 
 func durationToDays(dur *types.Duration) int {
 	factor := getDurationFactorDecimal(dur.Unit)

@@ -222,9 +222,9 @@ func TestDateLiterals(t *testing.T) {
 	}
 }
 
-// TestDateArithmeticEval tests date +/- duration expressions.
+// TestDateArithmeticEval tests date +/- duration expressions with pinned clock.
 func TestDateArithmeticEval(t *testing.T) {
-	now := time.Now()
+	now := testClock // Wednesday, April 8, 2026
 
 	tests := []struct {
 		name      string
@@ -272,7 +272,95 @@ func TestDateArithmeticEval(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			interp := NewInterpreter()
+			interp := newTestInterpreterWithClock(now)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestCalendarCorrectMonthArithmetic tests unit-aware month/year arithmetic.
+// This verifies calendar-correct behavior (not 30-day approximation).
+func TestCalendarCorrectMonthArithmetic(t *testing.T) {
+	tests := []struct {
+		name      string
+		clock     time.Time
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{
+			name:      "Jan 31 + 1 month = Feb 28 (non-leap)",
+			clock:     testClock,
+			input:     "d = Jan 31 2026 + 1 month\n",
+			wantYear:  2026,
+			wantMonth: 2,
+			wantDay:   28,
+		},
+		{
+			name:      "Jan 31 + 1 month = Feb 29 (leap year)",
+			clock:     testClock,
+			input:     "d = Jan 31 2024 + 1 month\n",
+			wantYear:  2024,
+			wantMonth: 2,
+			wantDay:   29,
+		},
+		{
+			name:      "Apr 6 - 3 months = Jan 6 (calendar correct)",
+			clock:     time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
+			input:     "d = today - 3 months\n",
+			wantYear:  2026,
+			wantMonth: 1,
+			wantDay:   6,
+		},
+		{
+			name:      "today + 1 year across leap year",
+			clock:     time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC),
+			input:     "d = today + 1 year\n",
+			wantYear:  2025,
+			wantMonth: 2,
+			wantDay:   28,
+		},
+		{
+			name:      "Dec 15 + 1 month = Jan 15 next year",
+			clock:     testClock,
+			input:     "d = Dec 15 2026 + 1 month\n",
+			wantYear:  2027,
+			wantMonth: 1,
+			wantDay:   15,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
