@@ -938,6 +938,127 @@ func TestRelativeMonthExpressions(t *testing.T) {
 	}
 }
 
+// TestAgoExpressions tests "<N> <unit> ago" syntax.
+func TestAgoExpressions(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026 14:30
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{"2 weeks ago", "d = 2 weeks ago\n", 2026, 3, 25},
+		{"3 months ago", "d = 3 months ago\n", 2026, 1, 8},
+		{"1 year ago", "d = 1 year ago\n", 2025, 4, 8},
+		{"7 days ago", "d = 7 days ago\n", 2026, 4, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestExtendedFromTargets tests "from" with new relative date targets.
+func TestExtendedFromTargets(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{
+			name:      "3 days from next Friday",
+			input:     "d = 3 days from next Friday\n",
+			wantYear:  2026,
+			wantMonth: 4,
+			wantDay:   13, // next Friday = Apr 10, + 3 = Apr 13
+		},
+		{
+			name:      "2 weeks from next month",
+			input:     "d = 2 weeks from next month\n",
+			wantYear:  2026,
+			wantMonth: 5,
+			wantDay:   15, // next month = May 1, + 14 = May 15
+		},
+		{
+			name:      "1 month from this year",
+			input:     "d = 1 month from this year\n",
+			wantYear:  2026,
+			wantMonth: 2,
+			wantDay:   1, // this year = Jan 1, + 1 month = Feb 1
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
 // TestWeekdayComposition tests weekday expressions compose with duration arithmetic.
 func TestWeekdayComposition(t *testing.T) {
 	clock := testClock // Wednesday, April 8, 2026

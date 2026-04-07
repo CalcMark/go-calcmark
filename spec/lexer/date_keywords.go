@@ -8,6 +8,9 @@ var DateKeywords = map[string]TokenType{
 	"tomorrow":  DATE_TOMORROW,
 	"yesterday": DATE_YESTERDAY,
 
+	// Duration modifier
+	"ago": AGO,
+
 	// Bare weekday names (shorthand for "this <weekday>")
 	"monday":    DATE_WEEKDAY,
 	"tuesday":   DATE_WEEKDAY,

@@ -124,6 +124,9 @@ const (
 	DATE_NEXT_MONTH_NAME // "next April"
 	DATE_LAST_MONTH_NAME // "last April"
 
+	// Duration modifier keywords
+	AGO // "ago" — as in "2 weeks ago"
+
 	// Date/Duration literals (combined by lexer)
 	DATE_LITERAL     // "Dec 12", "December 25 2025"
 	DURATION_LITERAL // "2 days", "3 weeks and 4 days"
@@ -303,6 +306,8 @@ func (tt TokenType) String() string {
 		return "DATE_NEXT_MONTH_NAME"
 	case DATE_LAST_MONTH_NAME:
 		return "DATE_LAST_MONTH_NAME"
+	case AGO:
+		return "AGO"
 	case DATE_LITERAL:
 		return "DATE_LITERAL"
 	case DURATION_LITERAL:
