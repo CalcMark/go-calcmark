@@ -530,6 +530,10 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 		if fm.Measurement != nil {
 			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
 		}
+		// Wire fiscal year configuration for FQ/FY expressions
+		if fm.FiscalYearStarts != nil {
+			interp.SetFiscalYearStarts(fm.FiscalYearStarts.Month, fm.FiscalYearStarts.Day)
+		}
 	}
 	results := make([]types.Type, 0, len(nodes))
 	var firstErr error
@@ -744,6 +748,10 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 		// Wire measurement conventions (pre-interpreter: affects unit name resolution)
 		if fm.Measurement != nil {
 			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
+		}
+		// Wire fiscal year configuration for FQ/FY expressions
+		if fm.FiscalYearStarts != nil {
+			interp.SetFiscalYearStarts(fm.FiscalYearStarts.Month, fm.FiscalYearStarts.Day)
 		}
 	}
 	results := make([]types.Type, 0, len(nodes))

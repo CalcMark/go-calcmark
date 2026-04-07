@@ -101,12 +101,19 @@ func (l *Lexer) peekThreeWords() string {
 }
 
 // tryReadNotation attempts to read Q1-Q4, FQ1-FQ4, FY26/FY2026, CY26/CY2026 patterns.
-// Returns token type, value string, and true if matched.
+// Only matches when the notation is NOT followed by identifier characters (_, letters).
+// This prevents "fq1_start" from being tokenized as FQ1 + _start.
 func (l *Lexer) tryReadNotation() (TokenType, string, bool) {
 	startPos := l.pos
 	// peekWord only reads letters; we need letters+digits for notation.
 	word := l.peekAlphanumWord()
 	upper := strings.ToUpper(word)
+
+	// Check that notation is not followed by identifier chars (prevents fq1_start → FQ1)
+	endPos := startPos + len([]rune(word))
+	if endPos < len(l.text) && (l.text[endPos] == '_' || unicode.IsLetter(l.text[endPos])) {
+		return 0, "", false
+	}
 
 	// Q1-Q4: calendar quarter
 	if len(upper) == 2 && upper[0] == 'Q' && upper[1] >= '1' && upper[1] <= '4' {
