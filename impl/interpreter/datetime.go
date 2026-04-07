@@ -225,32 +225,34 @@ func (interp *Interpreter) evalEndOfFiscal(keyword string, now time.Time) (types
 		return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
 	}
 
-	fyStart := time.Month(*interp.fiscalYearStarts)
+	fc := interp.fiscalYearStarts
+	fyStartMonth := time.Month(fc.month)
+	fyStartDay := fc.day
 
 	switch keyword {
 	case "this fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
-		nextFQ := time.Date(y, m+3, 1, 0, 0, 0, 0, time.UTC)
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
+		nextFQ := time.Date(y, m+3, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewDateFromTime(nextFQ.AddDate(0, 0, -1)), nil
 	case "next fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
-		nextNextFQ := time.Date(y, m+6, 1, 0, 0, 0, 0, time.UTC)
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
+		nextNextFQ := time.Date(y, m+6, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewDateFromTime(nextNextFQ.AddDate(0, 0, -1)), nil
 	case "last fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
-		thisFQ := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
+		thisFQ := time.Date(y, m, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewDateFromTime(thisFQ.AddDate(0, 0, -1)), nil
 	case "this fiscal year":
-		fy := fiscalYear(now.Year(), now.Month(), fyStart)
-		nextFYStart := time.Date(fy+1, fyStart, 1, 0, 0, 0, 0, time.UTC)
+		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
+		nextFYStart := time.Date(fy+1, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewDateFromTime(nextFYStart.AddDate(0, 0, -1)), nil
 	case "next fiscal year":
-		fy := fiscalYear(now.Year(), now.Month(), fyStart) + 1
-		nextFYStart := time.Date(fy+1, fyStart, 1, 0, 0, 0, 0, time.UTC)
+		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + 1
+		nextFYStart := time.Date(fy+1, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewDateFromTime(nextFYStart.AddDate(0, 0, -1)), nil
 	case "last fiscal year":
-		fy := fiscalYear(now.Year(), now.Month(), fyStart) - 1
-		nextFYStart := time.Date(fy+1, fyStart, 1, 0, 0, 0, 0, time.UTC)
+		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) - 1
+		nextFYStart := time.Date(fy+1, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewDateFromTime(nextFYStart.AddDate(0, 0, -1)), nil
 	}
 	return nil, fmt.Errorf("unknown fiscal end-of expression: %q", keyword)
@@ -275,42 +277,52 @@ func (interp *Interpreter) evalFiscalExpression(keyword string, now time.Time) (
 		return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
 	}
 
-	fyStart := time.Month(*interp.fiscalYearStarts)
+	fc := interp.fiscalYearStarts
+	fyStartMonth := time.Month(fc.month)
+	fyStartDay := fc.day
 
 	switch keyword {
 	case "this fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
-		return types.NewDateFromTime(time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)), nil
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
+		return types.NewDateFromTime(time.Date(y, m, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
 	case "next fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
-		t := time.Date(y, m+3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
+		t := time.Date(y, m+3, fyStartDay, 0, 0, 0, 0, time.UTC) // Go normalizes
 		return types.NewDateFromTime(t), nil
 	case "last fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStart)
-		t := time.Date(y, m-3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes
+		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
+		t := time.Date(y, m-3, fyStartDay, 0, 0, 0, 0, time.UTC) // Go normalizes
 		return types.NewDateFromTime(t), nil
 	case "this fiscal year":
-		y := fiscalYear(now.Year(), now.Month(), fyStart)
-		return types.NewDateFromTime(time.Date(y, fyStart, 1, 0, 0, 0, 0, time.UTC)), nil
+		y := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
+		return types.NewDateFromTime(time.Date(y, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
 	case "next fiscal year":
-		y := fiscalYear(now.Year(), now.Month(), fyStart) + 1
-		return types.NewDateFromTime(time.Date(y, fyStart, 1, 0, 0, 0, 0, time.UTC)), nil
+		y := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + 1
+		return types.NewDateFromTime(time.Date(y, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
 	case "last fiscal year":
-		y := fiscalYear(now.Year(), now.Month(), fyStart) - 1
-		return types.NewDateFromTime(time.Date(y, fyStart, 1, 0, 0, 0, 0, time.UTC)), nil
+		y := fiscalYearWithDay(now, fyStartMonth, fyStartDay) - 1
+		return types.NewDateFromTime(time.Date(y, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
 	default:
 		return nil, fmt.Errorf("unknown fiscal expression: %q", keyword)
 	}
 }
 
-// fiscalYear returns the calendar year in which the fiscal year begins.
-// For a FY starting in July, August 2026 is in the FY that started July 2026.
-// For a FY starting in July, May 2026 is in the FY that started July 2025.
+// fiscalYear returns the calendar year in which the fiscal year begins (month-only, day=1).
 func fiscalYear(calYear int, calMonth, fyStartMonth time.Month) int {
 	if calMonth >= fyStartMonth {
 		return calYear
 	}
 	return calYear - 1
+}
+
+// fiscalYearWithDay returns the calendar year in which the fiscal year begins,
+// accounting for a non-first-of-month start day.
+func fiscalYearWithDay(now time.Time, fyStartMonth time.Month, fyStartDay int) int {
+	fyStartThisYear := time.Date(now.Year(), fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
+	if now.Before(fyStartThisYear) {
+		return now.Year() - 1
+	}
+	return now.Year()
 }
 
 // fiscalQuarterStart returns the year and month of the first day of the

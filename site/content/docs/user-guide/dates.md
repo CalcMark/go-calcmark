@@ -173,6 +173,16 @@ fiscal_year_starts: july
 ---
 ```
 
+You can also specify a start day for fiscal years that don't begin on the 1st:
+
+```yaml
+---
+fiscal_year_starts: July 15
+---
+```
+
+Only `Month` or `Month Day` are accepted — not full dates, not relative expressions, not years.
+
 With fiscal configuration:
 
 ```calcmark
@@ -182,7 +192,7 @@ fy_start = this fiscal year
 fy_end = end of this fiscal year
 ```
 
-Without the `fiscal_year_starts` frontmatter key, fiscal expressions produce an error: *"fiscal expressions require a 'fiscal_year_starts' frontmatter key"*.
+> **Note:** Without the `fiscal_year_starts` frontmatter key, fiscal expressions produce an error: *"fiscal expressions require a 'fiscal_year_starts' frontmatter key"*.
 
 Fiscal quarter numbering: FQ1 begins at the configured start month. With `fiscal_year_starts: july`: FQ1 = Jul-Sep, FQ2 = Oct-Dec, FQ3 = Jan-Mar, FQ4 = Apr-Jun.
 

@@ -25,7 +25,7 @@ type Interpreter struct {
 	env              *Environment
 	directive        DirectiveResolver
 	measurement      *units.MeasurementConfig
-	fiscalYearStarts *int // 1-12, nil if not configured
+	fiscalYearStarts *fiscalConfig // nil if not configured
 	timeFunc         func() time.Time
 }
 
@@ -68,11 +68,16 @@ func (interp *Interpreter) SetMeasurement(mc *units.MeasurementConfig) {
 	interp.measurement = mc
 }
 
-// SetFiscalYearStarts configures the first month of the fiscal year.
-// When set, fiscal expressions (FQ1, FY26, "this fiscal quarter") resolve
-// relative to this configuration. Month is 1-12 (January-December).
-func (interp *Interpreter) SetFiscalYearStarts(month int) {
-	interp.fiscalYearStarts = &month
+// fiscalConfig holds the fiscal year start month and day.
+type fiscalConfig struct {
+	month int // 1-12
+	day   int // 1-31
+}
+
+// SetFiscalYearStarts configures the start of the fiscal year.
+// Month is 1-12 (January-December), day is the start day (1-31, typically 1).
+func (interp *Interpreter) SetFiscalYearStarts(month, day int) {
+	interp.fiscalYearStarts = &fiscalConfig{month: month, day: day}
 }
 
 // resolveUnit maps a bare ambiguous unit name to its qualified form using

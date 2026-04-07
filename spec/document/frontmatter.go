@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/units"
@@ -95,10 +96,10 @@ type Frontmatter struct {
 	// Measurement configures how ambiguous unit names are interpreted (nil if not present).
 	Measurement *MeasurementFrontmatter
 
-	// FiscalYearStarts configures the first month of the fiscal year (nil if not set).
+	// FiscalYearStarts configures the start of the fiscal year (nil if not set).
 	// When set, fiscal expressions (FQ1, FY26, "this fiscal quarter") resolve relative
 	// to this configuration. When nil, fiscal expressions produce an error diagnostic.
-	FiscalYearStarts *int // 1-12, representing January-December
+	FiscalYearStarts *FiscalYearConfig
 
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
@@ -688,11 +689,11 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 
 	// Parse fiscal_year_starts directive
 	if raw.FiscalYearStarts != "" {
-		month, err := parseFiscalYearStarts(raw.FiscalYearStarts)
+		fc, err := parseFiscalYearStarts(raw.FiscalYearStarts)
 		if err != nil {
 			return nil, "", fmt.Errorf("frontmatter: %w", err)
 		}
-		fm.FiscalYearStarts = &month
+		fm.FiscalYearStarts = fc
 	}
 
 	// Capture non-CalcMark frontmatter keys in document order.
@@ -721,8 +722,16 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	return fm, remaining, nil
 }
 
-// parseFiscalYearStarts parses the fiscal_year_starts value (a month name) to a month number (1-12).
-func parseFiscalYearStarts(value string) (int, error) {
+// FiscalYearConfig holds the fiscal year start month and optional day.
+type FiscalYearConfig struct {
+	Month int // 1-12 (January-December)
+	Day   int // 1-31 (defaults to 1 if not specified)
+}
+
+// parseFiscalYearStarts parses the fiscal_year_starts value.
+// Accepts: "july", "jul", "July 15", "october 1", etc.
+// When only a month is given, day defaults to 1.
+func parseFiscalYearStarts(value string) (*FiscalYearConfig, error) {
 	monthNames := map[string]int{
 		"january": 1, "jan": 1, "february": 2, "feb": 2,
 		"march": 3, "mar": 3, "april": 4, "apr": 4,
@@ -732,11 +741,30 @@ func parseFiscalYearStarts(value string) (int, error) {
 		"december": 12, "dec": 12,
 	}
 
-	month, ok := monthNames[strings.ToLower(strings.TrimSpace(value))]
-	if !ok {
-		return 0, fmt.Errorf("fiscal_year_starts: invalid month name %q", value)
+	parts := strings.Fields(strings.TrimSpace(value))
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("fiscal_year_starts: empty value")
 	}
-	return month, nil
+
+	month, ok := monthNames[strings.ToLower(parts[0])]
+	if !ok {
+		return nil, fmt.Errorf("fiscal_year_starts: invalid month name %q", parts[0])
+	}
+
+	if len(parts) > 2 {
+		return nil, fmt.Errorf("fiscal_year_starts: expected 'Month' or 'Month Day' (e.g., 'july' or 'July 15'), got %q", value)
+	}
+
+	day := 1
+	if len(parts) == 2 {
+		d, err := strconv.Atoi(parts[1])
+		if err != nil || d < 1 || d > 31 {
+			return nil, fmt.Errorf("fiscal_year_starts: invalid day %q", parts[1])
+		}
+		day = d
+	}
+
+	return &FiscalYearConfig{Month: month, Day: day}, nil
 }
 
 // parseYAMLMapping parses YAML content and returns the root mapping node.

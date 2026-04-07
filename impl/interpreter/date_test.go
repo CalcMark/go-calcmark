@@ -1133,6 +1133,65 @@ func TestRelativeMonthExpressions(t *testing.T) {
 	}
 }
 
+// TestFiscalWithDayOffset tests fiscal_year_starts with a day offset (e.g., "July 15").
+// A fiscal year starting July 15 means FQ1 runs Jul 15 - Oct 14, not Jul 1 - Sep 30.
+func TestFiscalWithDayOffset(t *testing.T) {
+	tests := []struct {
+		name             string
+		clock            time.Time
+		fiscalStartMonth int
+		fiscalStartDay   int
+		input            string
+		wantYear         int
+		wantMonth        int
+		wantDay          int
+	}{
+		// FY starts July 15. On Aug 1, "this fiscal year" = Jul 15 of current year
+		{"this fiscal year Jul 15 start", time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC), 7, 15,
+			"d = this fiscal year\n", 2026, 7, 15},
+		// On Jul 10 (before Jul 15), "this fiscal year" = Jul 15 of PREVIOUS year
+		{"this fiscal year before start", time.Date(2026, 7, 10, 0, 0, 0, 0, time.UTC), 7, 15,
+			"d = this fiscal year\n", 2025, 7, 15},
+		// "end of this fiscal year" from Aug = Jul 14 of next year (day before next FY start)
+		{"end of this fiscal year Jul 15", time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC), 7, 15,
+			"d = end of this fiscal year\n", 2027, 7, 14},
+		// Month-only (day=1) still works — backward compatible
+		{"backward compat month only", time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC), 7, 1,
+			"d = this fiscal year\n", 2026, 7, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
+			interp.SetFiscalYearStarts(tt.fiscalStartMonth, tt.fiscalStartDay)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
 // TestAgoExpressions tests "<N> <unit> ago" syntax.
 func TestAgoExpressions(t *testing.T) {
 	clock := testClock // Wednesday, April 8, 2026 14:30
@@ -1537,7 +1596,7 @@ func TestFiscalExpressions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			interp := newTestInterpreterWithClock(tt.clock)
-			interp.SetFiscalYearStarts(tt.fiscalStartMonth)
+			interp.SetFiscalYearStarts(tt.fiscalStartMonth, 1)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -1777,7 +1836,7 @@ func TestFiscalYearAndQuarterCompleteCoverage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			interp := newTestInterpreterWithClock(tt.clock)
-			interp.SetFiscalYearStarts(tt.fiscalStartMonth)
+			interp.SetFiscalYearStarts(tt.fiscalStartMonth, 1)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
