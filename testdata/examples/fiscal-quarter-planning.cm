@@ -2,76 +2,70 @@
 fiscal_year_starts: july
 ---
 
-# FY2025 Budget: Quarterly Engineering Spend
+# FY2026 Budget: Quarterly Engineering Spend
 
-An Australian SaaS company allocates its annual engineering budget across fiscal quarters. The fiscal year runs July 2024 through June 2025 — a period that includes the Feb 29 2024 leap day in FQ3.
-
-Because each fiscal quarter has a different number of calendar days, the daily run rate varies even when the quarterly budget is flat. This matters for cash flow forecasting, contractor planning, and mid-quarter reforecasts.
+An Australian SaaS company allocates its $4.8M annual engineering budget across fiscal quarters. The fiscal year runs July through June.
 
 ## Annual Budget
 
 annual_eng_budget = $4,800,000
 quarterly_budget = $4,800,000 / 4
 
-## Fiscal Quarter Boundaries
+## Fiscal Quarter Dates
 
-FQ1 starts July 1. Each quarter is three months, but not all months are equal.
-
-fq1_start = Jul 1 2024
-fq1_end = Oct 1 2024
-fq1_days = Oct 1 2024 - Jul 1 2024
-
-fq2_start = Oct 1 2024
-fq2_end = Jan 1 2025
-fq2_days = Jan 1 2025 - Oct 1 2024
-
-fq3_start = Jan 1 2025
-fq3_end = Apr 1 2025
-fq3_days = Apr 1 2025 - Jan 1 2025
-
-fq4_start = Apr 1 2025
-fq4_end = Jul 1 2025
-fq4_days = Jul 1 2025 - Apr 1 2025
+fq1_start = FQ1
+fq1_end = end of FQ1
+fq2_start = FQ2
+fq2_end = end of FQ2
+fq3_start = FQ3
+fq3_end = end of FQ3
+fq4_start = FQ4
+fq4_end = end of FQ4
 
 ## Daily Run Rates
 
-With a flat $1.2M per quarter, the daily cost varies by quarter length. FQ3 includes February — a shorter month, and in FY2024 it was a leap year February.
+Same budget, different day counts per quarter:
 
-fq1_daily = $1,200,000 / 92
-fq2_daily = $1,200,000 / 92
-fq3_daily = $1,200,000 / 90
-fq4_daily = $1,200,000 / 91
+fq1_daily = quarterly_budget / 92
+fq2_daily = quarterly_budget / 92
+fq3_daily = quarterly_budget / 90
+fq4_daily = quarterly_budget / 91
+
+## Calendar vs. Fiscal
+
+Calendar Q3 = Fiscal Q1 with a July fiscal year:
+
+cal_q3 = Q3
+fiscal_q1 = FQ1
+
+## Fiscal Year Boundaries
+
+fy_start = this fiscal year
+fy_end = end of this fiscal year
 
 ## Leap Year Impact
 
-The previous FY2024 had FQ3 spanning Jan-Mar 2024 with a leap day. Compare the two:
+Compare FQ3 (Jan-Mar) across leap and non-leap years:
 
-fy24_fq3_days = Apr 1 2024 - Jan 1 2024
-fy25_fq3_days = Apr 1 2025 - Jan 1 2025
-leap_day_difference = Apr 1 2024 - Jan 1 2024 - (Apr 1 2025 - Jan 1 2025)
+fy24_fq3 = Apr 1 2024 - Jan 1 2024
+fy25_fq3 = Apr 1 2025 - Jan 1 2025
+leap_difference = Apr 1 2024 - Jan 1 2024 - (Apr 1 2025 - Jan 1 2025)
 
 ## Mid-Quarter Reforecast
 
-It is Oct 15 2024. FQ2 is 14 days in. How much budget remains?
+14 days into FQ2:
 
-fq2_elapsed = Oct 15 2024 - Oct 1 2024
-fq2_spent = $1,200,000 / 92 * 14
-fq2_remaining = $1,200,000 - $1,200,000 / 92 * 14
+fq2_spent = quarterly_budget / 92 * 14
+fq2_remaining = quarterly_budget - fq2_spent
 
-## Contractor Ramp Timeline
-
-A new contractor team starts Jan 15 2025 (mid-FQ3) and ramps to full capacity by Mar 1 2025 — a 45-day ramp.
+## Contractor Ramp
 
 contractor_start = Jan 15 2025
 full_capacity = Jan 15 2025 + 45 days
-ramp_in_fq3 = Apr 1 2025 - (Jan 15 2025 + 45 days)
 contractor_monthly = $15,000
-ramp_months = 1.5
 ramp_cost = $15,000 * 1.5
-full_rate_days = Apr 1 2025 - (Jan 15 2025 + 45 days)
 
 ## Key Dates
 
-board_review = Jan 15 2025 + 3 months
-fiscal_year_end = Jul 1 2025 - 1 day
-budget_lock = Jul 1 2025 - 2 weeks
+board_review = FQ3 + 15 days
+budget_lock = end of this fiscal year - 2 weeks
