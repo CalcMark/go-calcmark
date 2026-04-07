@@ -21,6 +21,13 @@ The unique wedge: **plain-text source of truth + single-binary self-hosting + ca
 - R4. Beautiful markdown rendering — tables, headings, prose, interpolated values all render with high visual quality.
 - R5. Single-user editing for MVP.
 
+**Semantic Editor Intelligence (the killer feature)**
+
+- R18. **Interpolation autosuggest**: typing `{{ ` in any markdown block triggers a dropdown of all defined CalcMark variables from anywhere in the document. Suggestions include variable name, current value, and a natural language description (e.g., "sum of hc column in people table" or "total project cost: $1.2M").
+- R19. **Calc-table preview**: when a user clicks a CalcMark block that references a named table, the table renders inline as a mini-spreadsheet showing computed column values overlaid on the source data. The user sees inputs and outputs together without switching context.
+- R20. **Visual table editor**: markdown tables can be edited visually — drag to reorder columns, click cells to edit values, add/remove rows. The editor produces valid markdown pipe table syntax. When a table has a CalcMark directive, editing a cell triggers re-evaluation of dependent calculations.
+- R21. **Fluid prose-calculation boundary**: the editor understands the document semantically. Editing flows naturally between prose, calculations, and data without hard modal switches. CalcMark diagnostics, autosuggest, and documentation appear contextually wherever the cursor is — in a calc block, in an interpolation tag, or in a table cell.
+
 **Storage and State**
 
 - R6. Each document is stored as its `.cm` source text plus metadata (owner, timestamps). The source text is the single source of truth.
@@ -45,8 +52,10 @@ The unique wedge: **plain-text source of truth + single-binary self-hosting + ca
 
 **Deployment**
 
-- R14. Single Go binary that serves the web UI, evaluates CalcMark, and stores documents in SQLite. Zero external infrastructure required. Deploy to a VPS, Docker, or fly.io.
+- R14. Single Go binary (`cmw`) that serves the web UI, evaluates CalcMark, and stores documents in SQLite. Zero external infrastructure required. Deploy to a VPS, Docker, or fly.io. Works identically locally: `cmw start --port 3141` and start working.
 - R15. API-first: the web UI communicates with the backend via HTTP. Clean package separation in Go enables future extraction if needed, but no formal API versioning in MVP.
+- R15a. `cmw backup` command: copies the SQLite database to a destination (local path, S3, etc.). For continuous backup in production, Litestream streams WAL changes. For local use, `cmw backup ./my-backup/` is enough.
+- R15b. Separate project and binary (`CalcMark/calcmark-web`). Consumes `go-calcmark` as a library. Own release cycle, own deployment. Named tables is NOT a prerequisite — the web product ships with current CalcMark capabilities and gains table support when it lands in the library.
 
 **Evaluation**
 
