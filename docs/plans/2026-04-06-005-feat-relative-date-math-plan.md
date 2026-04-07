@@ -228,6 +228,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 **Approach:**
 - Add `TimeFunc func() time.Time` to the `Interpreter` struct, defaulting to `time.Now` in the constructor
 - Replace `time.Now()` call in `evalRelativeDateLiteral` with `i.TimeFunc()`
+- **Also address `types.NewDate` clock leak:** `spec/types/date.go:18` calls `time.Now().Year()` when year is 0 (for date literals like `Dec 25` without a year). Since `spec` cannot depend on `impl`, add a `NewDateWithYear(month, day, defaultYear)` variant or pass the year explicitly from `evalDateLiteral` using `i.TimeFunc().Year()`. This ensures year-less date literals also respect the pinned clock
 - Add a test helper `newTestInterpreterWithClock(t time.Time)` that returns an interpreter with a fixed clock
 - Convert existing date tests to use pinned clocks where they currently use `time.Now()` at test start
 - Unskip the 9 `TestExtendedRelativeDates` test cases — they will fail with "not implemented" errors, confirming the test infrastructure works. Unit 5 will implement the evaluation to make them pass
@@ -310,7 +311,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
   - `week` / `weeks` → `time.AddDate(0, 0, N*7)`, result `HasTime: false`
   - `day` / `days` → `time.AddDate(0, 0, N)`, result `HasTime: false`
   - `hour` / `hours`, `minute` / `minutes`, `second` / `seconds`, sub-second → `time.Add(duration)`, result `HasTime: true`
-- For compound durations: apply components sequentially in descending unit order (year → month → week → day → hour → minute → second). `HasTime: true` if any sub-day component is present
+- For compound durations: the lexer already tokenizes compound durations (e.g., `"3:week:4:day"`) but the parser currently discards all but the first component — `DurationLiteral` has single `Value`/`Unit` fields. **Extend `DurationLiteral` to carry multiple components** (e.g., `Components []DurationComponent` where each has Value+Unit), or introduce a `CompoundDurationLiteral` node. Apply components sequentially in descending unit order (year → month → week → day → hour → minute → second). `HasTime: true` if any sub-day component is present
 - Preserve `durationToDays` for the `Date - Date` path (still returns days) but mark it as legacy
 - Keep `evalDateDateOperation` unchanged — date subtraction still returns Duration in days
 
@@ -420,7 +421,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
   - `this month` → 1st of current month. `next month` → 1st of next month via `AddDate(0,1,0)`. `last month` → 1st of previous month via `AddDate(0,-1,0)`
   - `this year` → Jan 1. `next year` → Jan 1 + 1 year. `last year` → Jan 1 - 1 year
 - **Months (R3):** Add 3 new token types: `DATE_THIS_MONTH_NAME`, `DATE_NEXT_MONTH_NAME`, `DATE_LAST_MONTH_NAME`. Add 36 entries to `RelativeDateKeywords` (this/next/last × 12 months + abbreviations). Evaluate: `next April` = April 1 of next occurrence strictly after current month. `this April` in April = April 1 this year. `last April` = April 1 of most recent past occurrence
-- **Month+Day (R4):** After parsing `DATE_NEXT_MONTH_NAME`, lookahead for a number literal. If present, use that as the day. `next April 25` → April 25 of next occurrence. `next February 29` → forward-scan to next leap year: use `time.Date(year, 2, 29, ...)`, check if result month is still February (Go normalizes invalid dates)
+- **Month+Day (R4):** After parsing `DATE_NEXT_MONTH_NAME`, lookahead for a number literal. If present, use that as the day. `next April 25` → April 25 of next occurrence. `next February 29` → forward-scan to next leap year: use `time.Date(year, 2, 29, ...)`, check if result month is still February (Go normalizes invalid dates). **No year component in relative month+day expressions** — `next April 25 2028` is NOT valid. If the user wants a specific year, they should use the existing date literal syntax `April 25 2028`. The relative modifier (`next/last/this`) implies forward/backward scanning, which is incompatible with a fixed year
 
 **Execution note:** Test-first. The 9 `TestExtendedRelativeDates` cases were unskipped in Unit 1 (currently failing). Implement evaluation to make them pass, then add month-relative tests.
 
@@ -467,7 +468,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 - Create: `testdata/spec/valid/features/ago_expressions.cm`
 
 **Approach:**
-- **AGO (R5):** Add `"ago"` → `AGO` token to `DateKeywords`. In parser, after matching `DURATION_LITERAL`, check for `AGO` token (similar to `FROM` check). Desugar `2 weeks ago` into `BinaryOp("-", now, DurationLiteral(2, "week"))` where `now` is `RelativeDateLiteral("now")`
+- **AGO (R5):** Add `"ago"` → `AGO` token to `DateKeywords`. In parser, after matching `DURATION_LITERAL`, check for `AGO` token (similar to `FROM` check). Desugar `2 weeks ago` into `BinaryOp("-", now, DurationLiteral(2, "week"))` where `now` is a **synthetic** `RelativeDateLiteral("now")` created by the parser (not from a token). The evaluator already handles `"now"` in its switch — this is parser-internal desugaring, not a new token type
 - **Extended FROM (R6):** Expand `parseFromTarget()` to accept all new relative date token types from Units 4–5 (DATE_WEEKDAY, DATE_THIS_WEEKDAY, DATE_NEXT_WEEKDAY, DATE_LAST_WEEKDAY, DATE_THIS_MONTH_NAME, DATE_NEXT_MONTH_NAME, DATE_LAST_MONTH_NAME, and the 9 existing DATE_THIS/NEXT/LAST_WEEK/MONTH/YEAR) in addition to today/tomorrow/yesterday/date-literal. Quarter tokens from Unit 7 can be added to `parseFromTarget` when Unit 7 lands — Unit 6 does not depend on Unit 7
 - Register `ago` in `isNaturalSyntaxKeyword()` to prevent it being consumed as a unit name
 
@@ -518,7 +519,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 **Approach:**
 - **Calendar quarters (R9):** Add `this/next/last quarter` to `RelativeDateKeywords` with 3 new tokens. Evaluate: `this quarter` → first day of current Q (Jan/Apr/Jul/Oct). Quarter = `(month - 1) / 3`
 - **Q1–Q4 notation (R12):** New tokenizer function `tryReadQuarterNotation()`: recognizes `Q` followed by `1`-`4`. Produces `CALENDAR_QUARTER_LITERAL` token with value `"1"`–`"4"`. Resolves to first day of that quarter in current year
-- **Fiscal frontmatter (R10):** Add `FiscalYearStarts *time.Month` to `Frontmatter`. Parse in `ParseFrontmatter` following `parseMeasurementConfig` pattern. Validate: must be a valid month name
+- **Fiscal frontmatter (R10):** Add `FiscalYearStarts *time.Month` to `Frontmatter` struct. Parse in `ParseFrontmatter` following `parseMeasurementConfig` pattern. Validate: must be a valid month name. **Thread to evaluator:** add `FiscalYearStarts *time.Month` field to the `Interpreter` struct (same pattern as `measurement` config). Set during document initialization alongside measurement config. Fiscal expression evaluation reads this field directly
 - **Fiscal quarters (R12):** `FQ1`–`FQ4` tokenized as `FISCAL_QUARTER_LITERAL`. Evaluation reads `fiscal_year_starts` from document frontmatter. FQ1 starts at configured month. Error diagnostic (R11) if frontmatter not set
 - **FY notation (R12):** `FY26`/`FY2026` tokenized as `FISCAL_YEAR_LITERAL`. Resolves to first day of fiscal year (e.g., FY27 with July start = July 1 2026)
 - **CY notation (R12):** `CY2001`/`CY01` tokenized as `CALENDAR_YEAR_LITERAL`. Resolves to Jan 1 of that year. Two-digit years: `CY01` = 2001 (21st century default)
@@ -739,6 +740,7 @@ DURATION        := NUMBER UNIT ("and" NUMBER UNIT)*
 - Add worked examples to the documentation site showing financial modeling with fiscal quarters
 - Update `cm help` output via feature registry additions
 - Changelog entry noting the calendar-correctness improvement for month/year arithmetic (behavior change)
+- Changelog entry noting 7 new reserved words (Monday–Sunday) that can no longer be used as variable names
 
 ## Sources & References
 
