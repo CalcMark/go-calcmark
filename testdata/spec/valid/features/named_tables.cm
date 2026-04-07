@@ -1,0 +1,26 @@
+# Named Tables: Parse Validation
+# These expressions should parse successfully (syntax is valid).
+
+## Dot access expressions
+
+x = sales.revenue
+y = data.col_name
+z = my_table.field
+
+## Dot access in expressions
+
+result = a.x + b.y
+product = table.col1 * table.col2
+scaled = data.values * 2
+
+## Dot access in function calls
+
+total = sum(data.values)
+average = avg(scores.grade)
+smallest = min(data.col)
+largest = max(data.col)
+n = count(data.col)
+
+## Chained operations
+
+total = sum(rates.hourly * rates.hc)

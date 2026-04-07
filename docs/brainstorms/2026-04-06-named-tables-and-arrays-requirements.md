@@ -102,6 +102,8 @@ The canonical use cases:
 
 **Computed rows and columns**: v1 requires users to define calculations in calc blocks and use `{{interpolation}}` to display results. A future version could automatically bolt computed values onto tables — if a calc block clearly references a table (e.g., `sum(data.b)`), CalcMark could inject a summary row into the rendered output without the user adding any extra markup. The pre-processing pipeline already transforms TextBlocks before markdown-to-HTML rendering (interpolation does this today), so the architecture supports it. The key principle: avoid inventing CalcMark-specific magic syntax. If the computation is obvious from context, just do it.
 
+**Cross-table lookups**: The common pattern of a rates table + staff roster requires looking up values across tables. Two functions would cover this without recreating SQL: `lookup(team.level, rates.level, rates.hourly)` (match a column, return corresponding values — like VLOOKUP) and `countif(team.level, "Senior")` (count matching elements). v1's workaround is putting derived values directly in the table. The v1 Array type and element-wise design should not block adding these functions later — they take arrays in and return arrays/scalars out, same as `sum()`.
+
 **NL syntax for array functions**: `sum of rates.rate` reads naturally, but `sum of rates.rate * rates.hc` is ambiguous. NL syntax for array-accepting functions is deferred until the interaction with element-wise expressions is better understood.
 
 ## Next Steps

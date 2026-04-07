@@ -1,0 +1,6 @@
+# Named Tables: Parse Errors
+# These expressions should fail at parse time.
+
+## Nested dot access (only one level allowed)
+
+x = a.b.c

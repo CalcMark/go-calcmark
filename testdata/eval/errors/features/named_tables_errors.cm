@@ -1,0 +1,124 @@
+# Named Tables: Error Cases
+# Each section demonstrates an error that should produce a diagnostic.
+
+## Undefined table reference
+
+x = missing_table.col
+
+---
+
+## Undefined column reference
+
+<!-- table: data (a, b) -->
+| A  | B  |
+|----|-----|
+| 10 | 20 |
+
+---
+
+x = data.nonexistent
+
+---
+
+## Column count mismatch (directive says 2, table has 3)
+
+<!-- table: wrong (x, y) -->
+| A  | B  | C  |
+|----|----|----|
+| 1  | 2  | 3  |
+
+---
+
+## Mixed types in a column
+
+<!-- table: mixed (val) -->
+| Value |
+|-------|
+| $100  |
+| 50%   |
+
+---
+
+## Element-wise length mismatch
+
+<!-- table: short (a) -->
+| A |
+|---|
+| 1 |
+| 2 |
+
+---
+
+<!-- table: long (b) -->
+| B |
+|---|
+| 1 |
+| 2 |
+| 3 |
+
+---
+
+bad = short.a + long.b
+
+---
+
+## Duplicate table name
+
+<!-- table: dup (x) -->
+| X |
+|---|
+| 1 |
+
+---
+
+<!-- table: dup (y) -->
+| Y |
+|---|
+| 2 |
+
+---
+
+## Empty cell in table
+
+<!-- table: gaps (a, b) -->
+| A  | B  |
+|----|-----|
+| 10 |    |
+| 20 | 30 |
+
+---
+
+## Dot access on non-table variable
+
+scalar = 42
+
+---
+
+x = scalar.field
+
+---
+
+## Mixed array and scalar in sum
+
+<!-- table: nums (v) -->
+| V |
+|---|
+| 1 |
+| 2 |
+
+---
+
+bad_sum = sum(nums.v, 10)
+
+---
+
+## Nested dot access
+
+<!-- table: t (a) -->
+| A |
+|---|
+| 1 |
+
+---
+
+bad = t.a.something

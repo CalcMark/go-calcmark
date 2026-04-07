@@ -1,0 +1,19 @@
+# Named Tables: Consulting SOW
+# The canonical use case — a table of roles, rates, and headcount
+# that computes line costs and grand total without data duplication.
+
+<!-- table: team (role, rate, hc) -->
+| Role     | Hourly Rate | Headcount |
+|----------|-------------|-----------|
+| Senior   | $250/hr     | 3         |
+| Mid      | $175/hr     | 5         |
+| Junior   | $120/hr     | 4         |
+
+---
+
+line_costs = team.rate * team.hc
+total_cost = sum(line_costs)
+avg_rate = avg(team.rate)
+team_size = count(team.hc)
+highest_rate = max(team.rate)
+lowest_rate = min(team.rate)
