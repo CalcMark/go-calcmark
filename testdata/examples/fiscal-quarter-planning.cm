@@ -62,10 +62,13 @@ fq2_remaining = quarterly_budget - fq2_spent
 
 ## Contractor Ramp
 
+A contractor team starts mid-FQ3 (Jan-Mar) and ramps over 45 days. How many full days remain in FQ3 after ramp?
+
 contractor_start = Jan 15 2025
-full_capacity = Jan 15 2025 + 45 days
-contractor_monthly = $15,000
-ramp_cost = $15,000 * 1.5
+ramp_end = contractor_start + 45 days
+fq3_end_date = Mar 31 2025
+full_rate_days = fq3_end_date - ramp_end
+days_in_fq3 = FQ3 in days
 
 ## Key Dates
 
