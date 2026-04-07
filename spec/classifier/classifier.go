@@ -139,6 +139,26 @@ func containsSpecialKeywords(tokens []lexer.Token) bool {
 	return false
 }
 
+// containsDateKeywords checks if token list contains date-related keywords or duration literals.
+func containsDateKeywords(tokens []lexer.Token) bool {
+	for _, token := range tokens {
+		switch token.Type {
+		case lexer.DATE_TODAY, lexer.DATE_TOMORROW, lexer.DATE_YESTERDAY,
+			lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
+			lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
+			lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
+			lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
+			lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
+			lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
+			lexer.DATE_THIS_FISCAL_QUARTER, lexer.DATE_NEXT_FISCAL_QUARTER, lexer.DATE_LAST_FISCAL_QUARTER,
+			lexer.DATE_THIS_FISCAL_YEAR, lexer.DATE_NEXT_FISCAL_YEAR, lexer.DATE_LAST_FISCAL_YEAR,
+			lexer.AGO, lexer.DATE_LITERAL, lexer.DURATION_LITERAL:
+			return true
+		}
+	}
+	return false
+}
+
 // containsDirective checks if token list contains a directive reference (@scale, @globals.x)
 func containsDirective(tokens []lexer.Token) bool {
 	for _, token := range tokens {
@@ -312,7 +332,20 @@ func ClassifyLine(line string, env IdentifierResolver) (LineType, error) {
 		}
 	}
 
-	// 5c. Check for directive references (@scale, @globals.x)
+	// 5c. Check for date keywords (today, next Friday, this quarter, etc.)
+	if containsDateKeywords(contentTokens) {
+		nodes, err := parser.Parse(line)
+		if err != nil {
+			return Markdown, nil
+		}
+
+		// Must parse to exactly one statement
+		if len(nodes) == 1 {
+			return Calculation, nil
+		}
+	}
+
+	// 5d. Check for directive references (@scale, @globals.x)
 	if containsDirective(contentTokens) {
 		nodes, err := parser.Parse(line)
 		if err != nil {
