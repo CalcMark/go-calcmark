@@ -69,6 +69,20 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		return converted, nil
 	}
 
+	// Period-to-duration conversion: "Q1 in days", "this month in weeks"
+	// When a Date comes from a period expression, compute its duration and convert.
+	if _, ok := result.(*types.Date); ok {
+		dur, err := interp.periodToDuration(u.Quantity)
+		if err != nil {
+			return nil, err
+		}
+		converted, err := dur.Convert(targetUnit)
+		if err != nil {
+			return nil, fmt.Errorf("cannot convert period duration: %w", err)
+		}
+		return converted, nil
+	}
+
 	// Fraction with unit: convert to Duration or Quantity before proceeding.
 	// This handles "1/2 hour in minutes" and "1/4 cup in ml".
 	if frac, ok := result.(*types.Fraction); ok && frac.Unit != "" {
