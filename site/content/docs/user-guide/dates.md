@@ -196,6 +196,33 @@ fy_end = end of this fiscal year
 
 Fiscal quarter numbering: FQ1 begins at the configured start month. With `fiscal_year_starts: july`: FQ1 = Jul-Sep, FQ2 = Oct-Dec, FQ3 = Jan-Mar, FQ4 = Apr-Jun.
 
+### Quarter and Year Shorthand {#notation}
+
+CalcMark supports compact notation for quarters and years:
+
+```calcmark
+q1_start = Q1
+q4_start = Q4
+eoq2 = end of Q2
+```
+
+`Q1` through `Q4` are **always calendar quarters**: Q1 = Jan, Q2 = Apr, Q3 = Jul, Q4 = Oct of the current year.
+
+With fiscal configuration, fiscal notation is available:
+
+```calcmark
+fq1_start = FQ1
+fq3_start = FQ3
+fy_start = FY2027
+cy_start = CY2026
+```
+
+- `FQ1`-`FQ4` — fiscal quarters (requires `fiscal_year_starts`)
+- `FY27` or `FY2027` — first day of fiscal year 2027. **FY is labeled by the year it ends in** (Microsoft/Australian convention). With `fiscal_year_starts: july`, FY2027 = July 1, 2026 through June 30, 2027
+- `CY26` or `CY2026` — January 1 of calendar year 2026. Disambiguates a year from a bare number (`2026` is the number 2,026; `CY2026` is January 1, 2026)
+
+All notation is case-insensitive: `q1`, `fq3`, `fy27`, `cy2026` all work.
+
 ### Leap Year Handling {#leap-years}
 
 CalcMark delegates all calendar math to Go's `time` package for correct leap year handling:

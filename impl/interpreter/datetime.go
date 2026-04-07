@@ -404,15 +404,22 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		if interp.fiscalYearStarts == nil {
 			return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
 		}
-		year, err := strconv.Atoi(value)
+		fyLabel, err := strconv.Atoi(value)
 		if err != nil {
 			return nil, fmt.Errorf("invalid fiscal year: FY%s", value)
 		}
-		if year < 100 {
-			year += 2000 // 2-digit: FY26 = 2026
+		if fyLabel < 100 {
+			fyLabel += 2000 // 2-digit: FY27 = 2027
 		}
 		fc := interp.fiscalYearStarts
-		return types.NewDateFromTime(time.Date(year, time.Month(fc.month), fc.day, 0, 0, 0, 0, time.UTC)), nil
+		// FY is labeled by the year it ENDS in (Microsoft convention).
+		// FY2027 with July start = starts Jul 1, 2026 (ends Jun 30, 2027).
+		// When fiscal starts in January, FY label = start year (no offset).
+		startYear := fyLabel
+		if fc.month > 1 {
+			startYear = fyLabel - 1
+		}
+		return types.NewDateFromTime(time.Date(startYear, time.Month(fc.month), fc.day, 0, 0, 0, 0, time.UTC)), nil
 
 	case "CY":
 		year, err := strconv.Atoi(value)

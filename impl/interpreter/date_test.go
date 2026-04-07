@@ -1986,12 +1986,17 @@ func TestFiscalYearNotation(t *testing.T) {
 		wantMonth int
 		wantDay   int
 	}{
-		{"FY2026 full", "d = FY2026\n", 2026, 7, 1},
-		{"FY2025 full", "d = FY2025\n", 2025, 7, 1},
-		{"FY26 short", "d = FY26\n", 2026, 7, 1},
-		{"FY25 short", "d = FY25\n", 2025, 7, 1},
-		{"fy2026 lowercase", "d = fy2026\n", 2026, 7, 1},
-		{"fy26 lowercase", "d = fy26\n", 2026, 7, 1},
+		// FY = year it ENDS in (Microsoft convention).
+		// FY2027 with July start = Jul 1, 2026 (ends Jun 30, 2027)
+		// FY2026 with July start = Jul 1, 2025 (ends Jun 30, 2026)
+		{"FY2027 (ends 2027)", "d = FY2027\n", 2026, 7, 1},
+		{"FY2026 (ends 2026)", "d = FY2026\n", 2025, 7, 1},
+		{"FY27 short", "d = FY27\n", 2026, 7, 1},
+		{"FY26 short", "d = FY26\n", 2025, 7, 1},
+		{"fy2027 lowercase", "d = fy2027\n", 2026, 7, 1},
+		{"fy27 lowercase", "d = fy27\n", 2026, 7, 1},
+		// FY with January start: FY = CY (no offset)
+		// Tested separately via TestFiscalYearJanuaryStart
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
