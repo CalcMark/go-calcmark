@@ -14,6 +14,7 @@ This guide covers everything you need to use CalcMark effectively -- from editor
 - [Embedded Mode](#embedded-mode) -- CalcMark blocks inside standard Markdown files
 - [Sharing with GitHub Gist](#sharing-gist) -- Share and open documents via GitHub Gist
 - [Language Features](#language-features)
+  - [Dates & Time](dates/) -- Date creation, relative dates, quarters, fiscal periods, `ago`/`from`, `end of`
   - [Units & Measurement](units/) -- Physical units, conversion, and measurement conventions
   - [Currency & Exchange Rates](currency/) -- Exchange rates in frontmatter
   - [Frontmatter Directives](frontmatter/) -- Globals, directives, templates, scale and convert
@@ -210,6 +211,7 @@ Open the command menu, select **Open From Gist**, then paste a Gist URL or ID. C
 
 The CalcMark language is covered in detail across these sub-pages:
 
+- **[Dates & Time](dates/)** -- Date creation, relative dates (`next Friday`, `this quarter`), fiscal periods, `ago`/`from`, `start of`/`end of`, calendar-correct month arithmetic
 - **[Units & Measurement](units/)** -- Supported units, unit conversion with `in`/`as`, and measurement conventions (US, Imperial, Troy)
 - **[Currency & Exchange Rates](currency/)** -- Currency conversion using frontmatter exchange rates
 - **[Frontmatter Directives](frontmatter/)** -- Global variables, `@scale`/`@globals` references, template interpolation, and document-wide scale/convert transforms
