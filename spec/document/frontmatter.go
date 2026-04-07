@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/CalcMark/go-calcmark/spec/units"
@@ -94,6 +95,11 @@ type Frontmatter struct {
 
 	// Measurement configures how ambiguous unit names are interpreted (nil if not present).
 	Measurement *MeasurementFrontmatter
+
+	// FiscalYearStarts configures the start of the fiscal year (nil if not set).
+	// When set, fiscal expressions (FQ1, FY26, "this fiscal quarter") resolve relative
+	// to this configuration. When nil, fiscal expressions produce an error diagnostic.
+	FiscalYearStarts *FiscalYearConfig
 
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
@@ -318,11 +324,12 @@ func (f *Frontmatter) HasExchangeRate(key string) bool {
 // frontmatterYAML is the intermediate struct for YAML unmarshaling.
 // This keeps the YAML structure separate from the normalized Frontmatter type.
 type frontmatterYAML struct {
-	Exchange    map[string]float64 `yaml:"exchange"`
-	Globals     map[string]string  `yaml:"globals"`
-	Scale       any                `yaml:"scale"`
-	ConvertTo   any                `yaml:"convert_to"`
-	Measurement any                `yaml:"measurement"`
+	Exchange         map[string]float64 `yaml:"exchange"`
+	Globals          map[string]string  `yaml:"globals"`
+	Scale            any                `yaml:"scale"`
+	ConvertTo        any                `yaml:"convert_to"`
+	Measurement      any                `yaml:"measurement"`
+	FiscalYearStarts string             `yaml:"fiscal_year_starts"`
 }
 
 // parseScaleConfig parses the scale field which can be a scalar number or a map
@@ -680,10 +687,19 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.Measurement = mc
 	}
 
+	// Parse fiscal_year_starts directive
+	if raw.FiscalYearStarts != "" {
+		fc, err := parseFiscalYearStarts(raw.FiscalYearStarts)
+		if err != nil {
+			return nil, "", fmt.Errorf("frontmatter: %w", err)
+		}
+		fm.FiscalYearStarts = fc
+	}
+
 	// Capture non-CalcMark frontmatter keys in document order.
 	knownKeys := map[string]bool{
 		"exchange": true, "globals": true, "scale": true,
-		"convert_to": true, "measurement": true,
+		"convert_to": true, "measurement": true, "fiscal_year_starts": true,
 	}
 	extraOrder := extractYAMLTopLevelKeyOrder(yamlContent)
 	var rawMap map[string]any
@@ -704,6 +720,51 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	}
 
 	return fm, remaining, nil
+}
+
+// FiscalYearConfig holds the fiscal year start month and optional day.
+type FiscalYearConfig struct {
+	Month int // 1-12 (January-December)
+	Day   int // 1-31 (defaults to 1 if not specified)
+}
+
+// parseFiscalYearStarts parses the fiscal_year_starts value.
+// Accepts: "july", "jul", "July 15", "october 1", etc.
+// When only a month is given, day defaults to 1.
+func parseFiscalYearStarts(value string) (*FiscalYearConfig, error) {
+	monthNames := map[string]int{
+		"january": 1, "jan": 1, "february": 2, "feb": 2,
+		"march": 3, "mar": 3, "april": 4, "apr": 4,
+		"may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7,
+		"august": 8, "aug": 8, "september": 9, "sep": 9, "sept": 9,
+		"october": 10, "oct": 10, "november": 11, "nov": 11,
+		"december": 12, "dec": 12,
+	}
+
+	parts := strings.Fields(strings.TrimSpace(value))
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("fiscal_year_starts: empty value")
+	}
+
+	month, ok := monthNames[strings.ToLower(parts[0])]
+	if !ok {
+		return nil, fmt.Errorf("fiscal_year_starts: invalid month name %q", parts[0])
+	}
+
+	if len(parts) > 2 {
+		return nil, fmt.Errorf("fiscal_year_starts: expected 'Month' or 'Month Day' (e.g., 'july' or 'July 15'), got %q", value)
+	}
+
+	day := 1
+	if len(parts) == 2 {
+		d, err := strconv.Atoi(parts[1])
+		if err != nil || d < 1 || d > 31 {
+			return nil, fmt.Errorf("fiscal_year_starts: invalid day %q", parts[1])
+		}
+		day = d
+	}
+
+	return &FiscalYearConfig{Month: month, Day: day}, nil
 }
 
 // parseYAMLMapping parses YAML content and returns the root mapping node.

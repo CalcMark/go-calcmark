@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -21,23 +22,38 @@ type DirectiveResolver interface {
 // Interpreter executes validated AST nodes and produces typed results.
 // This is a Go-specific implementation of CalcMark execution.
 type Interpreter struct {
-	env         *Environment
-	directive   DirectiveResolver
-	measurement *units.MeasurementConfig
+	env              *Environment
+	directive        DirectiveResolver
+	measurement      *units.MeasurementConfig
+	fiscalYearStarts *fiscalConfig // nil if not configured
+	timeFunc         func() time.Time
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
 func NewInterpreter() *Interpreter {
 	return &Interpreter{
-		env: NewEnvironment(),
+		env:      NewEnvironment(),
+		timeFunc: time.Now,
 	}
 }
 
 // NewInterpreterWithEnv creates a new interpreter with a pre-populated environment.
 func NewInterpreterWithEnv(env *Environment) *Interpreter {
 	return &Interpreter{
-		env: env,
+		env:      env,
+		timeFunc: time.Now,
 	}
+}
+
+// SetTimeFunc overrides the clock used for date evaluation.
+// Useful for deterministic testing with pinned dates.
+func (interp *Interpreter) SetTimeFunc(f func() time.Time) {
+	interp.timeFunc = f
+}
+
+// now returns the current time from the configured clock.
+func (interp *Interpreter) now() time.Time {
+	return interp.timeFunc()
 }
 
 // SetDirectiveResolver provides frontmatter context for resolving @directive references.
@@ -50,6 +66,18 @@ func (interp *Interpreter) SetDirectiveResolver(dr DirectiveResolver) {
 // before any evaluation occurs (unlike convert_to which is post-evaluation).
 func (interp *Interpreter) SetMeasurement(mc *units.MeasurementConfig) {
 	interp.measurement = mc
+}
+
+// fiscalConfig holds the fiscal year start month and day.
+type fiscalConfig struct {
+	month int // 1-12
+	day   int // 1-31
+}
+
+// SetFiscalYearStarts configures the start of the fiscal year.
+// Month is 1-12 (January-December), day is the start day (1-31, typically 1).
+func (interp *Interpreter) SetFiscalYearStarts(month, day int) {
+	interp.fiscalYearStarts = &fiscalConfig{month: month, day: day}
 }
 
 // resolveUnit maps a bare ambiguous unit name to its qualified form using

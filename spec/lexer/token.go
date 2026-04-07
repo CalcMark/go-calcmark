@@ -113,6 +113,43 @@ const (
 	DATE_LAST_MONTH // "last month"
 	DATE_LAST_YEAR  // "last year"
 
+	// Weekday keywords
+	DATE_WEEKDAY      // bare "Friday" (shorthand for "this Friday")
+	DATE_THIS_WEEKDAY // "this Friday"
+	DATE_NEXT_WEEKDAY // "next Friday"
+	DATE_LAST_WEEKDAY // "last Friday"
+
+	// Relative month keywords
+	DATE_THIS_MONTH_NAME // "this April"
+	DATE_NEXT_MONTH_NAME // "next April"
+	DATE_LAST_MONTH_NAME // "last April"
+
+	// Notation tokens (prefix + number)
+	CALENDAR_QUARTER_LITERAL // Q1-Q4
+	FISCAL_QUARTER_LITERAL   // FQ1-FQ4
+	FISCAL_YEAR_LITERAL      // FY26, FY2026
+	CALENDAR_YEAR_LITERAL    // CY26, CY2026
+
+	// Duration modifier keywords
+	AGO // "ago" — as in "2 weeks ago"
+
+	// Period modifier keywords
+	START_OF // "start of" — explicit form of "this quarter" (resolves to first day)
+	END_OF   // "end of" — as in "end of this quarter" (resolves to last day)
+
+	// Quarter keywords
+	DATE_THIS_QUARTER // "this quarter"
+	DATE_NEXT_QUARTER // "next quarter"
+	DATE_LAST_QUARTER // "last quarter"
+
+	// Fiscal keywords (three-word phrases)
+	DATE_THIS_FISCAL_QUARTER // "this fiscal quarter"
+	DATE_NEXT_FISCAL_QUARTER // "next fiscal quarter"
+	DATE_LAST_FISCAL_QUARTER // "last fiscal quarter"
+	DATE_THIS_FISCAL_YEAR    // "this fiscal year"
+	DATE_NEXT_FISCAL_YEAR    // "next fiscal year"
+	DATE_LAST_FISCAL_YEAR    // "last fiscal year"
+
 	// Date/Duration literals (combined by lexer)
 	DATE_LITERAL     // "Dec 12", "December 25 2025"
 	DURATION_LITERAL // "2 days", "3 weeks and 4 days"
@@ -278,6 +315,52 @@ func (tt TokenType) String() string {
 		return "DATE_LAST_MONTH"
 	case DATE_LAST_YEAR:
 		return "DATE_LAST_YEAR"
+	case DATE_WEEKDAY:
+		return "DATE_WEEKDAY"
+	case DATE_THIS_WEEKDAY:
+		return "DATE_THIS_WEEKDAY"
+	case DATE_NEXT_WEEKDAY:
+		return "DATE_NEXT_WEEKDAY"
+	case DATE_LAST_WEEKDAY:
+		return "DATE_LAST_WEEKDAY"
+	case DATE_THIS_MONTH_NAME:
+		return "DATE_THIS_MONTH_NAME"
+	case DATE_NEXT_MONTH_NAME:
+		return "DATE_NEXT_MONTH_NAME"
+	case DATE_LAST_MONTH_NAME:
+		return "DATE_LAST_MONTH_NAME"
+	case CALENDAR_QUARTER_LITERAL:
+		return "CALENDAR_QUARTER_LITERAL"
+	case FISCAL_QUARTER_LITERAL:
+		return "FISCAL_QUARTER_LITERAL"
+	case FISCAL_YEAR_LITERAL:
+		return "FISCAL_YEAR_LITERAL"
+	case CALENDAR_YEAR_LITERAL:
+		return "CALENDAR_YEAR_LITERAL"
+	case AGO:
+		return "AGO"
+	case START_OF:
+		return "START_OF"
+	case END_OF:
+		return "END_OF"
+	case DATE_THIS_QUARTER:
+		return "DATE_THIS_QUARTER"
+	case DATE_NEXT_QUARTER:
+		return "DATE_NEXT_QUARTER"
+	case DATE_LAST_QUARTER:
+		return "DATE_LAST_QUARTER"
+	case DATE_THIS_FISCAL_QUARTER:
+		return "DATE_THIS_FISCAL_QUARTER"
+	case DATE_NEXT_FISCAL_QUARTER:
+		return "DATE_NEXT_FISCAL_QUARTER"
+	case DATE_LAST_FISCAL_QUARTER:
+		return "DATE_LAST_FISCAL_QUARTER"
+	case DATE_THIS_FISCAL_YEAR:
+		return "DATE_THIS_FISCAL_YEAR"
+	case DATE_NEXT_FISCAL_YEAR:
+		return "DATE_NEXT_FISCAL_YEAR"
+	case DATE_LAST_FISCAL_YEAR:
+		return "DATE_LAST_FISCAL_YEAR"
 	case DATE_LITERAL:
 		return "DATE_LITERAL"
 	case DURATION_LITERAL:

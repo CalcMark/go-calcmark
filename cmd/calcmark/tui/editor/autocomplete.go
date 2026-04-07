@@ -67,6 +67,9 @@ func (c *CombinedSuggestionSource) GetSuggestions(prefix string) []components.Su
 		all = append(all, features.VariableSuggestions(vars, prefix, c.CursorLine, definedLines)...)
 	}
 
+	// Date keywords (today, next Friday, this quarter, ago, end of, etc.)
+	all = append(all, features.DateSuggestions(prefix)...)
+
 	// Directives (@scale, @globals.field)
 	if c.getFrontmatter != nil {
 		fm := c.getFrontmatter()
@@ -96,6 +99,7 @@ func (c *CombinedSuggestionSource) GetSuggestions(prefix string) []components.Su
 		"Energy":      15,
 		"Power":       16,
 		"Area":        17,
+		"Date":        5,   // Date keywords after capacity, before physical units
 		"directive":   -1,  // Directives first (they're context-specific)
 		"variable":    100, // Variables last
 	}

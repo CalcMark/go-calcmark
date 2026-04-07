@@ -5,10 +5,13 @@ import (
 	"time"
 )
 
-// Date represents a calendar date.
+// Date represents a calendar date, optionally with time-of-day precision.
 // Uses Go's time.Time internally for proper date handling (leap years, etc.).
+// When HasTime is false, the time component is midnight and should not be displayed.
+// When HasTime is true, the time was explicitly set and should be displayed.
 type Date struct {
-	Time time.Time
+	Time    time.Time
+	HasTime bool
 }
 
 // NewDate creates a Date from year, month, and day.
@@ -29,11 +32,18 @@ func NewDate(year, month, day int) (*Date, error) {
 	return &Date{Time: t}, nil
 }
 
-// NewDateFromTime creates a Date from a time.Time value.
+// NewDateFromTime creates a date-only Date from a time.Time value.
+// The time component is normalized to midnight UTC and HasTime is false.
 func NewDateFromTime(t time.Time) *Date {
 	// Normalize to midnight UTC
 	normalized := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-	return &Date{Time: normalized}
+	return &Date{Time: normalized, HasTime: false}
+}
+
+// NewDateTime creates a Date with full time precision from a time.Time value.
+// The time component is preserved and HasTime is true.
+func NewDateTime(t time.Time) *Date {
+	return &Date{Time: t, HasTime: true}
 }
 
 // String returns a human-readable date representation with day of week.

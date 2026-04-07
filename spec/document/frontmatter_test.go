@@ -1566,3 +1566,96 @@ price = 100 USD
 		t.Errorf("expected nil measurement config when not specified, got %+v", fm.Measurement)
 	}
 }
+
+// TestFiscalYearStartsParsing tests frontmatter fiscal_year_starts with month-only and month+day.
+func TestFiscalYearStartsParsing(t *testing.T) {
+	tests := []struct {
+		name      string
+		source    string
+		wantMonth int
+		wantDay   int
+		wantErr   bool
+	}{
+		{
+			name:      "month only",
+			source:    "---\nfiscal_year_starts: july\n---\n",
+			wantMonth: 7,
+			wantDay:   1,
+		},
+		{
+			name:      "month abbreviation",
+			source:    "---\nfiscal_year_starts: oct\n---\n",
+			wantMonth: 10,
+			wantDay:   1,
+		},
+		{
+			name:      "month + day",
+			source:    "---\nfiscal_year_starts: July 15\n---\n",
+			wantMonth: 7,
+			wantDay:   15,
+		},
+		{
+			name:      "month + day 1 (explicit)",
+			source:    "---\nfiscal_year_starts: April 1\n---\n",
+			wantMonth: 4,
+			wantDay:   1,
+		},
+		{
+			name:    "invalid month",
+			source:  "---\nfiscal_year_starts: banana\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "invalid day",
+			source:  "---\nfiscal_year_starts: July 32\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "too many parts (full date)",
+			source:  "---\nfiscal_year_starts: Jan 1 2025\n---\n",
+			wantErr: true,
+		},
+		{
+			name:    "relative expression rejected",
+			source:  "---\nfiscal_year_starts: next April\n---\n",
+			wantErr: true,
+		},
+		{
+			name:      "not specified",
+			source:    "---\nglobals:\n  x: 1\n---\n",
+			wantMonth: 0, // nil
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm, _, err := ParseFrontmatter(tt.source)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tt.wantMonth == 0 {
+				if fm.FiscalYearStarts != nil {
+					t.Errorf("expected nil FiscalYearStarts, got %+v", fm.FiscalYearStarts)
+				}
+				return
+			}
+
+			if fm.FiscalYearStarts == nil {
+				t.Fatal("expected FiscalYearStarts to be set, got nil")
+			}
+			if fm.FiscalYearStarts.Month != tt.wantMonth {
+				t.Errorf("FiscalYearStarts.Month = %d, want %d", fm.FiscalYearStarts.Month, tt.wantMonth)
+			}
+			if fm.FiscalYearStarts.Day != tt.wantDay {
+				t.Errorf("FiscalYearStarts.Day = %d, want %d", fm.FiscalYearStarts.Day, tt.wantDay)
+			}
+		})
+	}
+}

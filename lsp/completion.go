@@ -47,10 +47,11 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		return items, nil
 
 	default:
-		// General context -> functions, units, variables, directives
+		// General context -> functions, units, variables, directives, dates
 		var items []protocol.CompletionItem
 		items = append(items, functionCompletionItems(prefix)...)
 		items = append(items, unitCompletionItems(prefix)...)
+		items = append(items, dateCompletionItems(prefix)...)
 		if snap.Evaluator != nil {
 			items = append(items, variableCompletionItems(snap, prefix, line)...)
 		}
@@ -296,6 +297,32 @@ func unitCompletionItems(prefix string) []protocol.CompletionItem {
 		kind := protocol.CompletionItemKindUnit
 		detail := s.Syntax // symbol
 		doc := fmt.Sprintf("%s (%s)", s.Description, s.Category)
+
+		items = append(items, protocol.CompletionItem{
+			Label:      s.Name,
+			Kind:       &kind,
+			Detail:     &detail,
+			InsertText: &s.InsertText,
+			Documentation: &protocol.MarkupContent{
+				Kind:  protocol.MarkupKindPlainText,
+				Value: doc,
+			},
+		})
+	}
+
+	return items
+}
+
+// dateCompletionItems returns completion items for date keywords.
+// Delegates to features.DateSuggestions then converts to protocol.CompletionItem.
+func dateCompletionItems(prefix string) []protocol.CompletionItem {
+	suggestions := features.DateSuggestions(prefix)
+	var items []protocol.CompletionItem
+
+	for _, s := range suggestions {
+		kind := protocol.CompletionItemKindKeyword
+		detail := s.Syntax
+		doc := s.Description
 
 		items = append(items, protocol.CompletionItem{
 			Label:      s.Name,

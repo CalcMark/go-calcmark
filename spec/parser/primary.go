@@ -324,11 +324,72 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return p.parseNaturalLanguageFunction()
 	}
 
-	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year
+	// Notation: Q1-Q4, FQ1-FQ4, FY26, CY2026
+	if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
+		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL) {
+		tok := p.previous()
+		// Encode as RelativeDateLiteral with prefix+value keyword
+		// e.g., "Q:1", "FQ:3", "FY:2026", "CY:26"
+		prefix := ""
+		switch tok.Type {
+		case lexer.CALENDAR_QUARTER_LITERAL:
+			prefix = "Q"
+		case lexer.FISCAL_QUARTER_LITERAL:
+			prefix = "FQ"
+		case lexer.FISCAL_YEAR_LITERAL:
+			prefix = "FY"
+		case lexer.CALENDAR_YEAR_LITERAL:
+			prefix = "CY"
+		}
+		return &ast.RelativeDateLiteral{
+			Keyword:    prefix + ":" + string(tok.Value),
+			SourceText: string(tok.OriginalText),
+		}, nil
+	}
+
+	// "start of <period>" — explicit form, equivalent to bare period (first day)
+	// "end of <period>" — resolves to last day of the period
+	if p.match(lexer.START_OF, lexer.END_OF) {
+		modifier := string(p.previous().Value) // "start of" or "end of"
+		// Parse the period expression that follows
+		if p.match(lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
+			lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
+			lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
+			lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
+			lexer.DATE_THIS_FISCAL_QUARTER, lexer.DATE_NEXT_FISCAL_QUARTER, lexer.DATE_LAST_FISCAL_QUARTER,
+			lexer.DATE_THIS_FISCAL_YEAR, lexer.DATE_NEXT_FISCAL_YEAR, lexer.DATE_LAST_FISCAL_YEAR,
+			lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME) {
+			tok := p.previous()
+			return &ast.RelativeDateLiteral{
+				Keyword:    modifier + " " + string(tok.Value),
+				SourceText: modifier + " " + string(tok.Value),
+			}, nil
+		}
+		// Also accept notation tokens: "end of Q2", "end of FQ1"
+		if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL) {
+			tok := p.previous()
+			prefix := "Q"
+			if tok.Type == lexer.FISCAL_QUARTER_LITERAL {
+				prefix = "FQ"
+			}
+			return &ast.RelativeDateLiteral{
+				Keyword:    modifier + " " + prefix + ":" + string(tok.Value),
+				SourceText: modifier + " " + string(tok.OriginalText),
+			}, nil
+		}
+		return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month')")
+	}
+
+	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year, weekdays
 	if p.match(lexer.DATE_TODAY, lexer.DATE_TOMORROW, lexer.DATE_YESTERDAY,
 		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
 		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
-		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {
+		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
+		lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
+		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
+		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
+		lexer.DATE_THIS_FISCAL_QUARTER, lexer.DATE_NEXT_FISCAL_QUARTER, lexer.DATE_LAST_FISCAL_QUARTER,
+		lexer.DATE_THIS_FISCAL_YEAR, lexer.DATE_NEXT_FISCAL_YEAR, lexer.DATE_LAST_FISCAL_YEAR) {
 		tok := p.previous()
 		return &ast.RelativeDateLiteral{
 			Keyword:    string(tok.Value),
@@ -368,6 +429,21 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			Value:      parts[0],
 			Unit:       parts[1],
 			SourceText: string(tok.OriginalText),
+		}
+
+		// Check for "ago" keyword: "2 weeks ago"
+		// Transforms to: now - duration
+		if p.match(lexer.AGO) {
+			nowNode := &ast.RelativeDateLiteral{
+				Keyword:    "now",
+				SourceText: "now",
+			}
+			return &ast.BinaryOp{
+				Operator: "-",
+				Left:     nowNode,
+				Right:    durationNode,
+				Range:    ast.SpanNodes(nowNode, durationNode),
+			}, nil
 		}
 
 		// Check for "from" keyword: "2 days from today"
@@ -584,9 +660,10 @@ func (p *RecursiveDescentParser) maybeCompoundModifier(arg ast.Node) ast.Node {
 func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 	// Try relative date keywords first
 	if p.match(lexer.DATE_TODAY) {
+		tok := p.previous()
 		return &ast.RelativeDateLiteral{
-			Keyword:    "today",
-			SourceText: string(p.previous().OriginalText),
+			Keyword:    string(tok.Value), // preserves "now" vs "today"
+			SourceText: string(tok.OriginalText),
 		}, nil
 	}
 	if p.match(lexer.DATE_TOMORROW) {
@@ -598,6 +675,19 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 	if p.match(lexer.DATE_YESTERDAY) {
 		return &ast.RelativeDateLiteral{
 			Keyword:    "yesterday",
+			SourceText: string(p.previous().OriginalText),
+		}, nil
+	}
+
+	// Try relative date expressions (weekdays, months, periods)
+	if p.match(lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
+		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
+		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
+		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
+		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
+		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {
+		return &ast.RelativeDateLiteral{
+			Keyword:    string(p.previous().Value),
 			SourceText: string(p.previous().OriginalText),
 		}, nil
 	}
@@ -628,6 +718,8 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 // Examples: "downtime", "over", "per", "with", "at", "capacity", "as" are used in natural language constructs.
 func isNaturalSyntaxKeyword(ident string) bool {
 	switch ident {
+	case "ago":
+		return true // Used in relative dates: "2 weeks ago"
 	case "at":
 		return true // Used in capacity planning: "10 TB at 2 TB per disk"
 	case "buffer":

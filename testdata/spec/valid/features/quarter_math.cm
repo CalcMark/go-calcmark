@@ -1,0 +1,41 @@
+# Quarter Math
+
+Deterministic quarter arithmetic using explicit dates.
+
+## Calendar-Correct Month Arithmetic
+
+jan_end = Jan 31 2026
+feb_from_jan = Jan 31 2026 + 1 month
+mar_from_jan = Jan 31 2026 + 2 months
+next_year = Jan 15 2026 + 1 year
+
+## Leap Year Handling
+
+leap_day = Feb 29 2024
+after_leap = Feb 29 2024 + 1 year
+month_after_leap = Feb 29 2024 + 1 month
+
+## Month Clipping
+
+mar_end = Mar 31 2026
+feb_from_mar = Mar 31 2026 - 1 month
+apr_from_mar = Mar 31 2026 + 1 month
+
+## Year Boundary Arithmetic
+
+dec_date = Dec 15 2026
+jan_from_dec = Dec 15 2026 + 1 month
+three_months = Dec 15 2026 + 3 months
+
+## Duration Composition
+
+start = Jan 1 2026
+half_year = Jan 1 2026 + 6 months
+quarter_later = Jan 1 2026 + 3 months
+two_and_half = Jan 1 2026 + 2 months + 15 days
+
+## Date Differences
+
+q1_start = Jan 1 2026
+q2_start = Apr 1 2026
+q1_length = Apr 1 2026 - Jan 1 2026

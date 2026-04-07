@@ -3,8 +3,17 @@
 # Bug: CTRL+Arrow doesn't move cursor
 
 # Start with empty editor, type "test this"
+# Note: "this" triggers date keyword autocomplete (this quarter, this week, etc.)
+# Dismiss autocomplete with Escape before testing CTRL+Arrow behavior.
 run observe=debug
 type test this
+----
+-- debug:
+mode=StateAutocomplete cursorLine=0 cursorCol=9 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="test thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
+
+# Dismiss autocomplete popup
+run observe=debug
+key esc
 ----
 -- debug:
 mode=StateDefault cursorLine=0 cursorCol=9 cursorVisual=0 cursorHighlight=0 scrollOffset=0 totalSource=4 totalVisual=4 editBuf="test thisx = 10" selectionAnchorLine=-1 selectionAnchorCol=-1 sourcePreviewMatch=true cursorInBounds=true highlightMatch=true mappingComplete=true
