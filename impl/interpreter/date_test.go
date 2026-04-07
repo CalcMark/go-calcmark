@@ -9,6 +9,203 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
+// ---------------------------------------------------------------------------
+// Date creation rules: what IS a date and what is NOT.
+// These tests document and enforce the type boundary contract.
+// ---------------------------------------------------------------------------
+
+// TestValidDateCreation verifies every way a user can create a date value.
+func TestValidDateCreation(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026
+
+	tests := []struct {
+		name  string
+		input string
+	}{
+		// Date literals with month names
+		{"full month + day + year", "d = January 15 2026\n"},
+		{"abbrev month + day + year", "d = Jan 15 2026\n"},
+		{"month + day (no year)", "d = Dec 25\n"},
+		{"month + day only", "d = Jul 4\n"},
+
+		// Keywords
+		{"today", "d = today\n"},
+		{"tomorrow", "d = tomorrow\n"},
+		{"yesterday", "d = yesterday\n"},
+		{"now", "d = now\n"},
+
+		// Relative weekday
+		{"next Friday", "d = next Friday\n"},
+		{"last Tuesday", "d = last Tuesday\n"},
+		{"this Monday", "d = this Monday\n"},
+		{"bare Wednesday", "d = Wednesday\n"},
+
+		// Relative periods
+		{"this week", "d = this week\n"},
+		{"next month", "d = next month\n"},
+		{"last year", "d = last year\n"},
+
+		// Relative month names
+		{"next April", "d = next April\n"},
+		{"last Dec", "d = last Dec\n"},
+		{"this September", "d = this September\n"},
+
+		// Calendar quarters
+		{"this quarter", "d = this quarter\n"},
+		{"next quarter", "d = next quarter\n"},
+
+		// End/start of
+		{"end of this month", "d = end of this month\n"},
+		{"end of this quarter", "d = end of this quarter\n"},
+		{"start of this year", "d = start of this year\n"},
+
+		// Ago
+		{"2 weeks ago", "d = 2 weeks ago\n"},
+		{"3 months ago", "d = 3 months ago\n"},
+
+		// From
+		{"3 days from today", "d = 3 days from today\n"},
+		{"2 weeks from now", "d = 2 weeks from now\n"},
+		{"1 month from next Friday", "d = 1 month from next Friday\n"},
+
+		// Arithmetic producing date
+		{"date + duration", "d = Jan 1 2026 + 90 days\n"},
+		{"date - duration", "d = Jun 1 2026 - 2 weeks\n"},
+		{"date + months", "d = Jan 31 2026 + 1 month\n"},
+		{"date + years", "d = Feb 29 2024 + 1 year\n"},
+		{"date + hours", "d = Apr 1 2026 + 2 hours\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			if _, ok := results[0].(*types.Date); !ok {
+				t.Errorf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			}
+		})
+	}
+}
+
+// TestNotADate verifies expressions that should NOT produce date values.
+func TestNotADate(t *testing.T) {
+	clock := testClock
+
+	tests := []struct {
+		name     string
+		input    string
+		wantType string // "number", "duration", "error", "markdown"
+	}{
+		// Bare numbers are never dates
+		{"bare year 2019", "d = 2019\n", "number"},
+		{"bare year 2025", "d = 2025\n", "number"},
+		{"bare number 1990", "d = 1990\n", "number"},
+
+		// Duration literals are durations, not dates
+		{"5 days literal", "d = 5 days\n", "duration"},
+		{"3 months literal", "d = 3 months\n", "duration"},
+		{"1 year literal", "d = 1 year\n", "duration"},
+
+		// Date subtraction produces duration
+		{"date minus date", "d = Jan 1 2026 - Dec 1 2025\n", "duration"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				if tt.wantType == "error" {
+					return // expected parse error
+				}
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				if tt.wantType == "error" {
+					return // expected eval error
+				}
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			result := results[0]
+			if _, isDate := result.(*types.Date); isDate {
+				t.Errorf("%q produced a *types.Date — bare numbers and durations must NOT be dates", tt.input)
+			}
+
+			switch tt.wantType {
+			case "number":
+				if _, ok := result.(*types.Number); !ok {
+					t.Errorf("Expected *types.Number, got %T", result)
+				}
+			case "duration":
+				if _, ok := result.(*types.Duration); !ok {
+					t.Errorf("Expected *types.Duration, got %T", result)
+				}
+			}
+		})
+	}
+}
+
+// TestDateCreationErrors verifies expressions that should produce errors.
+func TestDateCreationErrors(t *testing.T) {
+	clock := testClock
+
+	tests := []struct {
+		name      string
+		input     string
+		wantInErr string // substring expected in error message
+	}{
+		// Fiscal without frontmatter
+		{"fiscal quarter no config", "d = this fiscal quarter\n", "fiscal_year_starts"},
+		{"fiscal year no config", "d = this fiscal year\n", "fiscal_year_starts"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			_, err = interp.Eval(nodes)
+			if err == nil {
+				t.Fatalf("Expected error for %q, got nil", tt.input)
+			}
+
+			if tt.wantInErr != "" && !strings.Contains(err.Error(), tt.wantInErr) {
+				t.Errorf("Error %q should contain %q", err.Error(), tt.wantInErr)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Clock injection and date evaluation tests
+// ---------------------------------------------------------------------------
+
 // pinnedClock returns a time function that always returns the given time.
 func pinnedClock(t time.Time) func() time.Time {
 	return func() time.Time { return t }
