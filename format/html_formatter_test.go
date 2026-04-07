@@ -444,6 +444,40 @@ flour = 2 cups
 	}
 }
 
+// TestHTMLFormatterFiscalFrontmatter tests that fiscal_year_starts is rendered in HTML.
+func TestHTMLFormatterFiscalFrontmatter(t *testing.T) {
+	source := `---
+fiscal_year_starts: July 15
+---
+budget = $1,200,000
+`
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("Failed to create document: %v", err)
+	}
+
+	eval := implDoc.NewEvaluator()
+	if err := eval.Evaluate(doc); err != nil {
+		t.Fatalf("Failed to evaluate: %v", err)
+	}
+
+	var buf bytes.Buffer
+	formatter := &HTMLFormatter{}
+	err = formatter.Format(&buf, doc, Options{})
+	if err != nil {
+		t.Fatalf("Format failed: %v", err)
+	}
+
+	output := buf.String()
+
+	if !strings.Contains(output, "Fiscal Year") {
+		t.Error("Expected HTML to contain 'Fiscal Year' heading")
+	}
+	if !strings.Contains(output, "July 15") {
+		t.Error("Expected HTML to contain 'July 15' value")
+	}
+}
+
 // TestHTMLFormatterExtraFrontmatter tests that non-CalcMark frontmatter
 // fields (title, tags, etc.) are rendered in the HTML output.
 func TestHTMLFormatterExtraFrontmatter(t *testing.T) {
