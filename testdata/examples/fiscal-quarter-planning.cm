@@ -26,10 +26,10 @@ fq4_end = end of FQ4
 
 Same budget, different day counts per quarter:
 
-fq1_daily = quarterly_budget / 92
-fq2_daily = quarterly_budget / 92
-fq3_daily = quarterly_budget / 90
-fq4_daily = quarterly_budget / 91
+fq1_daily = quarterly_budget / (FQ1 in days)
+fq2_daily = quarterly_budget / (FQ2 in days)
+fq3_daily = quarterly_budget / (FQ3 in days)
+fq4_daily = quarterly_budget / (FQ4 in days)
 
 ## Calendar vs. Fiscal
 
@@ -55,7 +55,9 @@ leap_difference = Apr 1 2024 - Jan 1 2024 - (Apr 1 2025 - Jan 1 2025)
 
 14 days into FQ2:
 
-fq2_spent = quarterly_budget / 92 * 14
+fq2_elapsed = 14
+fq2_per_day = quarterly_budget / number(FQ2 in days)
+fq2_spent = fq2_per_day * fq2_elapsed
 fq2_remaining = quarterly_budget - fq2_spent
 
 ## Contractor Ramp
