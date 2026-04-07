@@ -3,7 +3,6 @@ package interpreter
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -22,7 +21,7 @@ func (interp *Interpreter) evalDateLiteral(d *ast.DateLiteral) (types.Type, erro
 		return nil, fmt.Errorf("invalid day: %w", err)
 	}
 
-	year := 0
+	year := interp.now().Year()
 	if d.Year != nil {
 		year, err = parseInt(*d.Year)
 		if err != nil {
@@ -73,7 +72,7 @@ func (interp *Interpreter) evalDurationLiteral(d *ast.DurationLiteral) (types.Ty
 }
 
 func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (types.Type, error) {
-	now := time.Now()
+	now := interp.now()
 	keyword := strings.ToLower(r.Keyword)
 
 	switch keyword {

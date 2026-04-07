@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -24,20 +25,34 @@ type Interpreter struct {
 	env         *Environment
 	directive   DirectiveResolver
 	measurement *units.MeasurementConfig
+	timeFunc    func() time.Time
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
 func NewInterpreter() *Interpreter {
 	return &Interpreter{
-		env: NewEnvironment(),
+		env:      NewEnvironment(),
+		timeFunc: time.Now,
 	}
 }
 
 // NewInterpreterWithEnv creates a new interpreter with a pre-populated environment.
 func NewInterpreterWithEnv(env *Environment) *Interpreter {
 	return &Interpreter{
-		env: env,
+		env:      env,
+		timeFunc: time.Now,
 	}
+}
+
+// SetTimeFunc overrides the clock used for date evaluation.
+// Useful for deterministic testing with pinned dates.
+func (interp *Interpreter) SetTimeFunc(f func() time.Time) {
+	interp.timeFunc = f
+}
+
+// now returns the current time from the configured clock.
+func (interp *Interpreter) now() time.Time {
+	return interp.timeFunc()
 }
 
 // SetDirectiveResolver provides frontmatter context for resolving @directive references.

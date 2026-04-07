@@ -9,9 +9,24 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
-// TestDateKeywords tests relative date keyword evaluation.
+// pinnedClock returns a time function that always returns the given time.
+func pinnedClock(t time.Time) func() time.Time {
+	return func() time.Time { return t }
+}
+
+// newTestInterpreterWithClock creates an interpreter with a fixed clock for deterministic testing.
+func newTestInterpreterWithClock(clock time.Time) *Interpreter {
+	interp := NewInterpreter()
+	interp.SetTimeFunc(pinnedClock(clock))
+	return interp
+}
+
+// Reference date for pinned-clock tests: Wednesday, April 8, 2026 14:30:00 UTC.
+var testClock = time.Date(2026, 4, 8, 14, 30, 0, 0, time.UTC)
+
+// TestDateKeywords tests relative date keyword evaluation with a pinned clock.
 func TestDateKeywords(t *testing.T) {
-	now := time.Now()
+	now := testClock
 
 	tests := []struct {
 		name      string
@@ -45,7 +60,78 @@ func TestDateKeywords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			interp := NewInterpreter()
+			interp := newTestInterpreterWithClock(now)
+
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+
+			if len(results) != 1 {
+				t.Fatalf("Expected 1 result, got %d", len(results))
+			}
+
+			date, ok := results[0].(*types.Date)
+			if !ok {
+				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestPinnedClockIsolation verifies that the clock injection works across year boundaries.
+func TestPinnedClockIsolation(t *testing.T) {
+	tests := []struct {
+		name      string
+		clock     time.Time
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		{
+			name:      "tomorrow across year boundary",
+			clock:     time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC),
+			input:     "d = tomorrow\n",
+			wantYear:  2027,
+			wantMonth: 1,
+			wantDay:   1,
+		},
+		{
+			name:      "yesterday across year boundary",
+			clock:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			input:     "d = yesterday\n",
+			wantYear:  2025,
+			wantMonth: 12,
+			wantDay:   31,
+		},
+		{
+			name:      "date literal without year uses clock year",
+			clock:     time.Date(2030, 6, 15, 0, 0, 0, 0, time.UTC),
+			input:     "d = Dec 25\n",
+			wantYear:  2030,
+			wantMonth: 12,
+			wantDay:   25,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(tt.clock)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -480,31 +566,41 @@ func TestTimeLiterals(t *testing.T) {
 }
 
 // TestExtendedRelativeDates tests this/next/last week/month/year keywords.
-// These tokens exist but evaluation is not fully implemented.
+// Clock pinned to Wednesday, April 8, 2026. Evaluation not yet implemented —
+// these tests confirm parsing works and will fail at evaluation until Unit 5.
 func TestExtendedRelativeDates(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026
+
 	tests := []struct {
-		name  string
-		input string
-		skip  bool
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
 	}{
-		{"this week", "d = this week\n", true},
-		{"this month", "d = this month\n", true},
-		{"this year", "d = this year\n", true},
-		{"next week", "d = next week\n", true},
-		{"next month", "d = next month\n", true},
-		{"next year", "d = next year\n", true},
-		{"last week", "d = last week\n", true},
-		{"last month", "d = last month\n", true},
-		{"last year", "d = last year\n", true},
+		// this week = Monday of current week = April 6, 2026
+		{"this week", "d = this week\n", 2026, 4, 6},
+		// this month = 1st of current month = April 1, 2026
+		{"this month", "d = this month\n", 2026, 4, 1},
+		// this year = Jan 1 of current year
+		{"this year", "d = this year\n", 2026, 1, 1},
+		// next week = Monday of next week = April 13, 2026
+		{"next week", "d = next week\n", 2026, 4, 13},
+		// next month = 1st of next month = May 1, 2026
+		{"next month", "d = next month\n", 2026, 5, 1},
+		// next year = Jan 1 of next year
+		{"next year", "d = next year\n", 2027, 1, 1},
+		// last week = Monday of last week = March 30, 2026
+		{"last week", "d = last week\n", 2026, 3, 30},
+		// last month = 1st of last month = March 1, 2026
+		{"last month", "d = last month\n", 2026, 3, 1},
+		// last year = Jan 1 of last year
+		{"last year", "d = last year\n", 2025, 1, 1},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.skip {
-				t.Skip("Extended relative date evaluation not implemented")
-			}
-
-			interp := NewInterpreter()
+			interp := newTestInterpreterWithClock(clock)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -513,24 +609,35 @@ func TestExtendedRelativeDates(t *testing.T) {
 
 			results, err := interp.Eval(nodes)
 			if err != nil {
-				t.Fatalf("Eval error = %v", err)
+				// Expected: evaluation not yet implemented for extended keywords.
+				// This test documents the expected behavior for when it is.
+				t.Skipf("Evaluation not yet implemented: %v", err)
 			}
 
 			if len(results) != 1 {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			_, ok := results[0].(*types.Date)
+			date, ok := results[0].(*types.Date)
 			if !ok {
 				t.Fatalf("Expected *types.Date, got %T", results[0])
+			}
+
+			gotYear := date.Time.Year()
+			gotMonth := int(date.Time.Month())
+			gotDay := date.Time.Day()
+			if gotYear != tt.wantYear || gotMonth != tt.wantMonth || gotDay != tt.wantDay {
+				t.Errorf("Got date %d-%02d-%02d, want %d-%02d-%02d",
+					gotYear, gotMonth, gotDay,
+					tt.wantYear, tt.wantMonth, tt.wantDay)
 			}
 		})
 	}
 }
 
-// TestXFromYSyntax tests "X from Y" date expressions.
+// TestXFromYSyntax tests "X from Y" date expressions with pinned clock.
 func TestXFromYSyntax(t *testing.T) {
-	now := time.Now()
+	now := testClock // Wednesday, April 8, 2026
 
 	tests := []struct {
 		name      string
@@ -564,7 +671,7 @@ func TestXFromYSyntax(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			interp := NewInterpreter()
+			interp := newTestInterpreterWithClock(now)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
@@ -597,21 +704,23 @@ func TestXFromYSyntax(t *testing.T) {
 	}
 }
 
-// TestDateStringFormat tests date output formatting.
+// TestDateStringFormat tests date output formatting with pinned clock.
 // Date.String() returns long format: "Monday, January 2, 2006"
 func TestDateStringFormat(t *testing.T) {
+	clock := testClock // Wednesday, April 8, 2026
+
 	tests := []struct {
 		name        string
 		input       string
 		wantContain string
 	}{
 		{"Dec 25 2025 format", "d = Dec 25 2025\n", "December 25, 2025"},
-		{"today format", "d = today\n", time.Now().Format("January 2, 2006")},
+		{"today format", "d = today\n", clock.Format("January 2, 2006")},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			interp := NewInterpreter()
+			interp := newTestInterpreterWithClock(clock)
 
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
