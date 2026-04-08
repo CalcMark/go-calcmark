@@ -596,3 +596,22 @@ func TestDirectiveCompletion_NonDirectivePrefixReturnsNothing(t *testing.T) {
 		t.Errorf("expected 0 directive completions for non-@ prefix, got %d", len(items))
 	}
 }
+
+// --- WebSocket API tests ---
+
+// TestServeWebSocket_MethodExists verifies that ServeWebSocket is exported and callable.
+// A full integration test requires a real WebSocket connection, but this confirms the
+// method exists with the correct signature and the server can be constructed.
+func TestServeWebSocket_MethodExists(t *testing.T) {
+	s := NewServer()
+
+	// Verify the method exists by taking its address. This is a compile-time
+	// check that the method signature is correct.
+	_ = s.ServeWebSocket
+
+	// Verify the server is fully initialized (same check as other tests)
+	snap := s.evaluate("a = 1")
+	if snap.Document == nil {
+		t.Fatal("server should be functional after construction")
+	}
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/CalcMark/go-calcmark/format"
 	implDoc "github.com/CalcMark/go-calcmark/impl/document"
 	specDoc "github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/gorilla/websocket"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
 	glspServer "github.com/tliron/glsp/server"
@@ -122,6 +123,13 @@ func NewServer() *Server {
 // RunStdio starts the LSP server over stdio.
 func (s *Server) RunStdio() error {
 	return s.server.RunStdio()
+}
+
+// ServeWebSocket serves the LSP protocol over an existing WebSocket connection.
+// This blocks until the connection is closed. Intended for embedding the LSP
+// inside an HTTP server that handles the WebSocket upgrade externally.
+func (s *Server) ServeWebSocket(conn *websocket.Conn) {
+	s.server.ServeWebSocket(conn)
 }
 
 // initialize handles the LSP initialize request.
