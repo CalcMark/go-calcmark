@@ -115,7 +115,10 @@ func NewServer() *Server {
 		TextDocumentCodeAction:         s.textDocumentCodeAction,
 	}
 
-	s.server = glspServer.NewServer(&s.handler, serverName, false)
+	// Wrap the handler so textDocument/signatureHelp can return our extended
+	// wire shape with per-parameter `data`. See lsp/handler_wrap.go.
+	wrapped := &interceptingHandler{inner: &s.handler, server: s}
+	s.server = glspServer.NewServer(wrapped, serverName, false)
 
 	return s
 }

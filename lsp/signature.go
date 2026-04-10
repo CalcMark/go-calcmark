@@ -11,8 +11,58 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+// lspParameterInformation is a superset of protocol.ParameterInformation that
+// adds a structured Data field. The LSP 3.16 spec does not define `data` on
+// ParameterInformation, but the issue explicitly opts into this pragmatic
+// extension — clients that don't know about `data` ignore it.
+//
+// JSON tags match the protocol's field names so the wire shape is a proper
+// superset of the standard ParameterInformation.
+type lspParameterInformation struct {
+	Label         any `json:"label"` // string | [2]UInteger
+	Documentation any `json:"documentation,omitempty"`
+	Data          any `json:"data,omitempty"`
+}
+
+// lspSignatureInformation mirrors protocol.SignatureInformation but references
+// lspParameterInformation so the extended Data field propagates to the wire.
+type lspSignatureInformation struct {
+	Label           string                    `json:"label"`
+	Documentation   any                       `json:"documentation,omitempty"`
+	Parameters      []lspParameterInformation `json:"parameters,omitempty"`
+	ActiveParameter *protocol.UInteger        `json:"activeParameter,omitempty"`
+}
+
+// lspSignatureHelp mirrors protocol.SignatureHelp's shape.
+type lspSignatureHelp struct {
+	Signatures      []lspSignatureInformation `json:"signatures"`
+	ActiveSignature *protocol.UInteger        `json:"activeSignature,omitempty"`
+	ActiveParameter *protocol.UInteger        `json:"activeParameter,omitempty"`
+}
+
+// signatureParamData is the structured payload attached to each parameter.
+type signatureParamData struct {
+	Type       types.ArgType `json:"type"`
+	Examples   []string      `json:"examples,omitempty"`
+	EnumValues []string      `json:"enumValues,omitempty"`
+	Optional   bool          `json:"optional,omitempty"`
+	Variadic   bool          `json:"variadic,omitempty"`
+}
+
 // textDocumentSignatureHelp handles the textDocument/signatureHelp request.
-func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+//
+// Returns a nil *protocol.SignatureHelp to satisfy the glsp handler struct's
+// field type. The real response is produced by signatureHelpHandle and routed
+// through the interceptingHandler wrapper so the extended lspSignatureHelp
+// shape (with per-parameter `data`) reaches the wire intact.
+func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, _ *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+	return nil, nil
+}
+
+// signatureHelpHandle is the actual signatureHelp implementation. Called from
+// interceptingHandler.Handle when the incoming method is
+// textDocument/signatureHelp. Returns `any` so the custom wire shape survives.
+func (s *Server) signatureHelpHandle(params *protocol.SignatureHelpParams) (any, error) {
 	ds := s.getDocument(params.TextDocument.URI)
 	if ds == nil {
 		return nil, nil
@@ -29,12 +79,15 @@ func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, params *protocol.Sig
 		return nil, nil
 	}
 
-	return signatureHelpForFunction(funcName, paramIdx), nil
+	help := signatureHelpForFunction(funcName, paramIdx)
+	if help == nil {
+		return nil, nil
+	}
+	return help, nil
 }
 
 // signatureHelpForFunction returns signature help for a known function, or nil.
-func signatureHelpForFunction(funcName string, activeParam int) *protocol.SignatureHelp {
-	// Look up the function spec for parameter info
+func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHelp {
 	spec := types.GetFunctionSpec(funcName)
 	if spec == nil {
 		return nil
@@ -53,7 +106,6 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 	}
 
 	if signature == "" {
-		// Build a signature from the spec
 		var params []string
 		for _, p := range spec.Params {
 			params = append(params, p.Name)
@@ -61,10 +113,10 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 		signature = fmt.Sprintf("%s(%s)", funcName, strings.Join(params, ", "))
 	}
 
-	// Build parameter information
-	var paramInfos []protocol.ParameterInformation
+	// Build parameter information — retain existing markdown Documentation for
+	// backward compat with clients that haven't upgraded to read `data`.
+	paramInfos := make([]lspParameterInformation, 0, len(spec.Params))
 	for _, p := range spec.Params {
-		label := p.Name
 		doc := fmt.Sprintf("Type: %s", p.Type)
 		if len(p.Examples) > 0 {
 			doc += fmt.Sprintf("\n\nExamples: %s", strings.Join(p.Examples, ", "))
@@ -76,19 +128,26 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 			doc += "\n\n(accepts multiple values)"
 		}
 
-		paramInfos = append(paramInfos, protocol.ParameterInformation{
-			Label: label,
+		paramInfos = append(paramInfos, lspParameterInformation{
+			Label: p.Name,
 			Documentation: protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: doc,
+			},
+			Data: signatureParamData{
+				Type:       p.Type,
+				Examples:   p.Examples,
+				EnumValues: p.EnumValues,
+				Optional:   p.Optional,
+				Variadic:   p.Variadic,
 			},
 		})
 	}
 
 	activeIdx := protocol.UInteger(activeParam)
 
-	return &protocol.SignatureHelp{
-		Signatures: []protocol.SignatureInformation{
+	return &lspSignatureHelp{
+		Signatures: []lspSignatureInformation{
 			{
 				Label:      signature,
 				Parameters: paramInfos,

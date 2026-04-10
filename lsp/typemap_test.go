@@ -39,9 +39,9 @@ func TestRuntimeTypeToArgType(t *testing.T) {
 
 func TestArgTypesCompatible(t *testing.T) {
 	cases := []struct {
-		name            string
+		name             string
 		actual, required types.ArgType
-		want            bool
+		want             bool
 	}{
 		{"exact rate", types.ArgTypeRate, types.ArgTypeRate, true},
 		{"exact number", types.ArgTypeNumber, types.ArgTypeNumber, true},

@@ -1000,25 +1000,25 @@ func TestWeekdayExpressions(t *testing.T) {
 		wantDay   int
 	}{
 		// Bare weekday = this <weekday>
-		{"bare Friday", "d = Friday\n", 2026, 4, 10},   // this week's Friday
-		{"bare Monday", "d = Monday\n", 2026, 4, 6},    // this week's Monday (past)
+		{"bare Friday", "d = Friday\n", 2026, 4, 10},      // this week's Friday
+		{"bare Monday", "d = Monday\n", 2026, 4, 6},       // this week's Monday (past)
 		{"bare Wednesday", "d = Wednesday\n", 2026, 4, 8}, // today
 
 		// This <weekday> = occurrence in current calendar week (Mon-Sun)
 		{"this Friday", "d = this Friday\n", 2026, 4, 10},
-		{"this Monday", "d = this Monday\n", 2026, 4, 6},    // past within week
-		{"this Sunday", "d = this Sunday\n", 2026, 4, 12},   // future within week
+		{"this Monday", "d = this Monday\n", 2026, 4, 6},       // past within week
+		{"this Sunday", "d = this Sunday\n", 2026, 4, 12},      // future within week
 		{"this Wednesday", "d = this Wednesday\n", 2026, 4, 8}, // today
 
 		// Next <weekday> = soonest future occurrence (skip today if same day)
-		{"next Friday on Wed", "d = next Friday\n", 2026, 4, 10},   // 2 days ahead
+		{"next Friday on Wed", "d = next Friday\n", 2026, 4, 10},       // 2 days ahead
 		{"next Wednesday on Wed", "d = next Wednesday\n", 2026, 4, 15}, // skip today, next week
-		{"next Monday on Wed", "d = next Monday\n", 2026, 4, 13},   // next week
+		{"next Monday on Wed", "d = next Monday\n", 2026, 4, 13},       // next week
 
 		// Last <weekday> = most recent past (skip today if same day)
-		{"last Monday on Wed", "d = last Monday\n", 2026, 4, 6},     // 2 days ago
+		{"last Monday on Wed", "d = last Monday\n", 2026, 4, 6},       // 2 days ago
 		{"last Wednesday on Wed", "d = last Wednesday\n", 2026, 4, 1}, // skip today, last week
-		{"last Friday on Wed", "d = last Friday\n", 2026, 4, 3},     // last week
+		{"last Friday on Wed", "d = last Friday\n", 2026, 4, 3},       // last week
 
 		// Year boundary
 		{"next Monday on Dec 31 Wed", "d = next Monday\n", 2027, 1, 4},
@@ -1081,17 +1081,17 @@ func TestRelativeMonthExpressions(t *testing.T) {
 		{"this December", "d = this December\n", 2026, 12, 1},
 
 		// next <month> = 1st of that month, next occurrence after current month
-		{"next April on Apr", "d = next April\n", 2027, 4, 1},     // April is current month → next year
-		{"next March on Apr", "d = next March\n", 2027, 3, 1},     // March is past → next year
-		{"next May on Apr", "d = next May\n", 2026, 5, 1},         // May is future → this year
-		{"next Jan on Apr", "d = next Jan\n", 2027, 1, 1},         // Jan is past → next year
-		{"next Dec on Apr", "d = next Dec\n", 2026, 12, 1},        // Dec is future → this year
+		{"next April on Apr", "d = next April\n", 2027, 4, 1}, // April is current month → next year
+		{"next March on Apr", "d = next March\n", 2027, 3, 1}, // March is past → next year
+		{"next May on Apr", "d = next May\n", 2026, 5, 1},     // May is future → this year
+		{"next Jan on Apr", "d = next Jan\n", 2027, 1, 1},     // Jan is past → next year
+		{"next Dec on Apr", "d = next Dec\n", 2026, 12, 1},    // Dec is future → this year
 
 		// last <month> = 1st of that month, most recent past occurrence
-		{"last April on Apr", "d = last April\n", 2025, 4, 1},     // April is current month → last year
-		{"last March on Apr", "d = last March\n", 2026, 3, 1},     // March is past → this year
-		{"last May on Apr", "d = last May\n", 2025, 5, 1},         // May is future → last year
-		{"last Dec on Apr", "d = last Dec\n", 2025, 12, 1},        // Dec is future → last year
+		{"last April on Apr", "d = last April\n", 2025, 4, 1}, // April is current month → last year
+		{"last March on Apr", "d = last March\n", 2026, 3, 1}, // March is past → this year
+		{"last May on Apr", "d = last May\n", 2025, 5, 1},     // May is future → last year
+		{"last Dec on Apr", "d = last Dec\n", 2025, 12, 1},    // Dec is future → last year
 
 		// Abbreviations work
 		{"next Sept", "d = next Sept\n", 2026, 9, 1},
@@ -2078,10 +2078,10 @@ func TestPeriodInDays(t *testing.T) {
 		wantDays         int64
 	}{
 		// Calendar quarters
-		{"Q1 in days", testClock, 0, "d = Q1 in days\n", 90},  // Jan 1 - Mar 31
-		{"Q2 in days", testClock, 0, "d = Q2 in days\n", 91},  // Apr 1 - Jun 30
-		{"Q3 in days", testClock, 0, "d = Q3 in days\n", 92},  // Jul 1 - Sep 30
-		{"Q4 in days", testClock, 0, "d = Q4 in days\n", 92},  // Oct 1 - Dec 31
+		{"Q1 in days", testClock, 0, "d = Q1 in days\n", 90}, // Jan 1 - Mar 31
+		{"Q2 in days", testClock, 0, "d = Q2 in days\n", 91}, // Apr 1 - Jun 30
+		{"Q3 in days", testClock, 0, "d = Q3 in days\n", 92}, // Jul 1 - Sep 30
+		{"Q4 in days", testClock, 0, "d = Q4 in days\n", 92}, // Oct 1 - Dec 31
 
 		// Fiscal quarters (July start)
 		{"FQ1 in days", testClock, 7, "d = FQ1 in days\n", 92}, // Jul 1 - Sep 30

@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -40,7 +41,8 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 		if env != nil {
 			vars := env.GetAllVariables()
 			if val, ok := vars[word]; ok {
-				content := fmt.Sprintf("**%s** = `%v`", word, val)
+				argType := runtimeTypeToArgType(val)
+				content := fmt.Sprintf("**%s**: `%s` = `%v`", word, argType, val)
 				return &protocol.Hover{
 					Contents: protocol.MarkupContent{
 						Kind:  protocol.MarkupKindMarkdown,
@@ -55,21 +57,17 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		if strings.EqualFold(f.Name, word) {
-			content := fmt.Sprintf("**%s**\n\n`%s`\n\n%s", f.Name, f.Syntax, f.Description)
-			// Check for NL examples
-			if f.NLExample != "" {
-				content += fmt.Sprintf("\n\nNL syntax: `%s`", f.NLExample)
-			}
 			return &protocol.Hover{
 				Contents: protocol.MarkupContent{
 					Kind:  protocol.MarkupKindMarkdown,
-					Value: content,
+					Value: buildFunctionHoverContent(f.Name, f.Syntax, f.Description, f.NLExample, f.Example),
 				},
 			}, nil
 		}
 		for _, syn := range f.Synonyms {
 			if strings.EqualFold(syn, word) {
-				content := fmt.Sprintf("**%s** (synonym for **%s**)\n\n`%s`\n\n%s", syn, f.Name, f.Syntax, f.Description)
+				body := buildFunctionHoverContent(f.Name, f.Syntax, f.Description, f.NLExample, f.Example)
+				content := fmt.Sprintf("**%s** (synonym for **%s**)\n\n%s", syn, f.Name, body)
 				return &protocol.Hover{
 					Contents: protocol.MarkupContent{
 						Kind:  protocol.MarkupKindMarkdown,
@@ -108,6 +106,43 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	}
 
 	return nil, nil
+}
+
+// buildFunctionHoverContent assembles the markdown hover body for a function,
+// combining name, signature, description, a parameter-types list from the
+// spec, and an example invocation (functional or NL form).
+func buildFunctionHoverContent(name, syntax, description, nlExample, example string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "**%s**\n\n`%s`\n\n%s", name, syntax, description)
+
+	if spec := types.GetFunctionSpec(name); spec != nil && len(spec.Params) > 0 {
+		b.WriteString("\n\n**Parameters:**\n")
+		for _, p := range spec.Params {
+			fmt.Fprintf(&b, "- `%s` (%s)", p.Name, p.Type)
+			if p.Optional {
+				b.WriteString(" — optional")
+			}
+			if p.Variadic {
+				b.WriteString(" — variadic")
+			}
+			if len(p.Examples) > 0 {
+				fmt.Fprintf(&b, ": `%s`", p.Examples[0])
+			}
+			b.WriteString("\n")
+		}
+	}
+
+	if example != "" {
+		fmt.Fprintf(&b, "\n**Example:** `%s`", example)
+	} else if nlExample != "" {
+		fmt.Fprintf(&b, "\n**Example (NL):** `%s`", nlExample)
+	}
+
+	if nlExample != "" && example != "" {
+		fmt.Fprintf(&b, "\n\nNL syntax: `%s`", nlExample)
+	}
+
+	return b.String()
 }
 
 // textDocumentDefinition handles the textDocument/definition request.
