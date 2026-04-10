@@ -1,18 +1,100 @@
 package lsp
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-// textDocumentHover handles the textDocument/hover request.
-func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+//go:embed templates/function_hover.md.tmpl
+var functionHoverTemplateSrc string
+
+// functionHoverTmpl renders the markdown body for function hover responses.
+// Parsed once at package init; execution is safe for concurrent use.
+var functionHoverTmpl = template.Must(
+	template.New("function_hover").Parse(functionHoverTemplateSrc),
+)
+
+// functionHoverData is the view model for functionHoverTmpl.
+type functionHoverData struct {
+	Name        string
+	Syntax      string
+	Description string
+	Params      []functionHoverParam
+	Example     string
+	NLExample   string
+}
+
+// functionHoverParam is one row in the Parameters section of a function hover.
+type functionHoverParam struct {
+	Name         string
+	Type         types.ArgType
+	Optional     bool
+	Variadic     bool
+	FirstExample string
+}
+
+// lspHover is a superset of protocol.Hover that adds a structured Data field
+// so clients that want structured hover content (e.g. calcmark-web's gutter
+// panel) don't have to parse markdown out of Contents. Standard LSP clients
+// (VS Code, Neovim, Zed, …) ignore the unknown `data` field and render
+// Contents normally — no capability negotiation required.
+type lspHover struct {
+	Contents any             `json:"contents"`
+	Range    *protocol.Range `json:"range,omitempty"`
+	Data     any             `json:"data,omitempty"`
+}
+
+// hoverData is the structured payload attached to lspHover.Data. The Kind
+// field discriminates the shape of the remaining fields:
+//
+//   - "variable" → Name, VariableType, Value
+//   - "function" → Name, Syntax, Description, Params, Example, NLExample
+//   - "unit"     → Name, Symbol, Description, Category, Aliases
+//
+// Name is always set and should be used uniformly across kinds. Clients use
+// Kind to decide which additional fields are relevant.
+type hoverData struct {
+	Kind string `json:"kind"`
+
+	// Common to every kind.
+	Name string `json:"name,omitempty"`
+
+	// Variable kind.
+	VariableType types.ArgType `json:"variableType,omitempty"`
+	Value        string        `json:"value,omitempty"`
+
+	// Function kind.
+	Syntax      string          `json:"syntax,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Params      []wireParamData `json:"params,omitempty"`
+	Example     string          `json:"example,omitempty"`
+	NLExample   string          `json:"nlExample,omitempty"`
+
+	// Unit kind.
+	Symbol   string   `json:"symbol,omitempty"`
+	Category string   `json:"category,omitempty"`
+	Aliases  []string `json:"aliases,omitempty"`
+}
+
+// textDocumentHover is a no-op satisfying the glsp handler struct's field
+// type. Real dispatch happens via interceptingHandler → hoverHandle so the
+// extended lspHover wire shape reaches JSON marshaling intact.
+func (s *Server) textDocumentHover(_ *glsp.Context, _ *protocol.HoverParams) (*protocol.Hover, error) {
+	return nil, nil
+}
+
+// hoverHandle is the actual hover implementation. Returns `any` so the
+// extended lspHover shape can carry a structured `data` field.
+func (s *Server) hoverHandle(params *protocol.HoverParams) (any, error) {
 	ds := s.getDocument(params.TextDocument.URI)
 	if ds == nil {
 		return nil, nil
@@ -40,11 +122,19 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 		if env != nil {
 			vars := env.GetAllVariables()
 			if val, ok := vars[word]; ok {
-				content := fmt.Sprintf("**%s** = `%v`", word, val)
-				return &protocol.Hover{
+				argType := runtimeTypeToArgType(val)
+				value := fmt.Sprintf("%v", val)
+				content := fmt.Sprintf("**%s**: `%s` = `%s`", word, argType, value)
+				return &lspHover{
 					Contents: protocol.MarkupContent{
 						Kind:  protocol.MarkupKindMarkdown,
 						Value: content,
+					},
+					Data: hoverData{
+						Kind:         "variable",
+						Name:         word,
+						VariableType: argType,
+						Value:        value,
 					},
 				}, nil
 			}
@@ -55,26 +145,24 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		if strings.EqualFold(f.Name, word) {
-			content := fmt.Sprintf("**%s**\n\n`%s`\n\n%s", f.Name, f.Syntax, f.Description)
-			// Check for NL examples
-			if f.NLExample != "" {
-				content += fmt.Sprintf("\n\nNL syntax: `%s`", f.NLExample)
-			}
-			return &protocol.Hover{
+			return &lspHover{
 				Contents: protocol.MarkupContent{
 					Kind:  protocol.MarkupKindMarkdown,
-					Value: content,
+					Value: buildFunctionHoverContent(f.Name, f.Syntax, f.Description, f.NLExample, f.Example),
 				},
+				Data: buildFunctionHoverData(f.Name, f.Syntax, f.Description, f.Example, f.NLExample),
 			}, nil
 		}
 		for _, syn := range f.Synonyms {
 			if strings.EqualFold(syn, word) {
-				content := fmt.Sprintf("**%s** (synonym for **%s**)\n\n`%s`\n\n%s", syn, f.Name, f.Syntax, f.Description)
-				return &protocol.Hover{
+				body := buildFunctionHoverContent(f.Name, f.Syntax, f.Description, f.NLExample, f.Example)
+				content := fmt.Sprintf("**%s** (synonym for **%s**)\n\n%s", syn, f.Name, body)
+				return &lspHover{
 					Contents: protocol.MarkupContent{
 						Kind:  protocol.MarkupKindMarkdown,
 						Value: content,
 					},
+					Data: buildFunctionHoverData(f.Name, f.Syntax, f.Description, f.Example, f.NLExample),
 				}, nil
 			}
 		}
@@ -87,20 +175,36 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 			if len(unit.Aliases) > 0 {
 				content += fmt.Sprintf("\n\nAliases: %s", strings.Join(unit.Aliases, ", "))
 			}
-			return &protocol.Hover{
+			return &lspHover{
 				Contents: protocol.MarkupContent{
 					Kind:  protocol.MarkupKindMarkdown,
 					Value: content,
+				},
+				Data: hoverData{
+					Kind:        "unit",
+					Name:        unit.Canonical,
+					Symbol:      unit.Symbol,
+					Description: unit.Description,
+					Category:    unit.Quantity,
+					Aliases:     unit.Aliases,
 				},
 			}, nil
 		}
 		for _, alias := range unit.Aliases {
 			if strings.EqualFold(alias, word) {
 				content := fmt.Sprintf("**%s** (`%s`) — alias for **%s**\n\n%s", alias, unit.Symbol, unit.Canonical, unit.Description)
-				return &protocol.Hover{
+				return &lspHover{
 					Contents: protocol.MarkupContent{
 						Kind:  protocol.MarkupKindMarkdown,
 						Value: content,
+					},
+					Data: hoverData{
+						Kind:        "unit",
+						Name:        unit.Canonical,
+						Symbol:      unit.Symbol,
+						Description: unit.Description,
+						Category:    unit.Quantity,
+						Aliases:     unit.Aliases,
 					},
 				}, nil
 			}
@@ -108,6 +212,60 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	}
 
 	return nil, nil
+}
+
+// buildFunctionHoverData constructs the structured hoverData for a function,
+// pulling param metadata from the spec.
+func buildFunctionHoverData(name, syntax, description, example, nlExample string) hoverData {
+	d := hoverData{
+		Kind:        "function",
+		Name:        name,
+		Syntax:      syntax,
+		Description: description,
+		Example:     example,
+		NLExample:   nlExample,
+	}
+	if spec := types.GetFunctionSpec(name); spec != nil {
+		d.Params = paramSpecsToData(spec.Params)
+	}
+	return d
+}
+
+// buildFunctionHoverContent renders the markdown hover body for a function
+// through the embedded text/template. Gathers parameter data from the function
+// spec so clients see names, types, and first-examples inline.
+func buildFunctionHoverContent(name, syntax, description, nlExample, example string) string {
+	data := functionHoverData{
+		Name:        name,
+		Syntax:      syntax,
+		Description: description,
+		Example:     example,
+		NLExample:   nlExample,
+	}
+	if spec := types.GetFunctionSpec(name); spec != nil {
+		data.Params = make([]functionHoverParam, len(spec.Params))
+		for i, p := range spec.Params {
+			fp := functionHoverParam{
+				Name:     p.Name,
+				Type:     p.Type,
+				Optional: p.Optional,
+				Variadic: p.Variadic,
+			}
+			if len(p.Examples) > 0 {
+				fp.FirstExample = p.Examples[0]
+			}
+			data.Params[i] = fp
+		}
+	}
+
+	var b strings.Builder
+	if err := functionHoverTmpl.Execute(&b, data); err != nil {
+		// Template is compiled in-package — this can only fail on a broken
+		// template file, which is caught by tests. Fall back to a minimal
+		// string so hover still returns something useful.
+		return fmt.Sprintf("**%s**\n\n`%s`\n\n%s", name, syntax, description)
+	}
+	return b.String()
 }
 
 // textDocumentDefinition handles the textDocument/definition request.

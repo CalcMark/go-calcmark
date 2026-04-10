@@ -1039,10 +1039,10 @@ func TestDirectiveSuggestionSource_FrontmatterUpdate(t *testing.T) {
 // TestDateSuggestions verifies date keywords appear in autocomplete.
 func TestDateSuggestions(t *testing.T) {
 	tests := []struct {
-		name       string
-		prefix     string
-		wantAny    bool // expect at least one Date suggestion
-		wantNames  []string // expect these specific names in results
+		name      string
+		prefix    string
+		wantAny   bool     // expect at least one Date suggestion
+		wantNames []string // expect these specific names in results
 	}{
 		{"to prefix", "to", true, []string{"today", "tomorrow"}},
 		{"ye prefix", "ye", true, []string{"yesterday", "years"}},

@@ -35,6 +35,10 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	// This replaces string heuristics with the real lexer.
 	ctx := classifyCompletionContext(lineText, col)
 
+	// Detect enclosing function call and active parameter position — used for
+	// enum completions and type-filtered variable completions below.
+	argCtx := extractArgumentContext(lineText, col)
+
 	switch ctx {
 	case completionContextMarkdown:
 		return nil, nil
@@ -47,13 +51,30 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		return items, nil
 
 	default:
+		// Enum-backed string parameter: exclusive context — return only the
+		// valid enum values. Mixing in functions/variables here would clutter
+		// the dropdown with clearly invalid choices.
+		if enumItems := enumCompletionsForContext(argCtx, prefix); len(enumItems) > 0 {
+			return enumItems, nil
+		}
+
+		// Determine active parameter type for variable filtering, if any.
+		var requiredType types.ArgType
+		if argCtx.funcName != "" && !argCtx.insideString {
+			if spec := types.GetFunctionSpec(argCtx.funcName); spec != nil {
+				if p := spec.GetParamAtIndex(argCtx.paramIdx); p != nil {
+					requiredType = p.Type
+				}
+			}
+		}
+
 		// General context -> functions, units, variables, directives, dates
 		var items []protocol.CompletionItem
 		items = append(items, functionCompletionItems(prefix)...)
 		items = append(items, unitCompletionItems(prefix)...)
 		items = append(items, dateCompletionItems(prefix)...)
 		if snap.Evaluator != nil {
-			items = append(items, variableCompletionItems(snap, prefix, line)...)
+			items = append(items, variableCompletionItems(snap, prefix, line, requiredType)...)
 		}
 		if snap.Document != nil {
 			items = append(items, directiveCompletionItems(snap, prefix)...)
@@ -64,12 +85,26 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 
 // functionCompletionItems returns completion items for built-in functions.
 // Delegates to features.FunctionSuggestions then enriches with LSP-specific
-// snippets, parameter docs, and markdown documentation.
+// snippets, parameter docs, markdown documentation, and structured
+// CompletionItem.data so clients can read function metadata without parsing
+// labels (see R3 in the plan).
 func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	suggestions := features.FunctionSuggestions(prefix, nil) // nil = all registry functions
 	var items []protocol.CompletionItem
 
 	for _, s := range suggestions {
+		// For both signature-form and NL-example rows, the canonical name is
+		// s.Name — the features layer has already resolved label → canonical.
+		canonical := s.Name
+		spec := types.GetFunctionSpec(canonical)
+		data := completionItemData{
+			Kind:         "function",
+			FunctionName: canonical,
+		}
+		if spec != nil {
+			data.Params = paramSpecsToData(spec.Params)
+		}
+
 		if s.Category == "example" {
 			// NL example row -> snippet item
 			kind := protocol.CompletionItemKindSnippet
@@ -80,6 +115,7 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 				Kind:       &kind,
 				Detail:     &detail,
 				InsertText: &insertText,
+				Data:       data,
 			})
 		} else {
 			// Function row -> enriched with snippet + docs
@@ -99,6 +135,7 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 					Kind:  protocol.MarkupKindMarkdown,
 					Value: doc,
 				},
+				Data: data,
 			})
 		}
 	}
@@ -340,20 +377,32 @@ func dateCompletionItems(prefix string) []protocol.CompletionItem {
 }
 
 // variableCompletionItems returns completion items for variables.
+//
+// When requiredType is non-empty, variables whose evaluator-inferred type is
+// not compatible with the required parameter type are filtered out. An empty
+// requiredType means no filter (bare expression context).
+//
 // Known limitation: position filtering is not applied because the LSP's
 // Environment does not expose variable definition line numbers.
-// The shared VariableSuggestions function supports it when definedLines is provided.
-func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine int) []protocol.CompletionItem {
+func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine int, requiredType types.ArgType) []protocol.CompletionItem {
 	env := snap.Evaluator.GetEnvironment()
 	if env == nil {
 		return nil
 	}
 
-	// Build vars map: name -> formatted value string
 	allVars := env.GetAllVariables()
+
+	// Build the filtered vars map plus a parallel map of runtime types for
+	// attaching to completion item data.
 	vars := make(map[string]string, len(allVars))
+	argTypes := make(map[string]types.ArgType, len(allVars))
 	for name, val := range allVars {
+		varType := runtimeTypeToArgType(val)
+		if !argTypesCompatible(varType, requiredType) {
+			continue
+		}
 		vars[name] = fmt.Sprintf("%v", val)
+		argTypes[name] = varType
 	}
 
 	// nil definedLines = no position filtering (LSP limitation documented above)
@@ -369,6 +418,10 @@ func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine i
 			Kind:       &kind,
 			Detail:     &detail,
 			InsertText: &s.InsertText,
+			Data: completionItemData{
+				Kind:         "variable",
+				VariableType: argTypes[s.Name],
+			},
 		})
 	}
 

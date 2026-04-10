@@ -329,6 +329,33 @@ func TestEveryFunctionHasParams(t *testing.T) {
 	}
 }
 
+// TestParamEnumValuesFlowThroughToFeatures verifies that the EnumValues
+// populated on ParamSpec in spec/types/param_types.go actually reach the
+// features registry when the spec.Params slice is copied during registry
+// construction. This is the integration seam between spec/types (where
+// EnumValues is populated) and consumers like the LSP that read
+// features.Feature.Params to build enum completions. A silent slice-copy
+// regression would break the LSP's enum completion path.
+func TestParamEnumValuesFlowThroughToFeatures(t *testing.T) {
+	r := DefaultRegistry()
+	var throughput *Feature
+	for _, f := range r.ByCategory(CategoryFunction) {
+		if f.Name == "throughput" {
+			throughput = &f
+			break
+		}
+	}
+	if throughput == nil {
+		t.Fatal("throughput not found in default registry")
+	}
+	if len(throughput.Params) != 1 {
+		t.Fatalf("throughput should have 1 param, got %d", len(throughput.Params))
+	}
+	if len(throughput.Params[0].EnumValues) == 0 {
+		t.Error("throughput param[0].EnumValues is empty; the EnumValues slice did not flow through from spec/types into the features registry")
+	}
+}
+
 func TestGetByName(t *testing.T) {
 	r := NewRegistry()
 

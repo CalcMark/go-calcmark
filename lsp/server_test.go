@@ -380,7 +380,7 @@ func TestCompletionItems_VariablesFromSnapshot(t *testing.T) {
 	s := NewServer()
 	snap := s.evaluate("price = 100\ntax = 10")
 
-	items := variableCompletionItems(snap, "", 2)
+	items := variableCompletionItems(snap, "", 2, "")
 	if len(items) == 0 {
 		t.Fatal("expected variable completion items")
 	}
@@ -433,12 +433,12 @@ func TestExtractFunctionContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fn, idx := extractFunctionContext(tt.line, tt.col)
-			if fn != tt.wantFunc {
-				t.Errorf("extractFunctionContext(%q, %d) func = %q, want %q", tt.line, tt.col, fn, tt.wantFunc)
+			ctx := extractArgumentContext(tt.line, tt.col)
+			if ctx.funcName != tt.wantFunc {
+				t.Errorf("extractArgumentContext(%q, %d) func = %q, want %q", tt.line, tt.col, ctx.funcName, tt.wantFunc)
 			}
-			if idx != tt.wantIdx {
-				t.Errorf("extractFunctionContext(%q, %d) paramIdx = %d, want %d", tt.line, tt.col, idx, tt.wantIdx)
+			if ctx.paramIdx != tt.wantIdx {
+				t.Errorf("extractArgumentContext(%q, %d) paramIdx = %d, want %d", tt.line, tt.col, ctx.paramIdx, tt.wantIdx)
 			}
 		})
 	}

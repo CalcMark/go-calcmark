@@ -26,6 +26,11 @@ var StorageAliases = map[string]string{"sata_ssd": "ssd"}
 // CompressionTypes lists valid compression type identifiers for compress().
 var CompressionTypes = []string{"gzip", "zstd", "lz4", "snappy", "bzip2", "none"}
 
+// TimeUnits lists valid time unit identifiers accepted by convert_rate() and
+// other rate/duration-manipulating functions. Ordered from smallest to largest
+// so "second" is the representative example.
+var TimeUnits = []string{"nanosecond", "microsecond", "millisecond", "second", "minute", "hour", "day", "week", "month", "year"}
+
 // AllStorageNames returns all valid storage names including aliases.
 // Used by interpreter validation and error messages.
 func AllStorageNames() []string {

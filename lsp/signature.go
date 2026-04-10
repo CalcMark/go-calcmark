@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -12,8 +11,53 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+// lspParameterInformation is a superset of protocol.ParameterInformation that
+// adds a structured Data field. The LSP 3.16 spec does not define `data` on
+// ParameterInformation, but the issue explicitly opts into this pragmatic
+// extension — clients that don't know about `data` ignore it.
+//
+// JSON tags match the protocol's field names so the wire shape is a proper
+// superset of the standard ParameterInformation.
+type lspParameterInformation struct {
+	Label         any `json:"label"` // string | [2]UInteger
+	Documentation any `json:"documentation,omitempty"`
+	Data          any `json:"data,omitempty"`
+}
+
+// lspSignatureInformation mirrors protocol.SignatureInformation but references
+// lspParameterInformation so the extended Data field propagates to the wire.
+// Calcmark has single-signature functions only, so the per-signature
+// activeParameter field from LSP 3.16 is omitted — the top-level
+// lspSignatureHelp.ActiveParameter is authoritative.
+type lspSignatureInformation struct {
+	Label         string                    `json:"label"`
+	Documentation any                       `json:"documentation,omitempty"`
+	Parameters    []lspParameterInformation `json:"parameters,omitempty"`
+}
+
+// lspSignatureHelp mirrors protocol.SignatureHelp's shape. Signatures uses
+// a non-nil initialization in signatureHelpForFunction so the wire never
+// emits {"signatures":null} — LSP clients expect an array.
+type lspSignatureHelp struct {
+	Signatures      []lspSignatureInformation `json:"signatures"`
+	ActiveSignature *protocol.UInteger        `json:"activeSignature,omitempty"`
+	ActiveParameter *protocol.UInteger        `json:"activeParameter,omitempty"`
+}
+
 // textDocumentSignatureHelp handles the textDocument/signatureHelp request.
-func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+//
+// Returns a nil *protocol.SignatureHelp to satisfy the glsp handler struct's
+// field type. The real response is produced by signatureHelpHandle and routed
+// through the interceptingHandler wrapper so the extended lspSignatureHelp
+// shape (with per-parameter `data`) reaches the wire intact.
+func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, _ *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+	return nil, nil
+}
+
+// signatureHelpHandle is the actual signatureHelp implementation. Called from
+// interceptingHandler.Handle when the incoming method is
+// textDocument/signatureHelp. Returns `any` so the custom wire shape survives.
+func (s *Server) signatureHelpHandle(params *protocol.SignatureHelpParams) (any, error) {
 	ds := s.getDocument(params.TextDocument.URI)
 	if ds == nil {
 		return nil, nil
@@ -25,17 +69,20 @@ func (s *Server) textDocumentSignatureHelp(_ *glsp.Context, params *protocol.Sig
 	col := int(params.Position.Character)
 	lineText := getLineText(source, line)
 
-	funcName, paramIdx := extractFunctionContext(lineText, col)
-	if funcName == "" {
+	ctx := extractArgumentContext(lineText, col)
+	if ctx.funcName == "" {
 		return nil, nil
 	}
 
-	return signatureHelpForFunction(funcName, paramIdx), nil
+	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
+	if help == nil {
+		return nil, nil
+	}
+	return help, nil
 }
 
 // signatureHelpForFunction returns signature help for a known function, or nil.
-func signatureHelpForFunction(funcName string, activeParam int) *protocol.SignatureHelp {
-	// Look up the function spec for parameter info
+func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHelp {
 	spec := types.GetFunctionSpec(funcName)
 	if spec == nil {
 		return nil
@@ -54,7 +101,6 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 	}
 
 	if signature == "" {
-		// Build a signature from the spec
 		var params []string
 		for _, p := range spec.Params {
 			params = append(params, p.Name)
@@ -62,10 +108,10 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 		signature = fmt.Sprintf("%s(%s)", funcName, strings.Join(params, ", "))
 	}
 
-	// Build parameter information
-	var paramInfos []protocol.ParameterInformation
+	// Build parameter information — retain existing markdown Documentation for
+	// backward compat with clients that haven't upgraded to read `data`.
+	paramInfos := make([]lspParameterInformation, 0, len(spec.Params))
 	for _, p := range spec.Params {
-		label := p.Name
 		doc := fmt.Sprintf("Type: %s", p.Type)
 		if len(p.Examples) > 0 {
 			doc += fmt.Sprintf("\n\nExamples: %s", strings.Join(p.Examples, ", "))
@@ -77,19 +123,30 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 			doc += "\n\n(accepts multiple values)"
 		}
 
-		paramInfos = append(paramInfos, protocol.ParameterInformation{
-			Label: label,
+		paramInfos = append(paramInfos, lspParameterInformation{
+			Label: p.Name,
 			Documentation: protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: doc,
 			},
+			Data: paramSpecToData(p),
 		})
 	}
 
-	activeIdx := protocol.UInteger(activeParam)
+	// Clamp activeParameter to a valid index into paramInfos.
+	// - Variadic functions declare one parameter but accept N arguments, so a
+	//   cursor past the declared param must still point at the variadic slot.
+	// - Non-variadic functions with over-applied arguments (user typed extra
+	//   commas) must still produce a valid index rather than an out-of-bounds
+	//   value that would violate the LSP protocol.
+	clamped := max(activeParam, 0)
+	if len(paramInfos) > 0 && clamped >= len(paramInfos) {
+		clamped = len(paramInfos) - 1
+	}
+	activeIdx := protocol.UInteger(clamped)
 
-	return &protocol.SignatureHelp{
-		Signatures: []protocol.SignatureInformation{
+	return &lspSignatureHelp{
+		Signatures: []lspSignatureInformation{
 			{
 				Label:      signature,
 				Parameters: paramInfos,
@@ -102,47 +159,6 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 		ActiveSignature: uintPtr(0),
 		ActiveParameter: &activeIdx,
 	}
-}
-
-// extractFunctionContext finds the function name and active parameter index
-// at the given cursor position. Returns ("", -1) if the cursor is not inside
-// a function call.
-// Uses rune-aware indexing for UTF-8 safety.
-func extractFunctionContext(lineText string, col int) (string, int) {
-	runes := []rune(lineText)
-	if col > len(runes) {
-		col = len(runes)
-	}
-
-	// Walk backward from cursor to find the matching '('
-	depth := 0
-	commaCount := 0
-	for i := col - 1; i >= 0; i-- {
-		switch runes[i] {
-		case ')':
-			depth++
-		case '(':
-			if depth == 0 {
-				// Found the opening paren — extract the function name before it
-				end := i
-				start := end
-				for start > 0 && (unicode.IsLetter(runes[start-1]) || unicode.IsDigit(runes[start-1]) || runes[start-1] == '_') {
-					start--
-				}
-				if start == end {
-					return "", -1
-				}
-				return string(runes[start:end]), commaCount
-			}
-			depth--
-		case ',':
-			if depth == 0 {
-				commaCount++
-			}
-		}
-	}
-
-	return "", -1
 }
 
 func uintPtr(v uint32) *protocol.UInteger {
