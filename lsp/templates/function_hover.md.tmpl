@@ -1,0 +1,26 @@
+**{{.Name}}**
+
+`{{.Syntax}}`
+
+{{.Description}}
+{{- if .Params}}
+
+**Parameters:**
+{{- range .Params}}
+- `{{.Name}}` ({{.Type}})
+  {{- if .Optional}} — optional{{end}}
+  {{- if .Variadic}} — variadic{{end}}
+  {{- if .FirstExample}}: `{{.FirstExample}}`{{end}}
+{{- end}}
+{{- end}}
+{{- if .Example}}
+
+**Example:** `{{.Example}}`
+{{- else if .NLExample}}
+
+**Example (NL):** `{{.NLExample}}`
+{{- end}}
+{{- if and .Example .NLExample}}
+
+NL syntax: `{{.NLExample}}`
+{{- end}}

@@ -1,8 +1,10 @@
 package lsp
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
@@ -11,6 +13,34 @@ import (
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+//go:embed templates/function_hover.md.tmpl
+var functionHoverTemplateSrc string
+
+// functionHoverTmpl renders the markdown body for function hover responses.
+// Parsed once at package init; execution is safe for concurrent use.
+var functionHoverTmpl = template.Must(
+	template.New("function_hover").Parse(functionHoverTemplateSrc),
+)
+
+// functionHoverData is the view model for functionHoverTmpl.
+type functionHoverData struct {
+	Name        string
+	Syntax      string
+	Description string
+	Params      []functionHoverParam
+	Example     string
+	NLExample   string
+}
+
+// functionHoverParam is one row in the Parameters section of a function hover.
+type functionHoverParam struct {
+	Name         string
+	Type         types.ArgType
+	Optional     bool
+	Variadic     bool
+	FirstExample string
+}
 
 // textDocumentHover handles the textDocument/hover request.
 func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
@@ -108,40 +138,40 @@ func (s *Server) textDocumentHover(_ *glsp.Context, params *protocol.HoverParams
 	return nil, nil
 }
 
-// buildFunctionHoverContent assembles the markdown hover body for a function,
-// combining name, signature, description, a parameter-types list from the
-// spec, and an example invocation (functional or NL form).
+// buildFunctionHoverContent renders the markdown hover body for a function
+// through the embedded text/template. Gathers parameter data from the function
+// spec so clients see names, types, and first-examples inline.
 func buildFunctionHoverContent(name, syntax, description, nlExample, example string) string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "**%s**\n\n`%s`\n\n%s", name, syntax, description)
-
-	if spec := types.GetFunctionSpec(name); spec != nil && len(spec.Params) > 0 {
-		b.WriteString("\n\n**Parameters:**\n")
-		for _, p := range spec.Params {
-			fmt.Fprintf(&b, "- `%s` (%s)", p.Name, p.Type)
-			if p.Optional {
-				b.WriteString(" — optional")
-			}
-			if p.Variadic {
-				b.WriteString(" — variadic")
+	data := functionHoverData{
+		Name:        name,
+		Syntax:      syntax,
+		Description: description,
+		Example:     example,
+		NLExample:   nlExample,
+	}
+	if spec := types.GetFunctionSpec(name); spec != nil {
+		data.Params = make([]functionHoverParam, len(spec.Params))
+		for i, p := range spec.Params {
+			fp := functionHoverParam{
+				Name:     p.Name,
+				Type:     p.Type,
+				Optional: p.Optional,
+				Variadic: p.Variadic,
 			}
 			if len(p.Examples) > 0 {
-				fmt.Fprintf(&b, ": `%s`", p.Examples[0])
+				fp.FirstExample = p.Examples[0]
 			}
-			b.WriteString("\n")
+			data.Params[i] = fp
 		}
 	}
 
-	if example != "" {
-		fmt.Fprintf(&b, "\n**Example:** `%s`", example)
-	} else if nlExample != "" {
-		fmt.Fprintf(&b, "\n**Example (NL):** `%s`", nlExample)
+	var b strings.Builder
+	if err := functionHoverTmpl.Execute(&b, data); err != nil {
+		// Template is compiled in-package — this can only fail on a broken
+		// template file, which is caught by tests. Fall back to a minimal
+		// string so hover still returns something useful.
+		return fmt.Sprintf("**%s**\n\n`%s`\n\n%s", name, syntax, description)
 	}
-
-	if nlExample != "" && example != "" {
-		fmt.Fprintf(&b, "\n\nNL syntax: `%s`", nlExample)
-	}
-
 	return b.String()
 }
 
