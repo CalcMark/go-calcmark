@@ -26,27 +26,22 @@ type lspParameterInformation struct {
 
 // lspSignatureInformation mirrors protocol.SignatureInformation but references
 // lspParameterInformation so the extended Data field propagates to the wire.
+// Calcmark has single-signature functions only, so the per-signature
+// activeParameter field from LSP 3.16 is omitted — the top-level
+// lspSignatureHelp.ActiveParameter is authoritative.
 type lspSignatureInformation struct {
-	Label           string                    `json:"label"`
-	Documentation   any                       `json:"documentation,omitempty"`
-	Parameters      []lspParameterInformation `json:"parameters,omitempty"`
-	ActiveParameter *protocol.UInteger        `json:"activeParameter,omitempty"`
+	Label         string                    `json:"label"`
+	Documentation any                       `json:"documentation,omitempty"`
+	Parameters    []lspParameterInformation `json:"parameters,omitempty"`
 }
 
-// lspSignatureHelp mirrors protocol.SignatureHelp's shape.
+// lspSignatureHelp mirrors protocol.SignatureHelp's shape. Signatures uses
+// a non-nil initialization in signatureHelpForFunction so the wire never
+// emits {"signatures":null} — LSP clients expect an array.
 type lspSignatureHelp struct {
 	Signatures      []lspSignatureInformation `json:"signatures"`
 	ActiveSignature *protocol.UInteger        `json:"activeSignature,omitempty"`
 	ActiveParameter *protocol.UInteger        `json:"activeParameter,omitempty"`
-}
-
-// signatureParamData is the structured payload attached to each parameter.
-type signatureParamData struct {
-	Type       types.ArgType `json:"type"`
-	Examples   []string      `json:"examples,omitempty"`
-	EnumValues []string      `json:"enumValues,omitempty"`
-	Optional   bool          `json:"optional,omitempty"`
-	Variadic   bool          `json:"variadic,omitempty"`
 }
 
 // textDocumentSignatureHelp handles the textDocument/signatureHelp request.
@@ -74,12 +69,12 @@ func (s *Server) signatureHelpHandle(params *protocol.SignatureHelpParams) (any,
 	col := int(params.Position.Character)
 	lineText := getLineText(source, line)
 
-	funcName, paramIdx := extractFunctionContext(lineText, col)
-	if funcName == "" {
+	ctx := extractArgumentContext(lineText, col)
+	if ctx.funcName == "" {
 		return nil, nil
 	}
 
-	help := signatureHelpForFunction(funcName, paramIdx)
+	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
 	if help == nil {
 		return nil, nil
 	}
@@ -134,17 +129,21 @@ func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHel
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: doc,
 			},
-			Data: signatureParamData{
-				Type:       p.Type,
-				Examples:   p.Examples,
-				EnumValues: p.EnumValues,
-				Optional:   p.Optional,
-				Variadic:   p.Variadic,
-			},
+			Data: paramSpecToData(p),
 		})
 	}
 
-	activeIdx := protocol.UInteger(activeParam)
+	// Clamp activeParameter to a valid index into paramInfos.
+	// - Variadic functions declare one parameter but accept N arguments, so a
+	//   cursor past the declared param must still point at the variadic slot.
+	// - Non-variadic functions with over-applied arguments (user typed extra
+	//   commas) must still produce a valid index rather than an out-of-bounds
+	//   value that would violate the LSP protocol.
+	clamped := max(activeParam, 0)
+	if len(paramInfos) > 0 && clamped >= len(paramInfos) {
+		clamped = len(paramInfos) - 1
+	}
+	activeIdx := protocol.UInteger(clamped)
 
 	return &lspSignatureHelp{
 		Signatures: []lspSignatureInformation{
@@ -160,17 +159,6 @@ func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHel
 		ActiveSignature: uintPtr(0),
 		ActiveParameter: &activeIdx,
 	}
-}
-
-// extractFunctionContext finds the function name and active parameter index
-// at the given cursor position. Returns ("", -1) if the cursor is not inside
-// a function call.
-//
-// Thin adapter over extractArgumentContext preserved for existing callers
-// that don't need string-literal awareness.
-func extractFunctionContext(lineText string, col int) (string, int) {
-	ctx := extractArgumentContext(lineText, col)
-	return ctx.funcName, ctx.paramIdx
 }
 
 func uintPtr(v uint32) *protocol.UInteger {

@@ -7,25 +7,13 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-// completionItemData is the structured payload attached to CompletionItem.Data
-// so clients can read function metadata, variable types, and enum value context
-// without parsing labels. Serialized to JSON under the LSP-standard "data" field.
-type completionItemData struct {
-	Kind         string                    `json:"kind"` // "function" | "variable" | "enum_value" | "keyword" | "example_value"
-	FunctionName string                    `json:"functionName,omitempty"`
-	Params       []completionItemParamData `json:"params,omitempty"`
-	// VariableType is set on variable completion items to the evaluator's
-	// inferred ArgType (number, quantity, rate, duration, percentage).
-	VariableType types.ArgType `json:"variableType,omitempty"`
-	// ParamName is set on enum_value and example_value items to identify
-	// which parameter the value is for (useful for UI labeling).
-	ParamName string `json:"paramName,omitempty"`
-}
-
-// completionItemParamData mirrors ParamSpec on the wire so clients never need
-// to duplicate the spec.
-type completionItemParamData struct {
-	Name       string        `json:"name"`
+// wireParamData mirrors ParamSpec on the wire so clients never need to
+// duplicate the spec. Shared across CompletionItem.data.params,
+// signatureHelp ParameterInformation.data, and hover function-kind
+// data.params so that any future ParamSpec field (e.g. Deprecated) lands
+// in one place and every wire surface picks it up.
+type wireParamData struct {
+	Name       string        `json:"name,omitempty"`
 	Type       types.ArgType `json:"type"`
 	Examples   []string      `json:"examples,omitempty"`
 	EnumValues []string      `json:"enumValues,omitempty"`
@@ -34,8 +22,8 @@ type completionItemParamData struct {
 }
 
 // paramSpecToData converts a ParamSpec to its wire representation.
-func paramSpecToData(p types.ParamSpec) completionItemParamData {
-	return completionItemParamData{
+func paramSpecToData(p types.ParamSpec) wireParamData {
+	return wireParamData{
 		Name:       p.Name,
 		Type:       p.Type,
 		Examples:   p.Examples,
@@ -46,15 +34,33 @@ func paramSpecToData(p types.ParamSpec) completionItemParamData {
 }
 
 // paramSpecsToData converts a slice of ParamSpec to wire form.
-func paramSpecsToData(params []types.ParamSpec) []completionItemParamData {
+func paramSpecsToData(params []types.ParamSpec) []wireParamData {
 	if len(params) == 0 {
 		return nil
 	}
-	out := make([]completionItemParamData, len(params))
+	out := make([]wireParamData, len(params))
 	for i, p := range params {
 		out[i] = paramSpecToData(p)
 	}
 	return out
+}
+
+// completionItemData is the structured payload attached to CompletionItem.Data
+// so clients can read function metadata, variable types, and enum value context
+// without parsing labels. Serialized to JSON under the LSP-standard "data" field.
+//
+// Allowed Kind values: "function", "variable", "enum_value", "keyword",
+// "example_value", and "unit" (used by hover, see hoverData).
+type completionItemData struct {
+	Kind         string          `json:"kind"`
+	FunctionName string          `json:"functionName,omitempty"`
+	Params       []wireParamData `json:"params,omitempty"`
+	// VariableType is set on variable completion items to the evaluator's
+	// inferred ArgType (number, quantity, rate, duration, percentage).
+	VariableType types.ArgType `json:"variableType,omitempty"`
+	// ParamName is set on enum_value and example_value items to identify
+	// which parameter the value is for (useful for UI labeling).
+	ParamName string `json:"paramName,omitempty"`
 }
 
 // enumCompletionsForContext returns enum value completions for the active

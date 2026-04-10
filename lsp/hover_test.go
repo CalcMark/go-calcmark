@@ -154,8 +154,8 @@ func TestHover_FunctionData(t *testing.T) {
 	if d.Kind != "function" {
 		t.Errorf("kind = %q, want function", d.Kind)
 	}
-	if d.FunctionName != "accumulate" {
-		t.Errorf("functionName = %q, want accumulate", d.FunctionName)
+	if d.Name != "accumulate" {
+		t.Errorf("name = %q, want accumulate", d.Name)
 	}
 	if len(d.Params) != 2 {
 		t.Errorf("expected 2 params, got %d", len(d.Params))

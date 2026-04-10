@@ -82,25 +82,30 @@ func TestR2_VariableTypeFilteringAccumulate(t *testing.T) {
 	// Line 3 is "result = accumulate(, 1 hour)" — cursor just after "("
 	// col = len("result = accumulate(") = 20
 	items := completionAt(t, s, uri, 3, 20)
-	labels := itemLabels(items)
 
-	if !slices.Contains(labels, "bandwidth") {
-		t.Errorf("expected rate-typed 'bandwidth' in completions, got %v", labels)
-	}
-	// delay (duration) and plain (number) must not appear as variable suggestions
-	// NOTE: These labels can still appear as function names or unit names,
-	// so we check data.kind == "variable" items specifically.
+	// Positive and negative checks are both narrowed to data.kind == "variable"
+	// items so this test cannot pass vacuously from a function or unit label
+	// coincidentally matching "bandwidth".
+	var bandwidthVar bool
 	for _, it := range items {
 		d, ok := it.Data.(completionItemData)
 		if !ok || d.Kind != "variable" {
 			continue
 		}
-		if it.Label == "delay" {
+		switch it.Label {
+		case "bandwidth":
+			bandwidthVar = true
+			if d.VariableType != "rate" {
+				t.Errorf("bandwidth variable type = %q, want rate", d.VariableType)
+			}
+		case "delay":
 			t.Errorf("duration-typed 'delay' leaked into rate-filtered completions")
-		}
-		if it.Label == "plain" {
+		case "plain":
 			t.Errorf("number-typed 'plain' leaked into rate-filtered completions")
 		}
+	}
+	if !bandwidthVar {
+		t.Errorf("expected rate-typed 'bandwidth' variable in completions")
 	}
 }
 
@@ -168,9 +173,10 @@ func TestR4_SignatureHelpGrowSecondArg(t *testing.T) {
 	if !strings.Contains(wireJSON, `"activeParameter":1`) {
 		t.Errorf("wire missing activeParameter:1\n%s", wireJSON)
 	}
-	// grow's increment param is ArgTypeAny in the spec
-	if !strings.Contains(wireJSON, `"data":{"type":"any"`) {
-		t.Errorf("wire missing parameters[1].data.type='any'\n%s", wireJSON)
+	// grow's increment param is ArgTypeAny in the spec. The wireParamData
+	// struct emits Name first (when present), then Type.
+	if !strings.Contains(wireJSON, `"name":"increment","type":"any"`) {
+		t.Errorf("wire missing parameters[1].name='increment' + type='any'\n%s", wireJSON)
 	}
 }
 

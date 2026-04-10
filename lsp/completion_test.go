@@ -198,6 +198,20 @@ func TestVariableCompletions_TypeFiltering(t *testing.T) {
 	}
 }
 
+// TestVariableCompletions_BooleanDoesNotLeakIntoRateFilter proves that a
+// boolean-typed (ArgTypeAny-mapped) variable does NOT appear in a rate-
+// filtered completion context. Regression guard for ADV-007.
+func TestVariableCompletions_BooleanDoesNotLeakIntoRateFilter(t *testing.T) {
+	s := NewServer()
+	snap := s.evaluate("flag = true\nbandwidth = 10 MB/s")
+
+	items := variableCompletionItems(snap, "", 2, "rate")
+	labels := itemLabels(items)
+	if slices.Contains(labels, "flag") {
+		t.Errorf("boolean-typed 'flag' leaked into rate-filtered completions: %v", labels)
+	}
+}
+
 // TestVariableCompletions_DataKind asserts that variable items carry
 // data.kind == "variable" and the inferred type.
 func TestVariableCompletions_DataKind(t *testing.T) {

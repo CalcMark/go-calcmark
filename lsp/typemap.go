@@ -28,14 +28,20 @@ func runtimeTypeToArgType(v types.Type) types.ArgType {
 	}
 }
 
-// argTypesCompatible reports whether an actual runtime ArgType satisfies
-// a required parameter ArgType. ArgTypeAny on either side is always compatible;
-// an empty required type accepts anything (used when no filter is active).
+// argTypesCompatible reports whether an actual runtime ArgType satisfies a
+// required parameter ArgType.
+//
+//   - An empty required type accepts anything (used when no filter is active).
+//   - A required type of ArgTypeAny accepts every actual type, including
+//     unknown/any variables.
+//   - An actual type of ArgTypeAny (produced by runtimeTypeToArgType for
+//     unmapped runtime types like Boolean or Fraction) does NOT match a
+//     specific required type. An unknown-typed variable should not silently
+//     pass a type-specific filter — that would leak semantically-wrong
+//     completions (e.g., a Boolean variable offered as an accumulate rate).
+//   - Otherwise actual and required must match exactly.
 func argTypesCompatible(actual, required types.ArgType) bool {
 	if required == "" || required == types.ArgTypeAny {
-		return true
-	}
-	if actual == types.ArgTypeAny {
 		return true
 	}
 	return actual == required

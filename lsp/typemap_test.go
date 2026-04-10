@@ -25,6 +25,8 @@ func TestRuntimeTypeToArgType(t *testing.T) {
 		{"duration", dur, types.ArgTypeDuration},
 		{"currency", types.NewCurrency(decimal.NewFromInt(100), "$"), types.ArgTypeQuantity},
 		{"nil", nil, types.ArgTypeAny},
+		{"boolean", types.NewBoolean(true), types.ArgTypeAny},
+		{"fraction", mustFraction(t, 1, 2), types.ArgTypeAny},
 	}
 
 	for _, tc := range cases {
@@ -37,6 +39,16 @@ func TestRuntimeTypeToArgType(t *testing.T) {
 	}
 }
 
+// mustFraction builds a Fraction or fails the test — keeps test rows readable.
+func mustFraction(t *testing.T, num, denom int64) types.Type {
+	t.Helper()
+	f, err := types.NewFraction(num, denom)
+	if err != nil {
+		t.Fatalf("NewFraction: %v", err)
+	}
+	return f
+}
+
 func TestArgTypesCompatible(t *testing.T) {
 	cases := []struct {
 		name             string
@@ -46,10 +58,16 @@ func TestArgTypesCompatible(t *testing.T) {
 		{"exact rate", types.ArgTypeRate, types.ArgTypeRate, true},
 		{"exact number", types.ArgTypeNumber, types.ArgTypeNumber, true},
 		{"number vs rate", types.ArgTypeNumber, types.ArgTypeRate, false},
-		{"number vs any", types.ArgTypeNumber, types.ArgTypeAny, true},
-		{"rate vs any", types.ArgTypeRate, types.ArgTypeAny, true},
+		{"number vs any required", types.ArgTypeNumber, types.ArgTypeAny, true},
+		{"rate vs any required", types.ArgTypeRate, types.ArgTypeAny, true},
 		{"empty required accepts anything", types.ArgTypeNumber, types.ArgType(""), true},
 		{"duration vs number", types.ArgTypeDuration, types.ArgTypeNumber, false},
+		// Unknown/any actual (e.g. Boolean mapped to ArgTypeAny) must NOT
+		// leak into type-specific filters. Only an ArgTypeAny *required*
+		// accepts everything; an ArgTypeAny *actual* is otherwise excluded.
+		{"any actual does not match rate required", types.ArgTypeAny, types.ArgTypeRate, false},
+		{"any actual does not match number required", types.ArgTypeAny, types.ArgTypeNumber, false},
+		{"any actual matches any required", types.ArgTypeAny, types.ArgTypeAny, true},
 	}
 
 	for _, tc := range cases {

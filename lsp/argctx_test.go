@@ -10,25 +10,22 @@ func TestExtractArgumentContext(t *testing.T) {
 		wantFunc     string
 		wantParam    int
 		wantInString bool
-		wantPrefix   string
 	}{
 		{
-			name:         "empty throughput string arg",
+			name:         "double-quote opens string run",
 			line:         `x = throughput("`,
 			col:          len(`x = throughput("`),
 			wantFunc:     "throughput",
 			wantParam:    0,
 			wantInString: true,
-			wantPrefix:   "",
 		},
 		{
-			name:         "partial throughput value",
-			line:         `x = throughput("gig`,
-			col:          len(`x = throughput("gig`),
+			name:         "single-quote opens string run symmetrically",
+			line:         `x = throughput('`,
+			col:          len(`x = throughput('`),
 			wantFunc:     "throughput",
 			wantParam:    0,
 			wantInString: true,
-			wantPrefix:   "gig",
 		},
 		{
 			name:      "accumulate first arg",
@@ -58,7 +55,22 @@ func TestExtractArgumentContext(t *testing.T) {
 			wantFunc:     "convert_rate",
 			wantParam:    1,
 			wantInString: true,
-			wantPrefix:   "",
+		},
+		{
+			name:         "comma inside string content does not advance paramIdx",
+			line:         `throughput("gig, `,
+			col:          len(`throughput("gig, `),
+			wantFunc:     "throughput",
+			wantParam:    0, // comma was inside the quoted run
+			wantInString: true,
+		},
+		{
+			name:         "single-quote comma also does not advance paramIdx",
+			line:         `throughput('gig, `,
+			col:          len(`throughput('gig, `),
+			wantFunc:     "throughput",
+			wantParam:    0,
+			wantInString: true,
 		},
 		{
 			name:      "outside any call",
@@ -75,22 +87,14 @@ func TestExtractArgumentContext(t *testing.T) {
 			wantParam: -1,
 		},
 		{
-			name:         "escaped quote still in string",
-			line:         `throughput("a\"b`,
-			col:          len(`throughput("a\"b`),
+			name: "backslash is a regular rune, not an escape",
+			line: `throughput("a\"b`,
+			col:  len(`throughput("a\"b`),
+			// After opening `"`, the `a\` is content, the second `"` closes
+			// the run. Now back at paren level, `b` is a plain identifier.
 			wantFunc:     "throughput",
 			wantParam:    0,
-			wantInString: true,
-			wantPrefix:   `a\"b`,
-		},
-		{
-			name:         "rtt partial scope",
-			line:         `r = rtt("re`,
-			col:          len(`r = rtt("re`),
-			wantFunc:     "rtt",
-			wantParam:    0,
-			wantInString: true,
-			wantPrefix:   "re",
+			wantInString: false,
 		},
 	}
 
@@ -106,18 +110,88 @@ func TestExtractArgumentContext(t *testing.T) {
 			if ctx.insideString != tc.wantInString {
 				t.Errorf("insideString = %v, want %v", ctx.insideString, tc.wantInString)
 			}
-			if ctx.stringPrefix != tc.wantPrefix {
-				t.Errorf("stringPrefix = %q, want %q", ctx.stringPrefix, tc.wantPrefix)
+		})
+	}
+}
+
+// TestExtractArgumentContext_DeepNesting covers 3+ levels and commas inside
+// completed inner calls to make sure they don't inflate outer paramIdx.
+func TestExtractArgumentContext_DeepNesting(t *testing.T) {
+	cases := []struct {
+		name      string
+		line      string
+		col       int
+		wantFunc  string
+		wantParam int
+	}{
+		{
+			name:      "three levels nested, cursor innermost",
+			line:      `a(b(c(`,
+			col:       len(`a(b(c(`),
+			wantFunc:  "c",
+			wantParam: 0,
+		},
+		{
+			name:      "outer comma after closed inner call",
+			line:      `outer(inner(a, b), `,
+			col:       len(`outer(inner(a, b), `),
+			wantFunc:  "outer",
+			wantParam: 1,
+		},
+		{
+			name:      "outer third arg after two closed inners",
+			line:      `outer(i1(1, 2), i2(3, 4), `,
+			col:       len(`outer(i1(1, 2), i2(3, 4), `),
+			wantFunc:  "outer",
+			wantParam: 2,
+		},
+		{
+			name:      "inner first arg, then outer still unaffected",
+			line:      `accumulate(convert_rate(r, `,
+			col:       len(`accumulate(convert_rate(r, `),
+			wantFunc:  "convert_rate",
+			wantParam: 1,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := extractArgumentContext(tc.line, tc.col)
+			if ctx.funcName != tc.wantFunc {
+				t.Errorf("funcName = %q, want %q", ctx.funcName, tc.wantFunc)
+			}
+			if ctx.paramIdx != tc.wantParam {
+				t.Errorf("paramIdx = %d, want %d", ctx.paramIdx, tc.wantParam)
 			}
 		})
 	}
 }
 
-// TestExtractFunctionContext_BackwardCompat ensures the adapter still returns
-// the legacy (name, paramIdx) tuple correctly.
-func TestExtractFunctionContext_BackwardCompatStillWorks(t *testing.T) {
-	name, idx := extractFunctionContext(`accumulate(10 MB/s, `, len(`accumulate(10 MB/s, `))
-	if name != "accumulate" || idx != 1 {
-		t.Errorf("extractFunctionContext = (%q, %d), want (accumulate, 1)", name, idx)
+// FuzzExtractArgumentContext seeds the backward walker with edge-case inputs
+// and asserts that arbitrary byte sequences never panic. The plan commits to
+// a fuzz test as the mitigation for walker misclassification risk.
+func FuzzExtractArgumentContext(f *testing.F) {
+	seeds := []string{
+		``,
+		`x = throughput(`,
+		`x = throughput("gig`,
+		`accumulate(10 MB/s, `,
+		`grow(100, `,
+		`accumulate(convert_rate(10 MB/s, "`,
+		`foo()) `,
+		`x = 1 + `,
+		`throughput("a\"b`,
+		`rtt("re`,
+		`a(b(c(`,
+		`outer(i1(1, 2), i2(3, 4), `,
+		string([]byte{0x00, '(', ')'}),
+		"δ(ε, ",
 	}
+	for _, s := range seeds {
+		for i := 0; i <= len(s); i++ {
+			f.Add(s, i)
+		}
+	}
+	f.Fuzz(func(t *testing.T, line string, col int) {
+		_ = extractArgumentContext(line, col)
+	})
 }

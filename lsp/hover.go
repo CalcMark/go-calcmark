@@ -54,30 +54,32 @@ type lspHover struct {
 }
 
 // hoverData is the structured payload attached to lspHover.Data. The Kind
-// field tells the client which shape the rest of the struct uses:
+// field discriminates the shape of the remaining fields:
 //
 //   - "variable" → Name, VariableType, Value
-//   - "function" → FunctionName, Syntax, Description, Params, Example
-//   - "unit"     → Name, Symbol, Category, Aliases
+//   - "function" → Name, Syntax, Description, Params, Example, NLExample
+//   - "unit"     → Name, Symbol, Description, Category, Aliases
+//
+// Name is always set and should be used uniformly across kinds. Clients use
+// Kind to decide which additional fields are relevant.
 type hoverData struct {
 	Kind string `json:"kind"`
 
-	// Common
+	// Common to every kind.
 	Name string `json:"name,omitempty"`
 
-	// Variable
+	// Variable kind.
 	VariableType types.ArgType `json:"variableType,omitempty"`
 	Value        string        `json:"value,omitempty"`
 
-	// Function
-	FunctionName string                    `json:"functionName,omitempty"`
-	Syntax       string                    `json:"syntax,omitempty"`
-	Description  string                    `json:"description,omitempty"`
-	Params       []completionItemParamData `json:"params,omitempty"`
-	Example      string                    `json:"example,omitempty"`
-	NLExample    string                    `json:"nlExample,omitempty"`
+	// Function kind.
+	Syntax      string          `json:"syntax,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Params      []wireParamData `json:"params,omitempty"`
+	Example     string          `json:"example,omitempty"`
+	NLExample   string          `json:"nlExample,omitempty"`
 
-	// Unit
+	// Unit kind.
 	Symbol   string   `json:"symbol,omitempty"`
 	Category string   `json:"category,omitempty"`
 	Aliases  []string `json:"aliases,omitempty"`
@@ -216,13 +218,12 @@ func (s *Server) hoverHandle(params *protocol.HoverParams) (any, error) {
 // pulling param metadata from the spec.
 func buildFunctionHoverData(name, syntax, description, example, nlExample string) hoverData {
 	d := hoverData{
-		Kind:         "function",
-		Name:         name,
-		FunctionName: name,
-		Syntax:       syntax,
-		Description:  description,
-		Example:      example,
-		NLExample:    nlExample,
+		Kind:        "function",
+		Name:        name,
+		Syntax:      syntax,
+		Description: description,
+		Example:     example,
+		NLExample:   nlExample,
 	}
 	if spec := types.GetFunctionSpec(name); spec != nil {
 		d.Params = paramSpecsToData(spec.Params)

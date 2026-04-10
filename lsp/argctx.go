@@ -6,23 +6,28 @@ import "unicode"
 // function call. Returned by extractArgumentContext.
 //
 // When the cursor is not inside any call, funcName is "" and paramIdx is -1.
-// When the cursor is inside a string literal within the active argument,
-// insideString is true and stringPrefix holds the characters already typed
-// inside the string (for prefix-filtering enum completions).
+//
+// insideString reports whether the cursor lies inside a '"' or "'" quoted
+// run within the active argument. Calcmark has no string literal syntax —
+// enum-backed parameters take bare identifiers like throughput(gigabit) —
+// so insideString is used only as a suppression signal: when true, the
+// LSP does not offer bare-identifier completions that would produce
+// invalid calcmark code.
 type argumentContext struct {
 	funcName     string
 	paramIdx     int
 	insideString bool
-	stringPrefix string
 }
 
 // extractArgumentContext scans lineText from the start up to col and reports
 // the innermost function call context at the cursor. Uses a forward scan with
 // a paren-frame stack because forward scanning is the natural way to track
-// string literal state across the line.
+// quote-run state across the line.
 //
-// The scan is rune-aware for UTF-8 safety. Escaped quotes (`\"`) inside a
-// string do not terminate the string.
+// The scan is rune-aware for UTF-8 safety. Both '"' and "'" act as quote
+// delimiters symmetrically — whichever one opens the run closes it. There is
+// no backslash-escape handling because calcmark has no string literal syntax
+// and therefore no escape semantics to honor.
 func extractArgumentContext(lineText string, col int) argumentContext {
 	runes := []rune(lineText)
 	if col > len(runes) {
@@ -33,32 +38,27 @@ func extractArgumentContext(lineText string, col int) argumentContext {
 		funcName     string
 		paramIdx     int
 		insideString bool
-		stringStart  int // rune index just past the opening quote
+		openQuote    rune // '"' or '\'' while insideString, otherwise 0
 	}
 	var stack []frame
 
-	i := 0
-	for i < col {
+	for i := 0; i < col; i++ {
 		r := runes[i]
 
 		if len(stack) > 0 && stack[len(stack)-1].insideString {
-			// We're inside a string — consume escape sequences and look for closing quote.
-			if r == '\\' && i+1 < col {
-				i += 2
-				continue
+			top := &stack[len(stack)-1]
+			if r == top.openQuote {
+				top.insideString = false
+				top.openQuote = 0
 			}
-			if r == '"' {
-				stack[len(stack)-1].insideString = false
-				i++
-				continue
-			}
-			i++
+			// All other characters (including '(' ')' ',' '\\') are consumed
+			// as string content while inside a quote run — they do NOT affect
+			// paren depth or paramIdx tracking.
 			continue
 		}
 
 		switch r {
 		case '(':
-			// Extract the identifier immediately preceding this paren as the function name.
 			name := identifierEndingAt(runes, i)
 			stack = append(stack, frame{funcName: name, paramIdx: 0})
 		case ')':
@@ -69,13 +69,13 @@ func extractArgumentContext(lineText string, col int) argumentContext {
 			if len(stack) > 0 {
 				stack[len(stack)-1].paramIdx++
 			}
-		case '"':
+		case '"', '\'':
 			if len(stack) > 0 {
-				stack[len(stack)-1].insideString = true
-				stack[len(stack)-1].stringStart = i + 1
+				top := &stack[len(stack)-1]
+				top.insideString = true
+				top.openQuote = r
 			}
 		}
-		i++
 	}
 
 	if len(stack) == 0 {
@@ -87,15 +87,11 @@ func extractArgumentContext(lineText string, col int) argumentContext {
 		return argumentContext{funcName: "", paramIdx: -1}
 	}
 
-	ctx := argumentContext{
+	return argumentContext{
 		funcName:     top.funcName,
 		paramIdx:     top.paramIdx,
 		insideString: top.insideString,
 	}
-	if top.insideString {
-		ctx.stringPrefix = string(runes[top.stringStart:col])
-	}
-	return ctx
 }
 
 // identifierEndingAt returns the identifier-run ending immediately before

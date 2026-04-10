@@ -26,13 +26,13 @@ type interceptingHandler struct {
 }
 
 // Handle satisfies the glsp.Handler interface. Called once per incoming JSON-
-// RPC request by the glsp server.
+// RPC request by the glsp server. NewServer always registers the stub
+// protocol.Handler fields for the intercepted methods, so the intercept
+// unconditionally handles signatureHelp and hover; other methods fall through
+// to the inner handler.
 func (h *interceptingHandler) Handle(ctx *glsp.Context) (r any, validMethod bool, validParams bool, err error) {
 	switch ctx.Method {
 	case protocol.MethodTextDocumentSignatureHelp:
-		if h.inner.TextDocumentSignatureHelp == nil {
-			break
-		}
 		validMethod = true
 		var params protocol.SignatureHelpParams
 		if err = json.Unmarshal(ctx.Params, &params); err != nil {
@@ -43,9 +43,6 @@ func (h *interceptingHandler) Handle(ctx *glsp.Context) (r any, validMethod bool
 		return r, validMethod, validParams, err
 
 	case protocol.MethodTextDocumentHover:
-		if h.inner.TextDocumentHover == nil {
-			break
-		}
 		validMethod = true
 		var params protocol.HoverParams
 		if err = json.Unmarshal(ctx.Params, &params); err != nil {
