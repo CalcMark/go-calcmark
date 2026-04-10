@@ -27,11 +27,12 @@ const (
 
 // ParamSpec describes a function parameter with type constraints and examples.
 type ParamSpec struct {
-	Name     string   // Parameter name (e.g., "rate", "duration")
-	Type     ArgType  // Expected argument type
-	Optional bool     // True if parameter has a default value
-	Variadic bool     // True if parameter accepts multiple values
-	Examples []string // Example values showing how to create this type
+	Name       string   // Parameter name (e.g., "rate", "duration")
+	Type       ArgType  // Expected argument type
+	Optional   bool     // True if parameter has a default value
+	Variadic   bool     // True if parameter accepts multiple values
+	Examples   []string // Example values showing how to create this type
+	EnumValues []string // Canonical unquoted enum values when the parameter accepts a finite identifier set (nil for free-form params)
 }
 
 // FunctionSpec describes a function's type signature for semantic analysis.
@@ -102,41 +103,41 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"rtt": {
 		Name: "rtt",
 		Params: []ParamSpec{
-			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes)},
+			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes), EnumValues: identifiers.NetworkScopes},
 		},
 	},
 	"throughput": {
 		Name: "throughput",
 		Params: []ParamSpec{
-			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes)},
+			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes), EnumValues: identifiers.NetworkTypes},
 		},
 	},
 	"transfer_time": {
 		Name: "transfer_time",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 GB", "100 MB", "10 TB"}},
-			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes)},
-			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes)},
+			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes), EnumValues: identifiers.NetworkScopes},
+			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes), EnumValues: identifiers.NetworkTypes},
 		},
 	},
 	"read": {
 		Name: "read",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 MB", "4 KB", "1 GB"}},
-			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes)},
+			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes), EnumValues: identifiers.StorageTypes},
 		},
 	},
 	"seek": {
 		Name: "seek",
 		Params: []ParamSpec{
-			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes)},
+			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes), EnumValues: identifiers.StorageTypes},
 		},
 	},
 	"compress": {
 		Name: "compress",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 MB", "100 KB", "1 GB"}},
-			{Name: "compression_type", Type: ArgTypeString, Examples: quotedNames(identifiers.CompressionTypes)},
+			{Name: "compression_type", Type: ArgTypeString, Examples: quotedNames(identifiers.CompressionTypes), EnumValues: identifiers.CompressionTypes},
 		},
 	},
 	"compound": {

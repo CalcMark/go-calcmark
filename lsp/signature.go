@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -107,42 +106,12 @@ func signatureHelpForFunction(funcName string, activeParam int) *protocol.Signat
 // extractFunctionContext finds the function name and active parameter index
 // at the given cursor position. Returns ("", -1) if the cursor is not inside
 // a function call.
-// Uses rune-aware indexing for UTF-8 safety.
+//
+// Thin adapter over extractArgumentContext preserved for existing callers
+// that don't need string-literal awareness.
 func extractFunctionContext(lineText string, col int) (string, int) {
-	runes := []rune(lineText)
-	if col > len(runes) {
-		col = len(runes)
-	}
-
-	// Walk backward from cursor to find the matching '('
-	depth := 0
-	commaCount := 0
-	for i := col - 1; i >= 0; i-- {
-		switch runes[i] {
-		case ')':
-			depth++
-		case '(':
-			if depth == 0 {
-				// Found the opening paren — extract the function name before it
-				end := i
-				start := end
-				for start > 0 && (unicode.IsLetter(runes[start-1]) || unicode.IsDigit(runes[start-1]) || runes[start-1] == '_') {
-					start--
-				}
-				if start == end {
-					return "", -1
-				}
-				return string(runes[start:end]), commaCount
-			}
-			depth--
-		case ',':
-			if depth == 0 {
-				commaCount++
-			}
-		}
-	}
-
-	return "", -1
+	ctx := extractArgumentContext(lineText, col)
+	return ctx.funcName, ctx.paramIdx
 }
 
 func uintPtr(v uint32) *protocol.UInteger {
