@@ -1,15 +1,16 @@
 package lsp
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-// hoverContent calls textDocumentHover with a freshly-loaded document and
-// returns the hover body text (empty string when hover is nil).
-func hoverContent(t *testing.T, source string, line, col uint32) string {
+// hoverResult drives textDocument/hover through the full extended path
+// (including the interceptingHandler) and returns the *lspHover wire shape.
+func hoverResult(t *testing.T, source string, line, col uint32) *lspHover {
 	t.Helper()
 	s := NewServer()
 	ds := &documentState{}
@@ -21,7 +22,7 @@ func hoverContent(t *testing.T, source string, line, col uint32) string {
 	s.documents["test://doc.cm"] = ds
 	s.mu.Unlock()
 
-	h, err := s.textDocumentHover(nil, &protocol.HoverParams{
+	r, err := s.hoverHandle(&protocol.HoverParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 			TextDocument: protocol.TextDocumentIdentifier{URI: "test://doc.cm"},
 			Position:     protocol.Position{Line: line, Character: col},
@@ -30,6 +31,20 @@ func hoverContent(t *testing.T, source string, line, col uint32) string {
 	if err != nil {
 		t.Fatalf("hover error: %v", err)
 	}
+	if r == nil {
+		return nil
+	}
+	h, ok := r.(*lspHover)
+	if !ok {
+		t.Fatalf("hover result is not *lspHover: %T", r)
+	}
+	return h
+}
+
+// hoverContent returns just the markdown body text (empty string when nil).
+func hoverContent(t *testing.T, source string, line, col uint32) string {
+	t.Helper()
+	h := hoverResult(t, source, line, col)
 	if h == nil {
 		return ""
 	}
@@ -99,6 +114,78 @@ func TestHover_VariableRate(t *testing.T) {
 	}
 	if !strings.Contains(content, "rate") {
 		t.Errorf("hover content missing 'rate':\n%s", content)
+	}
+}
+
+// TestHover_VariableData asserts the structured data field on a variable hover.
+func TestHover_VariableData(t *testing.T) {
+	h := hoverResult(t, "price = 100", 0, 0)
+	if h == nil {
+		t.Fatal("expected hover on price")
+	}
+	d, ok := h.Data.(hoverData)
+	if !ok {
+		t.Fatalf("h.Data is not hoverData: %T", h.Data)
+	}
+	if d.Kind != "variable" {
+		t.Errorf("kind = %q, want variable", d.Kind)
+	}
+	if d.Name != "price" {
+		t.Errorf("name = %q, want price", d.Name)
+	}
+	if d.VariableType != "number" {
+		t.Errorf("variableType = %q, want number", d.VariableType)
+	}
+	if d.Value == "" {
+		t.Error("value is empty")
+	}
+}
+
+// TestHover_FunctionData asserts the structured data field on a function hover.
+func TestHover_FunctionData(t *testing.T) {
+	h := hoverResult(t, "x = accumulate(10 MB/s, 1 hour)", 0, 4)
+	if h == nil {
+		t.Fatal("expected hover on accumulate")
+	}
+	d, ok := h.Data.(hoverData)
+	if !ok {
+		t.Fatalf("h.Data is not hoverData: %T", h.Data)
+	}
+	if d.Kind != "function" {
+		t.Errorf("kind = %q, want function", d.Kind)
+	}
+	if d.FunctionName != "accumulate" {
+		t.Errorf("functionName = %q, want accumulate", d.FunctionName)
+	}
+	if len(d.Params) != 2 {
+		t.Errorf("expected 2 params, got %d", len(d.Params))
+	}
+	if len(d.Params) >= 1 && d.Params[0].Type != "rate" {
+		t.Errorf("param[0].type = %q, want rate", d.Params[0].Type)
+	}
+}
+
+// TestHover_WireJSONShape asserts the final JSON emitted by MarshalJSON on
+// lspHover includes both contents (standard) and data (extension).
+func TestHover_WireJSONShape(t *testing.T) {
+	h := hoverResult(t, "price = 100", 0, 0)
+	if h == nil {
+		t.Fatal("expected hover")
+	}
+	b, err := json.Marshal(h)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	s := string(b)
+	for _, want := range []string{
+		`"contents"`,
+		`"data"`,
+		`"kind":"variable"`,
+		`"variableType":"number"`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("wire JSON missing %q\n%s", want, s)
+		}
 	}
 }
 

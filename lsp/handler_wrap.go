@@ -10,9 +10,14 @@ import (
 // interceptingHandler wraps a protocol.Handler and intercepts methods whose
 // native glsp return types are too narrow for our extended wire shapes.
 //
-// Today only textDocument/signatureHelp is intercepted: the protocol
-// ParameterInformation struct has no `data` field, so we produce our own
-// lspSignatureHelp shape and let JSON marshaling handle the extra field.
+// Intercepted methods:
+//
+//   - textDocument/signatureHelp — protocol.ParameterInformation has no
+//     `data` field, so we produce lspSignatureHelp with per-parameter data.
+//   - textDocument/hover — protocol.Hover has no `data` field, so we produce
+//     lspHover with a sibling `data` field for clients that want structured
+//     content without parsing markdown.
+//
 // Clients that don't know about `data` ignore it (standard JSON-over-LSP
 // behavior for unknown fields).
 type interceptingHandler struct {
@@ -23,7 +28,11 @@ type interceptingHandler struct {
 // Handle satisfies the glsp.Handler interface. Called once per incoming JSON-
 // RPC request by the glsp server.
 func (h *interceptingHandler) Handle(ctx *glsp.Context) (r any, validMethod bool, validParams bool, err error) {
-	if ctx.Method == protocol.MethodTextDocumentSignatureHelp && h.inner.TextDocumentSignatureHelp != nil {
+	switch ctx.Method {
+	case protocol.MethodTextDocumentSignatureHelp:
+		if h.inner.TextDocumentSignatureHelp == nil {
+			break
+		}
 		validMethod = true
 		var params protocol.SignatureHelpParams
 		if err = json.Unmarshal(ctx.Params, &params); err != nil {
@@ -31,6 +40,19 @@ func (h *interceptingHandler) Handle(ctx *glsp.Context) (r any, validMethod bool
 		}
 		validParams = true
 		r, err = h.server.signatureHelpHandle(&params)
+		return r, validMethod, validParams, err
+
+	case protocol.MethodTextDocumentHover:
+		if h.inner.TextDocumentHover == nil {
+			break
+		}
+		validMethod = true
+		var params protocol.HoverParams
+		if err = json.Unmarshal(ctx.Params, &params); err != nil {
+			return nil, true, false, err
+		}
+		validParams = true
+		r, err = h.server.hoverHandle(&params)
 		return r, validMethod, validParams, err
 	}
 	return h.inner.Handle(ctx)
