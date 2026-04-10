@@ -47,6 +47,7 @@ func TestEnumValuesOnStringParams(t *testing.T) {
 		{"read", 1, "storage_type", identifiers.StorageTypes},
 		{"seek", 0, "storage_type", identifiers.StorageTypes},
 		{"compress", 1, "compression_type", identifiers.CompressionTypes},
+		{"convert_rate", 1, "time_unit", identifiers.TimeUnits},
 	}
 
 	for _, tc := range cases {
@@ -76,9 +77,8 @@ func TestEnumValuesNilForNonEnumStringParams(t *testing.T) {
 		fn       string
 		paramIdx int
 	}{
-		{"convert_rate", 1}, // time_unit — free-form
-		{"compound", 3},     // period — free-form
-		{"capacity", 2},     // unit — free-form
+		{"compound", 3}, // period — free-form
+		{"capacity", 2}, // unit — free-form
 	}
 
 	for _, tc := range cases {

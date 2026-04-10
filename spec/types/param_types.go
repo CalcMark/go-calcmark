@@ -81,7 +81,7 @@ var FunctionSpecs = map[string]FunctionSpec{
 		Name: "convert_rate",
 		Params: []ParamSpec{
 			{Name: "rate", Type: ArgTypeRate, Examples: []string{"10 MB/s", "1 GB/hour", "100 req/s"}},
-			{Name: "time_unit", Type: ArgTypeString, Examples: []string{"second", "hour", "day", "week", "year"}},
+			{Name: "time_unit", Type: ArgTypeString, Examples: identifiers.TimeUnits, EnumValues: identifiers.TimeUnits},
 		},
 	},
 	"downtime": {

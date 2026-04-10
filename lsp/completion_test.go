@@ -117,14 +117,27 @@ func TestEnumValueCompletions_CompressSecondArg(t *testing.T) {
 	}
 }
 
-// TestEnumValueCompletions_NonEnumStringParam asserts a free-form string
-// param (convert_rate.time_unit) yields no enum completions — the code path
-// must fall through to general completions.
-func TestEnumValueCompletions_NonEnumStringParam(t *testing.T) {
+// TestEnumValueCompletions_ConvertRateTimeUnit asserts that convert_rate's
+// second arg now offers the canonical time unit names as enum completions.
+func TestEnumValueCompletions_ConvertRateTimeUnit(t *testing.T) {
 	ctx := argumentContext{funcName: "convert_rate", paramIdx: 1}
 	items := enumCompletionsForContext(ctx, "")
+	labels := itemLabels(items)
+	for _, want := range []string{"second", "minute", "hour", "day", "year"} {
+		if !slices.Contains(labels, want) {
+			t.Errorf("expected %q in convert_rate time_unit completions, got %v", want, labels)
+		}
+	}
+}
+
+// TestEnumValueCompletions_NonEnumStringParam asserts a free-form string
+// param (compound.period) yields no enum completions — the code path
+// must fall through to general completions.
+func TestEnumValueCompletions_NonEnumStringParam(t *testing.T) {
+	ctx := argumentContext{funcName: "compound", paramIdx: 3}
+	items := enumCompletionsForContext(ctx, "")
 	if len(items) != 0 {
-		t.Errorf("expected no enum items for convert_rate.time_unit, got %d: %v", len(items), itemLabels(items))
+		t.Errorf("expected no enum items for compound.period, got %d: %v", len(items), itemLabels(items))
 	}
 }
 
