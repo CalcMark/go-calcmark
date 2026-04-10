@@ -2,15 +2,6 @@ package types
 
 import "github.com/CalcMark/go-calcmark/spec/identifiers"
 
-// quotedNames wraps each name in double quotes for ParamSpec.Examples display.
-func quotedNames(names []string) []string {
-	quoted := make([]string, len(names))
-	for i, n := range names {
-		quoted[i] = `"` + n + `"`
-	}
-	return quoted
-}
-
 // ArgType represents the semantic type expected for a function argument.
 // This defines what kinds of values are valid for each parameter position.
 type ArgType string
@@ -48,7 +39,7 @@ var ArgTypeExamples = map[ArgType][]string{
 	ArgTypeRate:       {"10 MB/s", "60 km/h", "100 requests/second", "5 GB/day"},
 	ArgTypeDuration:   {"2 hours", "30 minutes", "1 day", "500 ms"},
 	ArgTypePercentage: {"99.9%", "15%", "50%", "0.1%"},
-	ArgTypeString:     {`"datacenter"`, `"ssd"`, `"gzip"`},
+	ArgTypeString:     {"ssd", "gzip", "gigabit"},
 	ArgTypeAny:        {"<any value>"},
 }
 
@@ -90,7 +81,7 @@ var FunctionSpecs = map[string]FunctionSpec{
 		Name: "convert_rate",
 		Params: []ParamSpec{
 			{Name: "rate", Type: ArgTypeRate, Examples: []string{"10 MB/s", "1 GB/hour", "100 req/s"}},
-			{Name: "time_unit", Type: ArgTypeString, Examples: []string{`"per second"`, `"per hour"`, `"per day"`}},
+			{Name: "time_unit", Type: ArgTypeString, Examples: []string{"second", "hour", "day", "week", "year"}},
 		},
 	},
 	"downtime": {
@@ -103,41 +94,41 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"rtt": {
 		Name: "rtt",
 		Params: []ParamSpec{
-			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes), EnumValues: identifiers.NetworkScopes},
+			{Name: "scope", Type: ArgTypeString, Examples: identifiers.NetworkScopes, EnumValues: identifiers.NetworkScopes},
 		},
 	},
 	"throughput": {
 		Name: "throughput",
 		Params: []ParamSpec{
-			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes), EnumValues: identifiers.NetworkTypes},
+			{Name: "network_type", Type: ArgTypeString, Examples: identifiers.NetworkTypes, EnumValues: identifiers.NetworkTypes},
 		},
 	},
 	"transfer_time": {
 		Name: "transfer_time",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 GB", "100 MB", "10 TB"}},
-			{Name: "scope", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkScopes), EnumValues: identifiers.NetworkScopes},
-			{Name: "network_type", Type: ArgTypeString, Examples: quotedNames(identifiers.NetworkTypes), EnumValues: identifiers.NetworkTypes},
+			{Name: "scope", Type: ArgTypeString, Examples: identifiers.NetworkScopes, EnumValues: identifiers.NetworkScopes},
+			{Name: "network_type", Type: ArgTypeString, Examples: identifiers.NetworkTypes, EnumValues: identifiers.NetworkTypes},
 		},
 	},
 	"read": {
 		Name: "read",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 MB", "4 KB", "1 GB"}},
-			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes), EnumValues: identifiers.StorageTypes},
+			{Name: "storage_type", Type: ArgTypeString, Examples: identifiers.StorageTypes, EnumValues: identifiers.StorageTypes},
 		},
 	},
 	"seek": {
 		Name: "seek",
 		Params: []ParamSpec{
-			{Name: "storage_type", Type: ArgTypeString, Examples: quotedNames(identifiers.StorageTypes), EnumValues: identifiers.StorageTypes},
+			{Name: "storage_type", Type: ArgTypeString, Examples: identifiers.StorageTypes, EnumValues: identifiers.StorageTypes},
 		},
 	},
 	"compress": {
 		Name: "compress",
 		Params: []ParamSpec{
 			{Name: "size", Type: ArgTypeQuantity, Examples: []string{"1 MB", "100 KB", "1 GB"}},
-			{Name: "compression_type", Type: ArgTypeString, Examples: quotedNames(identifiers.CompressionTypes), EnumValues: identifiers.CompressionTypes},
+			{Name: "compression_type", Type: ArgTypeString, Examples: identifiers.CompressionTypes, EnumValues: identifiers.CompressionTypes},
 		},
 	},
 	"compound": {
@@ -171,7 +162,7 @@ var FunctionSpecs = map[string]FunctionSpec{
 		Params: []ParamSpec{
 			{Name: "demand", Type: ArgTypeRate, Examples: []string{"1000 requests/second", "10 GB/day"}},
 			{Name: "capacity_per_unit", Type: ArgTypeRate, Examples: []string{"100 requests/second", "1 GB/day"}},
-			{Name: "unit", Type: ArgTypeString, Examples: []string{`"servers"`, `"instances"`}},
+			{Name: "unit", Type: ArgTypeString, Examples: []string{"server", "instance", "pod"}},
 			{Name: "buffer", Type: ArgTypePercentage, Optional: true, Examples: []string{"20%", "50%"}},
 		},
 	},

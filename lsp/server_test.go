@@ -380,7 +380,7 @@ func TestCompletionItems_VariablesFromSnapshot(t *testing.T) {
 	s := NewServer()
 	snap := s.evaluate("price = 100\ntax = 10")
 
-	items := variableCompletionItems(snap, "", 2)
+	items := variableCompletionItems(snap, "", 2, "")
 	if len(items) == 0 {
 		t.Fatal("expected variable completion items")
 	}
