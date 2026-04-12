@@ -135,6 +135,118 @@ func TestR3_FunctionDataFunctionName(t *testing.T) {
 	}
 }
 
+// TestR3b_NLCompletionDataFunctionName — NL-example completion items for
+// functions with synonyms carry the canonical name, not the alias display name.
+func TestR3b_NLCompletionDataFunctionName(t *testing.T) {
+	source := "x = av"
+	s, uri := prepareServerDoc(t, source)
+
+	items := completionAt(t, s, uri, 0, 6)
+	nlSeen := false
+	for _, it := range items {
+		d, ok := it.Data.(completionItemData)
+		if !ok {
+			continue
+		}
+		if it.Kind != nil && *it.Kind == protocol.CompletionItemKindSnippet && d.FunctionName == "avg" {
+			nlSeen = true
+			if len(d.Params) == 0 {
+				t.Errorf("NL avg item %q has empty data.params", it.Label)
+			}
+		}
+		// No item should carry the display name as functionName
+		if d.FunctionName == "avg (average, mean)" {
+			t.Errorf("item %q has display name as functionName: %q", it.Label, d.FunctionName)
+		}
+	}
+	if !nlSeen {
+		t.Error("expected NL-example item with data.functionName == avg")
+	}
+}
+
+// TestNLSignatureHelp_GrowAcceptance — end-to-end signatureHelp for NL-form
+// "grow 100 by 20 over 5 months" with cursor on each numeric literal.
+func TestNLSignatureHelp_GrowAcceptance(t *testing.T) {
+	source := "grow 100 by 20 over 5 months"
+	s, uri := prepareServerDoc(t, source)
+
+	cases := []struct {
+		name      string
+		col       uint32
+		wantParam uint32
+	}{
+		{"cursor on 100", 6, 0},
+		{"cursor on 20", 13, 1},
+		{"cursor on 5", 21, 2},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			params := &protocol.SignatureHelpParams{
+				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+					TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+					Position:     protocol.Position{Line: 0, Character: tc.col},
+				},
+			}
+			r, err := s.signatureHelpHandle(params)
+			if err != nil {
+				t.Fatalf("signatureHelp error: %v", err)
+			}
+			if r == nil {
+				t.Fatal("expected non-nil signatureHelp for NL grow")
+			}
+			help, ok := r.(*lspSignatureHelp)
+			if !ok {
+				t.Fatalf("result is not *lspSignatureHelp: %T", r)
+			}
+			if help.ActiveParameter == nil {
+				t.Fatal("expected activeParameter to be set")
+			}
+			if *help.ActiveParameter != protocol.UInteger(tc.wantParam) {
+				t.Errorf("activeParameter = %d, want %d", *help.ActiveParameter, tc.wantParam)
+			}
+			if !strings.Contains(help.Signatures[0].Label, "grow") {
+				t.Errorf("signature label = %q, want to contain grow", help.Signatures[0].Label)
+			}
+		})
+	}
+}
+
+// TestNLSignatureHelp_CompoundWithAssignment — end-to-end signatureHelp for
+// "goal = compound $1000 by 5% monthly over 10 years".
+func TestNLSignatureHelp_CompoundWithAssignment(t *testing.T) {
+	source := "goal = compound $1000 by 5% monthly over 10 years"
+	s, uri := prepareServerDoc(t, source)
+
+	params := &protocol.SignatureHelpParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     protocol.Position{Line: 0, Character: 19}, // cursor on "1000"
+		},
+	}
+	r, err := s.signatureHelpHandle(params)
+	if err != nil {
+		t.Fatalf("signatureHelp error: %v", err)
+	}
+	if r == nil {
+		t.Fatal("expected non-nil signatureHelp for NL compound")
+	}
+	help, ok := r.(*lspSignatureHelp)
+	if !ok {
+		t.Fatalf("result is not *lspSignatureHelp: %T", r)
+	}
+	if help.ActiveParameter == nil || *help.ActiveParameter != 0 {
+		var got any
+		if help.ActiveParameter != nil {
+			got = *help.ActiveParameter
+		}
+		t.Errorf("activeParameter = %v, want 0", got)
+	}
+	if !strings.Contains(help.Signatures[0].Label, "compound") {
+		t.Errorf("label = %q, want to contain compound", help.Signatures[0].Label)
+	}
+}
+
 // TestR4_SignatureHelpGrowSecondArg — signatureHelp at grow(100, |, 5)
 // returns activeParameter=1 and parameters[1].data.type is set.
 func TestR4_SignatureHelpGrowSecondArg(t *testing.T) {
