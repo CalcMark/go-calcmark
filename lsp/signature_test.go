@@ -128,6 +128,81 @@ func TestSignatureHelp_EnumParamCarriesValues(t *testing.T) {
 	}
 }
 
+// TestSignatureHelp_NLFormGrow verifies the full signatureHelp path for
+// NL-form "grow 100 by 20 over 5 months" — extractArgumentContext returns
+// a valid context and signatureHelpForFunction produces the correct response.
+func TestSignatureHelp_NLFormGrow(t *testing.T) {
+	cases := []struct {
+		name      string
+		line      string
+		col       int
+		wantParam int
+	}{
+		{
+			name:      "cursor on first literal",
+			line:      "grow 100 by 20 over 5 months",
+			col:       len([]rune("grow 1")),
+			wantParam: 0,
+		},
+		{
+			name:      "cursor on second literal",
+			line:      "grow 100 by 20 over 5 months",
+			col:       len([]rune("grow 100 by 2")),
+			wantParam: 1,
+		},
+		{
+			name:      "cursor on third literal",
+			line:      "grow 100 by 20 over 5 months",
+			col:       len([]rune("grow 100 by 20 over 5")),
+			wantParam: 2,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := extractArgumentContext(tc.line, tc.col)
+			if ctx.funcName != "grow" {
+				t.Fatalf("funcName = %q, want grow", ctx.funcName)
+			}
+			help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
+			if help == nil {
+				t.Fatal("expected non-nil signatureHelp")
+			}
+			if help.ActiveParameter == nil {
+				t.Fatal("expected activeParameter to be set")
+			}
+			if int(*help.ActiveParameter) != tc.wantParam {
+				t.Errorf("activeParameter = %d, want %d", *help.ActiveParameter, tc.wantParam)
+			}
+			if !strings.Contains(help.Signatures[0].Label, "grow") {
+				t.Errorf("signature label = %q, want to contain grow", help.Signatures[0].Label)
+			}
+		})
+	}
+}
+
+// TestSignatureHelp_NLFormCompoundWithAssignment verifies NL signatureHelp
+// for "goal = compound $1000 by 5% monthly over 10 years" with assignment prefix.
+func TestSignatureHelp_NLFormCompoundWithAssignment(t *testing.T) {
+	line := "goal = compound $1000 by 5% monthly over 10 years"
+
+	ctx := extractArgumentContext(line, len([]rune("goal = compound $10")))
+	if ctx.funcName != "compound" {
+		t.Fatalf("funcName = %q, want compound", ctx.funcName)
+	}
+	if ctx.paramIdx != 0 {
+		t.Errorf("paramIdx = %d, want 0", ctx.paramIdx)
+	}
+
+	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
+	if help == nil {
+		t.Fatal("expected non-nil signatureHelp for compound NL")
+	}
+	if !strings.Contains(help.Signatures[0].Label, "compound") {
+		t.Errorf("label = %q, want to contain compound", help.Signatures[0].Label)
+	}
+}
+
 // TestSignatureHelp_JSONShape asserts the wire format: marshaling the result
 // yields the expected top-level keys and nested structure.
 func TestSignatureHelp_JSONShape(t *testing.T) {

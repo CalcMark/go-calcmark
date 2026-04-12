@@ -1,6 +1,12 @@
 package lsp
 
-import "unicode"
+import (
+	"strings"
+	"unicode"
+
+	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/spec/types"
+)
 
 // argumentContext describes where a cursor sits relative to an enclosing
 // function call. Returned by extractArgumentContext.
@@ -79,7 +85,7 @@ func extractArgumentContext(lineText string, col int) argumentContext {
 	}
 
 	if len(stack) == 0 {
-		return argumentContext{funcName: "", paramIdx: -1}
+		return extractNLArgumentContext(lineText, col)
 	}
 
 	top := stack[len(stack)-1]
@@ -114,4 +120,187 @@ func identifierEndingAt(runes []rune, end int) string {
 		return ""
 	}
 	return string(runes[start:end])
+}
+
+// extractNLArgumentContext detects natural-language function calls
+// (e.g., "grow 100 by 20 over 5 months") and returns the argument context.
+// It is called as a fallback when the paren-based scanner finds no call.
+func extractNLArgumentContext(lineText string, col int) argumentContext {
+	empty := argumentContext{funcName: "", paramIdx: -1}
+
+	runes := []rune(lineText)
+	if col > len(runes) {
+		col = len(runes)
+	}
+
+	// Strip optional assignment prefix: "identifier = expr" or "identifier= expr".
+	// Uses rune indexing throughout to handle multi-byte identifiers correctly.
+	// Skips comparison operators (==, !=, <=, >=) which also contain '='.
+	exprRunes := runes
+	exprCol := col
+	for i, r := range runes {
+		if r == '=' {
+			// Skip comparison operators: ==, !=, <=, >=
+			if i+1 < len(runes) && runes[i+1] == '=' {
+				continue // == at this position
+			}
+			if i > 0 && (runes[i-1] == '!' || runes[i-1] == '<' || runes[i-1] == '>') {
+				continue // !=, <=, >= at this position
+			}
+			before := strings.TrimSpace(string(runes[:i]))
+			if isIdentifier(before) {
+				exprRunes = runes[i+1:]
+				exprCol = col - (i + 1)
+				if exprCol < 0 {
+					return empty
+				}
+			}
+			break
+		}
+	}
+
+	// Extract the first identifier in the expression.
+	exprTrimmed := []rune(strings.TrimLeft(string(exprRunes), " \t"))
+	leadingSpaces := len(exprRunes) - len(exprTrimmed)
+	funcName := extractLeadingIdentifier(string(exprTrimmed))
+	if funcName == "" {
+		return empty
+	}
+
+	// Look up the function name: first in FunctionSpecs, then synonyms.
+	canonicalName := resolveNLFunctionName(funcName)
+	if canonicalName == "" {
+		return empty
+	}
+
+	// Scan for numeric literals in the expression to determine paramIdx.
+	// A numeric literal is a sequence of digits with optional decimal point,
+	// optionally preceded by $ or € and optionally followed by %.
+	literals := findNumericLiterals(exprRunes, leadingSpaces+len([]rune(funcName)))
+
+	if len(literals) == 0 {
+		return argumentContext{funcName: canonicalName, paramIdx: 0}
+	}
+
+	// Find which literal the cursor is in or most recently past.
+	// exprCol is relative to expr start.
+	paramIdx := 0
+	for i, lit := range literals {
+		if exprCol >= lit.start {
+			paramIdx = i
+		}
+	}
+
+	return argumentContext{funcName: canonicalName, paramIdx: paramIdx}
+}
+
+// numericLiteral records the rune-index span of a numeric literal within a rune slice.
+type numericLiteral struct {
+	start int // inclusive, rune index
+	end   int // exclusive, rune index
+}
+
+// findNumericLiterals scans runes starting from startIdx for numeric literals.
+// A numeric literal is digits with optional decimal point, optionally preceded
+// by $ or € and optionally followed by %.
+func findNumericLiterals(runes []rune, startIdx int) []numericLiteral {
+	var lits []numericLiteral
+	i := startIdx
+	for i < len(runes) {
+		// Skip non-numeric runes.
+		r := runes[i]
+
+		// Check for currency prefix.
+		hasCurrencyPrefix := r == '$' || r == '€'
+		digitStart := i
+		if hasCurrencyPrefix {
+			if i+1 < len(runes) && (unicode.IsDigit(runes[i+1]) || runes[i+1] == '.') {
+				i++ // skip currency symbol, digit follows
+			} else {
+				i++
+				continue
+			}
+		}
+
+		if !unicode.IsDigit(runes[i]) && runes[i] != '.' {
+			i++
+			continue
+		}
+
+		// We're at the start of a potential number. Check that a '.' is followed by digit.
+		if runes[i] == '.' {
+			if i+1 >= len(runes) || !unicode.IsDigit(runes[i+1]) {
+				i++
+				continue
+			}
+		}
+
+		// Consume digits and optional decimal point.
+		hasDigit := false
+		for i < len(runes) && (unicode.IsDigit(runes[i]) || runes[i] == '.') {
+			if unicode.IsDigit(runes[i]) {
+				hasDigit = true
+			}
+			i++
+		}
+
+		if !hasDigit {
+			continue
+		}
+
+		// Optional trailing %.
+		end := i
+		if i < len(runes) && runes[i] == '%' {
+			end = i + 1
+			i++
+		}
+
+		lits = append(lits, numericLiteral{start: digitStart, end: end})
+		continue
+	}
+	return lits
+}
+
+// resolveNLFunctionName checks if name is a known function (in FunctionSpecs)
+// or a synonym mapping to a canonical function name.
+func resolveNLFunctionName(name string) string {
+	lower := strings.ToLower(name)
+
+	// Direct lookup in FunctionSpecs.
+	if types.GetFunctionSpec(lower) != nil {
+		return lower
+	}
+
+	// Check synonyms in the features registry.
+	registry := features.DefaultRegistry()
+	for _, f := range registry.ByCategory(features.CategoryFunction) {
+		for _, syn := range f.Synonyms {
+			if strings.EqualFold(syn, name) {
+				return f.Name
+			}
+		}
+	}
+
+	return ""
+}
+
+// extractLeadingIdentifier returns the first identifier at the start of s.
+func extractLeadingIdentifier(s string) string {
+	runes := []rune(s)
+	if len(runes) == 0 {
+		return ""
+	}
+	if !unicode.IsLetter(runes[0]) && runes[0] != '_' {
+		return ""
+	}
+	end := 1
+	for end < len(runes) {
+		r := runes[end]
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
+			end++
+			continue
+		}
+		break
+	}
+	return string(runes[:end])
 }
