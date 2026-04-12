@@ -166,6 +166,108 @@ func TestExtractArgumentContext_DeepNesting(t *testing.T) {
 	}
 }
 
+// TestExtractArgumentContext_NLFallback verifies that natural-language function
+// calls (without parens) are detected by the NL fallback path.
+func TestExtractArgumentContext_NLFallback(t *testing.T) {
+	cases := []struct {
+		name      string
+		line      string
+		col       int
+		wantFunc  string
+		wantParam int
+	}{
+		{
+			name:      "grow NL first param",
+			line:      "grow 100 by 20 over 5 months",
+			col:       5, // on the '1' of 100
+			wantFunc:  "grow",
+			wantParam: 0,
+		},
+		{
+			name:      "grow NL second param",
+			line:      "grow 100 by 20 over 5 months",
+			col:       13, // on the '2' of 20
+			wantFunc:  "grow",
+			wantParam: 1,
+		},
+		{
+			name:      "grow NL third param",
+			line:      "grow 100 by 20 over 5 months",
+			col:       21, // on the '5'
+			wantFunc:  "grow",
+			wantParam: 2,
+		},
+		{
+			name:      "compound with assignment and currency",
+			line:      "goal = compound $1000 by 5% monthly over 10 years",
+			col:       16, // on the '$' of $1000
+			wantFunc:  "compound",
+			wantParam: 0,
+		},
+		{
+			name:      "compound second param with percent",
+			line:      "goal = compound $1000 by 5% monthly over 10 years",
+			col:       25, // on the '5' of 5%
+			wantFunc:  "compound",
+			wantParam: 1,
+		},
+		{
+			name:      "compound third param",
+			line:      "goal = compound $1000 by 5% monthly over 10 years",
+			col:       41, // on the '1' of 10
+			wantFunc:  "compound",
+			wantParam: 2,
+		},
+		{
+			name:      "synonym average maps to avg",
+			line:      "average of 1, 2, 3",
+			col:       15, // on the '2'
+			wantFunc:  "avg",
+			wantParam: 1,
+		},
+		{
+			name:      "plain arithmetic not a function",
+			line:      "x = 100 + 200",
+			col:       5,
+			wantFunc:  "",
+			wantParam: -1,
+		},
+		{
+			name:      "paren form still handled by paren scanner",
+			line:      "grow(100, 20, 5)",
+			col:       5,
+			wantFunc:  "grow",
+			wantParam: 0,
+		},
+		{
+			name:      "assignment prefix stripped for grow",
+			line:      "result = grow 100 by 20 over 5 months",
+			col:       14, // on the '1' of 100
+			wantFunc:  "grow",
+			wantParam: 0,
+		},
+		{
+			name:      "unknown function returns empty",
+			line:      "foobar 100 by 200",
+			col:       7,
+			wantFunc:  "",
+			wantParam: -1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := extractArgumentContext(tc.line, tc.col)
+			if ctx.funcName != tc.wantFunc {
+				t.Errorf("funcName = %q, want %q", ctx.funcName, tc.wantFunc)
+			}
+			if ctx.paramIdx != tc.wantParam {
+				t.Errorf("paramIdx = %d, want %d", ctx.paramIdx, tc.wantParam)
+			}
+		})
+	}
+}
+
 // FuzzExtractArgumentContext seeds the backward walker with edge-case inputs
 // and asserts that arbitrary byte sequences never panic. The plan commits to
 // a fuzz test as the mitigation for walker misclassification risk.
