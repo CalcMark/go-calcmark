@@ -93,9 +93,12 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
 	for _, s := range suggestions {
-		// For both signature-form and NL-example rows, the canonical name is
-		// s.Name — the features layer has already resolved label → canonical.
-		canonical := s.Name
+		// Use the canonical function name for spec lookup. FunctionName is set
+		// by FunctionSuggestions to f.Name for both paren-form and NL rows.
+		canonical := s.FunctionName
+		if canonical == "" {
+			canonical = s.Name
+		}
 		spec := types.GetFunctionSpec(canonical)
 		data := completionItemData{
 			Kind:         "function",

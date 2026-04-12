@@ -10,6 +10,7 @@ type Suggestion struct {
 	Description  string // Brief description
 	Syntax       string // Syntax example
 	InsertText   string // Actual text to insert (without synonyms/formatting)
+	FunctionName string // Canonical function name for spec lookup (set only for function suggestions)
 	SortCategory string // Override category for sorting (e.g., NL rows use parent fn category)
 }
 

@@ -117,6 +117,49 @@ func TestFunctionSuggestions(t *testing.T) {
 		}
 	})
 
+	t.Run("FunctionName is canonical for paren-form", func(t *testing.T) {
+		suggestions := FunctionSuggestions("av", implementedNames)
+		for _, s := range suggestions {
+			if s.InsertText == "avg" && s.Category != "example" {
+				if s.FunctionName != "avg" {
+					t.Errorf("paren-form FunctionName = %q, want %q", s.FunctionName, "avg")
+				}
+				return
+			}
+		}
+		t.Fatal("expected paren-form suggestion for avg")
+	})
+
+	t.Run("FunctionName is canonical for NL-example rows", func(t *testing.T) {
+		suggestions := FunctionSuggestions("av", implementedNames)
+		for _, s := range suggestions {
+			if s.Category == "example" && s.FunctionName == "avg" {
+				return // found it
+			}
+		}
+		t.Fatal("expected NL-example row with FunctionName='avg'")
+	})
+
+	t.Run("FunctionName is canonical for grow NL-example", func(t *testing.T) {
+		suggestions := FunctionSuggestions("gro", implementedNames)
+		for _, s := range suggestions {
+			if s.Category == "example" && s.FunctionName == "grow" {
+				return
+			}
+		}
+		t.Fatal("expected NL-example row with FunctionName='grow'")
+	})
+
+	t.Run("FunctionName is canonical for sum NL-example", func(t *testing.T) {
+		suggestions := FunctionSuggestions("sum", implementedNames)
+		for _, s := range suggestions {
+			if s.Category == "example" && s.FunctionName == "sum" {
+				return
+			}
+		}
+		t.Fatal("expected NL-example row with FunctionName='sum'")
+	})
+
 	t.Run("NLExample fallback for functions without parseable aliases", func(t *testing.T) {
 		suggestions := FunctionSuggestions("accum", implementedNames)
 		var nlRow *Suggestion

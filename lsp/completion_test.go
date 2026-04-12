@@ -312,6 +312,72 @@ func TestFunctionCompletions_ThroughputParamsEnumValues(t *testing.T) {
 	}
 }
 
+// TestFunctionCompletions_SynonymFunctionCanonicalName asserts that functions
+// with synonyms (like avg/average/mean) carry the canonical name in data, not
+// the display name with synonym suffix.
+func TestFunctionCompletions_SynonymFunctionCanonicalName(t *testing.T) {
+	items := functionCompletionItems("av")
+	if len(items) == 0 {
+		t.Fatal("expected avg completion items, got none")
+	}
+
+	avgSigSeen := false
+	avgNLSeen := false
+	for _, it := range items {
+		d, ok := it.Data.(completionItemData)
+		if !ok {
+			t.Errorf("item %q missing completionItemData", it.Label)
+			continue
+		}
+		if d.FunctionName != "avg" {
+			t.Errorf("item %q has data.functionName = %q, want avg", it.Label, d.FunctionName)
+		}
+		if len(d.Params) == 0 {
+			t.Errorf("avg item %q has empty params", it.Label)
+		}
+		if it.Kind != nil && *it.Kind == protocol.CompletionItemKindFunction {
+			avgSigSeen = true
+		}
+		if it.Kind != nil && *it.Kind == protocol.CompletionItemKindSnippet {
+			avgNLSeen = true
+		}
+	}
+	if !avgSigSeen {
+		t.Error("expected signature-form avg item")
+	}
+	if !avgNLSeen {
+		t.Error("expected NL-example avg item")
+	}
+}
+
+// TestFunctionCompletions_CompoundNLParamsPopulated asserts that compound's
+// NL-example items carry full params (principal, rate, periods, period?).
+func TestFunctionCompletions_CompoundNLParamsPopulated(t *testing.T) {
+	items := functionCompletionItems("compou")
+	nlSeen := false
+	for _, it := range items {
+		d, ok := it.Data.(completionItemData)
+		if !ok {
+			continue
+		}
+		if d.FunctionName != "compound" {
+			continue
+		}
+		if it.Kind != nil && *it.Kind == protocol.CompletionItemKindSnippet {
+			nlSeen = true
+			if len(d.Params) < 3 {
+				t.Errorf("compound NL item %q has %d params, want >= 3", it.Label, len(d.Params))
+			}
+			if len(d.Params) > 0 && d.Params[0].Name != "principal" {
+				t.Errorf("compound first param = %q, want principal", d.Params[0].Name)
+			}
+		}
+	}
+	if !nlSeen {
+		t.Error("expected at least one NL-example compound item")
+	}
+}
+
 // TestEnumValueCompletions_InsideStringSuppressed asserts that a cursor
 // inside a string literal suppresses enum completion — the LSP should not
 // offer unquoted bare identifiers inside a "..." literal because calcmark

@@ -87,11 +87,12 @@ func FunctionSuggestions(prefix string, implementedNames map[string]bool) []Sugg
 			}
 
 			suggestions = append(suggestions, Suggestion{
-				Name:        name,
-				Category:    f.Subcategory,
-				Description: f.Description,
-				Syntax:      f.Syntax,
-				InsertText:  f.Name,
+				Name:         name,
+				Category:     f.Subcategory,
+				Description:  f.Description,
+				Syntax:       f.Syntax,
+				InsertText:   f.Name,
+				FunctionName: f.Name,
 			})
 		}
 
@@ -102,6 +103,7 @@ func FunctionSuggestions(prefix string, implementedNames map[string]bool) []Sugg
 				Category:     "example",
 				Syntax:       nl.example,
 				InsertText:   nl.example,
+				FunctionName: f.Name,
 				SortCategory: f.Subcategory, // Sort alongside parent function
 			})
 		}
