@@ -175,9 +175,9 @@ func TestNLSignatureHelp_GrowAcceptance(t *testing.T) {
 		col       uint32
 		wantParam uint32
 	}{
-		{"cursor on 100", 6, 0},
-		{"cursor on 20", 13, 1},
-		{"cursor on 5", 21, 2},
+		{"cursor on 100", uint32(len([]rune("grow 1"))), 0},
+		{"cursor on 20", uint32(len([]rune("grow 100 by 2"))), 1},
+		{"cursor on 5", uint32(len([]rune("grow 100 by 20 over 5"))), 2},
 	}
 
 	for _, tc := range cases {
@@ -221,7 +221,7 @@ func TestNLSignatureHelp_CompoundWithAssignment(t *testing.T) {
 	params := &protocol.SignatureHelpParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
-			Position:     protocol.Position{Line: 0, Character: 19}, // cursor on "1000"
+			Position:     protocol.Position{Line: 0, Character: uint32(len([]rune("goal = compound $10")))}, // cursor on "1000"
 		},
 	}
 	r, err := s.signatureHelpHandle(params)

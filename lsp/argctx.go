@@ -134,27 +134,35 @@ func extractNLArgumentContext(lineText string, col int) argumentContext {
 	}
 
 	// Strip optional assignment prefix: "identifier = expr" or "identifier= expr".
-	expr := lineText
-	exprColOffset := 0
-	if idx := strings.Index(lineText, "="); idx >= 0 {
-		// Only strip if the part before '=' looks like an identifier (no parens).
-		before := strings.TrimSpace(lineText[:idx])
-		if isSimpleIdentifier(before) {
-			exprColOffset = idx + 1
-			expr = lineText[idx+1:]
+	// Uses rune indexing throughout to handle multi-byte identifiers correctly.
+	// Skips comparison operators (==, !=, <=, >=) which also contain '='.
+	exprRunes := runes
+	exprCol := col
+	for i, r := range runes {
+		if r == '=' {
+			// Skip comparison operators: ==, !=, <=, >=
+			if i+1 < len(runes) && runes[i+1] == '=' {
+				continue // == at this position
+			}
+			if i > 0 && (runes[i-1] == '!' || runes[i-1] == '<' || runes[i-1] == '>') {
+				continue // !=, <=, >= at this position
+			}
+			before := strings.TrimSpace(string(runes[:i]))
+			if isIdentifier(before) {
+				exprRunes = runes[i+1:]
+				exprCol = col - (i + 1)
+				if exprCol < 0 {
+					return empty
+				}
+			}
+			break
 		}
 	}
 
-	// Adjust col into the expression portion.
-	exprCol := col - exprColOffset
-	if exprCol < 0 {
-		return empty
-	}
-
 	// Extract the first identifier in the expression.
-	exprTrimmed := strings.TrimLeft(expr, " \t")
-	leadingSpaces := len(expr) - len(exprTrimmed)
-	funcName := extractLeadingIdentifier(exprTrimmed)
+	exprTrimmed := []rune(strings.TrimLeft(string(exprRunes), " \t"))
+	leadingSpaces := len(exprRunes) - len(exprTrimmed)
+	funcName := extractLeadingIdentifier(string(exprTrimmed))
 	if funcName == "" {
 		return empty
 	}
@@ -168,7 +176,6 @@ func extractNLArgumentContext(lineText string, col int) argumentContext {
 	// Scan for numeric literals in the expression to determine paramIdx.
 	// A numeric literal is a sequence of digits with optional decimal point,
 	// optionally preceded by $ or € and optionally followed by %.
-	exprRunes := []rune(expr)
 	literals := findNumericLiterals(exprRunes, leadingSpaces+len([]rune(funcName)))
 
 	if len(literals) == 0 {
@@ -275,26 +282,6 @@ func resolveNLFunctionName(name string) string {
 	}
 
 	return ""
-}
-
-// isSimpleIdentifier checks if s is a valid simple identifier (letters, digits, underscores,
-// starting with a letter or underscore).
-func isSimpleIdentifier(s string) bool {
-	if s == "" {
-		return false
-	}
-	for i, r := range s {
-		if i == 0 {
-			if !unicode.IsLetter(r) && r != '_' {
-				return false
-			}
-		} else {
-			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // extractLeadingIdentifier returns the first identifier at the start of s.

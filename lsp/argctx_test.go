@@ -268,6 +268,103 @@ func TestExtractArgumentContext_NLFallback(t *testing.T) {
 	}
 }
 
+// TestExtractArgumentContext_ComparisonOperators verifies that comparison
+// operators containing '=' do not trigger false assignment prefix stripping.
+func TestExtractArgumentContext_ComparisonOperators(t *testing.T) {
+	cases := []struct {
+		name      string
+		line      string
+		col       int
+		wantFunc  string
+		wantParam int
+	}{
+		{
+			name:      "!= does not strip",
+			line:      "x != grow 100",
+			col:       12,
+			wantFunc:  "",
+			wantParam: -1,
+		},
+		{
+			name:      "<= does not strip",
+			line:      "a <= grow 100 by 20",
+			col:       14,
+			wantFunc:  "",
+			wantParam: -1,
+		},
+		{
+			name:      ">= does not strip",
+			line:      "b >= grow 100",
+			col:       12,
+			wantFunc:  "",
+			wantParam: -1,
+		},
+		{
+			name:      "== does not strip",
+			line:      "x == grow 100",
+			col:       12,
+			wantFunc:  "",
+			wantParam: -1,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := extractArgumentContext(tc.line, tc.col)
+			if ctx.funcName != tc.wantFunc {
+				t.Errorf("funcName = %q, want %q", ctx.funcName, tc.wantFunc)
+			}
+			if ctx.paramIdx != tc.wantParam {
+				t.Errorf("paramIdx = %d, want %d", ctx.paramIdx, tc.wantParam)
+			}
+		})
+	}
+}
+
+// TestExtractArgumentContext_UnicodeAssignment verifies that multi-byte
+// Unicode identifiers before '=' are handled correctly with rune indexing.
+func TestExtractArgumentContext_UnicodeAssignment(t *testing.T) {
+	// "résultat" has a multi-byte é, so byte index != rune index for '='
+	line := "résultat = grow 100 by 20 over 5 months"
+	ctx := extractArgumentContext(line, len([]rune("résultat = grow 1")))
+	if ctx.funcName != "grow" {
+		t.Errorf("funcName = %q, want grow", ctx.funcName)
+	}
+	if ctx.paramIdx != 0 {
+		t.Errorf("paramIdx = %d, want 0", ctx.paramIdx)
+	}
+}
+
+// TestFindNumericLiterals tests the numeric literal scanner directly.
+func TestFindNumericLiterals(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		startIdx int
+		want     int // expected number of literals
+	}{
+		{"single integer", "grow 100", 5, 1},
+		{"decimal number", "grow 1.5", 5, 1},
+		{"dollar prefix", "compound $1000 by 5%", 9, 2},
+		{"euro prefix", "compound €1000 by 5%", 9, 2},
+		{"percent suffix", "rate 5%", 5, 1},
+		{"multiple numbers", "grow 100 by 20 over 5", 5, 3},
+		{"leading dot followed by digit", "x .5", 2, 1},
+		{"lone dot not a number", "x . y", 2, 0},
+		{"no numbers", "grow by over", 5, 0},
+		{"currency with no following digit", "$ by", 0, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			runes := []rune(tc.input)
+			lits := findNumericLiterals(runes, tc.startIdx)
+			if len(lits) != tc.want {
+				t.Errorf("findNumericLiterals(%q, %d) found %d literals, want %d",
+					tc.input, tc.startIdx, len(lits), tc.want)
+			}
+		})
+	}
+}
+
 // FuzzExtractArgumentContext seeds the backward walker with edge-case inputs
 // and asserts that arbitrary byte sequences never panic. The plan commits to
 // a fuzz test as the mitigation for walker misclassification risk.
@@ -287,6 +384,16 @@ func FuzzExtractArgumentContext(f *testing.F) {
 		`outer(i1(1, 2), i2(3, 4), `,
 		string([]byte{0x00, '(', ')'}),
 		"δ(ε, ",
+		// NL-form seeds to exercise the NL fallback path
+		`grow 100 by 20 over 5 months`,
+		`goal = compound $1000 by 5% monthly over 10 years`,
+		`average of 1, 2, 3`,
+		`résultat = grow 100 by 20`,
+		`x != grow 100`,
+		`a <= grow 100 by 20`,
+		`grow`,
+		`$$$100`,
+		`compound €1000 by 5% over 10 years`,
 	}
 	for _, s := range seeds {
 		for i := 0; i <= len(s); i++ {
