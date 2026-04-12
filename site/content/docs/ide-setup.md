@@ -322,10 +322,29 @@ cm watch --port 8080 budget.cm    # Custom port (default: 3141)
 | Feature | Description |
 |---------|-------------|
 | Diagnostics | Errors and warnings with precise source positions |
-| Autocomplete | Functions, units, variables, NL syntax |
+| Autocomplete | Functions, units, variables, NL syntax, date keywords |
 | Hover | Variable values, function signatures, unit descriptions |
 | Go-to-definition | Jump to variable assignment |
 | Document symbols | Variables and headings in outline view |
 | Semantic tokens | Context-aware highlighting (calc vs Markdown lines) |
 | Code actions | Quick fixes for undefined variables ("did you mean?") |
-| Signature help | Parameter hints inside function calls |
+| Signature help | Parameter hints for both function-call and natural-language syntax |
+
+### Autocomplete Details
+
+The LSP provides context-sensitive completions:
+
+- **Functions** — both call form (`compound(`) and natural-language snippets (`compound $1000 by 5% monthly over 10 years`). Each item carries structured parameter metadata so editors can show type-aware placeholder suggestions.
+- **Variables** — in-scope variables filtered by type compatibility when inside a function argument. For example, inside `accumulate(|)`, only rate-typed variables appear.
+- **Enum values** — for parameters like `throughput(|)`, only valid network types (`gigabit`, `wifi`, etc.) are offered.
+- **Units** — after `in` or `as` keywords for unit conversion.
+- **Date keywords** — `today`, `next Friday`, `this quarter`, etc.
+
+### Signature Help Details
+
+When your cursor is inside a function call, the LSP shows the full function signature with the active parameter highlighted, its type, and example values. This works for both syntaxes:
+
+- **Function calls:** `compound($10000, |)` highlights the `rate` parameter with type `percentage` and examples like `5%`, `8.5%`
+- **Natural-language forms:** `compound $1000 by |` shows the same parameter hints, tracking which argument the cursor is nearest to
+
+Optional parameters (like `period` in `compound` or `salvage` in `depreciate`) are marked with `?` in the signature and documented as optional in the parameter hints.

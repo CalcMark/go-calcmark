@@ -202,6 +202,7 @@ CalcMark supports natural language forms for many functions. These are equivalen
 | Natural Language | Equivalent | Example |
 |-----------------|------------|---------|
 | `average of X, Y, Z` | `avg(X, Y, Z)` | `average of 10, 20, 30` |
+| `sum of X, Y, Z` | `sum(X, Y, Z)` | `sum of $100, $200, $300` |
 | `square root of X` | `sqrt(X)` | `square root of 144` |
 | `read X from Y` | `read(X, Y)` | `read 100 MB from ssd` |
 | `compress X using Y` | `compress(X, Y)` | `compress 1 GB using gzip` |
@@ -302,13 +303,13 @@ downtime(99.99%, month)   -> 4.32 minute
 #### Read Time
 
 ```calcmark
-read(1 GB, ssd)       read from SATA SSD (~550 MB/s)
-read(1 GB, nvme)      read from NVMe SSD (~3.5 GB/s)
-read(1 GB, pcie_ssd)  read from PCIe Gen4 SSD (~7 GB/s)
-read(1 GB, hdd)       read from 7200 RPM HDD (~150 MB/s)
-
-read 100 MB from ssd  (NL form)
+read(1 GB, ssd)
+read(1 GB, nvme)
+read(1 GB, hdd)
+read 100 MB from ssd
 ```
+
+Storage types and approximate read speeds: SSD ~500 MB/s, NVMe ~3 GB/s, HDD ~100 MB/s.
 
 #### Seek Latency
 
