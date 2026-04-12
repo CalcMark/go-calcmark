@@ -73,14 +73,14 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"accumulate": {
 		Name: "accumulate",
 		Params: []ParamSpec{
-			{Name: "rate", Type: ArgTypeRate, Examples: []string{"10 MB/s", "100 requests/second", "5 GB/day"}},
+			{Name: "rate", Type: ArgTypeRate, Examples: []string{"10 MB/s", "500 req/s", "5 GB/day"}},
 			{Name: "duration", Type: ArgTypeDuration, Examples: []string{"1 hour", "30 minutes", "1 day"}},
 		},
 	},
 	"convert_rate": {
 		Name: "convert_rate",
 		Params: []ParamSpec{
-			{Name: "rate", Type: ArgTypeRate, Examples: []string{"10 MB/s", "1 GB/hour", "100 req/s"}},
+			{Name: "rate", Type: ArgTypeRate, Examples: []string{"10 MB/s", "1 GB/hour", "500 req/s"}},
 			{Name: "time_unit", Type: ArgTypeString, Examples: identifiers.TimeUnits, EnumValues: identifiers.TimeUnits},
 		},
 	},
@@ -134,27 +134,27 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"compound": {
 		Name: "compound",
 		Params: []ParamSpec{
-			{Name: "principal", Type: ArgTypeAny, Examples: []string{"1000", "$1000", "100 users"}},
-			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"5%", "0.05", "12%"}},
-			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"10", "12", "5"}},
-			{Name: "period", Type: ArgTypeString, Optional: true, Examples: []string{"monthly", "quarterly", "compounded:monthly"}},
+			{Name: "principal", Type: ArgTypeAny, Examples: []string{"$10000", "1000 users", "$1M"}},
+			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"5%", "8.5%", "12%"}},
+			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"30", "12", "5"}},
+			{Name: "period", Type: ArgTypeString, Optional: true, Examples: []string{"monthly", "quarterly", "yearly"}},
 		},
 	},
 	"grow": {
 		Name: "grow",
 		Params: []ParamSpec{
-			{Name: "amount", Type: ArgTypeAny, Examples: []string{"100", "50 GB", "1000 users"}},
-			{Name: "increment", Type: ArgTypeAny, Examples: []string{"20 GB", "100 users", "5"}},
+			{Name: "amount", Type: ArgTypeAny, Examples: []string{"$1000", "50 GB", "100 users"}},
+			{Name: "increment", Type: ArgTypeAny, Examples: []string{"$200", "10 GB", "50 users"}},
 			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"12", "6", "24"}},
 		},
 	},
 	"depreciate": {
 		Name: "depreciate",
 		Params: []ParamSpec{
-			{Name: "value", Type: ArgTypeAny, Examples: []string{"10000", "$50000", "1000 units"}},
-			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"20%", "0.15", "10%"}},
+			{Name: "value", Type: ArgTypeAny, Examples: []string{"$50000", "$10000", "1000 units"}},
+			{Name: "rate", Type: ArgTypePercentage, Examples: []string{"20%", "15%", "10%"}},
 			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"5", "10", "7"}},
-			{Name: "salvage", Type: ArgTypeAny, Optional: true, Examples: []string{"$5000", "1000"}},
+			{Name: "salvage", Type: ArgTypeAny, Optional: true, Examples: []string{"$5000", "$1000"}},
 		},
 	},
 	"capacity": {
