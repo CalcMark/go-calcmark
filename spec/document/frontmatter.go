@@ -696,16 +696,14 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.FiscalYearStarts = fc
 	}
 
-	// Capture non-CalcMark frontmatter keys in document order.
-	knownKeys := map[string]bool{
-		"exchange": true, "globals": true, "scale": true,
-		"convert_to": true, "measurement": true, "fiscal_year_starts": true,
-	}
+	// Capture non-CalcMark frontmatter keys in document order. The Registry
+	// (frontmatter_registry.go) is the source of truth for which keys carry
+	// CalcMark semantics; everything else is preserved verbatim in Extra.
 	extraOrder := extractYAMLTopLevelKeyOrder(yamlContent)
 	var rawMap map[string]any
 	_ = yaml.Unmarshal([]byte(yamlContent), &rawMap)
 	for _, key := range extraOrder {
-		if knownKeys[key] {
+		if IsRegisteredKey(key) {
 			continue
 		}
 		if val, ok := rawMap[key]; ok {
