@@ -361,3 +361,59 @@ func TestFrontmatterHover_Acceptance_VariableStillWorks(t *testing.T) {
 		t.Errorf("variable hover missing 'number'/'100':\n%s", content)
 	}
 }
+
+// TestFrontmatterCompletion_Acceptance_KeyPosition — end-to-end completion
+// at a key position in a frontmatter region returns every registered key.
+func TestFrontmatterCompletion_Acceptance_KeyPosition(t *testing.T) {
+	source := "---\n\n---\n"
+	s, uri := prepareServerDoc(t, source)
+	items := completionAt(t, s, uri, 1, 0)
+
+	labels := itemLabels(items)
+	for _, want := range []string{"convert_to", "exchange", "fiscal_year_starts", "globals", "measurement", "scale"} {
+		if !slices.Contains(labels, want) {
+			t.Errorf("missing registered key %q in completion labels: %v", want, labels)
+		}
+	}
+}
+
+// TestFrontmatterCompletion_Acceptance_EnumValuePosition — end-to-end
+// completion at the value position of `convert_to:` returns exactly the
+// EnumString values for that key.
+func TestFrontmatterCompletion_Acceptance_EnumValuePosition(t *testing.T) {
+	source := "---\nconvert_to: \n---\n"
+	s, uri := prepareServerDoc(t, source)
+	// col 12 = just after "convert_to: "
+	items := completionAt(t, s, uri, 1, 12)
+
+	labels := itemLabels(items)
+	if len(labels) != 2 {
+		t.Fatalf("expected 2 enum labels, got %d: %v", len(labels), labels)
+	}
+	for _, want := range []string{"si", "imperial"} {
+		if !slices.Contains(labels, want) {
+			t.Errorf("missing enum value %q in completion labels: %v", want, labels)
+		}
+	}
+}
+
+// TestFrontmatterCompletion_Acceptance_CalcBlockStillWorks — regression:
+// completion in a calc line below the frontmatter still surfaces functions.
+func TestFrontmatterCompletion_Acceptance_CalcBlockStillWorks(t *testing.T) {
+	source := "---\nconvert_to: si\n---\nx = gro"
+	s, uri := prepareServerDoc(t, source)
+	// Line 3 col 7 = end of "x = gro"
+	items := completionAt(t, s, uri, 3, 7)
+
+	var sawGrow bool
+	for _, it := range items {
+		d, ok := it.Data.(completionItemData)
+		if ok && d.FunctionName == "grow" {
+			sawGrow = true
+			break
+		}
+	}
+	if !sawGrow {
+		t.Errorf("expected grow function completion in calc line below frontmatter; labels = %v", itemLabels(items))
+	}
+}
