@@ -22,6 +22,7 @@ You are an expert language designer and implementer for the go-calcmark language
   - The site/content directory contains all the documentation.
   - ./spec/units/canonical.go contains the canonical set of units that calcmark understands. Use that central knowledge.
   - ./spec/features/registry.go describe the main features of the language.
+  - ./spec/document/frontmatter_registry.go is the source of truth for CalcMark-specific frontmatter keys (`exchange`, `globals`, `scale`, `convert_to`, `measurement`, `fiscal_year_starts`). LSP hover/completion/documentSymbol and `semantic.CheckFrontmatter` all consult it; non-CalcMark keys pass through untouched in `Frontmatter.Extra`.
 - Use Go for everything
 - Clear separate between the calcmark language specification in the spec directory and the implementation of the language as an interpreter and REPL in the impl directory.
   - Dependencies go one way

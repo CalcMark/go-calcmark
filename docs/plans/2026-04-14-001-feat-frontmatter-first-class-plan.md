@@ -214,7 +214,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ## Implementation Units
 
-- [ ] **Unit 1: Registry — extract the allowlist into a typed `Registry` slice**
+- [x] **Unit 1: Registry — extract the allowlist into a typed `Registry` slice**
 
 **Goal:** A new file `spec/document/frontmatter_registry.go` defines `RegisteredKey`, `FrontmatterKeyType`, and a populated `Registry` covering the six existing keys with docstrings and (for `convert_to`) enum values. `ParseFrontmatter` continues working unchanged.
 
@@ -252,7 +252,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ---
 
-- [ ] **Unit 2: Refactor `ParseFrontmatter` to consult the registry**
+- [x] **Unit 2: Refactor `ParseFrontmatter` to consult the registry**
 
 **Goal:** Replace the hardcoded allowlist at `frontmatter.go:700-703` with a `Registry`-driven check. No behavioral change for any caller — known keys still populate typed `Frontmatter` struct fields; unknown keys still flow into `Extra`. The change is one of provenance: the source of truth for "which keys are CalcMark-known" moves from a hardcoded slice into the new registry.
 
@@ -284,7 +284,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ---
 
-- [ ] **Unit 3: Capture frontmatter source ranges (per-key positions)**
+- [x] **Unit 3: Capture frontmatter source ranges (per-key positions)**
 
 **Goal:** Extend `Frontmatter` (or sidecar data) with line/column ranges per parsed key, so semantic diagnostics and LSP hover/completion can anchor to source positions. Backward-compatible — additive, no field renames or removals.
 
@@ -320,7 +320,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ---
 
-- [ ] **Unit 4: `semantic.CheckFrontmatter` — diagnostics for malformed registered keys**
+- [x] **Unit 4: `semantic.CheckFrontmatter` — diagnostics for malformed registered keys**
 
 **Goal:** A new exported function `semantic.CheckFrontmatter(fm document.Frontmatter) []semantic.Diagnostic` that returns diagnostics for registered keys whose values don't match their registered type. Non-registered keys (`Extra`) produce no diagnostics. Existing semantic-check callers gain access via either calling the new function directly or via `Checker.Check` automatically forwarding when frontmatter has been set (D4 + Open Questions Deferred).
 
@@ -361,7 +361,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ---
 
-- [ ] **Unit 5: LSP frontmatter-region detection helper**
+- [x] **Unit 5: LSP frontmatter-region detection helper**
 
 **Goal:** Pure helpers `DetectRegion(source string) (FrontmatterRegion, bool)` and `ClassifyCursor(region, position) CursorContext` in `lsp/frontmatter_region.go`. These are the foundation for Units 6, 7, 8 (hover, completion, documentSymbol).
 
@@ -400,7 +400,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ---
 
-- [ ] **Unit 6: LSP hover for registered frontmatter keys**
+- [x] **Unit 6: LSP hover for registered frontmatter keys**
 
 **Goal:** `textDocument/hover` at a position inside the frontmatter region, on a registered key (or a registered enum value), returns the registry's docstring + expected type formatted as Markdown. Hover on a non-registered key returns nothing (passthrough — null hover response).
 
@@ -438,7 +438,7 @@ These two functions are the foundation for hover / completion / documentSymbol. 
 
 ---
 
-- [ ] **Unit 7: LSP completion for registered keys + enum values**
+- [x] **Unit 7: LSP completion for registered keys + enum values**
 
 **Goal:** `textDocument/completion` inside the frontmatter region surfaces:
 - At a `key` position: all registered keys with their docstrings as completion items
@@ -480,7 +480,7 @@ Outside the region, existing completion logic runs unchanged.
 
 ---
 
-- [ ] **Unit 8: LSP documentSymbol for registered frontmatter keys**
+- [x] **Unit 8: LSP documentSymbol for registered frontmatter keys**
 
 **Goal:** `textDocument/documentSymbol` includes one symbol per registered frontmatter key present in the document, with `SymbolKind.Property`. The symbols sit at the top of the symbol list (before calc-block variables), so editor outlines show frontmatter at the top.
 
@@ -514,7 +514,7 @@ Outside the region, existing completion logic runs unchanged.
 
 ---
 
-- [ ] **Unit 9: Acceptance tests + close the loop**
+- [x] **Unit 9: Acceptance tests + close the loop**
 
 **Goal:** End-to-end acceptance tests in `lsp/acceptance_test.go` verifying all six R-numbered behaviors from a real LSP client perspective. Update relevant docs.
 
@@ -585,6 +585,24 @@ Outside the region, existing completion logic runs unchanged.
 - If Unit 3 (per-key ranges) reveals that the YAML library doesn't expose positions, the implementer scopes the work to manual instrumentation in the parsing pass — don't switch YAML libraries for this.
 - If `CheckFrontmatter` (Unit 4) finds that most of its target diagnostics are already produced by the parser, scope it to the residual cases and update the plan's R2 inline rather than producing duplicate diagnostics.
 - If any unit fails its verification, stop and commit what works as a documentation-only escalation; do not push through a broken state.
+
+## Resolution
+
+Shipped: CalcMark frontmatter is now a first-class language concept with a typed `Registry`, per-key source ranges, standalone semantic validation (`semantic.CheckFrontmatter`), and LSP hover, completion, and documentSymbol coverage for registered keys — while non-CalcMark (Extra) keys continue to pass through untouched. Downstream consumers (`calcmark-web`, TUI, any LSP client) now have a single source of truth for CalcMark-specific frontmatter semantics.
+
+| Unit | Commit |
+|---|---|
+| 1 — Registry | `b412a9b` |
+| 2 — ParseFrontmatter consults Registry | `76473cf` |
+| 3 — KeyRanges capture | `f646cad` |
+| 4 — semantic.CheckFrontmatter | `d96fae6` |
+| 5 — LSP region detection helpers | `9ad815a` |
+| 6 — LSP hover | `34f604b` |
+| 7 — LSP completion | `a67f7dd` |
+| 8 — LSP documentSymbol | `a4859f7` |
+| 9 — Consolidated acceptance + close the loop | (this commit) |
+
+Follow-up handoff: calcmark-web plan `2026-04-14-003`'s Deferred entry "First-class frontmatter handling in go-calcmark" is now unblocked. A new calcmark-web plan for frontend frontmatter rendering can be written against the next go-calcmark release tag.
 
 ## Sources & References
 

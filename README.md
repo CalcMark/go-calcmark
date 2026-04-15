@@ -83,7 +83,7 @@ cm testdata/examples/budget.cm
 - **Currencies** - `$100`, `50 EUR`, automatic formatting
 - **Percentages** - `savings_rate = 20%`, then `income * savings_rate`
 - **Functions** - `avg()`, `sqrt()`, `capacity()`, and more
-- **YAML front matter** - Define document-level constants
+- **YAML front matter** - Define document-level constants (`exchange`, `globals`, `scale`, `convert_to`, `measurement`, `fiscal_year_starts`; see [`spec/document/frontmatter_registry.go`](spec/document/frontmatter_registry.go) for the authoritative list)
 - **Export formats** - Convert to HTML, Markdown, JSON, or plain text
 
 ## Help Commands

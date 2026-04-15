@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/spec/semantic"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -516,5 +518,191 @@ func TestFrontmatterDocumentSymbol_Acceptance_NoFrontmatter(t *testing.T) {
 	}
 	if !sawHeading || !sawPrice {
 		t.Errorf("expected existing heading+variable symbols intact; got %+v", syms)
+	}
+}
+
+// TestFrontmatter_Unit9_ConsolidatedSession drives one realistic LSP session
+// covering all six R-numbered behaviors end-to-end against a single server
+// instance + document:
+//
+//   - R1: Registry exposes exactly the six CalcMark-grammar keys and
+//     IsRegisteredKey returns true for each
+//   - R2: semantic.CheckFrontmatter is callable standalone and surfaces
+//     diagnostics for malformed registered keys while ignoring Extra keys
+//   - R3: hover on a registered key returns a markdown body; hover on an
+//     Extra (passthrough) key returns nil
+//   - R4: completion at a key position returns all six registered keys;
+//     completion at an EnumString value position returns the enum values
+//   - R5: documentSymbol lists registered frontmatter keys first, then
+//     calc-block Variable symbols from the body
+//   - R6: the negative case — a document with ONLY Extra keys produces no
+//     frontmatter LSP output from hover, completion, or documentSymbol — is
+//     covered by TestFrontmatter_Unit9_ExtraOnlyNoLSPResponse below
+func TestFrontmatter_Unit9_ConsolidatedSession(t *testing.T) {
+	source := "---\n" +
+		"exchange:\n" + // line 1
+		"  USD_EUR: 0.92\n" + // line 2
+		"convert_to: si\n" + // line 3
+		"globals:\n" + // line 4
+		"  rate: 10\n" + // line 5
+		"title: Hello\n" + // line 6  (Extra)
+		"author: Alice\n" + // line 7  (Extra)
+		"\n" + // line 8  (blank key position)
+		"---\n" + // line 9
+		"price = 100\n" // line 10
+	s, uri := prepareServerDoc(t, source)
+
+	// R1 — Registry shape and membership.
+	if got := len(document.Registry); got != 6 {
+		t.Errorf("R1: Registry has %d entries, want 6", got)
+	}
+	for _, name := range []string{"exchange", "globals", "scale", "convert_to", "measurement", "fiscal_year_starts"} {
+		if !document.IsRegisteredKey(name) {
+			t.Errorf("R1: IsRegisteredKey(%q) = false, want true", name)
+		}
+	}
+	if document.IsRegisteredKey("title") {
+		t.Errorf("R1: IsRegisteredKey(\"title\") = true, want false (Extra passthrough)")
+	}
+
+	// R3 — hover on a registered key returns markdown; Extra key returns nil.
+	if content := hoverContent(t, source, 3, 2); content == "" {
+		t.Errorf("R3: expected non-empty hover on registered key 'convert_to'")
+	} else if !strings.Contains(content, "**convert_to**") {
+		t.Errorf("R3: hover on convert_to missing **convert_to**:\n%s", content)
+	}
+	if h := hoverResult(t, source, 6, 2); h != nil {
+		t.Errorf("R3: expected nil hover on Extra key 'title', got %+v", h)
+	}
+
+	// R4 — completion at a blank key-position line returns every registered key.
+	keyItems := completionAt(t, s, uri, 8, 0)
+	keyLabels := itemLabels(keyItems)
+	for _, want := range []string{"convert_to", "exchange", "fiscal_year_starts", "globals", "measurement", "scale"} {
+		if !slices.Contains(keyLabels, want) {
+			t.Errorf("R4: key-position completion missing %q: %v", want, keyLabels)
+		}
+	}
+	// R4 — completion at the value position of `convert_to: si` returns exactly
+	// the two EnumString values. col 12 = just past "convert_to: ".
+	valItems := completionAt(t, s, uri, 3, 12)
+	valLabels := itemLabels(valItems)
+	if len(valLabels) != 2 {
+		t.Errorf("R4: expected 2 enum labels at convert_to value position, got %d: %v", len(valLabels), valLabels)
+	}
+	for _, want := range []string{"si", "imperial"} {
+		if !slices.Contains(valLabels, want) {
+			t.Errorf("R4: enum-value completion missing %q: %v", want, valLabels)
+		}
+	}
+
+	// R5 — documentSymbol lists registered FM keys first, then calc variables.
+	syms := documentSymbolsAt(t, s, uri)
+	if len(syms) < 4 {
+		t.Fatalf("R5: expected >=4 symbols (3 frontmatter + 1 variable), got %d: %+v", len(syms), syms)
+	}
+	for i, want := range []string{"exchange", "convert_to", "globals"} {
+		if syms[i].Name != want || syms[i].Kind != protocol.SymbolKindProperty {
+			t.Errorf("R5: syms[%d] = %+v, want Property %q", i, syms[i], want)
+		}
+	}
+	for _, sym := range syms[:3] {
+		if sym.Name == "title" || sym.Name == "author" {
+			t.Errorf("R5: Extra key %q leaked into frontmatter symbols", sym.Name)
+		}
+	}
+	var sawPrice bool
+	for _, sym := range syms[3:] {
+		if sym.Name == "price" && sym.Kind == protocol.SymbolKindVariable {
+			sawPrice = true
+			break
+		}
+	}
+	if !sawPrice {
+		t.Errorf("R5: expected Variable 'price' after frontmatter symbols; got %+v", syms)
+	}
+
+	// R2 — semantic.CheckFrontmatter, invoked directly (not folded into LSP
+	// publishDiagnostics per Unit 9 constraint). The parsed document's
+	// frontmatter is clean, so we first assert zero diagnostics (Extra keys
+	// produce no noise), then mutate a registered value to an invalid state and
+	// assert CheckFrontmatter flags it. This exercises the standalone entry
+	// point tooling consumers rely on.
+	fm, _, err := document.ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("R2: ParseFrontmatter error: %v", err)
+	}
+	if fm == nil {
+		t.Fatal("R2: ParseFrontmatter returned nil frontmatter")
+	}
+	if diags := semantic.CheckFrontmatter(*fm); len(diags) != 0 {
+		t.Errorf("R2: expected zero diagnostics for clean registered + Extra mix, got %+v", diags)
+	}
+	// Force an invalid convert_to system to confirm CheckFrontmatter catches it.
+	if fm.ConvertTo != nil {
+		fm.ConvertTo.System = "galactic"
+		diags := semantic.CheckFrontmatter(*fm)
+		var sawConvertTo bool
+		for _, d := range diags {
+			if strings.Contains(d.Message, "convert_to") || strings.Contains(d.Message, "galactic") {
+				sawConvertTo = true
+				break
+			}
+		}
+		if !sawConvertTo {
+			t.Errorf("R2: CheckFrontmatter missed malformed convert_to; diags=%+v", diags)
+		}
+	}
+}
+
+// TestFrontmatter_Unit9_ExtraOnlyNoLSPResponse — R6 negative path. A document
+// whose frontmatter contains only Extra (unregistered) keys produces no LSP
+// output from hover on any Extra key, no completion suggestions at a value
+// position of an Extra key, and no Property symbols in documentSymbol. Calc
+// variables below the region continue to work.
+func TestFrontmatter_Unit9_ExtraOnlyNoLSPResponse(t *testing.T) {
+	source := "---\n" +
+		"title: Hello\n" + // line 1
+		"author: Alice\n" + // line 2
+		"date: 2026-04-14\n" + // line 3
+		"---\n" + // line 4
+		"price = 100\n" // line 5
+	s, uri := prepareServerDoc(t, source)
+
+	// Hover — every Extra key returns nil.
+	for i, key := range []string{"title", "author", "date"} {
+		if h := hoverResult(t, source, uint32(i+1), 2); h != nil {
+			t.Errorf("hover on Extra key %q returned non-nil: %+v", key, h)
+		}
+	}
+
+	// Completion — at a value position for an unregistered key, there are no
+	// registry-driven enum values to surface, so the frontmatter completion
+	// path returns nil. col 7 = just past "title: ".
+	items := completionAt(t, s, uri, 1, 7)
+	for _, it := range items {
+		// The only items that could appear here from a cold server are the
+		// calc-block fallbacks, which should never carry FM registry labels.
+		if slices.Contains([]string{"si", "imperial"}, it.Label) {
+			t.Errorf("Extra-only frontmatter surfaced enum value %q in completion", it.Label)
+		}
+	}
+
+	// documentSymbol — no Property symbols, calc variable intact.
+	syms := documentSymbolsAt(t, s, uri)
+	for _, sym := range syms {
+		if sym.Kind == protocol.SymbolKindProperty {
+			t.Errorf("Extra-only frontmatter produced Property symbol: %+v", sym)
+		}
+	}
+	var sawPrice bool
+	for _, sym := range syms {
+		if sym.Name == "price" {
+			sawPrice = true
+			break
+		}
+	}
+	if !sawPrice {
+		t.Errorf("expected Variable 'price' even with Extra-only frontmatter; got %+v", syms)
 	}
 }
