@@ -325,3 +325,39 @@ func TestR6_HoverOnPriceVariable(t *testing.T) {
 		t.Errorf("hover missing '100':\n%s", content)
 	}
 }
+
+// TestFrontmatterHover_Acceptance_RegisteredKey — end-to-end hover on a
+// registered frontmatter key returns non-empty markdown referencing the key.
+func TestFrontmatterHover_Acceptance_RegisteredKey(t *testing.T) {
+	source := "---\nglobals:\n  price: 100\n---\n"
+	content := hoverContent(t, source, 1, 2)
+	if content == "" {
+		t.Fatal("expected hover on globals key")
+	}
+	if !strings.Contains(content, "**globals**") {
+		t.Errorf("hover missing **globals**:\n%s", content)
+	}
+}
+
+// TestFrontmatterHover_Acceptance_ExtraKey — hover on an unregistered
+// frontmatter key (e.g., `title`) returns nil.
+func TestFrontmatterHover_Acceptance_ExtraKey(t *testing.T) {
+	source := "---\ntitle: Hello\n---\n"
+	h := hoverResult(t, source, 1, 2)
+	if h != nil {
+		t.Errorf("expected nil hover for extra key, got %+v", h)
+	}
+}
+
+// TestFrontmatterHover_Acceptance_VariableStillWorks — regression: calc-line
+// variable hover still works when a frontmatter region precedes the body.
+func TestFrontmatterHover_Acceptance_VariableStillWorks(t *testing.T) {
+	source := "---\nconvert_to: si\n---\nprice = 100\n"
+	content := hoverContent(t, source, 3, 2)
+	if content == "" {
+		t.Fatal("expected variable hover below frontmatter")
+	}
+	if !strings.Contains(content, "number") || !strings.Contains(content, "100") {
+		t.Errorf("variable hover missing 'number'/'100':\n%s", content)
+	}
+}

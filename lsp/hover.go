@@ -106,6 +106,23 @@ func (s *Server) hoverHandle(params *protocol.HoverParams) (any, error) {
 	}
 
 	source := ds.getSource()
+
+	// Frontmatter hover takes priority. When the cursor sits inside the
+	// frontmatter region we never fall through to calc-block hover: either
+	// we return a registered-key hover, or we return null (Extra keys,
+	// fences, blanks). This prevents the word-under-cursor code below from
+	// producing bogus variable/function matches against YAML text.
+	if region, ok := DetectRegion(source); ok {
+		ctx := ClassifyCursor(region, params.Position)
+		if ctx.InRegion {
+			h := buildFrontmatterHover(source, params.Position)
+			if h == nil {
+				return nil, nil
+			}
+			return h, nil
+		}
+	}
+
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)
 	lineText := getLineText(source, line)
