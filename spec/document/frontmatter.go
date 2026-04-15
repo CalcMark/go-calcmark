@@ -879,7 +879,15 @@ func nodeEndPosition(n *yaml.Node, lineOffset int) ast.Position {
 	default: // ScalarNode and DocumentNode (DocumentNode shouldn't appear here)
 		// Approximate the scalar's end by adding its rendered length to the
 		// start column. yaml.v3 does not expose folded/literal block scalar end
-		// positions; for those rare cases this gives a reasonable lower bound.
+		// positions; for `|` and `>` block scalars this leaves End.Line on the
+		// KEY line (the line of the `|` / `>` indicator), not the last physical
+		// line of the block content. Consumers (currently only the LSP) that
+		// anchor UI to the key location are unaffected; anything needing the
+		// full byte span of a block scalar would be wrong. See
+		// spec/document/frontmatter_yaml_shapes_test.go
+		// (TestParseFrontmatter_YAMLShape_LiteralBlockScalar) — the test
+		// asserts the observed (imperfect) value, so a future fix is a clean
+		// test-flip.
 		col := n.Column + len(n.Value)
 		if col < n.Column {
 			col = n.Column
