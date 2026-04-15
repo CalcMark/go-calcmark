@@ -600,7 +600,7 @@ Shipped: CalcMark frontmatter is now a first-class language concept with a typed
 | 6 — LSP hover | `34f604b` |
 | 7 — LSP completion | `a67f7dd` |
 | 8 — LSP documentSymbol | `a4859f7` |
-| 9 — Consolidated acceptance + close the loop | (this commit) |
+| 9 — Consolidated acceptance + close the loop | `ce89021` |
 
 Follow-up handoff: calcmark-web plan `2026-04-14-003`'s Deferred entry "First-class frontmatter handling in go-calcmark" is now unblocked. A new calcmark-web plan for frontend frontmatter rendering can be written against the next go-calcmark release tag.
 
