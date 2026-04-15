@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/units"
 	"github.com/shopspring/decimal"
 	"gopkg.in/yaml.v3"
@@ -120,6 +121,20 @@ type Frontmatter struct {
 	// editing of frontmatter lines (Enter, whitespace, etc.) in the TUI editor.
 	// Cleared on programmatic modification (SetGlobal, SetExchangeRate).
 	rawSource string
+
+	// KeyRanges maps each top-level frontmatter key (registered or Extra) to
+	// the source range covering its key+value YAML block. Lines and columns are
+	// 1-based, matching ast.Position convention (see spec/ast/position.go).
+	// The range starts at the key identifier and ends at the last byte of its
+	// value (for mappings/sequences, the last byte of the deepest child).
+	//
+	// Absent keys are simply not present in the map. Use the
+	// `r, ok := fm.KeyRanges[key]` idiom; a returned zero-value ast.Range from a
+	// missing key is indistinguishable from one explicitly stored as zero.
+	//
+	// Lines are document-relative: line 1 is the opening "---" fence and the
+	// first key sits on line 2 in a typical frontmatter.
+	KeyRanges map[string]ast.Range
 }
 
 // ExtraField holds a non-CalcMark frontmatter key-value pair.
@@ -696,6 +711,11 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.FiscalYearStarts = fc
 	}
 
+	// Capture per-key source ranges for every top-level key (registered + Extra).
+	// Lines are document-relative (1-based); the YAML body starts on line 2
+	// because line 1 is the opening "---" fence, hence yamlLineOffset = 1.
+	fm.KeyRanges = collectKeyRanges(yamlContent, 1)
+
 	// Capture non-CalcMark frontmatter keys in document order. The Registry
 	// (frontmatter_registry.go) is the source of truth for which keys carry
 	// CalcMark semantics; everything else is preserved verbatim in Extra.
@@ -803,6 +823,69 @@ func extractYAMLKeyOrder(yamlContent string, topKey string) []string {
 		}
 	}
 	return nil
+}
+
+// collectKeyRanges walks the top-level keys of a YAML mapping and returns each
+// key's source range covering the key identifier through the last byte of its
+// value. Line/column numbers are 1-based per ast.Position; lineOffset is added
+// to every yaml.Node line so callers can translate yaml-content-relative lines
+// into document-relative lines (typical caller passes 1 to skip the "---"
+// fence on document line 1).
+//
+// Returns an empty map (non-nil) when the YAML is empty or not a mapping, so
+// callers can use len() and ranged-for safely without nil-checks.
+//
+// Complexity: O(N) in total YAML node count — single pass over top-level keys
+// plus one descent per value to find its deepest end position. Lookup is O(1).
+func collectKeyRanges(yamlContent string, lineOffset int) map[string]ast.Range {
+	out := make(map[string]ast.Range)
+	mapping := parseYAMLMapping(yamlContent)
+	if mapping == nil {
+		return out
+	}
+	for i := 0; i < len(mapping.Content)-1; i += 2 {
+		keyNode := mapping.Content[i]
+		valueNode := mapping.Content[i+1]
+		start := ast.Position{
+			Line:   keyNode.Line + lineOffset,
+			Column: keyNode.Column,
+		}
+		end := nodeEndPosition(valueNode, lineOffset)
+		out[keyNode.Value] = ast.Range{Start: start, End: end}
+	}
+	return out
+}
+
+// nodeEndPosition returns a Position pointing to the last byte of the YAML
+// node's textual span. yaml.v3 only exposes a node's start; the end is derived
+// by walking to the deepest trailing child for mappings/sequences and by
+// adding the scalar's length for leaf scalars. lineOffset is added to convert
+// yaml-content lines into document-relative lines.
+func nodeEndPosition(n *yaml.Node, lineOffset int) ast.Position {
+	if n == nil {
+		return ast.Position{}
+	}
+	switch n.Kind {
+	case yaml.MappingNode, yaml.SequenceNode:
+		if len(n.Content) == 0 {
+			return ast.Position{Line: n.Line + lineOffset, Column: n.Column}
+		}
+		// For mappings, the trailing element is a value (odd-indexed); for
+		// sequences, it's the last item. In both cases the last Content entry
+		// is the deepest trailing node — recurse into it.
+		return nodeEndPosition(n.Content[len(n.Content)-1], lineOffset)
+	case yaml.AliasNode:
+		return ast.Position{Line: n.Line + lineOffset, Column: n.Column}
+	default: // ScalarNode and DocumentNode (DocumentNode shouldn't appear here)
+		// Approximate the scalar's end by adding its rendered length to the
+		// start column. yaml.v3 does not expose folded/literal block scalar end
+		// positions; for those rare cases this gives a reasonable lower bound.
+		col := n.Column + len(n.Value)
+		if col < n.Column {
+			col = n.Column
+		}
+		return ast.Position{Line: n.Line + lineOffset, Column: col}
+	}
 }
 
 // extractYAMLTopLevelKeyOrder returns all top-level YAML keys in document order.
