@@ -23,6 +23,22 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	// Use latest source text (not snapshot -- snapshot may be stale during debounce)
 	source := ds.getSource()
 
+	// Frontmatter completion takes priority. When the cursor sits inside the
+	// frontmatter region we never fall through to calc-block completion:
+	// either we return registered-key / enum-value items, or we return an
+	// empty list (non-enum value positions, unregistered keys). Falling
+	// through would otherwise surface bogus function/variable completions
+	// against YAML text.
+	if region, ok := DetectRegion(source); ok {
+		ctx := ClassifyCursor(region, params.Position)
+		if ctx.InRegion {
+			if items := buildFrontmatterCompletions(source, params.Position); items != nil {
+				return items, nil
+			}
+			return []protocol.CompletionItem{}, nil
+		}
+	}
+
 	// Get the current line text for context-sensitive filtering
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)

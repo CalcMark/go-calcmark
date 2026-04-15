@@ -7,6 +7,7 @@ import (
 	"text/template"
 	"unicode"
 
+	specDoc "github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
@@ -106,6 +107,23 @@ func (s *Server) hoverHandle(params *protocol.HoverParams) (any, error) {
 	}
 
 	source := ds.getSource()
+
+	// Frontmatter hover takes priority. When the cursor sits inside the
+	// frontmatter region we never fall through to calc-block hover: either
+	// we return a registered-key hover, or we return null (Extra keys,
+	// fences, blanks). This prevents the word-under-cursor code below from
+	// producing bogus variable/function matches against YAML text.
+	if region, ok := DetectRegion(source); ok {
+		ctx := ClassifyCursor(region, params.Position)
+		if ctx.InRegion {
+			h := buildFrontmatterHover(source, params.Position)
+			if h == nil {
+				return nil, nil
+			}
+			return h, nil
+		}
+	}
+
 	line := int(params.Position.Line)
 	col := int(params.Position.Character)
 	lineText := getLineText(source, line)
@@ -318,6 +336,14 @@ func (s *Server) textDocumentDocumentSymbol(_ *glsp.Context, params *protocol.Do
 	source := ds.getSource()
 
 	var symbols []protocol.DocumentSymbol
+
+	// Prepend frontmatter symbols for registered keys. A malformed YAML
+	// frontmatter must not kill the outline — if parsing fails we simply
+	// skip the frontmatter section and still emit calc-block symbols.
+	if fm, _, err := specDoc.ParseFrontmatter(source); err == nil && fm != nil {
+		symbols = append(symbols, buildFrontmatterSymbols(*fm)...)
+	}
+
 	lines := strings.Split(source, "\n")
 
 	for i, line := range lines {

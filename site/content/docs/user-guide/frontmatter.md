@@ -5,6 +5,8 @@ weight: 3
 
 CalcMark uses YAML frontmatter to configure document-wide behavior: global variables, directive references, template interpolation, and scaling/conversion transforms.
 
+Editors with CalcMark LSP support (including the TUI and the CalcMark web editor) show hover documentation, completion, and document-outline entries for CalcMark-specific frontmatter keys. Keys outside the CalcMark set (e.g., Jekyll-style `title`, `date`, `author`) pass through untouched with no editor hints. The authoritative list of CalcMark-grammar keys lives in [`spec/document/frontmatter_registry.go`](https://github.com/CalcMark/go-calcmark/blob/main/spec/document/frontmatter_registry.go).
+
 ### Global Variables {#global-variables}
 
 Define reusable values in the frontmatter that can be referenced throughout your document:

@@ -1659,3 +1659,45 @@ func TestFiscalYearStartsParsing(t *testing.T) {
 		})
 	}
 }
+
+// TestParseFrontmatter_RegistryDrivesKnownKeyRouting pins the architectural
+// property that the Registry — not an inline allowlist — decides which
+// frontmatter keys are CalcMark-known. Every Registry entry must be routed
+// through its typed parse arm (and therefore NOT appear in Extra), and a
+// non-Registry key must land in Extra.
+func TestParseFrontmatter_RegistryDrivesKnownKeyRouting(t *testing.T) {
+	// Sanity: registered keys never leak into Extra.
+	registered := "---\nexchange:\n  USD_EUR: 1.1\n---\n"
+	fm, _, err := ParseFrontmatter(registered)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter(registered) error: %v", err)
+	}
+	if len(fm.Exchange) == 0 {
+		t.Errorf("expected Exchange to be populated, got empty")
+	}
+	for _, e := range fm.Extra {
+		if IsRegisteredKey(e.Key) {
+			t.Errorf("registered key %q leaked into Extra", e.Key)
+		}
+	}
+
+	// Sanity: a non-registered key lands in Extra and does not pollute typed fields.
+	unregistered := "---\ntitle: Hello\n---\n"
+	fm2, _, err := ParseFrontmatter(unregistered)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter(unregistered) error: %v", err)
+	}
+	if len(fm2.Exchange) != 0 {
+		t.Errorf("expected Exchange empty for unregistered-key doc, got %v", fm2.Exchange)
+	}
+	found := false
+	for _, e := range fm2.Extra {
+		if e.Key == "title" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected 'title' in Extra, got %+v", fm2.Extra)
+	}
+}
