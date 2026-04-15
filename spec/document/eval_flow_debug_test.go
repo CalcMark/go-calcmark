@@ -1,4 +1,10 @@
-package document
+package document_test
+
+// This test lives in package document_test (not document) to break what would
+// otherwise be a test-only import cycle: spec/semantic imports spec/document
+// (for document.Frontmatter in CheckFrontmatter), and a `package document` test
+// importing spec/semantic would close the cycle. The test exercises only
+// exported symbols, so the move is safe.
 
 import (
 	"testing"
