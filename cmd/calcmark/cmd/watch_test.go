@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,6 +15,27 @@ import (
 	"github.com/CalcMark/go-calcmark/format"
 	"github.com/fsnotify/fsnotify"
 )
+
+// syncBuf is a goroutine-safe wrapper around bytes.Buffer used by tests
+// that capture watchServer.logf output. The watchLoop goroutine writes
+// concurrently with the test goroutine reading String(); a bare
+// bytes.Buffer would race (caught by `go test -race`).
+type syncBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuf) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuf) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
 
 func TestRenderFile(t *testing.T) {
 	// Create a temp .cm file
@@ -282,8 +304,9 @@ func TestWatchLoop_LogsOnChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Capture stderr
-	var buf bytes.Buffer
+	// Capture stderr through a goroutine-safe buffer (the watchLoop
+	// goroutine writes concurrently with this test reading String()).
+	var buf syncBuf
 	srv := &watchServer{
 		filename: cmFile,
 		mode:     calcmark.CM,
