@@ -7,6 +7,7 @@ import (
 	"text/template"
 	"unicode"
 
+	specDoc "github.com/CalcMark/go-calcmark/spec/document"
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
@@ -335,6 +336,14 @@ func (s *Server) textDocumentDocumentSymbol(_ *glsp.Context, params *protocol.Do
 	source := ds.getSource()
 
 	var symbols []protocol.DocumentSymbol
+
+	// Prepend frontmatter symbols for registered keys. A malformed YAML
+	// frontmatter must not kill the outline — if parsing fails we simply
+	// skip the frontmatter section and still emit calc-block symbols.
+	if fm, _, err := specDoc.ParseFrontmatter(source); err == nil && fm != nil {
+		symbols = append(symbols, buildFrontmatterSymbols(*fm)...)
+	}
+
 	lines := strings.Split(source, "\n")
 
 	for i, line := range lines {

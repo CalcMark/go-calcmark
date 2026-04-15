@@ -417,3 +417,104 @@ func TestFrontmatterCompletion_Acceptance_CalcBlockStillWorks(t *testing.T) {
 		t.Errorf("expected grow function completion in calc line below frontmatter; labels = %v", itemLabels(items))
 	}
 }
+
+// documentSymbolsAt drives the documentSymbol handler end-to-end and returns
+// the resulting slice, failing the test on transport-level errors.
+func documentSymbolsAt(t *testing.T, s *Server, uri string) []protocol.DocumentSymbol {
+	t.Helper()
+	r, err := s.textDocumentDocumentSymbol(nil, &protocol.DocumentSymbolParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+	})
+	if err != nil {
+		t.Fatalf("documentSymbol error: %v", err)
+	}
+	if r == nil {
+		return nil
+	}
+	syms, ok := r.([]protocol.DocumentSymbol)
+	if !ok {
+		t.Fatalf("documentSymbol result is not []DocumentSymbol: %T", r)
+	}
+	return syms
+}
+
+// TestFrontmatterDocumentSymbol_Acceptance_RegisteredKeysFirst — a doc with
+// frontmatter + calc-block assignments produces frontmatter Property symbols
+// ahead of the Variable/String symbols from the body.
+func TestFrontmatterDocumentSymbol_Acceptance_RegisteredKeysFirst(t *testing.T) {
+	source := "---\nconvert_to: si\nglobals:\n  rate: 10\n---\nprice = 100\n"
+	s, uri := prepareServerDoc(t, source)
+	syms := documentSymbolsAt(t, s, uri)
+
+	if len(syms) < 3 {
+		t.Fatalf("expected at least 3 symbols (2 frontmatter + 1 variable), got %d: %+v", len(syms), syms)
+	}
+	if syms[0].Name != "convert_to" || syms[0].Kind != protocol.SymbolKindProperty {
+		t.Errorf("first symbol should be Property convert_to, got %+v", syms[0])
+	}
+	if syms[1].Name != "globals" || syms[1].Kind != protocol.SymbolKindProperty {
+		t.Errorf("second symbol should be Property globals, got %+v", syms[1])
+	}
+	// The calc-block "price" Variable should appear after frontmatter symbols.
+	var sawPrice bool
+	for _, sym := range syms[2:] {
+		if sym.Name == "price" && sym.Kind == protocol.SymbolKindVariable {
+			sawPrice = true
+			break
+		}
+	}
+	if !sawPrice {
+		t.Errorf("expected Variable symbol 'price' after frontmatter symbols; got %+v", syms)
+	}
+}
+
+// TestFrontmatterDocumentSymbol_Acceptance_ExtraKeysProduceNoSymbols — Extra
+// (unregistered) frontmatter keys must not appear in the outline; calc-block
+// variables still do.
+func TestFrontmatterDocumentSymbol_Acceptance_ExtraKeysProduceNoSymbols(t *testing.T) {
+	source := "---\ntitle: Hello\nauthor: Alice\n---\nprice = 100\n"
+	s, uri := prepareServerDoc(t, source)
+	syms := documentSymbolsAt(t, s, uri)
+
+	for _, sym := range syms {
+		if sym.Name == "title" || sym.Name == "author" {
+			t.Errorf("Extra key %q leaked into documentSymbol output", sym.Name)
+		}
+	}
+	var sawPrice bool
+	for _, sym := range syms {
+		if sym.Name == "price" {
+			sawPrice = true
+			break
+		}
+	}
+	if !sawPrice {
+		t.Errorf("expected Variable symbol 'price' even with Extra-only frontmatter; got %+v", syms)
+	}
+}
+
+// TestFrontmatterDocumentSymbol_Acceptance_NoFrontmatter — documents without
+// any frontmatter produce only calc-block symbols (regression guard).
+func TestFrontmatterDocumentSymbol_Acceptance_NoFrontmatter(t *testing.T) {
+	source := "# Heading\nprice = 100\n"
+	s, uri := prepareServerDoc(t, source)
+	syms := documentSymbolsAt(t, s, uri)
+
+	for _, sym := range syms {
+		if sym.Kind == protocol.SymbolKindProperty {
+			t.Errorf("no Property symbols expected without frontmatter, got %+v", sym)
+		}
+	}
+	var sawHeading, sawPrice bool
+	for _, sym := range syms {
+		if sym.Name == "Heading" {
+			sawHeading = true
+		}
+		if sym.Name == "price" {
+			sawPrice = true
+		}
+	}
+	if !sawHeading || !sawPrice {
+		t.Errorf("expected existing heading+variable symbols intact; got %+v", syms)
+	}
+}
