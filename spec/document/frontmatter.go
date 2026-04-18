@@ -564,6 +564,17 @@ func parseUnitCategories(m map[string]any, directive string) ([]string, error) {
 	return categories, nil
 }
 
+// ErrFrontmatterUnclosed is returned by ParseFrontmatter when a document
+// starts with an opening `---` fence but no matching closing fence is
+// present. Along with this error, ParseFrontmatter returns the full
+// source as the remaining body so interactive callers (editors, LSPs)
+// can render in-progress content instead of erroring out.
+//
+// Strict callers (like NewDocument) may continue to treat this as fatal.
+// Lenient callers should check `errors.Is(err, ErrFrontmatterUnclosed)`
+// and use the returned source.
+var ErrFrontmatterUnclosed = fmt.Errorf("frontmatter not closed: missing closing '---' delimiter")
+
 // ParseFrontmatter extracts YAML frontmatter from the beginning of a document.
 // Returns the parsed frontmatter, the remaining source (without frontmatter), and any error.
 //
@@ -575,6 +586,10 @@ func parseUnitCategories(m map[string]any, directive string) ([]string, error) {
 //     (exchange, globals, scale, convert_to)
 //
 // If no frontmatter is present, returns (nil, source, nil).
+//
+// If the opening fence is found but the closing fence is missing,
+// returns (nil, source, ErrFrontmatterUnclosed). The full source is
+// returned as body so lenient callers can render in-progress content.
 func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	lines := strings.Split(source, "\n")
 	if len(lines) == 0 {
@@ -596,7 +611,7 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	}
 
 	if closeIdx == -1 {
-		return nil, "", fmt.Errorf("frontmatter not closed: missing closing '---' delimiter")
+		return nil, source, ErrFrontmatterUnclosed
 	}
 
 	// Extract YAML content (between the delimiters)

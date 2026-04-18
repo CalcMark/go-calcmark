@@ -1,6 +1,7 @@
 package document
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -104,17 +105,56 @@ x = 10`
 	}
 }
 
+// TestParseFrontmatter_UnclosedDelimiter verifies that an opening
+// `---` fence without a matching closer returns the typed sentinel
+// ErrFrontmatterUnclosed along with the full source as body. Strict
+// callers bail on the error; lenient callers (editors, LSPs) can
+// check errors.Is(err, ErrFrontmatterUnclosed) and render in-progress
+// content via the returned body.
 func TestParseFrontmatter_UnclosedDelimiter(t *testing.T) {
 	source := `---
 exchange:
   USD_EUR: 0.92
 x = 10`
-	_, _, err := ParseFrontmatter(source)
-	if err == nil {
-		t.Error("expected error for unclosed frontmatter")
+	fm, remaining, err := ParseFrontmatter(source)
+	if !errors.Is(err, ErrFrontmatterUnclosed) {
+		t.Fatalf("expected ErrFrontmatterUnclosed for unclosed fence, got %v", err)
 	}
-	if err != nil && err.Error() != "frontmatter not closed: missing closing '---' delimiter" {
-		t.Errorf("unexpected error message: %v", err)
+	if fm != nil {
+		t.Errorf("expected nil frontmatter when fence is unclosed, got %+v", fm)
+	}
+	if remaining != source {
+		t.Errorf("expected source to pass through as body; got %q, want %q", remaining, source)
+	}
+}
+
+// TestParseFrontmatter_BareOpeningFence exercises the in-progress
+// editing case: the user has typed `---` (and optionally a newline)
+// but nothing else. ParseFrontmatter must return ErrFrontmatterUnclosed
+// AND the full source so lenient callers can keep rendering.
+func TestParseFrontmatter_BareOpeningFence(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{"just dashes", "---"},
+		{"dashes + newline", "---\n"},
+		{"dashes + blank line", "---\n\n"},
+		{"dashes + one key, no close", "---\nscale: 1000\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm, remaining, err := ParseFrontmatter(tt.source)
+			if !errors.Is(err, ErrFrontmatterUnclosed) {
+				t.Fatalf("expected ErrFrontmatterUnclosed, got %v", err)
+			}
+			if fm != nil {
+				t.Errorf("expected nil frontmatter (fence unclosed), got %+v", fm)
+			}
+			if remaining != tt.source {
+				t.Errorf("expected source to pass through, got %q", remaining)
+			}
+		})
 	}
 }
 

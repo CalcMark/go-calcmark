@@ -1,6 +1,7 @@
 package document
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -121,16 +122,20 @@ func TestParseFrontmatter_KeyRanges_EmptyBody(t *testing.T) {
 	}
 }
 
-// TestParseFrontmatter_KeyRanges_UnclosedFence verifies the existing parser
-// behavior on a missing closing fence is unchanged: error returned, no
-// frontmatter exposed (so KeyRanges is unobservable).
+// TestParseFrontmatter_KeyRanges_UnclosedFence verifies the parser
+// returns ErrFrontmatterUnclosed on a missing closing fence, no
+// frontmatter is exposed (so KeyRanges is unobservable), and the
+// full source is returned as body for lenient callers.
 func TestParseFrontmatter_KeyRanges_UnclosedFence(t *testing.T) {
 	source := "---\nconvert_to: si\n"
-	fm, _, err := ParseFrontmatter(source)
-	if err == nil {
-		t.Fatal("expected error for unclosed fence, got nil")
+	fm, remaining, err := ParseFrontmatter(source)
+	if !errors.Is(err, ErrFrontmatterUnclosed) {
+		t.Fatalf("expected ErrFrontmatterUnclosed, got %v", err)
 	}
 	if fm != nil {
-		t.Errorf("expected nil frontmatter on parse error, got %+v", fm)
+		t.Errorf("expected nil frontmatter when fence unclosed, got %+v", fm)
+	}
+	if remaining != source {
+		t.Errorf("expected source to pass through, got %q", remaining)
 	}
 }
