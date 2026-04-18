@@ -439,3 +439,50 @@ func TestFirstWord(t *testing.T) {
 		}
 	}
 }
+
+// TestDateSuggestions_ExcludesTemplateNames verifies that template-
+// form entries (like `this weekday`, `next month name`) are NOT
+// surfaced as literal completions. Users are expected to type a
+// specific weekday (`this Friday`) or month (`next April`) — offering
+// the bare template as a one-shot completion would insert invalid
+// calcmark source.
+func TestDateSuggestions_ExcludesTemplateNames(t *testing.T) {
+	banned := []string{
+		"next weekday", "this weekday", "last weekday",
+		"next month name", "this month name", "last month name",
+	}
+	// Use prefixes that would otherwise match these names.
+	for _, prefix := range []string{"", "this", "last", "next"} {
+		sugg := DateSuggestions(prefix)
+		for _, b := range banned {
+			for _, s := range sugg {
+				if s.Name == b {
+					t.Errorf("DateSuggestions(%q) unexpectedly surfaced template %q", prefix, b)
+				}
+			}
+		}
+	}
+}
+
+// TestDateSuggestions_KeepsLiteralAliases confirms valid literal
+// entries in the features registry survive the template filter.
+// (Keywords like `this week` / `this year` live in the lexer's
+// RelativeDateKeywords map, not the feature registry, so they are
+// not surfaced by DateSuggestions — the lexer tokenises them
+// directly.)
+func TestDateSuggestions_KeepsLiteralAliases(t *testing.T) {
+	required := []string{"today", "this quarter"}
+	sugg := DateSuggestions("")
+	for _, want := range required {
+		found := false
+		for _, s := range sugg {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("DateSuggestions(\"\") should still surface literal %q", want)
+		}
+	}
+}

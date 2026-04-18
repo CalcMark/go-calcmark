@@ -50,6 +50,37 @@ func TestEnvironmentClone(t *testing.T) {
 	}
 }
 
+// TestEnvironmentBuiltinConstants verifies PI and E are pre-defined in
+// the semantic environment so static analysis doesn't flag them as
+// undefined. Mirrors the runtime interpreter's TestBuiltinConstants.
+func TestEnvironmentBuiltinConstants(t *testing.T) {
+	env := NewEnvironment()
+
+	for _, name := range []string{"PI", "E"} {
+		if !env.Has(name) {
+			t.Errorf("expected built-in constant %q to be defined in a fresh semantic environment", name)
+		}
+		val, ok := env.Get(name)
+		if !ok {
+			t.Errorf("Get(%q) returned ok=false; expected true", name)
+			continue
+		}
+		if val == nil {
+			t.Errorf("Get(%q) returned nil type; expected a number type", name)
+		}
+	}
+}
+
+// TestEnvironmentBuiltinConstantsCloneIncludesConstants ensures the
+// constants survive Clone — scoped environments must still resolve
+// built-ins.
+func TestEnvironmentBuiltinConstantsCloneIncludesConstants(t *testing.T) {
+	cloned := NewEnvironment().Clone()
+	if !cloned.Has("PI") || !cloned.Has("E") {
+		t.Error("cloned semantic environment should still contain built-in constants PI and E")
+	}
+}
+
 // TestCurrencyValidation tests currency code validation
 func TestCurrencyValidation(t *testing.T) {
 	tests := []struct {

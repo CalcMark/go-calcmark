@@ -1048,7 +1048,7 @@ func TestDateSuggestions(t *testing.T) {
 		{"ye prefix", "ye", true, []string{"yesterday", "years"}},
 		{"ag prefix", "ag", true, []string{"ago"}},
 		{"thi prefix", "thi", true, []string{"this quarter"}},
-		{"ne prefix", "ne", true, []string{"next weekday", "next month name"}},
+		{"ne prefix", "ne", true, []string{"next quarter", "next fiscal year"}},
 		{"fi prefix", "fi", true, []string{"fiscal quarter", "fiscal year"}},
 		{"xx prefix (no match)", "xx", false, nil},
 	}

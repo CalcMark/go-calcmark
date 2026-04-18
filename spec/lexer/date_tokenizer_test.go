@@ -24,6 +24,23 @@ func TestDateKeywordTokenization(t *testing.T) {
 		{"last week", lexer.DATE_LAST_WEEK},
 		{"last month", lexer.DATE_LAST_MONTH},
 		{"last year", lexer.DATE_LAST_YEAR},
+
+		// Period abbreviations — with relative prefix.
+		// Bare forms (CY / FY / CQ / FQ) collide with the notation
+		// parser (Q1-Q4, FQ1-FQ4, FY2026, CY26), so users must use
+		// the relative forms.
+		{"this CY", lexer.DATE_THIS_YEAR},
+		{"next CY", lexer.DATE_NEXT_YEAR},
+		{"last CY", lexer.DATE_LAST_YEAR},
+		{"this FY", lexer.DATE_THIS_FISCAL_YEAR},
+		{"next FY", lexer.DATE_NEXT_FISCAL_YEAR},
+		{"last FY", lexer.DATE_LAST_FISCAL_YEAR},
+		{"this CQ", lexer.DATE_THIS_QUARTER},
+		{"next CQ", lexer.DATE_NEXT_QUARTER},
+		{"last CQ", lexer.DATE_LAST_QUARTER},
+		{"this FQ", lexer.DATE_THIS_FISCAL_QUARTER},
+		{"next FQ", lexer.DATE_NEXT_FISCAL_QUARTER},
+		{"last FQ", lexer.DATE_LAST_FISCAL_QUARTER},
 	}
 
 	for _, tt := range tests {

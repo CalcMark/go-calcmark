@@ -74,9 +74,35 @@ func (interp *Interpreter) evalDurationLiteral(d *ast.DurationLiteral) (types.Ty
 	return types.NewDurationFromString(d.Value, d.Unit)
 }
 
+// periodAbbreviationExpansion normalises the short-form period
+// abbreviations into the canonical phrases the evaluator switch
+// already understands. Keeps the bulk of the switch body unchanged
+// instead of growing it with a dozen new cases.
+var periodAbbreviationExpansion = map[string]string{
+	"cy":      "this year",
+	"fy":      "this fiscal year",
+	"cq":      "this quarter",
+	"fq":      "this fiscal quarter",
+	"this cy": "this year",
+	"next cy": "next year",
+	"last cy": "last year",
+	"this fy": "this fiscal year",
+	"next fy": "next fiscal year",
+	"last fy": "last fiscal year",
+	"this cq": "this quarter",
+	"next cq": "next quarter",
+	"last cq": "last quarter",
+	"this fq": "this fiscal quarter",
+	"next fq": "next fiscal quarter",
+	"last fq": "last fiscal quarter",
+}
+
 func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (types.Type, error) {
 	now := interp.now()
 	keyword := strings.ToLower(r.Keyword)
+	if canonical, ok := periodAbbreviationExpansion[keyword]; ok {
+		keyword = canonical
+	}
 
 	switch keyword {
 	case "today":
