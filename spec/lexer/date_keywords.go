@@ -22,6 +22,13 @@ var DateKeywords = map[string]TokenType{
 	"friday":    DATE_WEEKDAY,
 	"saturday":  DATE_WEEKDAY,
 	"sunday":    DATE_WEEKDAY,
+
+	// NOTE: bare period abbreviations (CY / FY / CQ / FQ) are NOT
+	// registered here. They collide with the notation parser
+	// (Q1-Q4, FQ1-FQ4, FY2026, CY26) because the word scanner
+	// stops at the first non-letter, consuming `FQ` out of `FQ1`.
+	// Users reach the same semantics via the relative forms below
+	// (`this CY`, `next FY`, `last FQ`, etc.).
 }
 
 // RelativeDateKeywords maps multi-word relative date keywords to token types
@@ -51,6 +58,24 @@ var RelativeDateKeywords = map[string]TokenType{
 	"this quarter": DATE_THIS_QUARTER,
 	"next quarter": DATE_NEXT_QUARTER,
 	"last quarter": DATE_LAST_QUARTER,
+
+	// Period abbreviations with relative prefixes.
+	// Calendar year / fiscal year / calendar quarter / fiscal quarter.
+	"this cy": DATE_THIS_YEAR,
+	"next cy": DATE_NEXT_YEAR,
+	"last cy": DATE_LAST_YEAR,
+
+	"this fy": DATE_THIS_FISCAL_YEAR,
+	"next fy": DATE_NEXT_FISCAL_YEAR,
+	"last fy": DATE_LAST_FISCAL_YEAR,
+
+	"this cq": DATE_THIS_QUARTER,
+	"next cq": DATE_NEXT_QUARTER,
+	"last cq": DATE_LAST_QUARTER,
+
+	"this fq": DATE_THIS_FISCAL_QUARTER,
+	"next fq": DATE_NEXT_FISCAL_QUARTER,
+	"last fq": DATE_LAST_FISCAL_QUARTER,
 
 	// This weekday
 	"this monday":    DATE_THIS_WEEKDAY,

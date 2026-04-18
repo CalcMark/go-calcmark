@@ -881,6 +881,14 @@ func TestExtendedRelativeDates(t *testing.T) {
 		{"last month", "d = last month\n", 2026, 3, 1},
 		// last year = Jan 1 of last year
 		{"last year", "d = last year\n", 2025, 1, 1},
+
+		// Period abbreviations (CY/FY/CQ/FQ). Bare forms collide with
+		// the notation parser (Q1-Q4, FQ1-FQ4, FY2026, CY26), so only
+		// relative forms (`this/next/last CY`) are supported.
+		{"next CY", "d = next CY\n", 2027, 1, 1},
+		{"last CY", "d = last CY\n", 2025, 1, 1},
+		{"next CQ", "d = next CQ\n", 2026, 7, 1},
+		{"last CQ", "d = last CQ\n", 2026, 1, 1},
 	}
 
 	for _, tt := range tests {

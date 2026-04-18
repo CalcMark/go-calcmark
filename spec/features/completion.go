@@ -235,6 +235,21 @@ func DirectiveSuggestions(prefix string, scaleFactor string, globals map[string]
 	return suggestions
 }
 
+// templateDateNames lists registry entries whose name is a TEMPLATE
+// placeholder form, not a literal calcmark expression. The parser
+// cannot consume `this weekday` — the user is expected to type `this
+// Friday` (specific weekday). Surfacing them as completions inserts
+// invalid source. These names exist in the registry for documentation
+// purposes (syntax, example) but must not appear in DateSuggestions.
+var templateDateNames = map[string]bool{
+	"next weekday":    true,
+	"this weekday":    true,
+	"last weekday":    true,
+	"next month name": true,
+	"this month name": true,
+	"last month name": true,
+}
+
 // DateSuggestions returns date keyword suggestions matching prefix.
 // Surfaces date-related features like "today", "next Friday", "this quarter", "ago", "end of".
 func DateSuggestions(prefix string) []Suggestion {
@@ -244,7 +259,7 @@ func DateSuggestions(prefix string) []Suggestion {
 	registry := DefaultRegistry()
 
 	for _, f := range registry.ByCategory(CategoryDate) {
-		if MatchesPrefix(f.Name, prefix) {
+		if !templateDateNames[f.Name] && MatchesPrefix(f.Name, prefix) {
 			suggestions = append(suggestions, Suggestion{
 				Name:        f.Name,
 				Category:    "Date",
@@ -255,6 +270,9 @@ func DateSuggestions(prefix string) []Suggestion {
 		}
 		// Also check aliases for parseable date expressions
 		for _, alias := range f.Aliases {
+			if templateDateNames[alias.Name] {
+				continue
+			}
 			if alias.Parseable && MatchesPrefix(alias.Name, prefix) {
 				suggestions = append(suggestions, Suggestion{
 					Name:        alias.Name,

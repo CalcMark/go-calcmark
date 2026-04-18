@@ -5,6 +5,16 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
+)
+
+// Mathematical built-in constants. Values mirror the runtime interpreter
+// environment (impl/interpreter/environment.go) so static analysis and
+// evaluation agree on whether a name like "PI" is bound. If the runtime
+// list grows a constant, add it here too.
+var (
+	builtinPI = decimal.RequireFromString("3.14159265358979323846264338327950288419716939937510")
+	builtinE  = decimal.RequireFromString("2.71828182845904523536028747135266249775724709369995")
 )
 
 // VarInfo tracks information about a variable definition
@@ -19,11 +29,25 @@ type Environment struct {
 	vars map[string]*VarInfo
 }
 
-// NewEnvironment creates a new empty environment.
+// NewEnvironment creates a new environment pre-populated with the
+// built-in mathematical constants (PI, E) so the semantic checker
+// doesn't flag references to them as "undefined variable." The
+// runtime interpreter environment does the equivalent via
+// addConstants — this function keeps the two layers aligned.
 func NewEnvironment() *Environment {
-	return &Environment{
+	env := &Environment{
 		vars: make(map[string]*VarInfo),
 	}
+	env.addBuiltinConstants()
+	return env
+}
+
+// addBuiltinConstants registers the mathematical constants the runtime
+// interpreter also registers. The Range field is left nil — these
+// names are not defined at any source location.
+func (e *Environment) addBuiltinConstants() {
+	e.vars["PI"] = &VarInfo{Type: types.NewNumber(builtinPI), Range: nil}
+	e.vars["E"] = &VarInfo{Type: types.NewNumber(builtinE), Range: nil}
 }
 
 // Set stores a variable binding with optional range information.
