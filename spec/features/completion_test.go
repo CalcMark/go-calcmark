@@ -466,10 +466,6 @@ func TestDateSuggestions_ExcludesTemplateNames(t *testing.T) {
 
 // TestDateSuggestions_KeepsLiteralAliases confirms valid literal
 // entries in the features registry survive the template filter.
-// (Keywords like `this week` / `this year` live in the lexer's
-// RelativeDateKeywords map, not the feature registry, so they are
-// not surfaced by DateSuggestions — the lexer tokenises them
-// directly.)
 func TestDateSuggestions_KeepsLiteralAliases(t *testing.T) {
 	required := []string{"today", "this quarter"}
 	sugg := DateSuggestions("")
@@ -483,6 +479,35 @@ func TestDateSuggestions_KeepsLiteralAliases(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("DateSuggestions(\"\") should still surface literal %q", want)
+		}
+	}
+}
+
+// TestDateSuggestions_ThisPrefixCoversNamedPeriods verifies that
+// typing `this` in a calc block surfaces every named time period the
+// user can anchor with `this`, not just `this quarter`. The lexer
+// recognizes `this week / this month / this year / this quarter` as
+// relative date keywords, so completion must match.
+func TestDateSuggestions_ThisPrefixCoversNamedPeriods(t *testing.T) {
+	required := []string{"this week", "this month", "this year", "this quarter"}
+	sugg := DateSuggestions("this")
+	for _, want := range required {
+		found := false
+		for _, s := range sugg {
+			if s.Name == want {
+				found = true
+				if s.Category != "Date" {
+					t.Errorf("suggestion %q has category %q, want Date", s.Name, s.Category)
+				}
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(sugg))
+			for i, s := range sugg {
+				names[i] = s.Name
+			}
+			t.Errorf("DateSuggestions(\"this\") missing %q; got %v", want, names)
 		}
 	}
 }
