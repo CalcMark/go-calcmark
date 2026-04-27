@@ -781,12 +781,17 @@ func getGrowthFeatures() []Feature {
 			Subcategory: "Growth",
 			Syntax:      "compound(principal, rate, periods, period?)",
 			Description: "Compound growth: principal × (1 + rate)^periods. Add period for monthly/quarterly compounding.",
+			// Only the basic NL alias is offered as a completion. The
+			// parser still accepts `compound X by Y monthly over Z`
+			// (`parseNLCompoundFunction` has its own grammar), but the
+			// `period` modifier is an optional 4th argument with a
+			// default — the canonical completion shouldn't surface it
+			// as a placeholder the user has to consciously skip past.
 			Aliases: []Alias{
 				{Name: "compound...by...over", Parseable: true, Example: "compound $1000 by 5% over 10 years"},
-				{Name: "compound...by...monthly...over", Parseable: true, Example: "compound $1000 by 5% monthly over 10 years"},
 			},
 			Example:   "compound(1000, 5%, 10 years, monthly) → 1647.01",
-			NLExample: "compound $1000 by 5% monthly over 10 years",
+			NLExample: "compound $1000 by 5% over 10 years",
 		},
 		{
 			Name:        "grow",

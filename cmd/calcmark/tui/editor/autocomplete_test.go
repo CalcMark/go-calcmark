@@ -446,9 +446,15 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 		}
 	})
 
-	t.Run("compound prefix returns fn and nl rows", func(t *testing.T) {
+	t.Run("compound prefix returns fn row + the canonical NL row only", func(t *testing.T) {
+		// The `compound...by...monthly...over` alias was removed from the
+		// registry: monthly is an optional `period` argument with a
+		// default, not a placeholder users should be expected to skip.
+		// The parser still accepts the form; completion just doesn't
+		// surface it as a separate row.
 		suggestions := features.FunctionSuggestions("comp", implNames)
-		var fnRow, basicNL, freqNL *components.Suggestion
+		var fnRow, basicNL *components.Suggestion
+		var freqNLSeen bool
 		for i := range suggestions {
 			if suggestions[i].InsertText == "compound" {
 				fnRow = &suggestions[i]
@@ -457,7 +463,7 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 				basicNL = &suggestions[i]
 			}
 			if suggestions[i].Category == "example" && suggestions[i].InsertText == "compound $1000 by 5% monthly over 10 years" {
-				freqNL = &suggestions[i]
+				freqNLSeen = true
 			}
 		}
 		if fnRow == nil {
@@ -466,8 +472,8 @@ func TestFunctionSuggestionSource_NLRows(t *testing.T) {
 		if basicNL == nil {
 			t.Fatal("expected basic NL row for compound (without modifier)")
 		}
-		if freqNL == nil {
-			t.Fatal("expected frequency NL row for compound (with monthly)")
+		if freqNLSeen {
+			t.Error("did not expect frequency NL row for compound (the `monthly` form alias was dropped)")
 		}
 	})
 
