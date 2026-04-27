@@ -113,6 +113,12 @@ func NewServer() *Server {
 		TextDocumentDocumentSymbol:     s.textDocumentDocumentSymbol,
 		TextDocumentSemanticTokensFull: s.textDocumentSemanticTokensFull,
 		TextDocumentCodeAction:         s.textDocumentCodeAction,
+
+		// Frontmatter mutation commands (`calcmark.frontmatter.*`)
+		// dispatch through this single handler. See
+		// lsp/frontmatter_commands.go for the per-command logic and
+		// the WorkspaceEdit shape returned.
+		WorkspaceExecuteCommand: s.executeCommand,
 	}
 
 	// Wrap the handler so textDocument/signatureHelp can return our extended
