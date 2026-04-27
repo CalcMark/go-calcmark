@@ -51,6 +51,15 @@ func (h *interceptingHandler) Handle(ctx *glsp.Context) (r any, validMethod bool
 		validParams = true
 		r, err = h.server.hoverHandle(&params)
 		return r, validMethod, validParams, err
+
+	case "calcmark/lexicon":
+		// Custom request: ships the static set of function names and
+		// conversion keywords the client uses to color-code calc
+		// source. No params; pure server state. Fetched once after
+		// initialize.
+		validMethod = true
+		validParams = true
+		return computeLexicon(), validMethod, validParams, nil
 	}
 	return h.inner.Handle(ctx)
 }
