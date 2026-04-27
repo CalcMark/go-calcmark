@@ -420,8 +420,13 @@ func dateCompletionItems(prefix string) []protocol.CompletionItem {
 // not compatible with the required parameter type are filtered out. An empty
 // requiredType means no filter (bare expression context).
 //
-// Known limitation: position filtering is not applied because the LSP's
-// Environment does not expose variable definition line numbers.
+// Variables defined AT or AFTER `cursorLine` (doc-absolute, 0-indexed)
+// are excluded — calcmark is strictly ordered, so a reference cannot
+// point at a definition that appears later in the document. The
+// Environment exposes per-variable definition lines via
+// `GetAllDefinedLines`; built-in constants and frontmatter globals
+// (which apply before any block) are intentionally absent from that
+// map and therefore unfiltered.
 func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine int, requiredType types.ArgType) []protocol.CompletionItem {
 	env := snap.Evaluator.GetEnvironment()
 	if env == nil {
@@ -443,8 +448,11 @@ func variableCompletionItems(snap *DocumentSnapshot, prefix string, cursorLine i
 		argTypes[name] = varType
 	}
 
-	// nil definedLines = no position filtering (LSP limitation documented above)
-	suggestions := features.VariableSuggestions(vars, prefix, cursorLine, nil)
+	// Position filtering: variables defined at or after `cursorLine`
+	// are excluded. Variables without a recorded line (constants,
+	// frontmatter globals) pass through unfiltered.
+	definedLines := env.GetAllDefinedLines()
+	suggestions := features.VariableSuggestions(vars, prefix, cursorLine, definedLines)
 	var items []protocol.CompletionItem
 
 	for _, s := range suggestions {

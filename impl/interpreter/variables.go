@@ -17,6 +17,17 @@ func (interp *Interpreter) evalAssignment(a *ast.Assignment) (types.Type, error)
 
 	interp.env.Set(a.Name, value)
 	interp.env.ClearError(a.Name) // Clear any stale error from a prior failed evaluation
+
+	// Record doc-absolute, 0-indexed line for LSP completion position
+	// filtering. AST positions are 1-indexed; subtract 1 to align with
+	// LSP's 0-indexed protocol convention. Skip when the AST has no
+	// Range (synthetic assignments from frontmatter etc. — those should
+	// always be visible from any line, and absent from definedLines
+	// signals "no constraint" to the consumer).
+	if a.Range != nil && a.Range.Start.Line > 0 {
+		interp.env.SetDefinedLine(a.Name, a.Range.Start.Line-1+interp.lineOffset)
+	}
+
 	return value, nil
 }
 

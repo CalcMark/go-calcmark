@@ -14,6 +14,14 @@ type Environment struct {
 	vars          map[string]types.Type
 	exchangeRates map[string]decimal.Decimal // "USD_EUR" -> rate
 	erroredVars   map[string]error           // variables that failed evaluation
+	// definedLines records the doc-absolute, 0-indexed line where each
+	// user-defined variable was assigned. Built-in constants (PI, E)
+	// and frontmatter globals applied before block evaluation are
+	// intentionally absent — completions filter by line only when an
+	// entry is present, so absent entries (constants, globals) are
+	// always visible. Populated by `Interpreter.evalAssignment` once
+	// `SetLineOffset` has wired up the block's doc-line offset.
+	definedLines map[string]int
 }
 
 // NewEnvironment creates a new empty environment with built-in constants.
@@ -22,6 +30,7 @@ func NewEnvironment() *Environment {
 		vars:          make(map[string]types.Type),
 		exchangeRates: make(map[string]decimal.Decimal),
 		erroredVars:   make(map[string]error),
+		definedLines:  make(map[string]int),
 	}
 
 	// Add built-in constants
@@ -67,11 +76,30 @@ func (e *Environment) Clone() *Environment {
 		vars:          make(map[string]types.Type),
 		exchangeRates: make(map[string]decimal.Decimal),
 		erroredVars:   make(map[string]error),
+		definedLines:  make(map[string]int),
 	}
 	maps.Copy(newEnv.vars, e.vars)
 	maps.Copy(newEnv.exchangeRates, e.exchangeRates)
 	maps.Copy(newEnv.erroredVars, e.erroredVars)
+	maps.Copy(newEnv.definedLines, e.definedLines)
 	return newEnv
+}
+
+// SetDefinedLine records the doc-absolute, 0-indexed line where a
+// variable was assigned. Used by the LSP to filter completion items
+// to variables defined ABOVE the cursor — calcmark is strictly ordered.
+func (e *Environment) SetDefinedLine(name string, line int) {
+	e.definedLines[name] = line
+}
+
+// GetAllDefinedLines returns a snapshot of variable → defined-line.
+// Variables without a recorded line (built-in constants, frontmatter
+// globals) are absent from the map, which signals "no position
+// constraint" to the consumer.
+func (e *Environment) GetAllDefinedLines() map[string]int {
+	result := make(map[string]int, len(e.definedLines))
+	maps.Copy(result, e.definedLines)
+	return result
 }
 
 // GetAllVariables returns a snapshot copy of all variables.

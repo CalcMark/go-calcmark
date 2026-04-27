@@ -27,6 +27,14 @@ type Interpreter struct {
 	measurement      *units.MeasurementConfig
 	fiscalYearStarts *fiscalConfig // nil if not configured
 	timeFunc         func() time.Time
+	// lineOffset shifts AST node line numbers (which are 1-indexed and
+	// block-relative when the parser ran on a single block's source)
+	// to doc-absolute, 0-indexed lines. Used by `evalAssignment` to
+	// record `definedLines` in the environment for LSP completion
+	// position filtering. Zero is the safe default (single-block /
+	// whole-doc parses); the document evaluator wires it per-block via
+	// `SetLineOffset(blockLineOffset(...))`.
+	lineOffset int
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
@@ -49,6 +57,19 @@ func NewInterpreterWithEnv(env *Environment) *Interpreter {
 // Useful for deterministic testing with pinned dates.
 func (interp *Interpreter) SetTimeFunc(f func() time.Time) {
 	interp.timeFunc = f
+}
+
+// SetLineOffset sets the doc-absolute, 0-indexed line offset used to
+// translate block-relative AST line numbers into doc-absolute lines
+// when recording variable assignment positions.
+//
+// For a parser run over a single block's source starting at doc line 5
+// (0-indexed), pass 5. The interpreter then records `flour` defined on
+// AST line 2 as `definedLines[flour] = 5 + (2-1) = 6` (0-indexed,
+// doc-absolute), which the LSP can compare directly to its 0-indexed
+// cursor line.
+func (interp *Interpreter) SetLineOffset(offset int) {
+	interp.lineOffset = offset
 }
 
 // now returns the current time from the configured clock.

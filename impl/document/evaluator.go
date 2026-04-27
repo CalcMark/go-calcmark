@@ -523,6 +523,10 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	// Failed statements get nil placeholders to maintain 1:1 alignment with nodes.
 	evalEnv := env.Clone()
 	interp := interpreter.NewInterpreterWithEnv(evalEnv)
+	// Translate the parser's block-relative AST line numbers to
+	// doc-absolute 0-indexed lines so `definedLines` recorded in the
+	// environment compares directly against the LSP's cursor position.
+	interp.SetLineOffset(lineOff)
 	if doc != nil && doc.GetFrontmatter() != nil {
 		fm := doc.GetFrontmatter()
 		interp.SetDirectiveResolver(NewDirectiveResolver(fm))
@@ -742,6 +746,10 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	// Evaluate statements one by one to collect partial results even if a later statement fails.
 	// Failed statements get nil placeholders to maintain 1:1 alignment with nodes.
 	interp := interpreter.NewInterpreterWithEnv(e.env)
+	// Translate the parser's block-relative AST line numbers to
+	// doc-absolute 0-indexed lines so `definedLines` recorded in the
+	// environment compares directly against the LSP's cursor position.
+	interp.SetLineOffset(lineOff)
 	if doc != nil && doc.GetFrontmatter() != nil {
 		fm := doc.GetFrontmatter()
 		interp.SetDirectiveResolver(NewDirectiveResolver(fm))

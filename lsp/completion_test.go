@@ -198,6 +198,55 @@ func TestVariableCompletions_TypeFiltering(t *testing.T) {
 	}
 }
 
+// TestVariableCompletions_PositionFiltering pins the bug repro:
+// `grow $100 by flour over 10` (line 0) followed by `flour = 10`
+// (line 1) used to offer `flour` as a completion on line 0 because
+// the LSP passed nil definedLines. With the Environment now tracking
+// per-variable definition lines and the LSP forwarding them to
+// `VariableSuggestions`, references to a variable defined LATER in
+// the document are excluded.
+func TestVariableCompletions_PositionFiltering(t *testing.T) {
+	s := NewServer()
+	// price defined on line 0; flour defined on line 1.
+	snap := s.evaluate("price = 100\nflour = 10\n")
+
+	t.Run("cursor on line 0 sees price (defined here is also excluded; flour comes later)", func(t *testing.T) {
+		// Per VariableSuggestions: lineNum >= cursorLine excludes —
+		// so a variable defined on the same line as the cursor is also
+		// excluded (you can't reference a variable on the line where
+		// you're defining it, before the `=`).
+		items := variableCompletionItems(snap, "", 0, "")
+		labels := itemLabels(items)
+		if slices.Contains(labels, "price") {
+			t.Errorf("did not expect 'price' on line 0 (same-line self-reference), got %v", labels)
+		}
+		if slices.Contains(labels, "flour") {
+			t.Errorf("did not expect 'flour' on line 0 (defined later on line 1), got %v", labels)
+		}
+	})
+
+	t.Run("cursor on line 1 sees price but not flour (flour is the LHS being defined)", func(t *testing.T) {
+		items := variableCompletionItems(snap, "", 1, "")
+		labels := itemLabels(items)
+		if !slices.Contains(labels, "price") {
+			t.Errorf("expected 'price' on line 1 (defined above), got %v", labels)
+		}
+		if slices.Contains(labels, "flour") {
+			t.Errorf("did not expect 'flour' on line 1 (same-line self-reference), got %v", labels)
+		}
+	})
+
+	t.Run("cursor on line 2 (after both definitions) sees both", func(t *testing.T) {
+		items := variableCompletionItems(snap, "", 2, "")
+		labels := itemLabels(items)
+		for _, want := range []string{"price", "flour"} {
+			if !slices.Contains(labels, want) {
+				t.Errorf("expected %q on line 2 (after definition), got %v", want, labels)
+			}
+		}
+	})
+}
+
 // TestVariableCompletions_BooleanDoesNotLeakIntoRateFilter proves that a
 // boolean-typed (ArgTypeAny-mapped) variable does NOT appear in a rate-
 // filtered completion context. Regression guard for ADV-007.

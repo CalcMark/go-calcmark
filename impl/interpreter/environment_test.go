@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/shopspring/decimal"
 )
@@ -179,4 +180,109 @@ func TestEnvironment_GetError_UnsetVariable(t *testing.T) {
 	if got != nil {
 		t.Fatalf("expected nil error for unset variable, got %q", got)
 	}
+}
+
+func TestEnvironmentDefinedLines(t *testing.T) {
+	// Tracking definition line numbers lets the LSP filter completions
+	// to variables defined ABOVE the cursor — calcmark is strictly
+	// ordered (text/markdown interpolation is the one exception, handled
+	// elsewhere). Without this, an editor offers `flour` as a completion
+	// on a line that references it before its assignment.
+
+	t.Run("SetDefinedLine + GetAllDefinedLines round-trip", func(t *testing.T) {
+		env := NewEnvironment()
+		env.Set("price", &types.Number{Value: decimal.NewFromInt(100)})
+		env.SetDefinedLine("price", 5)
+
+		lines := env.GetAllDefinedLines()
+		if got := lines["price"]; got != 5 {
+			t.Errorf("definedLines[price] = %d, want 5", got)
+		}
+	})
+
+	t.Run("returned map is a copy, not the live map", func(t *testing.T) {
+		env := NewEnvironment()
+		env.SetDefinedLine("a", 1)
+		lines := env.GetAllDefinedLines()
+		lines["a"] = 999
+		got := env.GetAllDefinedLines()
+		if got["a"] != 1 {
+			t.Errorf("mutating returned map leaked back into env: got %d, want 1", got["a"])
+		}
+	})
+
+	t.Run("variables without a recorded line do not appear in the map", func(t *testing.T) {
+		// Built-in constants (PI, E) are added by addConstants without a
+		// source line — they should not be filterable by position.
+		env := NewEnvironment()
+		lines := env.GetAllDefinedLines()
+		if _, has := lines["PI"]; has {
+			t.Error("PI has a definition line, want none (built-in constant)")
+		}
+	})
+
+	t.Run("Clone preserves definedLines", func(t *testing.T) {
+		env := NewEnvironment()
+		env.SetDefinedLine("x", 7)
+		clone := env.Clone()
+		got := clone.GetAllDefinedLines()
+		if got["x"] != 7 {
+			t.Errorf("clone definedLines[x] = %d, want 7", got["x"])
+		}
+	})
+}
+
+func TestEvalAssignmentRecordsDefinedLine(t *testing.T) {
+	// Bug repro: typing on line 1 of `grow $100 by flour over 10 \n flour = 10`
+	// would offer `flour` as a completion even though `flour` is defined
+	// AFTER the cursor. The LSP filters via `definedLines` returned by
+	// the Environment; the interpreter populates it from each
+	// Assignment node's Range plus the block's doc-line offset.
+
+	t.Run("evalAssignment records line at offset 0 by default", func(t *testing.T) {
+		// `flour = 10` on line 2 of a single-block doc → definedLines[flour] = 1 (0-indexed).
+		interp := NewInterpreter()
+		stmt := &ast.Assignment{
+			Name:  "flour",
+			Value: &ast.NumberLiteral{Value: "10"},
+			Range: &ast.Range{
+				Start: ast.Position{Line: 2, Column: 1},
+				End:   ast.Position{Line: 2, Column: 11},
+			},
+		}
+		_, err := interp.Eval([]ast.Node{stmt})
+		if err != nil {
+			t.Fatalf("eval: %v", err)
+		}
+		lines := interp.GetEnvironment().GetAllDefinedLines()
+		if got, want := lines["flour"], 1; got != want {
+			t.Errorf("definedLines[flour] = %d, want %d (0-indexed line 2)", got, want)
+		}
+	})
+
+	t.Run("evalAssignment respects SetLineOffset for block-relative AST", func(t *testing.T) {
+		// A calc block sitting on doc lines 5-7 has block-relative
+		// AST line numbers 1-3. `SetLineOffset(4)` shifts them to
+		// doc-absolute 0-indexed.
+		interp := NewInterpreter()
+		interp.SetLineOffset(4)
+		stmt := &ast.Assignment{
+			Name:  "flour",
+			Value: &ast.NumberLiteral{Value: "10"},
+			Range: &ast.Range{
+				Start: ast.Position{Line: 2, Column: 1},
+				End:   ast.Position{Line: 2, Column: 11},
+			},
+		}
+		_, err := interp.Eval([]ast.Node{stmt})
+		if err != nil {
+			t.Fatalf("eval: %v", err)
+		}
+		lines := interp.GetEnvironment().GetAllDefinedLines()
+		// Block-relative line 2 + offset 4 = doc-absolute 1-indexed line 6
+		// → 0-indexed line 5.
+		if got, want := lines["flour"], 5; got != want {
+			t.Errorf("definedLines[flour] = %d, want %d (block-line 2 + offset 4, 0-indexed)", got, want)
+		}
+	})
 }
