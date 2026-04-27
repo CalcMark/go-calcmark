@@ -45,6 +45,32 @@ func TestComputeLexicon_ConversionKeywordsCoverDocumentedExamples(t *testing.T) 
 	}
 }
 
+func TestComputeLexicon_UnitCategoriesMirrorUnitsCategories(t *testing.T) {
+	// The TS-side frontmatter form uses these to populate the
+	// scale.unit_categories / convert_to.unit_categories chip list.
+	// The full set must include not just the standard quantities
+	// (Length, Mass, ...) but also the synthetic categories:
+	// Currency, Number, Custom, DataSize. Missing any one of these
+	// means the form silently filters out a category the server
+	// would otherwise accept — the regression that motivated landing
+	// this field in the lexicon in the first place.
+	lex := computeLexicon()
+	for _, cat := range []string{"Length", "Mass", "Volume", "Time", "DataSize", "Currency", "Number", "Custom"} {
+		if !slices.Contains(lex.UnitCategories, cat) {
+			t.Errorf("expected %q in UnitCategories, got %v", cat, lex.UnitCategories)
+		}
+	}
+}
+
+func TestComputeLexicon_UnitCategoriesAreSorted(t *testing.T) {
+	lex := computeLexicon()
+	for i := 1; i < len(lex.UnitCategories); i++ {
+		if lex.UnitCategories[i-1] > lex.UnitCategories[i] {
+			t.Errorf("UnitCategories not sorted: %q > %q", lex.UnitCategories[i-1], lex.UnitCategories[i])
+		}
+	}
+}
+
 func TestComputeLexicon_ExcludesControlFlowKeywords(t *testing.T) {
 	// Reserved control-flow words (`if`, `for`, `while`, ...) are not
 	// meaningful in calcmark expressions yet — they should NOT be

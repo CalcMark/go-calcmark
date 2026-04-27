@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/features"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/spec/units"
 )
 
 // LexiconResult is the wire shape returned by `calcmark/lexicon`.
@@ -28,6 +29,14 @@ type LexiconResult struct {
 	// (`by`, `compounded`, `to`). Excludes control-flow words that
 	// have no calcmark expression semantics yet (`if`, `else`, ...).
 	ConversionKeywords []string `json:"conversionKeywords"`
+	// Unit categories valid for `scale.unit_categories` and
+	// `convert_to.unit_categories` in frontmatter. Mirrors
+	// `units.Categories()` exactly — the canonical set the server-side
+	// validator accepts. The TS frontmatter form pulls this list to
+	// populate its category chip-list, so adding a category in
+	// `spec/units` automatically lights it up in the UI without a
+	// client-side mirror needing to follow.
+	UnitCategories []string `json:"unitCategories"`
 }
 
 // computeLexicon returns the static lexicon. Pure: no I/O, no document
@@ -80,8 +89,16 @@ func computeLexicon() LexiconResult {
 		"with",
 	}
 
+	// Unit categories: the canonical set from `units.Categories()`.
+	// Sorted for stable wire output (consumers shouldn't depend on
+	// order, but tests + diff-friendliness benefit). `units.Categories`
+	// already deduplicates; we just sort the result.
+	unitCategories := append([]string(nil), units.Categories()...)
+	sort.Strings(unitCategories)
+
 	return LexiconResult{
 		Functions:          functions,
 		ConversionKeywords: conversionKeywords,
+		UnitCategories:     unitCategories,
 	}
 }
