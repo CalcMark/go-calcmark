@@ -23,6 +23,13 @@ type argumentContext struct {
 	funcName     string
 	paramIdx     int
 	insideString bool
+	// isNL reports whether the cursor sits in a natural-language form
+	// (e.g., `grow 100 by 20 over 5 months`) rather than the paren-
+	// based form (`grow(100, 20, 5)`). Signature help uses this to
+	// surface the matching alias example as the signature label so
+	// the user sees `grow X by Y over Z months` while typing the NL
+	// form, instead of `grow(amount, increment, periods)`.
+	isNL bool
 }
 
 // extractArgumentContext scans lineText from the start up to col and reports
@@ -85,7 +92,11 @@ func extractArgumentContext(lineText string, col int) argumentContext {
 	}
 
 	if len(stack) == 0 {
-		return extractNLArgumentContext(lineText, col)
+		nl := extractNLArgumentContext(lineText, col)
+		if nl.funcName != "" {
+			nl.isNL = true
+		}
+		return nl
 	}
 
 	top := stack[len(stack)-1]

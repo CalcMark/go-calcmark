@@ -17,7 +17,7 @@ import (
 func TestSignatureHelp_ActiveParameterClampedForVariadic(t *testing.T) {
 	// avg declares a single variadic "values" param. Cursor at the 3rd arg
 	// (paramIdx=2) must clamp to index 0, not 2.
-	help := signatureHelpForFunction("avg", 2)
+	help := signatureHelpForFunction("avg", 2, false)
 	if help == nil {
 		t.Fatal("expected help for avg")
 	}
@@ -39,7 +39,7 @@ func TestSignatureHelp_ActiveParameterClampedForVariadic(t *testing.T) {
 // valid (clamped) activeParameter index.
 func TestSignatureHelp_ActiveParameterClampedForOverApplied(t *testing.T) {
 	// accumulate declares 2 params. paramIdx=5 must clamp to 1 (last index).
-	help := signatureHelpForFunction("accumulate", 5)
+	help := signatureHelpForFunction("accumulate", 5, false)
 	if help == nil {
 		t.Fatal("expected help for accumulate")
 	}
@@ -53,7 +53,7 @@ func TestSignatureHelp_ActiveParameterClampedForOverApplied(t *testing.T) {
 // TestSignatureHelp_ParameterDataShape asserts R4: signatureHelp returns
 // structured `data` on each parameter with type + examples.
 func TestSignatureHelp_ParameterDataShape(t *testing.T) {
-	help := signatureHelpForFunction("accumulate", 0)
+	help := signatureHelpForFunction("accumulate", 0, false)
 	if help == nil {
 		t.Fatal("expected signature help for accumulate")
 	}
@@ -86,7 +86,7 @@ func TestSignatureHelp_ParameterDataShape(t *testing.T) {
 // TestSignatureHelp_GrowActiveParam asserts R4 directly: for grow(100, |, 5),
 // activeParameter == 1 and parameters[1].data.type matches the spec.
 func TestSignatureHelp_GrowActiveParam(t *testing.T) {
-	help := signatureHelpForFunction("grow", 1)
+	help := signatureHelpForFunction("grow", 1, false)
 	if help == nil {
 		t.Fatal("expected signature help for grow")
 	}
@@ -111,10 +111,56 @@ func TestSignatureHelp_GrowActiveParam(t *testing.T) {
 	}
 }
 
+// TestSignatureHelp_GrowSyntaxMatchesParamSpecNames asserts that the
+// signature label uses the same vocabulary as the ParamSpec — no
+// drift between the registry's hand-written `Syntax` and the actual
+// param names. Drift produced confusing help where the panel header
+// said `grow(starting_amount, increment, duration)` while the
+// param-info row read `amount` and the description said `periods`.
+// User-flagged 2026-04-26.
+func TestSignatureHelp_GrowSyntaxMatchesParamSpecNames(t *testing.T) {
+	help := signatureHelpForFunction("grow", 0, false)
+	if help == nil {
+		t.Fatal("expected signature help for grow")
+	}
+	label := help.Signatures[0].Label
+	for _, want := range []string{"amount", "increment", "periods"} {
+		if !strings.Contains(label, want) {
+			t.Errorf("signature label %q missing param name %q", label, want)
+		}
+	}
+	for _, badName := range []string{"starting_amount", "duration"} {
+		if strings.Contains(label, badName) {
+			t.Errorf("signature label %q still contains stale param name %q", label, badName)
+		}
+	}
+}
+
+// TestSignatureHelp_NLContextUsesAliasExample asserts that when the
+// LSP detects an NL-form call (e.g., `grow 100 by 20 over 5 months`),
+// the signature label echoes that natural-language template instead
+// of the paren-form Syntax. Without this, the help panel shows
+// `grow(amount, increment, periods)` while the user is typing the
+// NL alias — confusing because the cursor is in a totally different
+// syntactic context. User-flagged 2026-04-26.
+func TestSignatureHelp_NLContextUsesAliasExample(t *testing.T) {
+	help := signatureHelpForFunction("grow", 0, true /* isNL */)
+	if help == nil {
+		t.Fatal("expected signature help for grow in NL context")
+	}
+	label := help.Signatures[0].Label
+	if !strings.Contains(label, "by") || !strings.Contains(label, "over") {
+		t.Errorf("NL signature label %q missing the alias keywords (by/over)", label)
+	}
+	if strings.Contains(label, "(") {
+		t.Errorf("NL signature label %q should not include parens (paren-form leaked)", label)
+	}
+}
+
 // TestSignatureHelp_EnumParamCarriesValues asserts that the structured data
 // on throughput's single parameter includes the EnumValues list.
 func TestSignatureHelp_EnumParamCarriesValues(t *testing.T) {
-	help := signatureHelpForFunction("throughput", 0)
+	help := signatureHelpForFunction("throughput", 0, false)
 	if help == nil {
 		t.Fatal("expected signature help for throughput")
 	}
@@ -164,7 +210,7 @@ func TestSignatureHelp_NLFormGrow(t *testing.T) {
 			if ctx.funcName != "grow" {
 				t.Fatalf("funcName = %q, want grow", ctx.funcName)
 			}
-			help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
+			help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx, ctx.isNL)
 			if help == nil {
 				t.Fatal("expected non-nil signatureHelp")
 			}
@@ -194,7 +240,7 @@ func TestSignatureHelp_NLFormCompoundWithAssignment(t *testing.T) {
 		t.Errorf("paramIdx = %d, want 0", ctx.paramIdx)
 	}
 
-	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
+	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx, ctx.isNL)
 	if help == nil {
 		t.Fatal("expected non-nil signatureHelp for compound NL")
 	}
@@ -206,7 +252,7 @@ func TestSignatureHelp_NLFormCompoundWithAssignment(t *testing.T) {
 // TestSignatureHelp_JSONShape asserts the wire format: marshaling the result
 // yields the expected top-level keys and nested structure.
 func TestSignatureHelp_JSONShape(t *testing.T) {
-	help := signatureHelpForFunction("accumulate", 1)
+	help := signatureHelpForFunction("accumulate", 1, false)
 	if help == nil {
 		t.Fatal("expected help")
 	}

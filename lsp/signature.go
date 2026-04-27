@@ -74,7 +74,7 @@ func (s *Server) signatureHelpHandle(params *protocol.SignatureHelpParams) (any,
 		return nil, nil
 	}
 
-	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx)
+	help := signatureHelpForFunction(ctx.funcName, ctx.paramIdx, ctx.isNL)
 	if help == nil {
 		return nil, nil
 	}
@@ -82,7 +82,10 @@ func (s *Server) signatureHelpHandle(params *protocol.SignatureHelpParams) (any,
 }
 
 // signatureHelpForFunction returns signature help for a known function, or nil.
-func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHelp {
+// `isNL` chooses the natural-language alias example as the signature label
+// when true (e.g., `grow X by Y over Z months`); otherwise the paren-form
+// `Syntax` is used.
+func signatureHelpForFunction(funcName string, activeParam int, isNL bool) *lspSignatureHelp {
 	spec := types.GetFunctionSpec(funcName)
 	if spec == nil {
 		return nil
@@ -94,7 +97,21 @@ func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHel
 	registry := features.DefaultRegistry()
 	for _, f := range registry.ByCategory(features.CategoryFunction) {
 		if f.Name == funcName || slices.Contains(f.Synonyms, funcName) {
-			signature = f.Syntax
+			// NL context: prefer the first parseable alias's `Example`
+			// so the signature panel echoes the form the user is
+			// typing. Falls back to `NLExample` (some entries set this
+			// instead of populating the alias example), then to
+			// `Syntax` as a last resort. The paren form is returned
+			// unchanged for NL items without an alias example.
+			if isNL {
+				if ex := firstNLExample(f); ex != "" {
+					signature = ex
+				} else {
+					signature = f.Syntax
+				}
+			} else {
+				signature = f.Syntax
+			}
 			description = f.Description
 			break
 		}
@@ -164,4 +181,16 @@ func signatureHelpForFunction(funcName string, activeParam int) *lspSignatureHel
 func uintPtr(v uint32) *protocol.UInteger {
 	u := protocol.UInteger(v)
 	return &u
+}
+
+// firstNLExample returns the first parseable alias example or the
+// feature's NLExample field, whichever is populated. Empty string when
+// neither is available — caller should fall back to `Syntax`.
+func firstNLExample(f features.Feature) string {
+	for _, a := range f.Aliases {
+		if a.Parseable && a.Example != "" {
+			return a.Example
+		}
+	}
+	return f.NLExample
 }

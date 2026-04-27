@@ -445,7 +445,7 @@ func TestExtractFunctionContext(t *testing.T) {
 }
 
 func TestSignatureHelpForFunction(t *testing.T) {
-	help := signatureHelpForFunction("avg", 0)
+	help := signatureHelpForFunction("avg", 0, false)
 	if help == nil {
 		t.Fatal("expected signature help for avg, got nil")
 	}
@@ -461,7 +461,7 @@ func TestSignatureHelpForFunction(t *testing.T) {
 }
 
 func TestSignatureHelpForUnknownFunction(t *testing.T) {
-	help := signatureHelpForFunction("not_a_function", 0)
+	help := signatureHelpForFunction("not_a_function", 0, false)
 	if help != nil {
 		t.Error("expected nil for unknown function")
 	}
