@@ -125,16 +125,26 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 		}
 
 		if s.Category == "example" {
-			// NL example row -> snippet item
+			// NL example row -> snippet item. Carry the same markdown
+			// documentation that the paren-form item gets so the
+			// completion-detail panel has something to show when the
+			// user highlights an NL row in the dropdown. Without this
+			// the right-panel detail surface goes empty for any NL
+			// alias, which reads as "the completion is broken."
 			kind := protocol.CompletionItemKindSnippet
 			detail := s.Syntax
 			insertText := s.InsertText
+			doc := buildFunctionDoc(canonical, s.Description)
 			items = append(items, protocol.CompletionItem{
 				Label:      s.Name,
 				Kind:       &kind,
 				Detail:     &detail,
 				InsertText: &insertText,
-				Data:       data,
+				Documentation: &protocol.MarkupContent{
+					Kind:  protocol.MarkupKindMarkdown,
+					Value: doc,
+				},
+				Data: data,
 			})
 		} else {
 			// Function row -> enriched with snippet + docs
