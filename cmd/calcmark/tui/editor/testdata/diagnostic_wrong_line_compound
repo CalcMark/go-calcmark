@@ -4,5 +4,5 @@
 run observe=results
 ----
 -- results:
-Line 0 (compound $1000 by 5% over 10 years): value=$1,628.89, error=""
+Line 0 (compound $1000 by 5% over 10): value=$1,628.89, error=""
 Line 1 (compound $1000 by 5% monthly over 10 ye): value=, error="eval_error: compound: invalid duration unit \"ye\": invalid duration unit: ye"

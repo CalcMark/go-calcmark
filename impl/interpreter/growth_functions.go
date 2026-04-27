@@ -58,6 +58,83 @@ func extractDecimalValue(val types.Type) (decimal.Decimal, error) {
 	}
 }
 
+// requireAdditiveValue rejects types that can't sit in an additive
+// expression like `amount + (increment × periods)`. Percentage, Rate,
+// and Duration are out — silently coercing them to decimals produces
+// nonsense (5% becomes 0.05, "5 hours" becomes 5, neither of which is
+// what the user meant). Number, Quantity, and Currency are in.
+//
+// `paramName` is included in the error message so callers don't need
+// to wrap. Used by grow's amount/increment, depreciate's value/salvage,
+// compound's principal — anywhere a "starting value" or "additive
+// increment" is expected.
+func requireAdditiveValue(funcName, paramName string, val types.Type) (decimal.Decimal, error) {
+	switch v := val.(type) {
+	case *types.Number:
+		return v.Value, nil
+	case *types.Currency:
+		return v.Value, nil
+	case *types.Quantity:
+		return v.Value, nil
+	case *types.Percentage:
+		return decZero, fmt.Errorf("%s: %s must be a number, quantity, or currency — got percentage", funcName, paramName)
+	case *types.Duration:
+		return decZero, fmt.Errorf("%s: %s must be a number, quantity, or currency — got duration", funcName, paramName)
+	case *types.Rate:
+		return decZero, fmt.Errorf("%s: %s must be a number, quantity, or currency — got rate", funcName, paramName)
+	default:
+		return decZero, fmt.Errorf("%s: invalid %s: cannot extract numeric value from %T", funcName, paramName, val)
+	}
+}
+
+// requirePeriodsCount accepts a plain Number only. The argument is an
+// iteration count, not a duration — `5 months` was previously coerced
+// to 5 silently, which obscured the unit-mismatch question. Reject it
+// so users write what they mean (`grow $100 by $20 over 5`, not `over
+// 5 months`). Includes Percentage in the rejected set for the same
+// reason: percentage iterations have no semantic meaning.
+func requirePeriodsCount(funcName string, val types.Type) (decimal.Decimal, error) {
+	switch v := val.(type) {
+	case *types.Number:
+		return v.Value, nil
+	case *types.Duration:
+		return decZero, fmt.Errorf("%s: periods must be a plain number (iteration count) — got duration; write the count without a time unit", funcName)
+	case *types.Quantity:
+		return decZero, fmt.Errorf("%s: periods must be a plain number (iteration count) — got quantity %s; drop the unit", funcName, v.Unit)
+	case *types.Percentage:
+		return decZero, fmt.Errorf("%s: periods must be a plain number (iteration count) — got percentage", funcName)
+	case *types.Rate:
+		return decZero, fmt.Errorf("%s: periods must be a plain number (iteration count) — got rate", funcName)
+	case *types.Currency:
+		return decZero, fmt.Errorf("%s: periods must be a plain number (iteration count) — got currency", funcName)
+	default:
+		return decZero, fmt.Errorf("%s: cannot extract period count from %T", funcName, val)
+	}
+}
+
+// requirePercentageRate accepts a Percentage. A bare Number is also
+// accepted for legacy reasons (5 read as 5%) — but new tests should
+// pass a Percentage explicitly. Currency, Quantity, Rate, Duration
+// are rejected.
+func requirePercentageRate(funcName string, val types.Type) (decimal.Decimal, error) {
+	switch v := val.(type) {
+	case *types.Percentage:
+		return v.Value, nil
+	case *types.Number:
+		return v.Value, nil
+	case *types.Currency:
+		return decZero, fmt.Errorf("%s: rate must be a percentage — got currency", funcName)
+	case *types.Quantity:
+		return decZero, fmt.Errorf("%s: rate must be a percentage — got quantity", funcName)
+	case *types.Rate:
+		return decZero, fmt.Errorf("%s: rate must be a percentage — got rate", funcName)
+	case *types.Duration:
+		return decZero, fmt.Errorf("%s: rate must be a percentage — got duration", funcName)
+	default:
+		return decZero, fmt.Errorf("%s: cannot extract rate from %T", funcName, val)
+	}
+}
+
 // extractPeriodsFromDuration extracts the number of periods from a Duration.
 // For "10 years", returns (10, "year"). For a plain number, returns (n, "").
 func extractPeriodsFromDuration(val types.Type) (decimal.Decimal, string, error) {
@@ -148,46 +225,58 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 		return nil, fmt.Errorf("compound() requires 3 or 4 arguments (principal, rate, periods, modifier?)")
 	}
 
-	// Evaluate principal (1st arg)
+	// principal: Additive (Number / Quantity / Currency)
 	principalVal, err := interp.evalNode(f.Arguments[0])
 	if err != nil {
 		return nil, err
 	}
-	principal, err := extractDecimalValue(principalVal)
+	principal, err := requireAdditiveValue("compound", "principal", principalVal)
 	if err != nil {
-		return nil, fmt.Errorf("compound: invalid principal: %w", err)
+		return nil, err
 	}
 
-	// Evaluate rate (2nd arg)
+	// rate: Percentage (Number accepted for legacy)
 	rateVal, err := interp.evalNode(f.Arguments[1])
 	if err != nil {
 		return nil, err
 	}
-	rate, err := extractDecimalValue(rateVal)
+	rate, err := requirePercentageRate("compound", rateVal)
 	if err != nil {
-		return nil, fmt.Errorf("compound: invalid rate: %w", err)
+		return nil, err
 	}
 	if err := validateRate(rate); err != nil {
 		return nil, err
 	}
 
-	// Evaluate duration/periods (3rd arg)
+	// 3rd arg semantics depend on arg count:
+	//   3-arg form  → iteration count (Number ONLY)
+	//   4-arg form  → years / total time (Duration or Number-of-years),
+	//                 because the 4th arg names a sub-period frequency
+	//                 (`monthly`, `quarterly`, …) and the runtime
+	//                 multiplies them together for the financial-
+	//                 compounding formula.
 	periodsVal, err := interp.evalNode(f.Arguments[2])
 	if err != nil {
 		return nil, err
 	}
-	periodsNum, periodUnit, err := extractPeriodsFromDuration(periodsVal)
-	if err != nil {
-		return nil, fmt.Errorf("compound: invalid periods: %w", err)
-	}
 
 	// 3-arg form: compound(principal, rate, periods) — simple compound growth
 	if len(f.Arguments) == 3 {
+		periodsNum, err := requirePeriodsCount("compound", periodsVal)
+		if err != nil {
+			return nil, err
+		}
 		if err := validatePeriods(periodsNum); err != nil {
 			return nil, err
 		}
 		result := compoundGrowth(principal, rate, periodsNum)
 		return wrapResult(result, principalVal), nil
+	}
+
+	// 4-arg form: 3rd arg can be Duration (years) or Number-of-years.
+	periodsNum, periodUnit, err := extractPeriodsFromDuration(periodsVal)
+	if err != nil {
+		return nil, fmt.Errorf("compound: invalid periods: %w", err)
 	}
 
 	// 4-arg form: check if 4th arg is a modifier (identifier) or a value
@@ -252,41 +341,41 @@ func evalGrowFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) 
 		return nil, fmt.Errorf("grow() requires exactly 3 arguments (amount, increment, periods)")
 	}
 
-	// Evaluate starting amount
+	// Type contract — see growth_function_types_test.go for the
+	// rationale and rejection matrix.
+
+	// amount: Additive (Number / Quantity / Currency)
 	amountVal, err := interp.evalNode(f.Arguments[0])
 	if err != nil {
 		return nil, err
 	}
-	amount, err := extractDecimalValue(amountVal)
+	amount, err := requireAdditiveValue("grow", "amount", amountVal)
 	if err != nil {
-		return nil, fmt.Errorf("grow: invalid starting amount: %w", err)
+		return nil, err
 	}
 
-	// Evaluate increment
+	// increment: Additive matching amount's unit family
 	incrementVal, err := interp.evalNode(f.Arguments[1])
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert increment to amount's unit when both are compatible quantities
 	incrementVal, err = convertToMatchingUnit(amountVal, incrementVal)
 	if err != nil {
 		return nil, fmt.Errorf("grow: %w", err)
 	}
-
-	increment, err := extractDecimalValue(incrementVal)
+	increment, err := requireAdditiveValue("grow", "increment", incrementVal)
 	if err != nil {
-		return nil, fmt.Errorf("grow: invalid increment: %w", err)
+		return nil, err
 	}
 
-	// Evaluate periods
+	// periods: Number ONLY (iteration count, not a duration)
 	periodsVal, err := interp.evalNode(f.Arguments[2])
 	if err != nil {
 		return nil, err
 	}
-	periodsNum, _, err := extractPeriodsFromDuration(periodsVal)
+	periodsNum, err := requirePeriodsCount("grow", periodsVal)
 	if err != nil {
-		return nil, fmt.Errorf("grow: invalid periods: %w", err)
+		return nil, err
 	}
 
 	result := linearGrow(amount, increment, periodsNum)
@@ -298,39 +387,38 @@ func evalDepreciateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 		return nil, fmt.Errorf("depreciate() requires 3 or 4 arguments (value, rate, periods, salvage?)")
 	}
 
-	// Evaluate principal value
+	// value: Additive
 	valueVal, err := interp.evalNode(f.Arguments[0])
 	if err != nil {
 		return nil, err
 	}
-	principal, err := extractDecimalValue(valueVal)
+	principal, err := requireAdditiveValue("depreciate", "value", valueVal)
 	if err != nil {
-		return nil, fmt.Errorf("depreciate: invalid value: %w", err)
+		return nil, err
 	}
 
-	// Evaluate rate
+	// rate: Percentage
 	rateVal, err := interp.evalNode(f.Arguments[1])
 	if err != nil {
 		return nil, err
 	}
-	rate, err := extractDecimalValue(rateVal)
+	rate, err := requirePercentageRate("depreciate", rateVal)
 	if err != nil {
-		return nil, fmt.Errorf("depreciate: invalid rate: %w", err)
+		return nil, err
 	}
 	if rate.LessThanOrEqual(decZero) {
 		return nil, fmt.Errorf("depreciate: rate must be positive, got %s%%", rate.Mul(decHundred).StringFixed(0))
 	}
 
-	// Evaluate periods
+	// periods: Number
 	periodsVal, err := interp.evalNode(f.Arguments[2])
 	if err != nil {
 		return nil, err
 	}
-	periodsNum, _, err := extractPeriodsFromDuration(periodsVal)
+	periodsNum, err := requirePeriodsCount("depreciate", periodsVal)
 	if err != nil {
-		return nil, fmt.Errorf("depreciate: invalid periods: %w", err)
+		return nil, err
 	}
-
 	if err := validatePeriods(periodsNum); err != nil {
 		return nil, err
 	}
@@ -338,25 +426,20 @@ func evalDepreciateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 	// Depreciation = compound growth with negative rate
 	result := compoundGrowth(principal, rate.Neg(), periodsNum)
 
-	// Check for salvage floor (4th arg)
+	// Optional salvage floor (Additive matching value's type)
 	if len(f.Arguments) == 4 {
 		salvageVal, err := interp.evalNode(f.Arguments[3])
 		if err != nil {
 			return nil, err
 		}
-
-		// Convert salvage to principal's unit when both are compatible quantities
 		salvageVal, err = convertToMatchingUnit(valueVal, salvageVal)
 		if err != nil {
 			return nil, fmt.Errorf("depreciate: %w", err)
 		}
-
-		salvage, err := extractDecimalValue(salvageVal)
+		salvage, err := requireAdditiveValue("depreciate", "salvage", salvageVal)
 		if err != nil {
-			return nil, fmt.Errorf("depreciate: invalid salvage value: %w", err)
+			return nil, err
 		}
-
-		// Apply salvage floor
 		if result.LessThan(salvage) {
 			result = salvage
 		}

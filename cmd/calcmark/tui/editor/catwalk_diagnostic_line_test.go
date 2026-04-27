@@ -29,7 +29,7 @@ var diagnosticLineTests = []diagnosticLineTest{
 	},
 	{
 		name: "compound NL eval error",
-		content: `compound $1000 by 5% over 10 years
+		content: `compound $1000 by 5% over 10
 compound $1000 by 5% monthly over 10 ye
 `,
 		file: "diagnostic_wrong_line_compound",

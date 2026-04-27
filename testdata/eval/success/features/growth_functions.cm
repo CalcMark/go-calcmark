@@ -5,13 +5,17 @@ investment = compound($1000, 5%, 10)
 compound(500, 10%, 20)
 compound($10000, 8%, 5)
 
-# Compound growth with duration
-compound($1000, 5%, 10 years)
+# Compound growth — 3-arg form requires a plain `periods` count.
+# (Previously `compound($1000, 5%, 10 years)` was accepted; that
+# form is now rejected — write `10` for the iteration count.)
+compound($1000, 5%, 10)
 
 # Compound growth with quantity
 compound(500 customers, 20%, 12)
 
-# Financial compounding: compounded modifier
+# Financial compounding: compounded modifier — 3rd arg is years
+# (Duration accepted in this 4-arg mode because the 4th arg names
+# the sub-period frequency, so `years` makes sense.)
 compound($1000, 5%, 10 years, compounded monthly)
 compound($1000, 5%, 10 years, compounded quarterly)
 
@@ -26,34 +30,34 @@ depreciate($10000, 10%, 3)
 # Depreciation with salvage floor
 depreciate($50000, 15%, 20, $5000)
 
-# Natural language compound
-compound $1000 by 5% over 10 years
+# Natural language compound — 3-arg form
+compound $1000 by 5% over 10
 compound $500 by 10% over 5
 
-# Natural language compound with per-period
+# Natural language compound with per-period modifier (4-arg form
+# accepts duration as 3rd arg).
 compound $1000 by 5% per month over 12 months
 
-# Natural language compound with compounded modifier
+# Natural language compound with compounded modifier (4-arg form).
 compound $1000 by 12% compounded monthly over 10 years
 
 # Linear growth with mixed compatible units (first-unit-wins)
 grow(50 GB, 20 TB, 6)
-grow(50 GB, 20 TB, 6 months)
 
-# Natural language grow
-grow 100 by 20 over 5 months
-grow 50 GB by 20 TB over 6 months
+# Natural language grow — periods is a plain number.
+grow 100 by 20 over 5
+grow 50 GB by 20 TB over 6
 
-# Natural language depreciate
-depreciate $50000 by 15% over 5 years
-depreciate $50000 by 15% over 5 years to $5000
+# Natural language depreciate — periods is a plain number.
+depreciate $50000 by 15% over 5
+depreciate $50000 by 15% over 5 to $5000
 
 # Natural language with variable arguments
 price = $1000
-compound price by 5% over 10 years
+compound price by 5% over 10
 
 servers = 100
-grow servers by 20 over 5 months
+grow servers by 20 over 5
 
 asset = $50000
-depreciate asset by 15% over 5 years
+depreciate asset by 15% over 5

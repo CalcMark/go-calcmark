@@ -288,13 +288,17 @@ func TestLinearGrow(t *testing.T) {
 			want:  "122930 GB",
 		},
 		{
-			name:  "mixed-unit quantity with duration periods",
-			input: "grow(50 GB, 20 TB, 6 months)",
+			// The previous "with duration periods" form
+			// (`grow(..., 6 months)`) is now rejected — see
+			// growth_function_types_test.go for the rationale. Use
+			// a bare number to express iteration count.
+			name:  "mixed-unit quantity with bare period count",
+			input: "grow(50 GB, 20 TB, 6)",
 			want:  "122930 GB",
 		},
 		{
 			name:  "NL syntax mixed-unit quantity",
-			input: "grow 50 GB by 20 TB over 6 months",
+			input: "grow 50 GB by 20 TB over 6",
 			want:  "122930 GB",
 		},
 	}

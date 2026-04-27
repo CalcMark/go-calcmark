@@ -63,7 +63,7 @@ func TestEvalErrorDiagnosticLine(t *testing.T) {
 	}{
 		{
 			name: "error on line 2 of calc block",
-			source: `compound $1000 by 5% over 10 years
+			source: `compound $1000 by 5% over 10
 compound $1000 by 5% monthly over 10 ye
 `,
 			wantLine: 2,
@@ -73,7 +73,7 @@ compound $1000 by 5% monthly over 10 ye
 		{
 			name: "error on line 1 of calc block",
 			source: `compound $1000 by 5% monthly over 10 ye
-compound $1000 by 5% over 10 years
+compound $1000 by 5% over 10
 `,
 			wantLine: 1,
 			wantCode: "eval_error",
