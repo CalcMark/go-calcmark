@@ -287,10 +287,11 @@ func TestR4_SignatureHelpGrowSecondArg(t *testing.T) {
 	if !strings.Contains(wireJSON, `"activeParameter":1`) {
 		t.Errorf("wire missing activeParameter:1\n%s", wireJSON)
 	}
-	// grow's increment param is ArgTypeAny in the spec. The wireParamData
+	// grow's increment param is ArgTypeAdditive — accepts Number,
+	// Quantity, or Currency, but excludes Percentage. The wireParamData
 	// struct emits Name first (when present), then Type.
-	if !strings.Contains(wireJSON, `"name":"increment","type":"any"`) {
-		t.Errorf("wire missing parameters[1].name='increment' + type='any'\n%s", wireJSON)
+	if !strings.Contains(wireJSON, `"name":"increment","type":"additive"`) {
+		t.Errorf("wire missing parameters[1].name='increment' + type='additive'\n%s", wireJSON)
 	}
 }
 

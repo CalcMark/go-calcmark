@@ -795,7 +795,12 @@ func getGrowthFeatures() []Feature {
 			Syntax:      "grow(amount, increment, periods)",
 			Description: "Linear growth: amount + (increment × periods). Use for additive scaling like hiring or storage growth.",
 			Aliases: []Alias{
-				{Name: "grow...by...over", Parseable: true, Example: "grow 100 by 20 over 5 months"},
+				// `periods` is a count (number of iterations), not a
+				// duration — so the example uses a bare number for the
+				// last arg. The parser still accepts a quantity like
+				// `5 months` for backwards compat, but the example
+				// shouldn't suggest that's the canonical shape.
+				{Name: "grow...by...over", Parseable: true, Example: "grow 100 by 20 over 5"},
 			},
 			Example: "grow(100, 20 GB, 5) → 200 GB",
 		},
