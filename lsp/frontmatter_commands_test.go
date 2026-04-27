@@ -244,3 +244,131 @@ func TestFmRemoveKey_DropsTopLevel(t *testing.T) {
 		t.Errorf("convert_to was dropped: %s", got)
 	}
 }
+
+// User-flagged 2026-04-27: every mutation auto-chases itself with
+// a format command from the client (FrontmatterPanel.dispatch). If
+// the round-trip ever stutters a `---` into the output, the format
+// pass exposes it on the very next save. Pin idempotency directly:
+// applying ANY mutation TWICE produces the same shape as applying
+// it once.
+func TestApplyFrontmatterMutation_IdempotentUnderFormatChase(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+	}{
+		{
+			name:   "minimal fence + body",
+			source: "---\nfiscal_year_starts: October\n---\n\nend of Q1\n",
+		},
+		{
+			name:   "fence with multiple keys",
+			source: "---\ntitle: Report\nfiscal_year_starts: October\n---\n\nbody\n",
+		},
+		{
+			name:   "fence with no body",
+			source: "---\nfiscal_year_starts: October\n---\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			once, err := applyFrontmatterMutation(tc.source, fmFormat())
+			if err != nil {
+				t.Fatalf("first apply: %v", err)
+			}
+			twice, err := applyFrontmatterMutation(once, fmFormat())
+			if err != nil {
+				t.Fatalf("second apply: %v", err)
+			}
+			if once != twice {
+				t.Errorf(
+					"format is not idempotent — second pass changed the source.\nFIRST:\n%s\nSECOND:\n%s",
+					once, twice,
+				)
+			}
+		})
+	}
+}
+
+// User-flagged 2026-04-27: saving fiscal_year_starts produced a
+// document with TWO `---` separators where there should be one,
+// rendering as horizontal rules in the body. Pin the bug at the
+// helper level so any encoder/regex regression trips the test.
+// TestDocEndPosition pins the (line, character) computation that
+// drives the WorkspaceEdit's range. The client's
+// applyTextEditsToString validates these values; a wrong answer
+// here either rejects the edit (best case) or applies it against a
+// truncated range (silent corruption — the user's repro shape).
+func TestDocEndPosition(t *testing.T) {
+	cases := []struct {
+		source        string
+		wantLine      int
+		wantCharacter int
+	}{
+		{"", 0, 0},
+		{"hello", 0, 5},
+		{"hello\n", 1, 0},
+		{"a\nb\n", 2, 0},
+		{"a\nb", 1, 1},
+		{"---\nfoo\n---\n", 3, 0},
+		{"---\nfoo\n---\n\nbody\n", 5, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			line, ch := docEndPosition(tc.source)
+			if line != tc.wantLine || ch != tc.wantCharacter {
+				t.Errorf("docEndPosition(%q) = (%d, %d), want (%d, %d)",
+					tc.source, line, ch, tc.wantLine, tc.wantCharacter)
+			}
+		})
+	}
+}
+
+func TestApplyFrontmatterMutation_NoDoubledFenceOnReplace(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+	}{
+		{
+			name:   "minimal fence + body",
+			source: "---\nfiscal_year_starts: October\n---\n\nend of Q1\n",
+		},
+		{
+			name:   "fence with multiple keys",
+			source: "---\ntitle: Report\nfiscal_year_starts: October\n---\n\nbody\n",
+		},
+		{
+			name:   "fence with no body",
+			source: "---\nfiscal_year_starts: October\n---\n",
+		},
+		{
+			name:   "fence followed by `---` text in body (legitimate hr)",
+			source: "---\nfiscal_year_starts: October\n---\n\nbody\n\n---\n\nmore body\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := applyFrontmatterMutation(tc.source, fmSetFiscalYearStarts(&commandArgs{
+				Map: map[string]any{"month": "January"},
+			}))
+			if err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+			// Only the leading and closing `---` of the fence should
+			// appear in the first three lines. A doubled fence
+			// produces three or four `---` lines back-to-back.
+			lines := strings.SplitN(got, "\n", 6)
+			fenceLines := 0
+			for i, line := range lines {
+				if i > 4 {
+					break
+				}
+				if line == "---" {
+					fenceLines++
+				}
+			}
+			if fenceLines > 2 {
+				t.Errorf("expected exactly 2 `---` lines (fence open + close), got %d:\n%s", fenceLines, got)
+			}
+		})
+	}
+}
