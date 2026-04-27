@@ -378,6 +378,95 @@ func TestFunctionCompletions_CompoundNLParamsPopulated(t *testing.T) {
 	}
 }
 
+// TestFunctionCompletions_NLExampleCarriesSnippetFormat asserts the LSP
+// (not the client) is the source of truth for placeholder boundaries on
+// NL-example completion items. Each numeric token — including currency
+// prefix and percent suffix — must be wrapped in `${N:token}` and the
+// item must declare InsertTextFormat=Snippet so the client can drop its
+// own boundary inference.
+func TestFunctionCompletions_NLExampleCarriesSnippetFormat(t *testing.T) {
+	items := functionCompletionItems("compou")
+	var nlItem *struct {
+		insertText string
+		isSnippet  bool
+	}
+	for _, it := range items {
+		if it.Kind == nil || *it.Kind != protocol.CompletionItemKindSnippet {
+			continue
+		}
+		// Skip the paren-form snippet item — that has Kind=Function in
+		// emit, but we filter both here just by surface-form. The NL row
+		// is detected by an InsertText that does NOT start with the
+		// canonical function name followed by '('.
+		if it.InsertText == nil {
+			continue
+		}
+		if it.Data == nil {
+			continue
+		}
+		d, ok := it.Data.(completionItemData)
+		if !ok || d.FunctionName != "compound" {
+			continue
+		}
+		// NL alias label is "compound by over" or similar; the paren
+		// form's label is "compound". Distinguish on InsertText shape.
+		if !containsRune(*it.InsertText, ' ') {
+			continue
+		}
+		if it.InsertTextFormat == nil || *it.InsertTextFormat != protocol.InsertTextFormatSnippet {
+			t.Errorf("NL example item %q does not declare InsertTextFormat=Snippet", it.Label)
+		}
+		nlItem = &struct {
+			insertText string
+			isSnippet  bool
+		}{*it.InsertText, true}
+		break
+	}
+	if nlItem == nil {
+		t.Fatal("expected an NL-example item for compound")
+	}
+	// Must contain `${1:` somewhere — the first placeholder.
+	if !containsString(nlItem.insertText, "${1:") {
+		t.Errorf("NL example InsertText missing ${1:...} placeholder: %q", nlItem.insertText)
+	}
+	// `$` currency prefix must be inside placeholder 1, not outside.
+	if containsString(nlItem.insertText, "$${1:") {
+		t.Errorf("NL example InsertText leaves `$` outside the placeholder: %q", nlItem.insertText)
+	}
+	// `%` percent suffix must be inside the percent-typed placeholder.
+	// The compound NL example shape `... by 5% ...` should ship the `%`
+	// inside the placeholder, not as `}%`.
+	if containsString(nlItem.insertText, "}%") {
+		t.Errorf("NL example InsertText leaves `%%` outside the placeholder: %q", nlItem.insertText)
+	}
+}
+
+func containsRune(s string, r rune) bool {
+	for _, c := range s {
+		if c == r {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(haystack, needle string) bool {
+	return len(haystack) >= len(needle) && (haystack == needle ||
+		(len(haystack) > 0 && indexOf(haystack, needle) >= 0))
+}
+
+func indexOf(s, sub string) int {
+	if len(sub) == 0 {
+		return 0
+	}
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
+}
+
 // TestEnumValueCompletions_InsideStringSuppressed asserts that a cursor
 // inside a string literal suppresses enum completion — the LSP should not
 // offer unquoted bare identifiers inside a "..." literal because calcmark

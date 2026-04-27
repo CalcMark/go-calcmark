@@ -14,13 +14,13 @@ const (
 	ArgTypePercentage ArgType = "percentage" // Percentage: 99.9%, 15%
 	ArgTypeString     ArgType = "string"     // String literal: "datacenter", "ssd"
 	ArgTypeAny        ArgType = "any"        // Any value type
-	// ArgTypeAdditive accepts any value that can be added to itself —
+	// ArgTypeAmount accepts any value that can be added to itself —
 	// Number, Quantity, or Currency. Excludes Percentage, Duration,
 	// and Rate, which produce nonsensical results when combined with
 	// `amount + (increment × periods)` style expressions. Used by
 	// `grow`'s `amount` and `increment` params to keep the autosuggest
 	// dropdown free of percentage variables.
-	ArgTypeAdditive ArgType = "additive"
+	ArgTypeAmount ArgType = "amount"
 )
 
 // ParamSpec describes a function parameter with type constraints and examples.
@@ -150,8 +150,8 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"grow": {
 		Name: "grow",
 		Params: []ParamSpec{
-			{Name: "amount", Type: ArgTypeAdditive, Examples: []string{"$1000", "50 GB", "100 users"}},
-			{Name: "increment", Type: ArgTypeAdditive, Examples: []string{"$200", "10 GB", "50 users"}},
+			{Name: "amount", Type: ArgTypeAmount, Examples: []string{"$1000", "50 GB", "100 users"}},
+			{Name: "increment", Type: ArgTypeAmount, Examples: []string{"$200", "10 GB", "50 users"}},
 			{Name: "periods", Type: ArgTypeNumber, Examples: []string{"12", "6", "24"}},
 		},
 	},

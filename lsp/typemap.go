@@ -44,12 +44,12 @@ func argTypesCompatible(actual, required types.ArgType) bool {
 	if required == "" || required == types.ArgTypeAny {
 		return true
 	}
-	// ArgTypeAdditive accepts anything that can sit in an additive
+	// ArgTypeAmount accepts anything that can sit in an additive
 	// expression — Number, Quantity, Currency. Percentage, Duration,
 	// and Rate are excluded so the autosuggest dropdown for params
 	// like `grow.increment` doesn't surface a `growth_rate` (5%)
 	// variable as a valid pick.
-	if required == types.ArgTypeAdditive {
+	if required == types.ArgTypeAmount {
 		return actual == types.ArgTypeNumber || actual == types.ArgTypeQuantity
 	}
 	return actual == required

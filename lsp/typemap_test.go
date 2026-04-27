@@ -69,16 +69,16 @@ func TestArgTypesCompatible(t *testing.T) {
 		{"any actual does not match number required", types.ArgTypeAny, types.ArgTypeNumber, false},
 		{"any actual matches any required", types.ArgTypeAny, types.ArgTypeAny, true},
 
-		// ArgTypeAdditive — accepts Number, Quantity, Currency
+		// ArgTypeAmount — accepts Number, Quantity, Currency
 		// (Currency maps to ArgTypeQuantity in runtimeTypeToArgType).
 		// Excludes Percentage, Duration, Rate so the autosuggest for
 		// `grow.amount` and `grow.increment` stays clean.
-		{"number vs additive", types.ArgTypeNumber, types.ArgTypeAdditive, true},
-		{"quantity vs additive", types.ArgTypeQuantity, types.ArgTypeAdditive, true},
-		{"percentage REJECTED by additive", types.ArgTypePercentage, types.ArgTypeAdditive, false},
-		{"duration REJECTED by additive", types.ArgTypeDuration, types.ArgTypeAdditive, false},
-		{"rate REJECTED by additive", types.ArgTypeRate, types.ArgTypeAdditive, false},
-		{"any actual REJECTED by additive (no leak)", types.ArgTypeAny, types.ArgTypeAdditive, false},
+		{"number vs amount", types.ArgTypeNumber, types.ArgTypeAmount, true},
+		{"quantity vs amount", types.ArgTypeQuantity, types.ArgTypeAmount, true},
+		{"percentage REJECTED by amount", types.ArgTypePercentage, types.ArgTypeAmount, false},
+		{"duration REJECTED by amount", types.ArgTypeDuration, types.ArgTypeAmount, false},
+		{"rate REJECTED by amount", types.ArgTypeRate, types.ArgTypeAmount, false},
+		{"any actual REJECTED by amount (no leak)", types.ArgTypeAny, types.ArgTypeAmount, false},
 	}
 
 	for _, tc := range cases {

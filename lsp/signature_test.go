@@ -105,11 +105,11 @@ func TestSignatureHelp_GrowActiveParam(t *testing.T) {
 	if !ok {
 		t.Fatalf("parameters[1].Data is not wireParamData")
 	}
-	// grow's second param (increment) is ArgTypeAdditive — accepts
+	// grow's second param (increment) is ArgTypeAmount — accepts
 	// Number, Quantity, or Currency, but excludes Percentage so the
 	// completion dropdown doesn't surface percentage variables.
-	if d.Type != types.ArgTypeAdditive {
-		t.Errorf("grow.increment.data.type = %q, want additive", d.Type)
+	if d.Type != types.ArgTypeAmount {
+		t.Errorf("grow.increment.data.type = %q, want amount", d.Type)
 	}
 }
 
