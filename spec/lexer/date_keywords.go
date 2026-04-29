@@ -54,6 +54,10 @@ var RelativeDateKeywords = map[string]TokenType{
 	"start of": START_OF,
 	"end of":   END_OF,
 
+	// v2.0 Period operators
+	"length of": LENGTH_OF, // `length of <Period>` → Duration
+	"days in":   DAYS_IN,   // `days in <Period>` → Number
+
 	// Calendar quarters
 	"this quarter": DATE_THIS_QUARTER,
 	"next quarter": DATE_NEXT_QUARTER,
