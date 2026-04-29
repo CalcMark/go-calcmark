@@ -113,25 +113,14 @@ func (c *Checker) checkEndOfStartOfInner(inner ast.Node, op string, r *ast.Range
 			})
 		}
 	case *ast.DateLiteral:
-		// Bare month names like `April` parse as DateLiteral with
-		// implicit Day=1, Year=nil. Semantically these are calendar
-		// periods (the whole month), not specific dates -- they were
-		// accepted as period inners pre-PR-1b through the old
-		// string-prefix dispatch's resolveEndOfMonth fallback.
-		// Accept them here so `end of April` keeps working.
-		// Discriminator: SourceText with no digits => bare month
-		// name (no day, no year). With digits => specific date
-		// (e.g., `April 15`, `Apr 1 2026`) and reject.
+		// DateLiteral always represents a specific date in v2.0 —
+		// bare month names (`April`) are routed to RelativeDateLiteral
+		// by the parser (U5). Any DateLiteral reaching here is
+		// unambiguously a Date, not a Period.
 		//
-		// This is a transitional shim. The brainstorm at
-		// docs/brainstorms/2026-04-29-period-data-type-and-go-semantics-requirements.md
-		// (calcmark-web) decided April should become a Period type
-		// outright; once that migration lands, the parser will emit
-		// a Period-bearing node directly and this DateLiteral arm
-		// can collapse back to a single rejection rule.
-		if !sourceTextHasDigit(v.SourceText) {
-			break // accept as period
-		}
+		// Pre-U5, this arm carried a transitional shim that accepted
+		// SourceText-without-digits as a bare-month period. After U5,
+		// that path is unreachable — collapsed.
 		c.addDiagnostic(Diagnostic{
 			Severity: Error,
 			Code:     DiagInvalidEndOfPeriod,
@@ -177,15 +166,3 @@ func (c *Checker) checkEndOfStartOfInner(inner ast.Node, op string, r *ast.Range
 	c.checkNode(inner)
 }
 
-// sourceTextHasDigit reports whether s contains any digit character.
-// Used to distinguish bare month names (`April`) from specific date
-// literals (`April 15`, `Apr 1 2026`) since both parse as the same
-// AST node type but only the former is period-bearing.
-func sourceTextHasDigit(s string) bool {
-	for _, r := range s {
-		if r >= '0' && r <= '9' {
-			return true
-		}
-	}
-	return false
-}

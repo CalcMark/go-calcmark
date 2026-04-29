@@ -191,6 +191,15 @@ func (c *Checker) checkNode(node ast.Node) {
 		c.checkEndOfStartOfInner(n.Period, "end of", n.Range)
 	case *ast.StartOfExpr:
 		c.checkEndOfStartOfInner(n.Period, "start of", n.Range)
+	case *ast.LengthOfExpr:
+		op := "length of"
+		if n.AsNumber {
+			op = "days in"
+		}
+		c.checkLengthOfInner(n.Period, op, n.Range)
+	case *ast.BetweenExpr:
+		c.checkBetweenEndpoint(n.Start, "start", n.Range)
+		c.checkBetweenEndpoint(n.End, "end", n.Range)
 	case *ast.TimeLiteral, *ast.DurationLiteral:
 		// Validated at parse time
 	case *ast.QuantityLiteral:
