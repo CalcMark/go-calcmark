@@ -106,12 +106,7 @@ func (f Formatter) Format(t types.Type) string {
 	case *types.Time:
 		return v.String()
 	case *types.Period:
-		// v2.0: Period values render via String() — named periods
-		// (Calendar Q1 2026, Fiscal Year 2027, April 2026, etc.)
-		// surface human-readable labels; PeriodCustom shows the
-		// ISO start-to-end span. The value-type's String() method
-		// is the single source of truth.
-		return v.String()
+		return f.FormatPeriod(v)
 	default:
 		return fmt.Sprintf("%v", t)
 	}
@@ -290,6 +285,36 @@ func (f Formatter) FormatDate(d *types.Date) string {
 	}
 	df := getDateFormat(f.cfg.Tag)
 	return formatDate(d.Time, df)
+}
+
+// FormatPeriod renders a Period for human display. v2.0 default
+// includes the resolved date range so the user sees concrete
+// boundaries — the bare kind label ("last fiscal quarter") gave
+// no indication of which dates it referred to. Format:
+//
+//   Named/calendar:  "Calendar Q1 2026 (Jan 1 – Mar 31, 2026)"
+//   Fiscal:          "Fiscal Year 2027 (Jul 1, 2026 – Jun 30, 2027)"
+//   Named-month:     "April 2026 (Apr 1 – Apr 30, 2026)"
+//   Relative:        "last fiscal quarter (Dec 1, 2025 – Feb 28, 2026)"
+//   Custom:          "Apr 15 – Jul 4, 2026"  (no kind label, dates only)
+//
+// The dash is an en-dash to read naturally; uses FormatDate for
+// locale-aware month/day abbreviations.
+func (f Formatter) FormatPeriod(p *types.Period) string {
+	if p == nil {
+		return ""
+	}
+	if p.Start == nil || p.End == nil {
+		// Defensive: every factory in spec/types/period.go populates
+		// both. Fall back to the kind label if invariant breaks.
+		return p.String()
+	}
+	startStr := f.FormatDate(p.Start)
+	endStr := f.FormatDate(p.End)
+	if p.Kind == types.PeriodCustom {
+		return startStr + " – " + endStr
+	}
+	return p.String() + " (" + startStr + " – " + endStr + ")"
 }
 
 // FormatPercentage formats a percentage in human-readable form.
