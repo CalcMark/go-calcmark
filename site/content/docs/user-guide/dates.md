@@ -49,9 +49,8 @@ These common patterns do **not** create dates in CalcMark:
 | `2019` | The number 2,019 | Bare numbers are never dates |
 | `Apr 1 2019 12:30PM` | Plain text (markdown) | Date + time in a single literal is not supported |
 | `10:30 AM` | Plain text (markdown) | Standalone time literals are not recognized as calculations |
-| `CY2019` | Error: undefined variable | CY/FY/Q notation is planned but not yet implemented |
 
-**To express a year as a date**, use a month name: `Jan 1 2019`.
+**To express a year as a date**, use a month name: `Jan 1 2019`, or the calendar-year shorthand: `CY2019` (resolves to January 1 — see [Quarter and Year Shorthand](#notation)).
 
 **To express a date with a time offset**, use arithmetic: `Apr 1 2019 + 12 hours + 30 minutes`. The result carries time precision internally.
 
@@ -163,6 +162,16 @@ board_deck = end of this quarter - 2 weeks
 
 `end of` resolves to the **last day** of the period. `start of` is the explicit form of the default (first day). These compose with all period types: weeks, months, years, quarters, named months, and fiscal periods.
 
+`start of` and `end of` are first-class language operators (not string-prefix sugar). The inner expression must be a **period** — a span of time the calendar can take the start or end of. Things that are NOT periods produce a clear diagnostic at type-check time:
+
+- `end of today` — `today` is a single Date, not a period. The intent is usually `end of this month` or `end of this week`.
+- `end of 5` — Numbers aren't periods.
+- `end of "Jan 15 2026"` — Date literals are points, not periods.
+
+The same rule applies to `start of`. Variable-bound forms (`q = Q1; e = end of q`) are deferred to a future release; until then, use the period literal directly: `e = end of Q1`.
+
+Period values type-check at editing time, so the LSP completion dropdown and the cmw editor's diagnostic markers surface these errors as you type.
+
 ### Fiscal Periods {#fiscal}
 
 CalcMark supports fiscal year and quarter calculations when configured via frontmatter:
@@ -222,6 +231,8 @@ cy_start = CY2026
 - `CY26` or `CY2026` — January 1 of calendar year 2026. Disambiguates a year from a bare number (`2026` is the number 2,026; `CY2026` is January 1, 2026)
 
 All notation is case-insensitive: `q1`, `fq3`, `fy27`, `cy2026` all work.
+
+In editors that integrate the CalcMark LSP, typing `Q`, `FQ`, `FY`, `CY`, `end`, `end of`, `start`, or `start of` surfaces the corresponding completions in the dropdown — including snippet-form `FY${1:NNNN}` and `CY${1:NNNN}` for the year-bearing forms, and synthesized `end of <period>` / `start of <period>` items for every parseable period kind. New period kinds added to the registry automatically light up in the completion dropdown without further wiring.
 
 `FQ1` always refers to **the current fiscal year** you are in. If you need a future fiscal quarter, use `next fiscal quarter`. The distinction:
 

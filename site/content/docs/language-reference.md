@@ -470,6 +470,7 @@ From **highest** to **lowest**:
 | **Duration** | `5 days`, `2 weeks`, `1 year` | Value + time unit |
 | **Rate** | `100 MB/s`, `$50/hour`, `1000 req/s` | Numerator / time unit |
 | **Date** | `Jan 15 2025`, `today` | Calendar date |
+| **Period** | `Q1`, `FQ2`, `this month`, `this fiscal quarter` | Calendar / fiscal span. **Structural type — full type-system integration is forthcoming.** Today, period-bearing keywords evaluate to `Date` (the period's start day). The `Period` type is defined in `spec/types/period.go` for a future PR that will plumb it through the interpreter. Period vs Duration distinction in function arguments and Period arithmetic semantics (`Period − Period`, `Period + Duration`, equality) are tracked as open design questions — see issues against [`go-calcmark`](https://github.com/CalcMark/go-calcmark/issues). |
 
 ### Type Compatibility
 
