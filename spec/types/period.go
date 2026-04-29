@@ -29,25 +29,31 @@ import (
 // import `impl/`. Period carries DATA, not behavior. End-of /
 // start-of arithmetic lives in impl/interpreter.
 type Period struct {
-	// Start is the first day of this period. Always populated; the
-	// rest of the fields are auxiliary context the interpreter uses
-	// to compute the period's end without re-deriving from Start.
+	// Start is the first day of this period. Always populated.
 	Start *Date
 
+	// End is the last day of this period (closed interval, day
+	// precision). Always populated by every factory at construction
+	// — code consuming Period must not need to re-derive End from
+	// Kind+context. PeriodCustom kinds carry End directly from the
+	// caller (`between A and B` / `from A to B`); named kinds
+	// (calendar/fiscal quarters, years, months, relatives) compute
+	// End once at factory time.
+	End *Date
+
 	// Kind is the period's discriminant. Switch on this in any code
-	// that needs kind-specific handling.
+	// that needs kind-specific handling (formatting, JSON shape).
 	Kind PeriodKind
 
 	// QuarterIndex is 1-4 for PeriodCalendarQuarter and
-	// PeriodFiscalQuarter; 0 for other kinds. Captures which quarter
-	// within the year so the interpreter can compute the next-quarter
-	// boundary (start + 3 months) without recomputing from Start.
+	// PeriodFiscalQuarter; 0 for other kinds.
 	QuarterIndex int
 
 	// Year is the calendar/fiscal year label:
 	//   - PeriodCalendarQuarter / PeriodCalendarYear / PeriodCalendarMonth: calendar year
 	//   - PeriodFiscalQuarter / PeriodFiscalYear: fiscal year label (Microsoft convention)
 	//   - Relative kinds: 0 (Direction is the relevant signal)
+	//   - PeriodCustom: 0
 	Year int
 
 	// Month is the calendar month (1-12) for PeriodCalendarMonth and
@@ -78,6 +84,10 @@ const (
 	PeriodRelativeQuarter
 	PeriodRelativeFiscalQuarter
 	PeriodRelativeFiscalYear
+	// PeriodCustom — user-defined period via `between A and B` /
+	// `from A to B`. Start and End come from the caller; no Year /
+	// Month / QuarterIndex / Direction context.
+	PeriodCustom
 )
 
 // String returns a human-readable description. Used in interpreter
@@ -108,6 +118,13 @@ func (p *Period) String() string {
 		return relativeLabel(p.Direction, "fiscal quarter")
 	case PeriodRelativeFiscalYear:
 		return relativeLabel(p.Direction, "fiscal year")
+	case PeriodCustom:
+		if p.Start != nil && p.End != nil {
+			return fmt.Sprintf("%s to %s",
+				p.Start.Time.Format("2006-01-02"),
+				p.End.Time.Format("2006-01-02"))
+		}
+		return "Period(custom)"
 	}
 	return fmt.Sprintf("Period(unknown kind %d)", p.Kind)
 }
@@ -132,9 +149,11 @@ func NewCalendarQuarter(year, quarter int) (*Period, error) {
 		return nil, fmt.Errorf("invalid calendar quarter: Q%d (must be 1-4)", quarter)
 	}
 	month := time.Month((quarter-1)*3 + 1) // Q1=Jan(1), Q2=Apr(4), Q3=Jul(7), Q4=Oct(10)
-	start := NewDateFromTime(time.Date(year, month, 1, 0, 0, 0, 0, time.UTC))
+	startT := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	endT := startT.AddDate(0, 3, -1)
 	return &Period{
-		Start:        start,
+		Start:        NewDateFromTime(startT),
+		End:          NewDateFromTime(endT),
 		Kind:         PeriodCalendarQuarter,
 		QuarterIndex: quarter,
 		Year:         year,
@@ -158,9 +177,11 @@ func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
 		startMonth -= 12
 		startYear++
 	}
-	start := NewDateFromTime(time.Date(startYear, startMonth, fyStart.Day(), 0, 0, 0, 0, time.UTC))
+	startT := time.Date(startYear, startMonth, fyStart.Day(), 0, 0, 0, 0, time.UTC)
+	endT := startT.AddDate(0, 3, -1)
 	return &Period{
-		Start:        start,
+		Start:        NewDateFromTime(startT),
+		End:          NewDateFromTime(endT),
 		Kind:         PeriodFiscalQuarter,
 		QuarterIndex: quarter,
 		Year:         fyStart.Year(),
@@ -170,8 +191,11 @@ func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
 // NewCalendarYear creates a Period for Jan 1 - Dec 31 of the given
 // year.
 func NewCalendarYear(year int) *Period {
+	startT := time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC)
+	endT := time.Date(year, time.December, 31, 0, 0, 0, 0, time.UTC)
 	return &Period{
-		Start: NewDateFromTime(time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC)),
+		Start: NewDateFromTime(startT),
+		End:   NewDateFromTime(endT),
 		Kind:  PeriodCalendarYear,
 		Year:  year,
 	}
@@ -187,18 +211,25 @@ func NewFiscalYear(fyLabel int, fyStartMonth time.Month, fyStartDay int) *Period
 	if fyStartMonth > time.January {
 		startYear = fyLabel - 1
 	}
+	startT := time.Date(startYear, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
+	endT := startT.AddDate(1, 0, -1)
 	return &Period{
-		Start: NewDateFromTime(time.Date(startYear, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)),
+		Start: NewDateFromTime(startT),
+		End:   NewDateFromTime(endT),
 		Kind:  PeriodFiscalYear,
 		Year:  fyLabel,
 	}
 }
 
 // NewCalendarMonth creates a Period for the 1st through last day of
-// the given month + year.
+// the given month + year. End handles leap years correctly via
+// time.Date normalization (Feb 29 in leap years, Feb 28 otherwise).
 func NewCalendarMonth(year int, month time.Month) *Period {
+	startT := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	endT := startT.AddDate(0, 1, -1)
 	return &Period{
-		Start: NewDateFromTime(time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)),
+		Start: NewDateFromTime(startT),
+		End:   NewDateFromTime(endT),
 		Kind:  PeriodCalendarMonth,
 		Year:  year,
 		Month: int(month),
@@ -222,8 +253,11 @@ func NewRelativeQuarter(now time.Time, direction int) *Period {
 		year++
 	}
 	month := time.Month((q-1)*3 + 1)
+	startT := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	endT := startT.AddDate(0, 3, -1)
 	return &Period{
-		Start:        NewDateFromTime(time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)),
+		Start:        NewDateFromTime(startT),
+		End:          NewDateFromTime(endT),
 		Kind:         PeriodRelativeQuarter,
 		QuarterIndex: q,
 		Year:         year,
@@ -256,12 +290,38 @@ func NewRelativeFiscalQuarter(now time.Time, fyStartMonth time.Month, fyStartDay
 
 	// Apply direction.
 	fqStart = fqStart.AddDate(0, direction*3, 0)
+	fqEnd := fqStart.AddDate(0, 3, -1)
 
 	return &Period{
 		Start:     NewDateFromTime(fqStart),
+		End:       NewDateFromTime(fqEnd),
 		Kind:      PeriodRelativeFiscalQuarter,
 		Direction: direction,
 	}
+}
+
+// NewCustomPeriod creates a user-defined period spanning [start,
+// end] inclusive (closed interval, day precision). Backs the
+// `between A and B` / `from A to B` language forms.
+//
+// Validates: both endpoints non-nil; end >= start (single-day
+// periods where start == end are valid).
+func NewCustomPeriod(start, end *Date) (*Period, error) {
+	if start == nil {
+		return nil, fmt.Errorf("custom period: start is nil")
+	}
+	if end == nil {
+		return nil, fmt.Errorf("custom period: end is nil")
+	}
+	if end.Time.Before(start.Time) {
+		return nil, fmt.Errorf("custom period: end (%s) is before start (%s)",
+			end.Time.Format("2006-01-02"), start.Time.Format("2006-01-02"))
+	}
+	return &Period{
+		Start: start,
+		End:   end,
+		Kind:  PeriodCustom,
+	}, nil
 }
 
 // calendarQuarterOf returns 1-4 for the calendar quarter containing
