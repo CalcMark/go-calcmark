@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -148,3 +149,217 @@ func TestParser_BareMonthFlowsThroughEndOf(t *testing.T) {
 }
 
 func strptr(s string) *string { return &s }
+
+// --- U7: BetweenExpr productions ---
+
+func TestParser_Between_HappyPath(t *testing.T) {
+	n := parseFirstStmt(t, "x = between Apr 15 2026 and Jul 4 2026")
+	expr := expressionFromAssignment(t, n)
+	be, ok := expr.(*ast.BetweenExpr)
+	if !ok {
+		t.Fatalf("expected *ast.BetweenExpr, got %T (%v)", expr, expr)
+	}
+	if _, ok := be.Start.(*ast.DateLiteral); !ok {
+		t.Errorf("Start = %T, want *ast.DateLiteral", be.Start)
+	}
+	if _, ok := be.End.(*ast.DateLiteral); !ok {
+		t.Errorf("End = %T, want *ast.DateLiteral", be.End)
+	}
+}
+
+func TestParser_FromTo_Synonym(t *testing.T) {
+	n := parseFirstStmt(t, "x = from Apr 15 2026 to Jul 4 2026")
+	expr := expressionFromAssignment(t, n)
+	be, ok := expr.(*ast.BetweenExpr)
+	if !ok {
+		t.Fatalf("expected *ast.BetweenExpr, got %T (%v)", expr, expr)
+	}
+	if _, ok := be.Start.(*ast.DateLiteral); !ok {
+		t.Errorf("Start = %T, want *ast.DateLiteral", be.Start)
+	}
+	if _, ok := be.End.(*ast.DateLiteral); !ok {
+		t.Errorf("End = %T, want *ast.DateLiteral", be.End)
+	}
+}
+
+// TestParser_BetweenAndFromTo_ASTEquivalent — both surface forms
+// must produce structurally identical AST trees. Catches subtle
+// parser-side divergence (different Range, swapped fields) that
+// semantic + eval would silently absorb.
+func TestParser_BetweenAndFromTo_ASTEquivalent(t *testing.T) {
+	a := parseFirstStmt(t, "x = between Apr 15 2026 and Jul 4 2026")
+	b := parseFirstStmt(t, "x = from Apr 15 2026 to Jul 4 2026")
+
+	beA, ok := expressionFromAssignment(t, a).(*ast.BetweenExpr)
+	if !ok {
+		t.Fatalf("`between ...`: expected BetweenExpr, got %T", expressionFromAssignment(t, a))
+	}
+	beB, ok := expressionFromAssignment(t, b).(*ast.BetweenExpr)
+	if !ok {
+		t.Fatalf("`from ... to ...`: expected BetweenExpr, got %T", expressionFromAssignment(t, b))
+	}
+	// Compare Start/End via String() — full deep-equal would fail
+	// on Range positions which differ legitimately by source offset.
+	if beA.Start.String() != beB.Start.String() {
+		t.Errorf("Start mismatch:\n  between: %s\n  from-to: %s", beA.Start.String(), beB.Start.String())
+	}
+	if beA.End.String() != beB.End.String() {
+		t.Errorf("End mismatch:\n  between: %s\n  from-to: %s", beA.End.String(), beB.End.String())
+	}
+}
+
+func TestParser_Between_RelativeDates(t *testing.T) {
+	n := parseFirstStmt(t, "x = between today and next month")
+	expr := expressionFromAssignment(t, n)
+	be, ok := expr.(*ast.BetweenExpr)
+	if !ok {
+		t.Fatalf("expected *ast.BetweenExpr, got %T", expr)
+	}
+	if _, ok := be.Start.(*ast.RelativeDateLiteral); !ok {
+		t.Errorf("Start = %T, want *ast.RelativeDateLiteral (today)", be.Start)
+	}
+	if _, ok := be.End.(*ast.RelativeDateLiteral); !ok {
+		t.Errorf("End = %T, want *ast.RelativeDateLiteral (next month)", be.End)
+	}
+}
+
+func TestParser_Between_MissingAnd(t *testing.T) {
+	_, err := Parse("x = between Apr 15 2026")
+	if err == nil {
+		t.Fatal("expected parse error for `between Apr 15 2026` (missing `and`)")
+	}
+}
+
+func TestParser_Between_AtEOF(t *testing.T) {
+	_, err := Parse("x = between")
+	if err == nil {
+		t.Fatal("expected parse error for `x = between` (no operands)")
+	}
+}
+
+func TestParser_FromTo_MissingEnd(t *testing.T) {
+	_, err := Parse("x = from Apr 15 2026 to")
+	if err == nil {
+		t.Fatal("expected parse error for `from Apr 15 2026 to` (missing End)")
+	}
+}
+
+// TestParser_BetweenAsIdentifier_MigrationDiagnostic — `between = 50`
+// is the v2.0 breaking-change scenario. The parser must surface a
+// clear migration message rather than crashing or silently
+// accepting it.
+func TestParser_BetweenAsIdentifier_MigrationDiagnostic(t *testing.T) {
+	_, err := Parse("between = 50")
+	if err == nil {
+		t.Fatal("expected migration diagnostic for `between = 50`")
+	}
+	msg := err.Error()
+	if !strings.Contains(strings.ToLower(msg), "between") {
+		t.Errorf("error %q should mention `between`", msg)
+	}
+	if !strings.Contains(strings.ToLower(msg), "reserved") &&
+		!strings.Contains(strings.ToLower(msg), "keyword") {
+		t.Errorf("error %q should explain that `between` is now a reserved keyword", msg)
+	}
+}
+
+// TestParser_DurationFromArith_NotABetween — the existing
+// `2 days from today` arithmetic must keep working. The new
+// `from A to B` parser branch fires only when FROM is at the start
+// of a primary expression, not after a duration.
+func TestParser_DurationFromArith_NotABetween(t *testing.T) {
+	n := parseFirstStmt(t, "x = 2 days from today")
+	expr := expressionFromAssignment(t, n)
+	if _, ok := expr.(*ast.BetweenExpr); ok {
+		t.Errorf("`2 days from today` must not parse as BetweenExpr; got %T", expr)
+	}
+}
+
+// --- U8: LengthOfExpr productions ---
+
+func TestParser_LengthOf_BareMonth(t *testing.T) {
+	n := parseFirstStmt(t, "x = length of April")
+	expr := expressionFromAssignment(t, n)
+	loe, ok := expr.(*ast.LengthOfExpr)
+	if !ok {
+		t.Fatalf("expected *ast.LengthOfExpr, got %T", expr)
+	}
+	if loe.AsNumber {
+		t.Errorf("AsNumber = true, want false (`length of` form)")
+	}
+	rdl, ok := loe.Period.(*ast.RelativeDateLiteral)
+	if !ok {
+		t.Fatalf("Period inner = %T, want *ast.RelativeDateLiteral (April → this April)", loe.Period)
+	}
+	if rdl.Keyword != "this April" {
+		t.Errorf("Period.Keyword = %q, want %q", rdl.Keyword, "this April")
+	}
+}
+
+func TestParser_DaysIn_BareMonth(t *testing.T) {
+	n := parseFirstStmt(t, "x = days in April")
+	expr := expressionFromAssignment(t, n)
+	loe, ok := expr.(*ast.LengthOfExpr)
+	if !ok {
+		t.Fatalf("expected *ast.LengthOfExpr, got %T", expr)
+	}
+	if !loe.AsNumber {
+		t.Errorf("AsNumber = false, want true (`days in` form)")
+	}
+}
+
+// TestParser_LengthOf_PrecedenceLockIn — `length of Q1 + 2 days`
+// must parse as `(length of Q1) + 2 days`, top-level BinaryOp.
+// Pinned at the AST level so the contract is locked even if the
+// interpreter or formatter accidentally cancels out a precedence
+// bug at runtime.
+func TestParser_LengthOf_PrecedenceLockIn(t *testing.T) {
+	n := parseFirstStmt(t, "x = length of Q1 + 2 days")
+	expr := expressionFromAssignment(t, n)
+	bop, ok := expr.(*ast.BinaryOp)
+	if !ok {
+		t.Fatalf("expected top-level *ast.BinaryOp (length of Q1 + 2 days), got %T", expr)
+	}
+	if bop.Operator != "+" {
+		t.Errorf("Operator = %q, want %q", bop.Operator, "+")
+	}
+	if _, ok := bop.Left.(*ast.LengthOfExpr); !ok {
+		t.Errorf("Left = %T, want *ast.LengthOfExpr", bop.Left)
+	}
+	if _, ok := bop.Right.(*ast.DurationLiteral); !ok {
+		t.Errorf("Right = %T, want *ast.DurationLiteral", bop.Right)
+	}
+}
+
+func TestParser_DaysIn_PrecedenceLockIn(t *testing.T) {
+	n := parseFirstStmt(t, "x = days in April * 100")
+	expr := expressionFromAssignment(t, n)
+	bop, ok := expr.(*ast.BinaryOp)
+	if !ok {
+		t.Fatalf("expected top-level *ast.BinaryOp, got %T", expr)
+	}
+	if bop.Operator != "*" {
+		t.Errorf("Operator = %q, want %q", bop.Operator, "*")
+	}
+	loe, ok := bop.Left.(*ast.LengthOfExpr)
+	if !ok {
+		t.Fatalf("Left = %T, want *ast.LengthOfExpr", bop.Left)
+	}
+	if !loe.AsNumber {
+		t.Errorf("Left.AsNumber = false, want true (days in)")
+	}
+}
+
+func TestParser_LengthOf_AtEOF(t *testing.T) {
+	_, err := Parse("x = length of")
+	if err == nil {
+		t.Fatal("expected parse error for `length of` at EOF")
+	}
+}
+
+func TestParser_DaysIn_AtEOF(t *testing.T) {
+	_, err := Parse("x = days in")
+	if err == nil {
+		t.Fatal("expected parse error for `days in` at EOF")
+	}
+}

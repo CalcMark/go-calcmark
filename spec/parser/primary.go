@@ -386,6 +386,112 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return &ast.StartOfExpr{Period: inner, SourceText: sourceText, Range: full}, nil
 	}
 
+	// `length of <Period>` / `days in <Period>` — v2.0 query
+	// operators. Inner parses via parsePrimary so precedence
+	// preserves: `length of Q1 + 2 days` parses as
+	// `(length of Q1) + 2 days`. Type-check enforces Period inner
+	// in U9.
+	if p.match(lexer.LENGTH_OF, lexer.DAYS_IN) {
+		op := p.previous()
+		asNumber := op.Type == lexer.DAYS_IN
+		modifier := "length of"
+		if asNumber {
+			modifier = "days in"
+		}
+		startRange := tokenRange(op)
+		inner, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " April', '" + modifier + " Q1'); got: " + err.Error())
+		}
+		if inner == nil {
+			return nil, p.error("expected period expression after '" + modifier + "'")
+		}
+		full := startRange
+		if innerR := inner.GetRange(); innerR != nil {
+			full = &ast.Range{Start: startRange.Start, End: innerR.End}
+		}
+		sourceText := modifier + " " + innerSourceText(inner)
+		return &ast.LengthOfExpr{
+			Period:     inner,
+			AsNumber:   asNumber,
+			SourceText: sourceText,
+			Range:      full,
+		}, nil
+	}
+
+	// `between A and B` — v2.0 user-defined Period.
+	if p.match(lexer.BETWEEN) {
+		op := p.previous()
+		startRange := tokenRange(op)
+		startExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'between'; got: " + err.Error())
+		}
+		if startExpr == nil {
+			return nil, p.error("expected expression after 'between'")
+		}
+		if !p.match(lexer.AND) {
+			return nil, p.error("expected 'and' after 'between <expr>' (e.g., 'between Apr 1 2026 and Jul 4 2026')")
+		}
+		endExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'and'; got: " + err.Error())
+		}
+		if endExpr == nil {
+			return nil, p.error("expected expression after 'and'")
+		}
+		full := startRange
+		if endR := endExpr.GetRange(); endR != nil {
+			full = &ast.Range{Start: startRange.Start, End: endR.End}
+		}
+		sourceText := "between " + innerSourceText(startExpr) + " and " + innerSourceText(endExpr)
+		return &ast.BetweenExpr{
+			Start:      startExpr,
+			End:        endExpr,
+			SourceText: sourceText,
+			Range:      full,
+		}, nil
+	}
+
+	// `from A to B` — synonym for `between A and B`. Only fires when
+	// FROM is at the start of a primary expression. The existing
+	// `<duration> from <date>` arithmetic consumes FROM inside the
+	// DURATION_LITERAL branch (below), so a FROM reaching here is
+	// always the start of the period synonym.
+	if p.match(lexer.FROM) {
+		op := p.previous()
+		startRange := tokenRange(op)
+		startExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'from'; got: " + err.Error())
+		}
+		if startExpr == nil {
+			return nil, p.error("expected expression after 'from'")
+		}
+		if !p.checkIdentValue("to") {
+			return nil, p.error("expected 'to' after 'from <expr>' (e.g., 'from Apr 1 2026 to Jul 4 2026')")
+		}
+		p.advance() // consume "to"
+		endExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'to'; got: " + err.Error())
+		}
+		if endExpr == nil {
+			return nil, p.error("expected expression after 'to'")
+		}
+		full := startRange
+		if endR := endExpr.GetRange(); endR != nil {
+			full = &ast.Range{Start: startRange.Start, End: endR.End}
+		}
+		sourceText := "from " + innerSourceText(startExpr) + " to " + innerSourceText(endExpr)
+		return &ast.BetweenExpr{
+			Start:      startExpr,
+			End:        endExpr,
+			SourceText: sourceText,
+			Range:      full,
+		}, nil
+	}
+
 	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year, weekdays
 	if p.match(lexer.DATE_TODAY, lexer.DATE_TOMORROW, lexer.DATE_YESTERDAY,
 		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
