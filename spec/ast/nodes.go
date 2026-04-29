@@ -263,6 +263,69 @@ func (r *RelativeDateLiteral) GetRange() *Range {
 	return r.Range
 }
 
+// EndOfExpr represents `end of <period>` -- the operator that
+// resolves a Period-typed inner expression to its last day. The
+// inner is a generic Node so any expression that types as Period
+// (literal, identifier-bound period, parenthesized period
+// expression) parses uniformly. Type-check enforcement of "must be
+// a Period" lives in spec/semantic; at the AST layer the constraint
+// is unenforced -- a NumberLiteral here is well-formed but
+// semantically rejected.
+//
+// Replaces the previous string-flatten in spec/parser/primary.go
+// which produced ast.RelativeDateLiteral{Keyword: "end of " +
+// innerKeyword} -- losing the inner's structure, bounding the
+// inner-token set to an enumeration, and forcing string-prefix
+// dispatch in the interpreter.
+type EndOfExpr struct {
+	// Period is the inner expression. Must type as Period at semantic
+	// check time; runtime panics if non-Period flows through. Parser
+	// uses parsePrimary() so precedence is preserved
+	// (`end of Q1 + 1 day` parses as `(end of Q1) + 1 day`).
+	Period Node
+
+	// SourceText is the original source slice ("end of Q1") for
+	// diagnostics + AST round-tripping.
+	SourceText string
+
+	Range *Range
+}
+
+func (e *EndOfExpr) String() string {
+	if e.Period == nil {
+		return "EndOfExpr(<nil>)"
+	}
+	return fmt.Sprintf("EndOfExpr(%s)", e.Period.String())
+}
+
+func (e *EndOfExpr) GetRange() *Range {
+	return e.Range
+}
+
+// StartOfExpr is the symmetric partner of EndOfExpr -- resolves a
+// Period to its first day. Parser-level identical to EndOfExpr;
+// interpreter just returns Period.Start unchanged. Useful in
+// expressions where intent matters (e.g.
+// `forecast = start of next fiscal quarter` reads better than the
+// implicit `next fiscal quarter` even though they evaluate the
+// same).
+type StartOfExpr struct {
+	Period     Node
+	SourceText string
+	Range      *Range
+}
+
+func (s *StartOfExpr) String() string {
+	if s.Period == nil {
+		return "StartOfExpr(<nil>)"
+	}
+	return fmt.Sprintf("StartOfExpr(%s)", s.Period.String())
+}
+
+func (s *StartOfExpr) GetRange() *Range {
+	return s.Range
+}
+
 // DurationLiteral represents a duration literal: "5 days", "3 hours"
 type DurationLiteral struct {
 	Value      string // Numeric value ("5", "3.5", etc.)

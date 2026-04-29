@@ -165,18 +165,13 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 			return d, err
 		}
 
-		// "start of <period>" — strip prefix and evaluate the inner period
-		if strings.HasPrefix(keyword, "start of ") {
-			inner := keyword[len("start of "):]
-			innerNode := &ast.RelativeDateLiteral{Keyword: inner, SourceText: inner}
-			return interp.evalRelativeDateLiteral(innerNode)
-		}
-
-		// "end of <period>" — evaluate inner period to get start, then find last day
-		if strings.HasPrefix(keyword, "end of ") {
-			inner := keyword[len("end of "):]
-			return interp.evalEndOf(inner, now)
-		}
+		// "start of <period>" / "end of <period>" string-prefix
+		// dispatches were retired here (and at the equivalent site
+		// in evalNotation) when the parser started emitting
+		// ast.EndOfExpr / ast.StartOfExpr structured nodes. Operator
+		// dispatch now happens at the AST layer (see evalEndOfExpr /
+		// evalStartOfExpr); reaching this branch with a string-form
+		// "end of ..." keyword would mean the parser regressed.
 
 		// Try weekday expressions: "friday", "this friday", "next friday", "last friday"
 		if d, ok := interp.resolveWeekdayExpression(keyword, now); ok {
@@ -380,17 +375,13 @@ func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, ti
 
 // evalNotation handles Q:N, FQ:N, FY:YYYY, CY:YYYY notation.
 // Returns (nil, nil) if keyword is not a notation pattern.
+//
+// The two HasPrefix(keyword, "end of ") / "start of " dispatches
+// that lived here previously were retired when the parser started
+// emitting ast.EndOfExpr / ast.StartOfExpr -- operator dispatch
+// happens at the AST layer (evalEndOfExpr / evalStartOfExpr) and
+// flows back into evalEndOfNotation via the AST inner.
 func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Type, error) {
-	// Check for "end of" + notation
-	if strings.HasPrefix(keyword, "end of ") {
-		inner := keyword[len("end of "):]
-		return interp.evalEndOfNotation(inner, now)
-	}
-	if strings.HasPrefix(keyword, "start of ") {
-		inner := keyword[len("start of "):]
-		return interp.evalNotation(inner, now)
-	}
-
 	parts := strings.SplitN(keyword, ":", 2)
 	if len(parts) != 2 {
 		return nil, nil // not a notation
@@ -704,4 +695,78 @@ func parseUTCOffset(offset *ast.UTCOffset) (int, error) {
 	}
 
 	return totalMinutes, nil
+}
+
+// evalEndOfExpr evaluates `end of <period>`. The parser emits this
+// AST shape (ast.EndOfExpr) for any well-formed `end of X`
+// expression. Dispatch flow:
+//
+//   1. Inspect the AST inner (NOT the evaluated value -- the inner's
+//      structure tells us which period kind it is, even when the
+//      same evaluated Date could correspond to multiple periods).
+//   2. For *ast.RelativeDateLiteral, dispatch via the existing
+//      keyword-keyed evalEndOf / evalEndOfNotation. The keyword is
+//      already in the canonical form the helpers understand
+//      ("Q:1" / "FQ:3" / "this month" / etc.).
+//   3. For *ast.Identifier, return a clear runtime error -- the
+//      variable holds a Date (today) and we can't recover which
+//      period kind produced it. R9 (variables-as-periods) is
+//      deferred to a future PR that introduces a Period value type
+//      and threads it through evalRelativeDateLiteral / Environment.
+//   4. For everything else (literals like 5 or "2026-01-01"),
+//      return a runtime error -- the type checker (U9) catches
+//      these statically too, but the runtime guard ensures
+//      correctness even when the type-check escape (e.g., a
+//      checker bug) lets one through.
+//
+// Replaces the prior strings.HasPrefix(keyword, "end of ") dispatch
+// at evalRelativeDateLiteral and evalNotation -- both removed.
+func (interp *Interpreter) evalEndOfExpr(e *ast.EndOfExpr) (types.Type, error) {
+	if e.Period == nil {
+		return nil, fmt.Errorf("end of: missing inner expression")
+	}
+	now := interp.now()
+
+	switch inner := e.Period.(type) {
+	case *ast.RelativeDateLiteral:
+		// Existing helpers handle every period-bearing keyword
+		// (Q:N, FQ:N, FY:NNNN, CY:NNNN, this/next/last
+		// week/month/year/quarter/fiscal-quarter/fiscal-year, named
+		// months). evalEndOfForKeyword routes to the right helper.
+		// Lowercase the keyword to match the casing convention in
+		// the existing helpers' switch statements (e.g.
+		// resolveMonthExpression's canonicalMonths map is
+		// lowercase-keyed) -- evalRelativeDateLiteral lowercases
+		// at line 102 before its own switch, so dispatching here
+		// must do the same.
+		return interp.evalEndOfForKeyword(strings.ToLower(inner.Keyword), now)
+	case *ast.Identifier:
+		// R9 demoted -- the variable's bound value is a Date in the
+		// current value-type model, not a Period. Surfacing this as
+		// a clear runtime error keeps the user oriented; a future
+		// PR introducing *types.Period through evalRelativeDateLiteral
+		// + Environment binding will let this case work emergently.
+		return nil, fmt.Errorf("end of %s: variable-bound periods are not yet supported; use the period literal directly (e.g. `end of Q1`) until upstream Period value-type plumbing lands", inner.Name)
+	default:
+		return nil, fmt.Errorf("end of: inner expression must be a period (got %T); valid examples: `end of Q1`, `end of this month`, `end of FY2027`", e.Period)
+	}
+}
+
+// evalStartOfExpr evaluates `start of <period>`. Symmetric to
+// evalEndOfExpr but trivial -- start of a period is just the
+// period's start date, which is what evaluating the inner literal
+// already returns.
+func (interp *Interpreter) evalStartOfExpr(s *ast.StartOfExpr) (types.Type, error) {
+	if s.Period == nil {
+		return nil, fmt.Errorf("start of: missing inner expression")
+	}
+	switch inner := s.Period.(type) {
+	case *ast.RelativeDateLiteral:
+		// Inner literal's evaluation IS the period start.
+		return interp.evalRelativeDateLiteral(inner)
+	case *ast.Identifier:
+		return nil, fmt.Errorf("start of %s: variable-bound periods are not yet supported; use the period literal directly (e.g. `start of Q1`) until upstream Period value-type plumbing lands", inner.Name)
+	default:
+		return nil, fmt.Errorf("start of: inner expression must be a period (got %T); valid examples: `start of Q1`, `start of this month`", s.Period)
+	}
 }

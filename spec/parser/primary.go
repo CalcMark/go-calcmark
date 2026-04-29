@@ -347,37 +347,43 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
-	// "start of <period>" — explicit form, equivalent to bare period (first day)
-	// "end of <period>" — resolves to last day of the period
+	// "start of <period>" / "end of <period>" — first-class language
+	// operators. The inner is parsed via parsePrimary() so any
+	// expression that resolves to a Period at semantic-check time
+	// works (literal periods, identifiers bound to periods,
+	// parenthesized period expressions). Precedence is preserved:
+	// `end of Q1 + 1 day` parses as `(end of Q1) + 1 day` because
+	// parsePrimary() doesn't reach across the additive boundary.
+	//
+	// Replaces the previous bounded-token-list + string-flattening
+	// where the inner had to be one of an enumerated set of tokens
+	// and the AST stored `Keyword: modifier + " " + innerKeyword`.
+	// See spec/ast/nodes.go EndOfExpr / StartOfExpr.
 	if p.match(lexer.START_OF, lexer.END_OF) {
-		modifier := string(p.previous().Value) // "start of" or "end of"
-		// Parse the period expression that follows
-		if p.match(lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
-			lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
-			lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
-			lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
-			lexer.DATE_THIS_FISCAL_QUARTER, lexer.DATE_NEXT_FISCAL_QUARTER, lexer.DATE_LAST_FISCAL_QUARTER,
-			lexer.DATE_THIS_FISCAL_YEAR, lexer.DATE_NEXT_FISCAL_YEAR, lexer.DATE_LAST_FISCAL_YEAR,
-			lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME) {
-			tok := p.previous()
-			return &ast.RelativeDateLiteral{
-				Keyword:    modifier + " " + string(tok.Value),
-				SourceText: modifier + " " + string(tok.Value),
-			}, nil
+		op := p.previous()
+		modifier := string(op.Value) // "start of" or "end of"
+		startRange := tokenRange(op)
+		inner, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month' or '" + modifier + " Q1'); got: " + err.Error())
 		}
-		// Also accept notation tokens: "end of Q2", "end of FQ1"
-		if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL) {
-			tok := p.previous()
-			prefix := "Q"
-			if tok.Type == lexer.FISCAL_QUARTER_LITERAL {
-				prefix = "FQ"
-			}
-			return &ast.RelativeDateLiteral{
-				Keyword:    modifier + " " + prefix + ":" + string(tok.Value),
-				SourceText: modifier + " " + string(tok.OriginalText),
-			}, nil
+		if inner == nil {
+			return nil, p.error("expected period expression after '" + modifier + "'")
 		}
-		return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month')")
+		// Span from the operator's start through the inner's end.
+		full := startRange
+		if innerR := inner.GetRange(); innerR != nil {
+			full = &ast.Range{Start: startRange.Start, End: innerR.End}
+		}
+		// SourceText spans from the operator through the inner --
+		// the inner's SourceText if available, else fall back to its
+		// String() form. Used in diagnostics and AST round-tripping.
+		innerText := innerSourceText(inner)
+		sourceText := modifier + " " + innerText
+		if op.Type == lexer.END_OF {
+			return &ast.EndOfExpr{Period: inner, SourceText: sourceText, Range: full}, nil
+		}
+		return &ast.StartOfExpr{Period: inner, SourceText: sourceText, Range: full}, nil
 	}
 
 	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year, weekdays
@@ -811,4 +817,31 @@ func (p *RecursiveDescentParser) parseFractionLiteral() (ast.Node, error) {
 	}
 
 	return fracNode, nil
+}
+
+// innerSourceText returns a best-effort source-text representation
+// of an expression-producing AST node, used to populate
+// EndOfExpr.SourceText / StartOfExpr.SourceText. Walks the common
+// AST node types and reads their SourceText / Keyword / Name
+// fields. Falls back to the node's String() form for unrecognized
+// shapes -- not perfect for round-tripping but sufficient for
+// diagnostic messages.
+func innerSourceText(n ast.Node) string {
+	switch v := n.(type) {
+	case *ast.RelativeDateLiteral:
+		if v.SourceText != "" {
+			return v.SourceText
+		}
+		return v.Keyword
+	case *ast.Identifier:
+		return v.Name
+	case *ast.NumberLiteral:
+		return v.Value
+	case *ast.DateLiteral:
+		if v.SourceText != "" {
+			return v.SourceText
+		}
+		return v.Month + " " + v.Day
+	}
+	return n.String()
 }

@@ -240,3 +240,66 @@ func TestDurationLiteralUnits(t *testing.T) {
 		})
 	}
 }
+
+// TestEndOfExpr_StringIncludesInner verifies the AST debug shape.
+// String() output is used in interpreter trace logs; nesting must
+// be visible.
+func TestEndOfExpr_StringIncludesInner(t *testing.T) {
+	inner := &RelativeDateLiteral{Keyword: "Q:1", SourceText: "Q1"}
+	node := &EndOfExpr{
+		Period:     inner,
+		SourceText: "end of Q1",
+		Range:      &Range{Start: Position{Line: 5, Column: 1}, End: Position{Line: 5, Column: 10}},
+	}
+	got := node.String()
+	if got == "" {
+		t.Fatal("EndOfExpr.String() should not be empty")
+	}
+	// Sanity: must mention the inner node so trace logs are useful.
+	if !contains(got, "Q") {
+		t.Errorf("EndOfExpr.String() = %q should mention inner; expected to contain %q", got, "Q")
+	}
+}
+
+// TestEndOfExpr_GetRangeReturnsStored — pin the Range pass-through.
+func TestEndOfExpr_GetRangeReturnsStored(t *testing.T) {
+	r := &Range{Start: Position{Line: 7, Column: 3}, End: Position{Line: 7, Column: 12}}
+	node := &EndOfExpr{Range: r}
+	if node.GetRange() != r {
+		t.Errorf("GetRange() should return the stored Range pointer")
+	}
+}
+
+// TestStartOfExpr_String — symmetric to EndOf.
+func TestStartOfExpr_String(t *testing.T) {
+	inner := &RelativeDateLiteral{Keyword: "FQ:1", SourceText: "FQ1"}
+	node := &StartOfExpr{Period: inner, SourceText: "start of FQ1"}
+	if got := node.String(); got == "" {
+		t.Errorf("StartOfExpr.String() should not be empty")
+	}
+}
+
+// TestEndOfExpr_PeriodFieldAcceptsAnyNode — the inner is `Node`,
+// not a constrained interface. Identifier / RelativeDateLiteral /
+// any expression-producing node must work. Type-check happens in
+// spec/semantic; at the AST layer this is unconstrained.
+func TestEndOfExpr_PeriodFieldAcceptsAnyNode(t *testing.T) {
+	cases := []Node{
+		&RelativeDateLiteral{Keyword: "Q:1"},
+		&Identifier{Name: "q"},
+		&NumberLiteral{Value: "5"}, // semantic checker rejects this; AST allows it
+	}
+	for _, inner := range cases {
+		_ = &EndOfExpr{Period: inner, SourceText: "end of <expr>"}
+	}
+}
+
+// contains is a tiny helper to avoid importing strings just for this file.
+func contains(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}

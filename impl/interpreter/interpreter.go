@@ -160,6 +160,10 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalDurationLiteral(n)
 	case *ast.RelativeDateLiteral:
 		return interp.evalRelativeDateLiteral(n)
+	case *ast.EndOfExpr:
+		return interp.evalEndOfExpr(n)
+	case *ast.StartOfExpr:
+		return interp.evalStartOfExpr(n)
 	case *ast.FractionLiteral:
 		return interp.evalFractionLiteral(n)
 	case *ast.QuantityLiteral:
