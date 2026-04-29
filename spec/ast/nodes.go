@@ -326,6 +326,82 @@ func (s *StartOfExpr) GetRange() *Range {
 	return s.Range
 }
 
+// BetweenExpr represents `between A and B` / `from A to B` -- a
+// user-defined custom Period spanning two Date endpoints. Both
+// endpoints are generic Node so any expression typing as Date is
+// well-formed at the AST layer; semantic check (spec/semantic) is
+// where Date typing + start <= end constraints are enforced. The
+// runtime constructs a *types.Period (PeriodCustom kind) from the
+// evaluated endpoints.
+type BetweenExpr struct {
+	// Start is the period's first day; End is its last (closed
+	// interval, day precision -- mirrors *types.Period).
+	Start Node
+	End   Node
+
+	// SourceText is the original source slice for diagnostics +
+	// AST round-tripping.
+	SourceText string
+
+	Range *Range
+}
+
+func (b *BetweenExpr) String() string {
+	startStr := "<nil>"
+	endStr := "<nil>"
+	if b.Start != nil {
+		startStr = b.Start.String()
+	}
+	if b.End != nil {
+		endStr = b.End.String()
+	}
+	return fmt.Sprintf("BetweenExpr(%s, %s)", startStr, endStr)
+}
+
+func (b *BetweenExpr) GetRange() *Range {
+	return b.Range
+}
+
+// LengthOfExpr represents `length of <Period>` (returns Duration)
+// and `days in <Period>` (returns Number). Both forms desugar to
+// the same node; AsNumber discriminates the return shape.
+//
+// AST layer doesn't enforce that Period types as Period -- semantic
+// (spec/semantic) does. Period field is generic Node so any
+// expression typing as Period (literal, variable-bound,
+// parenthesized) parses uniformly.
+type LengthOfExpr struct {
+	// Period is the inner expression. Must type as Period at
+	// semantic check time. Parser uses parsePrimary() so precedence
+	// is preserved.
+	Period Node
+
+	// AsNumber discriminates the surface form: false = `length of`
+	// (returns Duration); true = `days in` (returns Number, integer
+	// day count).
+	AsNumber bool
+
+	// SourceText is the original source slice.
+	SourceText string
+
+	Range *Range
+}
+
+func (l *LengthOfExpr) String() string {
+	form := "length of"
+	if l.AsNumber {
+		form = "days in"
+	}
+	if l.Period == nil {
+		return fmt.Sprintf("LengthOfExpr(%s <nil>)", form)
+	}
+	return fmt.Sprintf("LengthOfExpr(%s %s)", form, l.Period.String())
+}
+
+func (l *LengthOfExpr) GetRange() *Range {
+	return l.Range
+}
+
 // DurationLiteral represents a duration literal: "5 days", "3 hours"
 type DurationLiteral struct {
 	Value      string // Numeric value ("5", "3.5", etc.)
@@ -518,6 +594,10 @@ func ContainsScaleRef(node Node) bool {
 	case *EndOfExpr:
 		return ContainsScaleRef(n.Period)
 	case *StartOfExpr:
+		return ContainsScaleRef(n.Period)
+	case *BetweenExpr:
+		return ContainsScaleRef(n.Start) || ContainsScaleRef(n.End)
+	case *LengthOfExpr:
 		return ContainsScaleRef(n.Period)
 	default:
 		// Leaf nodes: NumberLiteral, FractionLiteral, CurrencyLiteral,
