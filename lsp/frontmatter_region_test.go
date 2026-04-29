@@ -9,12 +9,12 @@ import (
 
 func TestDetectRegion(t *testing.T) {
 	cases := []struct {
-		name       string
-		source     string
-		wantOK     bool
-		wantStart  int
-		wantEnd    int
-		wantKeys   map[int]string
+		name      string
+		source    string
+		wantOK    bool
+		wantStart int
+		wantEnd   int
+		wantKeys  map[int]string
 	}{
 		{
 			name:      "well-formed single key",
@@ -105,12 +105,12 @@ func TestClassifyCursor(t *testing.T) {
 	}
 
 	cases := []struct {
-		name     string
-		region   FrontmatterRegion
-		pos      protocol.Position
-		wantIn   bool
-		wantPos  CursorPosition
-		wantKey  string
+		name    string
+		region  FrontmatterRegion
+		pos     protocol.Position
+		wantIn  bool
+		wantPos CursorPosition
+		wantKey string
 	}{
 		{
 			name:    "outside region (after end fence)",

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/spec/types"
@@ -50,6 +51,13 @@ type Feature struct {
 	Params      []types.ParamSpec // Parameter specifications for functions (empty for non-functions)
 	Example     string            // Example usage (function-call form for help display)
 	NLExample   string            // Natural language example for autosuggest (e.g., "100 MB/s over 1 day")
+	// InsertText is the literal text to insert when the user accepts
+	// this completion. When empty, suggestion-builders fall back to
+	// `Name`. Use the LSP `${N:default}` snippet syntax for entries
+	// that need user-fillable placeholders (e.g., year-bearing date
+	// literals like `FY${1:NNNN}`). When set, downstream LSP layers
+	// flag the resulting completion item as InsertTextFormat: Snippet.
+	InsertText string
 }
 
 // Match checks if a query matches this feature (case-insensitive prefix match).
@@ -625,16 +633,131 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "this fiscal quarter",
 			Description: "First day of the current fiscal quarter (requires fiscal_year_starts frontmatter)",
-			Aliases:     []Alias{{Name: "next fiscal quarter", Parseable: true}, {Name: "last fiscal quarter", Parseable: true}},
-			Example:     "this fiscal quarter",
+			// `this FQ` / `next FQ` / `last FQ` shorthand forms are
+			// already accepted by the lexer (see
+			// spec/lexer/date_tokenizer_test.go); registering them
+			// as Parseable aliases makes the registry truthful and
+			// surfaces them in completion when the user types `this F`,
+			// `next F`, or `last F`.
+			Aliases: []Alias{
+				{Name: "next fiscal quarter", Parseable: true},
+				{Name: "last fiscal quarter", Parseable: true},
+				{Name: "this FQ", Parseable: true},
+				{Name: "next FQ", Parseable: true},
+				{Name: "last FQ", Parseable: true},
+			},
+			Example: "this fiscal quarter",
 		},
 		{
 			Name:        "fiscal year",
 			Category:    CategoryDate,
 			Syntax:      "this fiscal year",
 			Description: "First day of the current fiscal year (requires fiscal_year_starts frontmatter)",
-			Aliases:     []Alias{{Name: "next fiscal year", Parseable: true}, {Name: "last fiscal year", Parseable: true}},
-			Example:     "this fiscal year",
+			Aliases: []Alias{
+				{Name: "next fiscal year", Parseable: true},
+				{Name: "last fiscal year", Parseable: true},
+				{Name: "this FY", Parseable: true},
+				{Name: "next FY", Parseable: true},
+				{Name: "last FY", Parseable: true},
+			},
+			Example: "this fiscal year",
+		},
+		// Calendar-quarter literals (Q1-Q4). The lexer recognizes
+		// `Q1`-`Q4` as CALENDAR_QUARTER_LITERAL tokens and the
+		// interpreter resolves each to the first day of the
+		// corresponding calendar quarter (Jan/Apr/Jul/Oct 1 of the
+		// current year). Registering here makes them discoverable via
+		// LSP completion -- prior to this, typing `Q` returned zero
+		// suggestions despite the language fully supporting the form.
+		// User report 2026-04-28 (calcmark-web): "I'm not sure what
+		// to even type to get FQ or FY. Or the 'end of FQ2'."
+		{
+			Name:        "Q1",
+			Category:    CategoryDate,
+			Syntax:      "Q1",
+			Description: "First day of calendar quarter 1 (Jan 1 of the current year)",
+			Example:     "end of Q1",
+		},
+		{
+			Name:        "Q2",
+			Category:    CategoryDate,
+			Syntax:      "Q2",
+			Description: "First day of calendar quarter 2 (Apr 1 of the current year)",
+			Example:     "end of Q2",
+		},
+		{
+			Name:        "Q3",
+			Category:    CategoryDate,
+			Syntax:      "Q3",
+			Description: "First day of calendar quarter 3 (Jul 1 of the current year)",
+			Example:     "end of Q3",
+		},
+		{
+			Name:        "Q4",
+			Category:    CategoryDate,
+			Syntax:      "Q4",
+			Description: "First day of calendar quarter 4 (Oct 1 of the current year)",
+			Example:     "end of Q4",
+		},
+		// Fiscal-quarter literals (FQ1-FQ4). The lexer recognizes
+		// `FQ1`-`FQ4` as FISCAL_QUARTER_LITERAL tokens. Resolution
+		// requires `fiscal_year_starts` in the document frontmatter
+		// -- evaluation without it produces a "fiscal expressions
+		// require a 'fiscal_year_starts' frontmatter key" diagnostic.
+		// Description copy mentions the requirement so users see it
+		// before typing.
+		{
+			Name:        "FQ1",
+			Category:    CategoryDate,
+			Syntax:      "FQ1",
+			Description: "First day of fiscal quarter 1 (per fiscal_year_starts frontmatter)",
+			Example:     "end of FQ1",
+		},
+		{
+			Name:        "FQ2",
+			Category:    CategoryDate,
+			Syntax:      "FQ2",
+			Description: "First day of fiscal quarter 2 (3 months after fiscal_year_starts)",
+			Example:     "end of FQ2",
+		},
+		{
+			Name:        "FQ3",
+			Category:    CategoryDate,
+			Syntax:      "FQ3",
+			Description: "First day of fiscal quarter 3 (6 months after fiscal_year_starts)",
+			Example:     "end of FQ3",
+		},
+		{
+			Name:        "FQ4",
+			Category:    CategoryDate,
+			Syntax:      "FQ4",
+			Description: "First day of fiscal quarter 4 (9 months after fiscal_year_starts; requires fiscal_year_starts frontmatter)",
+			Example:     "end of FQ4",
+		},
+		// Year-bearing literals (FY, CY) are snippet completions: the
+		// LSP placeholder `${1:<current-year>}` lets the user accept
+		// the suggestion and have the year pre-selected for editing.
+		// Year is captured at registry-build time -- this is a
+		// `sync.Once` per-process value, so the default reflects the
+		// year the process started (LSP servers re-spawn frequently
+		// enough that this stays current). Year arithmetic is the
+		// interpreter's job; the registry just makes the literal
+		// shape discoverable.
+		{
+			Name:        "FY",
+			Category:    CategoryDate,
+			Syntax:      "FY<NNNN>",
+			Description: "Specific fiscal year start (Microsoft convention: FY2027 with July start = Jul 1 2026 -> Jun 30 2027). Requires fiscal_year_starts frontmatter.",
+			InsertText:  fmt.Sprintf("FY${1:%d}", time.Now().Year()),
+			Example:     "end of FY2027",
+		},
+		{
+			Name:        "CY",
+			Category:    CategoryDate,
+			Syntax:      "CY<NNNN>",
+			Description: "Specific calendar year start (Jan 1 of that year). Two-digit forms (CY26) interpreted as 2000+NN.",
+			InsertText:  fmt.Sprintf("CY${1:%d}", time.Now().Year()),
+			Example:     "end of CY2026",
 		},
 	}
 }

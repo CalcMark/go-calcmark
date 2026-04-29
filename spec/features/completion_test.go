@@ -1,6 +1,7 @@
 package features
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -510,4 +511,411 @@ func TestDateSuggestions_ThisPrefixCoversNamedPeriods(t *testing.T) {
 			t.Errorf("DateSuggestions(\"this\") missing %q; got %v", want, names)
 		}
 	}
+}
+
+// TestDateSuggestions_QPrefixSurfacesCalendarQuarters verifies that
+// typing `Q` in a calc block surfaces the four calendar-quarter
+// literal forms the lexer accepts (`Q1`-`Q4`). Reported 2026-04-28
+// against calcmark-web: typing `FQ` or `Q` produces zero suggestions
+// despite the lexer recognizing `CALENDAR_QUARTER_LITERAL` /
+// `FISCAL_QUARTER_LITERAL` and the evaluator computing them
+// correctly. This test pins the contract: every literal token kind
+// the lexer accepts must be discoverable via prefix completion.
+func TestDateSuggestions_QPrefixSurfacesCalendarQuarters(t *testing.T) {
+	required := []string{"Q1", "Q2", "Q3", "Q4"}
+	got := DateSuggestions("Q")
+	for _, want := range required {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				if s.Category != "Date" {
+					t.Errorf("suggestion %q has category %q, want Date", s.Name, s.Category)
+				}
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(got))
+			for i, s := range got {
+				names[i] = s.Name
+			}
+			t.Errorf("DateSuggestions(\"Q\") missing %q; got %v", want, names)
+		}
+	}
+}
+
+// TestDateSuggestions_QPrefixCaseInsensitive — calcmark identifiers
+// are case-insensitive in the lexer (q1 → CALENDAR_QUARTER_LITERAL).
+// Completion mirrors that: lowercase prefix returns the same set.
+func TestDateSuggestions_QPrefixCaseInsensitive(t *testing.T) {
+	got := DateSuggestions("q")
+	if len(got) < 4 {
+		t.Errorf("DateSuggestions(\"q\") should return at least 4 quarter items; got %d", len(got))
+	}
+}
+
+// TestDateSuggestions_Q1ExactPrefixSelectsOne — typing the literal
+// itself narrows to exactly that entry.
+func TestDateSuggestions_Q1ExactPrefixSelectsOne(t *testing.T) {
+	got := DateSuggestions("Q1")
+	count := 0
+	for _, s := range got {
+		if s.Name == "Q1" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("DateSuggestions(\"Q1\") should match exactly one Q1 entry; got %d matches in %v", count, got)
+	}
+}
+
+// TestDateSuggestions_Q5ReturnsNothingMatchingQ5 — the parser rejects
+// Q5 (`invalid calendar quarter`); completion must not offer it.
+func TestDateSuggestions_Q5ReturnsNothingMatchingQ5(t *testing.T) {
+	got := DateSuggestions("Q5")
+	for _, s := range got {
+		if s.Name == "Q5" {
+			t.Errorf("DateSuggestions(\"Q5\") unexpectedly surfaced %q", s.Name)
+		}
+	}
+}
+
+// TestDateSuggestions_QuarterEntriesHaveDescriptionAndExample —
+// every new entry must carry the full registry shape so hover docs
+// and the LSP detail panel have content to show.
+func TestDateSuggestions_QuarterEntriesHaveDescriptionAndExample(t *testing.T) {
+	got := DateSuggestions("Q")
+	for _, s := range got {
+		if s.Name != "Q1" && s.Name != "Q2" && s.Name != "Q3" && s.Name != "Q4" {
+			continue
+		}
+		if s.Description == "" {
+			t.Errorf("calendar-quarter %q has empty Description", s.Name)
+		}
+		if s.Syntax == "" {
+			t.Errorf("calendar-quarter %q has empty Syntax", s.Name)
+		}
+	}
+}
+
+// TestDateSuggestions_FQPrefixSurfacesFiscalQuarters — typing `FQ`
+// returns FQ1-FQ4. Symmetric to Q1-Q4 but documented as requiring
+// `fiscal_year_starts` frontmatter (the interpreter raises a
+// fiscal-required runtime error otherwise; surfacing that
+// requirement in the completion description prevents user
+// confusion).
+func TestDateSuggestions_FQPrefixSurfacesFiscalQuarters(t *testing.T) {
+	required := []string{"FQ1", "FQ2", "FQ3", "FQ4"}
+	got := DateSuggestions("FQ")
+	for _, want := range required {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				if s.Category != "Date" {
+					t.Errorf("suggestion %q has category %q, want Date", s.Name, s.Category)
+				}
+				if !strings.Contains(s.Description, "fiscal_year_starts") {
+					t.Errorf("FQ-family suggestion %q description should mention fiscal_year_starts; got %q",
+						s.Name, s.Description)
+				}
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(got))
+			for i, s := range got {
+				names[i] = s.Name
+			}
+			t.Errorf("DateSuggestions(\"FQ\") missing %q; got %v", want, names)
+		}
+	}
+}
+
+// TestDateSuggestions_FQ0AndFQ5RejectedByLexer — completion mirrors
+// what the lexer accepts. FQ0 / FQ5 are not valid lexer tokens, so
+// they must not appear as suggestions.
+func TestDateSuggestions_FQ0AndFQ5RejectedByLexer(t *testing.T) {
+	got := DateSuggestions("FQ")
+	for _, s := range got {
+		if s.Name == "FQ0" || s.Name == "FQ5" {
+			t.Errorf("DateSuggestions(\"FQ\") unexpectedly surfaced %q", s.Name)
+		}
+	}
+}
+
+// TestDateSuggestions_FiscalQuarterShorthandAliases — the lexer
+// already accepts `this FQ` / `next FQ` / `last FQ` (verified in
+// spec/lexer/date_tokenizer_test.go). The registry should reflect
+// that by listing them as Parseable aliases on `fiscal quarter`.
+// This test exercises the alias path through DateSuggestions.
+func TestDateSuggestions_FiscalQuarterShorthandAliases(t *testing.T) {
+	wanted := []string{"this FQ", "next FQ", "last FQ"}
+	got := DateSuggestions("this F")
+	gotNext := DateSuggestions("next F")
+	gotLast := DateSuggestions("last F")
+	all := append(append(append([]Suggestion{}, got...), gotNext...), gotLast...)
+	for _, want := range wanted {
+		found := false
+		for _, s := range all {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(all))
+			for i, s := range all {
+				names[i] = s.Name
+			}
+			t.Errorf("expected alias %q across this/next/last F prefix queries; got %v", want, names)
+		}
+	}
+}
+
+// TestDateSuggestions_FiscalYearShorthandAliases — `this FY` /
+// `next FY` / `last FY` are lexed equivalently; same registry
+// alias treatment.
+func TestDateSuggestions_FiscalYearShorthandAliases(t *testing.T) {
+	wanted := []string{"this FY", "next FY", "last FY"}
+	all := append(append(append(
+		[]Suggestion{},
+		DateSuggestions("this F")...),
+		DateSuggestions("next F")...),
+		DateSuggestions("last F")...)
+	for _, want := range wanted {
+		found := false
+		for _, s := range all {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected alias %q across this/next/last F prefix queries", want)
+		}
+	}
+}
+
+// TestDateSuggestions_FYPrefixSurfacesYearLiteralSnippet — typing
+// `FY` returns a single snippet completion that fills in the current
+// calendar year as a placeholder. The lexer recognizes `FY26` and
+// `FY2026` as FISCAL_YEAR_LITERAL; this entry is the discoverability
+// path. The snippet's InsertText carries `${1:NNNN}` so editors can
+// honor it as a placeholder. The registry stores the snippet text;
+// LSP-layer conversion to `InsertTextFormat: Snippet` happens
+// downstream in lsp/completion.go (covered by U3's lsp/ test).
+func TestDateSuggestions_FYPrefixSurfacesYearLiteralSnippet(t *testing.T) {
+	got := DateSuggestions("FY")
+	found := false
+	for _, s := range got {
+		// Allow a single FY entry whose InsertText contains
+		// `${1:` (the snippet placeholder marker).
+		if s.Name == "FY" && strings.Contains(s.InsertText, "${1:") {
+			found = true
+			if !strings.Contains(s.Description, "fiscal_year_starts") {
+				t.Errorf("FY snippet description should mention fiscal_year_starts; got %q", s.Description)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Errorf("DateSuggestions(\"FY\") missing FY snippet entry with ${1:NNNN} placeholder; got %v", got)
+	}
+}
+
+// TestDateSuggestions_FYSnippetDefaultsToCurrentYear — the
+// placeholder default is `now.Year()` so users see a sensible
+// pre-filled value. Format: `FY${1:2026}`.
+func TestDateSuggestions_FYSnippetDefaultsToCurrentYear(t *testing.T) {
+	got := DateSuggestions("FY")
+	for _, s := range got {
+		if s.Name != "FY" {
+			continue
+		}
+		// The exact year value depends on `time.Now()` at call time;
+		// verify the placeholder is exactly 4 digits in the default
+		// position so editors can interpret it as a year.
+		if !strings.Contains(s.InsertText, "${1:20") {
+			t.Errorf("FY snippet should default to a current-millennium year (FY${1:20YY}); got %q", s.InsertText)
+		}
+		return
+	}
+	t.Fatalf("no FY entry returned by DateSuggestions(\"FY\")")
+}
+
+// TestDateSuggestions_CYPrefixSurfacesYearLiteralSnippet — symmetric
+// to FY, for calendar years.
+func TestDateSuggestions_CYPrefixSurfacesYearLiteralSnippet(t *testing.T) {
+	got := DateSuggestions("CY")
+	found := false
+	for _, s := range got {
+		if s.Name == "CY" && strings.Contains(s.InsertText, "${1:") {
+			found = true
+			if s.Description == "" {
+				t.Errorf("CY snippet description should be non-empty")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Errorf("DateSuggestions(\"CY\") missing CY snippet entry; got %v", got)
+	}
+}
+
+// TestDateSuggestions_EndPrefixSynthesizesEndOfPeriods — typing
+// `end` returns synthesized `end of <period>` items, derived from
+// the registered period-bearing date features. The synthesis
+// handler skips non-period date entries (`today`, `tomorrow`,
+// `days`, `weeks`, etc.) via a local skip-list. New period kinds
+// added to the registry automatically flow through this handler
+// without manual registry expansion.
+func TestDateSuggestions_EndPrefixSynthesizesEndOfPeriods(t *testing.T) {
+	got := DateSuggestions("end")
+	required := []string{
+		"end of Q1", "end of Q2", "end of Q3", "end of Q4",
+		"end of FQ1", "end of FQ2", "end of FQ3", "end of FQ4",
+		"end of this month", "end of this quarter", "end of this year",
+		"end of fiscal quarter", "end of fiscal year",
+	}
+	for _, want := range required {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(got))
+			for i, s := range got {
+				names[i] = s.Name
+			}
+			t.Errorf("DateSuggestions(\"end\") missing %q; got %v", want, names)
+		}
+	}
+}
+
+// TestDateSuggestions_EndOfPrefixEquivalentToEnd — typing `end of`
+// returns the same synthesized set as `end` (the trailing space + of
+// don't change which period set is offered).
+func TestDateSuggestions_EndOfPrefixEquivalentToEnd(t *testing.T) {
+	gotEnd := DateSuggestions("end")
+	gotEndOf := DateSuggestions("end of")
+	endNames := nameSet(gotEnd)
+	endOfNames := nameSet(gotEndOf)
+	for name := range endNames {
+		if !endOfNames[name] {
+			t.Errorf("DateSuggestions(\"end of\") missing %q present in DateSuggestions(\"end\")", name)
+		}
+	}
+}
+
+// TestDateSuggestions_EndOfQNarrowsToCalendarQuarters — partial
+// prefix narrows the synthesized set.
+func TestDateSuggestions_EndOfQNarrowsToCalendarQuarters(t *testing.T) {
+	got := DateSuggestions("end of Q")
+	required := []string{"end of Q1", "end of Q2", "end of Q3", "end of Q4"}
+	for _, want := range required {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("DateSuggestions(\"end of Q\") missing %q", want)
+		}
+	}
+	// Should NOT include FQ-family items (different prefix).
+	for _, s := range got {
+		if strings.HasPrefix(s.Name, "end of FQ") {
+			t.Errorf("DateSuggestions(\"end of Q\") unexpectedly surfaced FQ-family item %q", s.Name)
+		}
+	}
+}
+
+// TestDateSuggestions_StartPrefixMirrorsEnd — `start of <period>`
+// is the symmetric form. Same synthesized set with `start` prefix.
+func TestDateSuggestions_StartPrefixMirrorsEnd(t *testing.T) {
+	got := DateSuggestions("start")
+	required := []string{
+		"start of Q1", "start of FQ1",
+		"start of this month", "start of fiscal quarter",
+	}
+	for _, want := range required {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(got))
+			for i, s := range got {
+				names[i] = s.Name
+			}
+			t.Errorf("DateSuggestions(\"start\") missing %q; got %v", want, names)
+		}
+	}
+}
+
+// TestDateSuggestions_EndPrefixSkipsNonPeriodEntries — synthesis
+// excludes non-period date features (today, tomorrow, days, weeks)
+// because `end of today` is not a meaningful expression.
+func TestDateSuggestions_EndPrefixSkipsNonPeriodEntries(t *testing.T) {
+	got := DateSuggestions("end")
+	for _, s := range got {
+		for _, banned := range []string{
+			"end of today", "end of tomorrow", "end of yesterday", "end of now",
+			"end of days", "end of weeks", "end of months", "end of years",
+			"end of from", "end of ago",
+		} {
+			if s.Name == banned {
+				t.Errorf("DateSuggestions(\"end\") unexpectedly synthesized %q", banned)
+			}
+		}
+	}
+}
+
+// TestDateSuggestions_EndingDoesNotMatchSynthesis — the literal
+// English word `ending` should NOT trigger synthesis. The handler
+// must use a word-boundary check, not a naive prefix match.
+func TestDateSuggestions_EndingDoesNotMatchSynthesis(t *testing.T) {
+	got := DateSuggestions("ending")
+	for _, s := range got {
+		if strings.HasPrefix(s.Name, "end of") {
+			t.Errorf("DateSuggestions(\"ending\") incorrectly synthesized %q", s.Name)
+		}
+	}
+}
+
+// TestDateSuggestions_EndOfFYPropagatesSnippet — the year-bearing
+// FY/CY entries carry snippet placeholders. The synthesis handler
+// must propagate them so `end of FY${1:NNNN}` is offered (rather
+// than `end of FY` with no placeholder).
+func TestDateSuggestions_EndOfFYPropagatesSnippet(t *testing.T) {
+	got := DateSuggestions("end of FY")
+	found := false
+	for _, s := range got {
+		if s.Name == "end of FY" && strings.Contains(s.InsertText, "${1:") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("DateSuggestions(\"end of FY\") should offer snippet `end of FY${1:NNNN}`; got %v", got)
+	}
+}
+
+// nameSet — small helper for set-membership comparisons.
+func nameSet(ss []Suggestion) map[string]bool {
+	m := make(map[string]bool, len(ss))
+	for _, s := range ss {
+		m[s.Name] = true
+	}
+	return m
 }

@@ -250,22 +250,62 @@ var templateDateNames = map[string]bool{
 	"last month name": true,
 }
 
+// nonPeriodDateNames identifies CategoryDate features that are NOT
+// period-bearing -- they resolve to a single date or a duration, not
+// to a period the user can take the start/end of. The
+// `end of <period>` / `start of <period>` synthesis handler skips
+// these so it does not offer nonsensical combinations like
+// `end of today` or `end of days`.
+//
+// Adding a new CategoryDate feature: if it produces a Period (a
+// span the user can ask for the start or end of), do nothing -- it
+// flows through synthesis automatically. If it produces a Date
+// (point in time) or Duration (length), add it here.
+var nonPeriodDateNames = map[string]bool{
+	"today":     true,
+	"tomorrow":  true,
+	"yesterday": true,
+	"now":       true,
+	"days":      true,
+	"weeks":     true,
+	"months":    true,
+	"years":     true,
+	"from":      true,
+	"ago":       true,
+}
+
 // DateSuggestions returns date keyword suggestions matching prefix.
 // Surfaces date-related features like "today", "next Friday", "this quarter", "ago", "end of".
 func DateSuggestions(prefix string) []Suggestion {
 	prefix = strings.ToLower(prefix)
 	var suggestions []Suggestion
 
+	// `end[ of]?` / `start[ of]?` prefix triggers the synthesis
+	// handler, which prefixes the registered period set with
+	// `end of ` / `start of `. Stays in sync with the registry --
+	// new period kinds light up automatically.
+	if op, isOp, opPrefix := detectEndStartOfPrefix(prefix); isOp {
+		return synthesizeEndStartOfPeriods(op, opPrefix)
+	}
+
 	registry := DefaultRegistry()
 
 	for _, f := range registry.ByCategory(CategoryDate) {
 		if !templateDateNames[f.Name] && MatchesPrefix(f.Name, prefix) {
+			// Snippet-form entries (e.g., year-bearing literals like
+			// `FY${1:NNNN}`) carry their own InsertText. Plain literals
+			// fall back to Name. Downstream LSP layers detect the
+			// `${...}` placeholder and flag InsertTextFormat: Snippet.
+			insertText := f.InsertText
+			if insertText == "" {
+				insertText = f.Name
+			}
 			suggestions = append(suggestions, Suggestion{
 				Name:        f.Name,
 				Category:    "Date",
 				Description: f.Description,
 				Syntax:      f.Syntax,
-				InsertText:  f.Name,
+				InsertText:  insertText,
 			})
 		}
 		// Also check aliases for parseable date expressions
@@ -352,4 +392,69 @@ func firstWord(name string) string {
 		return before
 	}
 	return name
+}
+
+// detectEndStartOfPrefix recognizes the `end[ of]?` / `start[ of]?`
+// prefix shapes that trigger synthesis. Returns:
+//   - op: the operator string ("end of " or "start of ")
+//   - isOp: true when the prefix matches one of these shapes
+//   - opPrefix: the period-name prefix the user has typed beyond
+//     the operator (e.g., "Q" from "end of Q", or "" from "end")
+//
+// Word-boundary check: the prefix must be exactly `end`, `end `,
+// `end of`, `end of `, `end of <text>`, or the `start` equivalents.
+// `ending`, `endorse`, `started` etc. don't match -- the input
+// has to *be* the operator, not just begin with it.
+func detectEndStartOfPrefix(prefix string) (op string, isOp bool, opPrefix string) {
+	for _, candidate := range []string{"end", "start"} {
+		full := candidate + " of"
+		switch {
+		case prefix == candidate:
+			return candidate + " of ", true, ""
+		case strings.HasPrefix(prefix, candidate+" ") && (prefix == candidate+" " || strings.HasPrefix(prefix, full)):
+			// Either "end " (still typing) or "end of..." (typing the period).
+			rest := strings.TrimPrefix(prefix, candidate+" ")
+			rest = strings.TrimPrefix(rest, "of")
+			rest = strings.TrimPrefix(rest, " ")
+			return candidate + " of ", true, rest
+		}
+	}
+	return "", false, ""
+}
+
+// synthesizeEndStartOfPeriods emits `op + <period-name>` items for
+// every registered period-bearing CategoryDate feature whose name
+// matches `opPrefix`. The `nonPeriodDateNames` skip-list filters out
+// non-period entries (today, tomorrow, days, etc.).
+//
+// Snippet propagation: when a period entry has its own InsertText
+// (e.g., FY/CY year-bearing snippets `FY${1:2026}`), the synthesized
+// item carries `op + that-snippet` so editors still treat the year
+// as a placeholder.
+func synthesizeEndStartOfPeriods(op string, opPrefix string) []Suggestion {
+	var out []Suggestion
+	registry := DefaultRegistry()
+
+	opPrefixLower := strings.ToLower(opPrefix)
+
+	for _, f := range registry.ByCategory(CategoryDate) {
+		if templateDateNames[f.Name] || nonPeriodDateNames[f.Name] {
+			continue
+		}
+		if opPrefix != "" && !MatchesPrefix(f.Name, opPrefixLower) {
+			continue
+		}
+		insertBase := f.InsertText
+		if insertBase == "" {
+			insertBase = f.Name
+		}
+		out = append(out, Suggestion{
+			Name:        op + f.Name,
+			Category:    "Date",
+			Description: f.Description,
+			Syntax:      op + f.Syntax,
+			InsertText:  op + insertBase,
+		})
+	}
+	return out
 }
