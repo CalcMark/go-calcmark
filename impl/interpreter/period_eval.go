@@ -14,6 +14,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
@@ -144,6 +145,121 @@ func (interp *Interpreter) evalBetweenExpr(b *ast.BetweenExpr) (types.Type, erro
 		return nil, fmt.Errorf("between requires Date inputs; end: %w", err)
 	}
 	return types.NewCustomPeriod(startDate, endDate)
+}
+
+// isPeriodBasisTarget reports whether the unit-conversion target
+// names a Period basis (fiscal / calendar). Triggers
+// convertPeriodBasis instead of the duration-conversion path in
+// evalUnitConversion.
+func isPeriodBasisTarget(unit string) bool {
+	switch strings.ToLower(unit) {
+	case "fiscal", "fy", "calendar", "cy":
+		return true
+	}
+	return false
+}
+
+// convertPeriodBasis converts a Period to the requested basis
+// (fiscal ↔ calendar). Two distinct rules apply depending on
+// granularity:
+//
+// Year-grain (CY ↔ FY): label-match. The numeric label carries
+// across — `CY2026 as fiscal` = FY2026, `FY2027 as calendar` =
+// CY2027. The dates differ (FY2027 with Jul start = Jul 2026 –
+// Jun 2027, CY2027 = Jan – Dec 2027) but the user's "year 2027"
+// mental model is preserved. Round-trip is identity.
+//
+// Quarter-grain (Q ↔ FQ): midpoint-contains. The dates are
+// preserved across the conversion — `Q1 as fiscal` with Jul-start
+// FY returns FQ3 of FY2026 (Jan–Mar 2026), the same date range
+// relabeled in fiscal terms. Useful for cross-referencing against
+// fiscal calendars without changing what dates the user means.
+//
+// Calendar-side targets always succeed (calendar boundaries don't
+// depend on configuration). Fiscal-side targets require
+// fiscal_year_starts in frontmatter.
+//
+// Other kinds (months, weeks, named-month, custom) error — they
+// don't have a canonical fiscal equivalent.
+func (interp *Interpreter) convertPeriodBasis(p *types.Period, target string) (*types.Period, error) {
+	target = strings.ToLower(target)
+	switch target {
+	case "fiscal", "fy":
+		return interp.toFiscalBasis(p)
+	case "calendar", "cy":
+		return interp.toCalendarBasis(p)
+	}
+	return nil, fmt.Errorf("unknown period basis: %q (use 'fiscal' or 'calendar')", target)
+}
+
+// toFiscalBasis converts a calendar-grain period to its fiscal
+// counterpart. Year inputs use label-match; quarter inputs use
+// midpoint-contains.
+func (interp *Interpreter) toFiscalBasis(p *types.Period) (*types.Period, error) {
+	if interp.fiscalYearStarts == nil {
+		return nil, fmt.Errorf("fiscal basis requires a 'fiscal_year_starts' frontmatter key")
+	}
+	fc := interp.fiscalYearStarts
+	fyStartMonth := time.Month(fc.month)
+	fyStartDay := fc.day
+
+	switch p.Kind {
+	case types.PeriodCalendarYear:
+		// CY<Y> → FY<Y>: numeric label carries across.
+		return types.NewFiscalYear(p.Year, fyStartMonth, fyStartDay), nil
+
+	case types.PeriodFiscalYear, types.PeriodRelativeYear, types.PeriodRelativeFiscalYear:
+		// CY<Y> seen via `this year` etc. → use the calendar year of
+		// the period's midpoint as the FY label. For PeriodFiscalYear
+		// it's already fiscal (no-op of sorts; reuse the same label).
+		span := p.End.Time.Sub(p.Start.Time)
+		midpoint := p.Start.Time.Add(span / 2)
+		return types.NewFiscalYear(midpoint.Year(), fyStartMonth, fyStartDay), nil
+
+	case types.PeriodCalendarQuarter, types.PeriodFiscalQuarter,
+		types.PeriodRelativeQuarter, types.PeriodRelativeFiscalQuarter:
+		// Quarter-grain: find the FQ whose dates contain the input's
+		// midpoint. Preserves the underlying date range when the
+		// quarters happen to align (e.g., Q1 ↔ FQ3 with Jul-start FY).
+		span := p.End.Time.Sub(p.Start.Time)
+		midpoint := p.Start.Time.Add(span / 2)
+		fyStartYear := fiscalYearWithDay(midpoint, fyStartMonth, fyStartDay)
+		fyStart := time.Date(fyStartYear, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
+		for q := 1; q <= 4; q++ {
+			fqStart := fyStart.AddDate(0, (q-1)*3, 0)
+			fqEnd := fqStart.AddDate(0, 3, -1)
+			if !midpoint.Before(fqStart) && !midpoint.After(fqEnd) {
+				return types.NewFiscalQuarter(fyStart, q)
+			}
+		}
+		return nil, fmt.Errorf("internal: midpoint %v not in any FQ of FY starting %v", midpoint, fyStart)
+	}
+	return nil, fmt.Errorf("`as fiscal` only supports year-grain and quarter-grain periods (got kind %v)", p.Kind)
+}
+
+// toCalendarBasis is the symmetric calendar-side converter.
+func (interp *Interpreter) toCalendarBasis(p *types.Period) (*types.Period, error) {
+	switch p.Kind {
+	case types.PeriodFiscalYear:
+		// FY<Y> → CY<Y>: numeric label carries across.
+		return types.NewCalendarYear(p.Year), nil
+
+	case types.PeriodCalendarYear, types.PeriodRelativeYear, types.PeriodRelativeFiscalYear:
+		// `this year` → CY of period's midpoint year. Relative fiscal
+		// year → CY whose label matches the FY's resolved year.
+		span := p.End.Time.Sub(p.Start.Time)
+		midpoint := p.Start.Time.Add(span / 2)
+		return types.NewCalendarYear(midpoint.Year()), nil
+
+	case types.PeriodCalendarQuarter, types.PeriodFiscalQuarter,
+		types.PeriodRelativeQuarter, types.PeriodRelativeFiscalQuarter:
+		// Calendar quarter containing midpoint: 1=Jan-Mar, ..., 4=Oct-Dec.
+		span := p.End.Time.Sub(p.Start.Time)
+		midpoint := p.Start.Time.Add(span / 2)
+		q := (int(midpoint.Month())-1)/3 + 1
+		return types.NewCalendarQuarter(midpoint.Year(), q)
+	}
+	return nil, fmt.Errorf("`as calendar` only supports year-grain and quarter-grain periods (got kind %v)", p.Kind)
 }
 
 // evalLengthOfExpr evaluates `length of <P>` (returns Duration in

@@ -70,10 +70,17 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		return converted, nil
 	}
 
-	// Period-to-duration conversion: "Q1 in days", "this month in weeks".
-	// v2.0: period expressions evaluate to *types.Period directly; the
-	// duration is End − Start + 1 day (closed-interval, day-precision).
 	if p, ok := result.(*types.Period); ok {
+		// Period basis conversion (v2.0): `Q1 as fiscal`, `this fiscal
+		// year as calendar`, etc. Returns a *types.Period of the target
+		// basis whose dates contain the input period's midpoint.
+		if isPeriodBasisTarget(targetUnit) {
+			return interp.convertPeriodBasis(p, targetUnit)
+		}
+		// Period-to-duration conversion: "Q1 in days", "this month
+		// in weeks". v2.0: period expressions evaluate to
+		// *types.Period directly; the duration is End − Start + 1
+		// day (closed-interval, day-precision).
 		days := int(p.End.Time.Sub(p.Start.Time).Hours()/24) + 1
 		dur := &types.Duration{Value: decimal.NewFromInt(int64(days)), Unit: "day"}
 		converted, err := dur.Convert(targetUnit)
