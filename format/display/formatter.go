@@ -105,6 +105,13 @@ func (f Formatter) Format(t types.Type) string {
 		return f.FormatPercentage(v)
 	case *types.Time:
 		return v.String()
+	case *types.Period:
+		// v2.0: Period values render via String() — named periods
+		// (Calendar Q1 2026, Fiscal Year 2027, April 2026, etc.)
+		// surface human-readable labels; PeriodCustom shows the
+		// ISO start-to-end span. The value-type's String() method
+		// is the single source of truth.
+		return v.String()
 	default:
 		return fmt.Sprintf("%v", t)
 	}

@@ -105,6 +105,13 @@ func (p *Period) String() string {
 	case PeriodFiscalYear:
 		return fmt.Sprintf("Fiscal Year %d", p.Year)
 	case PeriodNamedMonth:
+		// `this April`, `next December`, `April` (bare). Include the
+		// resolved year so the rendered value disambiguates which
+		// year the named month points to. Falls back to the bare
+		// month name when Year is unset (legacy callers).
+		if p.Year != 0 {
+			return fmt.Sprintf("%s %d", time.Month(p.Month).String(), p.Year)
+		}
 		return time.Month(p.Month).String()
 	case PeriodRelativeWeek:
 		return relativeLabel(p.Direction, "week")
