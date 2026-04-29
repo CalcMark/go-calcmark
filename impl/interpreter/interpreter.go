@@ -164,6 +164,10 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalEndOfExpr(n)
 	case *ast.StartOfExpr:
 		return interp.evalStartOfExpr(n)
+	case *ast.BetweenExpr:
+		return interp.evalBetweenExpr(n)
+	case *ast.LengthOfExpr:
+		return interp.evalLengthOfExpr(n)
 	case *ast.FractionLiteral:
 		return interp.evalFractionLiteral(n)
 	case *ast.QuantityLiteral:

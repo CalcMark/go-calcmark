@@ -16,7 +16,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/shopspring/decimal"
 )
 
 // asDate unwraps a *types.Period to its Start date, returns
@@ -112,4 +114,75 @@ func namedMonthPeriod(month time.Month, now time.Time, direction int) *types.Per
 	p.Kind = types.PeriodNamedMonth
 	p.Direction = direction
 	return p
+}
+
+// evalBetweenExpr evaluates `between A and B` / `from A to B` to a
+// *types.Period (PeriodCustom kind). Both endpoints must evaluate
+// to a Date (or a Period that narrows to its Start). Errors when
+// end < start (NewCustomPeriod enforces).
+func (interp *Interpreter) evalBetweenExpr(b *ast.BetweenExpr) (types.Type, error) {
+	if b.Start == nil {
+		return nil, fmt.Errorf("between: missing start endpoint")
+	}
+	if b.End == nil {
+		return nil, fmt.Errorf("between: missing end endpoint")
+	}
+	startVal, err := interp.evalNode(b.Start)
+	if err != nil {
+		return nil, fmt.Errorf("between start: %w", err)
+	}
+	endVal, err := interp.evalNode(b.End)
+	if err != nil {
+		return nil, fmt.Errorf("between end: %w", err)
+	}
+	startDate, err := asDate(startVal)
+	if err != nil {
+		return nil, fmt.Errorf("between requires Date inputs; start: %w", err)
+	}
+	endDate, err := asDate(endVal)
+	if err != nil {
+		return nil, fmt.Errorf("between requires Date inputs; end: %w", err)
+	}
+	return types.NewCustomPeriod(startDate, endDate)
+}
+
+// evalLengthOfExpr evaluates `length of <P>` (returns Duration in
+// days) and `days in <P>` (returns Number — integer day count).
+// AsNumber discriminates the surface form. Both forms compute
+// (Period.End - Period.Start) + 1 day for closed-interval semantics.
+func (interp *Interpreter) evalLengthOfExpr(l *ast.LengthOfExpr) (types.Type, error) {
+	if l.Period == nil {
+		op := "length of"
+		if l.AsNumber {
+			op = "days in"
+		}
+		return nil, fmt.Errorf("%s: missing inner expression", op)
+	}
+	innerVal, err := interp.evalNode(l.Period)
+	if err != nil {
+		return nil, err
+	}
+	p, err := asPeriod(innerVal)
+	if err != nil {
+		op := "length of"
+		if l.AsNumber {
+			op = "days in"
+		}
+		return nil, fmt.Errorf("%s requires a period; got %T", op, innerVal)
+	}
+
+	// Closed interval, day precision: end - start + 1 day.
+	days := int(p.End.Time.Sub(p.Start.Time).Hours()/24) + 1
+
+	if l.AsNumber {
+		// `days in <P>` → Number (integer day count). Used in
+		// arithmetic like `cost = days in cycle * 1000`.
+		return &types.Number{Value: decimal.NewFromInt(int64(days))}, nil
+	}
+	// `length of <P>` → Duration in days. Composes with duration
+	// arithmetic (`length of Q1 + 5 days` = 95 days).
+	return &types.Duration{
+		Value: decimal.NewFromInt(int64(days)),
+		Unit:  "day",
+	}, nil
 }
