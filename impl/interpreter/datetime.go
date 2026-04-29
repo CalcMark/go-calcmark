@@ -94,6 +94,13 @@ var periodAbbreviationExpansion = map[string]string{
 	"this fq": "this fiscal quarter",
 	"next fq": "next fiscal quarter",
 	"last fq": "last fiscal quarter",
+
+	// Bare-form fiscal aliases (lexer admits the phrase, eval treats
+	// it as `this <X>`). `end of fiscal quarter` reads naturally —
+	// users already configure fiscal_year_starts in frontmatter, so
+	// the implicit `this` is unambiguous.
+	"fiscal quarter": "this fiscal quarter",
+	"fiscal year":    "this fiscal year",
 }
 
 func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (types.Type, error) {

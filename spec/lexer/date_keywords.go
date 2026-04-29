@@ -58,6 +58,16 @@ var RelativeDateKeywords = map[string]TokenType{
 	"length of": LENGTH_OF, // `length of <Period>` → Duration
 	"days in":   DAYS_IN,   // `days in <Period>` → Number
 
+	// Bare-form fiscal period aliases. `end of fiscal quarter` reads
+	// naturally in English; users already configure fiscal_year_starts
+	// in frontmatter, so the implied "this" is unambiguous. Single-word
+	// forms (`quarter`, `year`, `month`, `week`) stay as identifiers
+	// because they conflict with common variable names; the multi-word
+	// fiscal phrases use a space and don't collide with snake_case
+	// variable conventions.
+	"fiscal quarter": DATE_THIS_FISCAL_QUARTER,
+	"fiscal year":    DATE_THIS_FISCAL_YEAR,
+
 	// Calendar quarters
 	"this quarter": DATE_THIS_QUARTER,
 	"next quarter": DATE_NEXT_QUARTER,
