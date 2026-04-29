@@ -6,6 +6,7 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/shopspring/decimal"
 )
 
 // evalUnitConversion evaluates explicit unit conversion: "10 meters in feet"
@@ -69,13 +70,12 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 		return converted, nil
 	}
 
-	// Period-to-duration conversion: "Q1 in days", "this month in weeks"
-	// When a Date comes from a period expression, compute its duration and convert.
-	if _, ok := result.(*types.Date); ok {
-		dur, err := interp.periodToDuration(u.Quantity)
-		if err != nil {
-			return nil, err
-		}
+	// Period-to-duration conversion: "Q1 in days", "this month in weeks".
+	// v2.0: period expressions evaluate to *types.Period directly; the
+	// duration is End − Start + 1 day (closed-interval, day-precision).
+	if p, ok := result.(*types.Period); ok {
+		days := int(p.End.Time.Sub(p.Start.Time).Hours()/24) + 1
+		dur := &types.Duration{Value: decimal.NewFromInt(int64(days)), Unit: "day"}
 		converted, err := dur.Convert(targetUnit)
 		if err != nil {
 			return nil, fmt.Errorf("cannot convert period duration: %w", err)
@@ -102,6 +102,12 @@ func (interp *Interpreter) evalUnitConversion(u *ast.UnitConversion) (types.Type
 	// Standard quantity conversion
 	qty, ok := result.(*types.Quantity)
 	if !ok {
+		// Date inputs need a period to be convertible to a duration.
+		// The pre-v2 error message named "period" explicitly so users
+		// know how to fix it; preserve that wording.
+		if _, isDate := result.(*types.Date); isDate {
+			return nil, fmt.Errorf("'in' conversion requires a period (got Date — use a period like 'this month', 'Q1', or 'FQ1')")
+		}
 		return nil, fmt.Errorf("'in' conversion requires a quantity or duration, got %T", result)
 	}
 

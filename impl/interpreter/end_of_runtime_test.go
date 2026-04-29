@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -9,25 +8,34 @@ import (
 	"github.com/CalcMark/go-calcmark/spec/types"
 )
 
-// TestEndOfExpr_VariableBoundDeferredR9 — R9 (variables-as-periods)
-// is demoted to a future PR. Until the *types.Period value-type
-// plumbing lands, `q = Q1; e = end of q` returns a clear runtime
-// error directing users to use the literal directly.
-func TestEndOfExpr_VariableBoundDeferredR9(t *testing.T) {
+// TestEndOfExpr_VariableBoundWorks — v2.0 R9 (variables-as-periods).
+// Pre-v2: `q = Q1; e = end of q` errored because the variable held
+// a Date (Q1's start) and end-of couldn't recover the period kind.
+// v2: Q1 evaluates to *types.Period; the variable holds the Period
+// directly; `end of q` reads Period.End cleanly. The test now asserts
+// the working behavior — Q1 ends March 31 — and pins the v2.0 R9
+// emergent capability so it can't regress.
+func TestEndOfExpr_VariableBoundWorks(t *testing.T) {
 	interp := newTestInterpreterWithClock(time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC))
 	src := "q = Q1\ne = end of q"
 	nodes, err := parser.Parse(src)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	_, err = interp.Eval(nodes)
-	if err == nil {
-		t.Fatal("expected runtime error from `e = end of q`; got nil")
+	results, err := interp.Eval(nodes)
+	if err != nil {
+		t.Fatalf("expected `end of q` to evaluate cleanly with v2 Period plumbing; got error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "variable-bound") &&
-		!strings.Contains(err.Error(), "Period") &&
-		!strings.Contains(err.Error(), "period") {
-		t.Errorf("error %q should mention variable-bound or Period", err.Error())
+	// Two results: the assignment of q, then end of q.
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+	d, ok := results[1].(*types.Date)
+	if !ok {
+		t.Fatalf("expected *types.Date for `end of q`, got %T", results[1])
+	}
+	if d.Time.Year() != 2026 || d.Time.Month() != time.March || d.Time.Day() != 31 {
+		t.Errorf("end of Q1 = %v, want 2026-03-31", d.Time.Format("2006-01-02"))
 	}
 }
 

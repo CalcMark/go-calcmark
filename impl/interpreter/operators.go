@@ -275,13 +275,54 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
-	// Date operations
+	// Period arithmetic (v2.0): asymmetric — `+` extends from the
+	// period's END, `-` extends from its START. So `Q1 + 30 days` =
+	// Mar 31 + 30 days; `Q1 - 5 days` = Jan 1 - 5 days. Period ==
+	// Period is structural (start.Equal && end.Equal). Period ==
+	// Date is a type error and falls through to the generic
+	// type-mismatch error below.
+	if leftPeriod, ok := left.(*types.Period); ok {
+		if rightDur, ok := right.(*types.Duration); ok {
+			switch operator {
+			case "+":
+				// End + Duration → Date past the period's end.
+				return evalDateDurationOperation(leftPeriod.End, rightDur, "+")
+			case "-":
+				// Start - Duration → Date before the period's start.
+				return evalDateDurationOperation(leftPeriod.Start, rightDur, "-")
+			}
+		}
+		if rightPeriod, ok := right.(*types.Period); ok {
+			switch operator {
+			case "==":
+				eq := leftPeriod.Start.Time.Equal(rightPeriod.Start.Time) &&
+					leftPeriod.End.Time.Equal(rightPeriod.End.Time)
+				return &types.Boolean{Value: eq}, nil
+			case "!=":
+				eq := leftPeriod.Start.Time.Equal(rightPeriod.Start.Time) &&
+					leftPeriod.End.Time.Equal(rightPeriod.End.Time)
+				return &types.Boolean{Value: !eq}, nil
+			case "+", "-":
+				return nil, fmt.Errorf("cannot %s two periods; use 'length of' to get a duration", operator)
+			}
+		}
+	}
+
+	// Date operations. Periods masquerading as dates (e.g., when a
+	// Period flows through addition with a Duration on the right and
+	// the Period was the LHS — already handled above; this Date arm
+	// catches the case where a Period appears on the RHS of a Date
+	// operation, which is unusual but not impossible).
 	if leftDate, ok := left.(*types.Date); ok {
 		if rightDur, ok := right.(*types.Duration); ok {
 			return evalDateDurationOperation(leftDate, rightDur, operator)
 		}
 		if rightDate, ok := right.(*types.Date); ok {
 			return evalDateDateOperation(leftDate, rightDate, operator)
+		}
+		// Date - Period: treat Period as its Start (legacy unwrap).
+		if rightPeriod, ok := right.(*types.Period); ok && operator == "-" {
+			return evalDateDateOperation(leftDate, rightPeriod.Start, "-")
 		}
 	}
 
@@ -727,6 +768,27 @@ func evalComparison(left, right types.Type, operator string) (types.Type, error)
 				return types.NewBoolean(leftBool.Value != rightBool.Value), nil
 			default:
 				return nil, fmt.Errorf("unsupported boolean comparison: %s", operator)
+			}
+		}
+	}
+
+	// Period comparisons (v2.0): Period == Period is structural —
+	// matching Start.Time AND End.Time. Period vs Date is a type
+	// error (not in this branch — falls through to the generic
+	// unsupported-comparison error below).
+	if leftPeriod, ok := left.(*types.Period); ok {
+		if rightPeriod, ok := right.(*types.Period); ok {
+			switch operator {
+			case "==":
+				eq := leftPeriod.Start.Time.Equal(rightPeriod.Start.Time) &&
+					leftPeriod.End.Time.Equal(rightPeriod.End.Time)
+				return types.NewBoolean(eq), nil
+			case "!=":
+				eq := leftPeriod.Start.Time.Equal(rightPeriod.Start.Time) &&
+					leftPeriod.End.Time.Equal(rightPeriod.End.Time)
+				return types.NewBoolean(!eq), nil
+			default:
+				return nil, fmt.Errorf("unsupported period comparison: %s — periods only support == and !=", operator)
 			}
 		}
 	}

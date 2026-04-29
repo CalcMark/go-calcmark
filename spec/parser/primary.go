@@ -812,16 +812,35 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 		}, nil
 	}
 
-	// Try relative date expressions (weekdays, months, periods)
-	if p.match(lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
+	// Try relative date expressions (weekdays, months, periods).
+	//
+	// Period-bearing tokens (DATE_THIS_QUARTER, DATE_NEXT_MONTH,
+	// DATE_THIS_YEAR, etc.) evaluate to *types.Period in v2.0. The
+	// `from <X>` arithmetic context is a Date-narrowing context — the
+	// user means "starting from the start of that period" — so we
+	// wrap period-bearing tokens in StartOfExpr at parse time.
+	// Day-bearing tokens (weekdays) stay as RelativeDateLiteral.
+	if p.match(lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY) {
+		return &ast.RelativeDateLiteral{
+			Keyword:    string(p.previous().Value),
+			SourceText: string(p.previous().OriginalText),
+		}, nil
+	}
+	if p.match(
 		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
 		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
 		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
 		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
 		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {
-		return &ast.RelativeDateLiteral{
-			Keyword:    string(p.previous().Value),
-			SourceText: string(p.previous().OriginalText),
+		tok := p.previous()
+		inner := &ast.RelativeDateLiteral{
+			Keyword:    string(tok.Value),
+			SourceText: string(tok.OriginalText),
+		}
+		return &ast.StartOfExpr{
+			Period:     inner,
+			SourceText: "start of " + string(tok.OriginalText),
+			Range:      tokenRange(tok),
 		}, nil
 	}
 
