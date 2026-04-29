@@ -5,6 +5,30 @@ import (
 	"unicode"
 )
 
+// isPotentialNotationFollow reports whether the rune at pos is a
+// digit AND the matched phrase ends with a notation prefix (FQ /
+// CQ / FY / CY). This indicates the user intends notation literal
+// (FQ1, CY2026) and we should NOT consume the matched phrase
+// keyword. Lowercased compare on the trailing two letters of the
+// phrase.
+func isPotentialNotationFollow(text []rune, pos int, phrase string) bool {
+	if pos >= len(text) {
+		return false
+	}
+	if !unicode.IsDigit(text[pos]) {
+		return false
+	}
+	if len(phrase) < 2 {
+		return false
+	}
+	tail := strings.ToLower(phrase[len(phrase)-2:])
+	switch tail {
+	case "fq", "cq", "fy", "cy":
+		return true
+	}
+	return false
+}
+
 // tryReadDateKeyword attempts to read a date keyword (today, tomorrow, etc.)
 // Returns token type and true if matched, otherwise 0 and false
 // Performance: O(1) map lookups
@@ -19,12 +43,25 @@ func (l *Lexer) tryReadDateKeyword() (TokenType, bool) {
 		return tokenType, true
 	}
 
-	// Try two-word phrases (this week, next month, last year)
+	// Try two-word phrases (this week, next month, last year). When
+	// the phrase ends with a notation prefix (FQ, CQ, FY, CY) and is
+	// followed immediately by a digit, do NOT match — `next FQ1`
+	// means "FQ1 of next FY" (notation literal), not the bare-phrase
+	// `next FQ` keyword. Without this guard the lexer greedily eats
+	// `next FQ` and leaves `1` dangling as a NUMBER.
 	twoWords := l.peekTwoWords()
 	if tokenType, ok := RelativeDateKeywords[strings.ToLower(twoWords)]; ok {
-		// Consume both words
-		l.pos = startPos + len([]rune(twoWords))
-		return tokenType, true
+		consumed := len([]rune(twoWords))
+		nextPos := startPos + consumed
+		// Peek the rune after the matched phrase. Reject the match if
+		// it's a digit and the second word is a 2-char notation prefix
+		// — covers `next FQ1`, `last CY26`, `this FY2027`, etc.
+		if isPotentialNotationFollow(l.text, nextPos, twoWords) {
+			// Fall through to single-word match below.
+		} else {
+			l.pos = startPos + consumed
+			return tokenType, true
+		}
 	}
 
 	// Try three-word phrases (this fiscal quarter, next fiscal year)

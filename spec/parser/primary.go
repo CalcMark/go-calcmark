@@ -324,23 +324,31 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return p.parseNaturalLanguageFunction()
 	}
 
+	// Directed notation: `next FQ1`, `last CY2026`, `this Q1`. The
+	// IDENTIFIER `this`/`next`/`last` followed by a notation literal
+	// (Q/FQ/FY/CY) means "the Nth quarter / year of the relative
+	// fiscal year". Lexer no longer greedy-matches `next FQ` (etc.)
+	// when followed by a digit, so the direction word arrives here
+	// as an IDENTIFIER.
+	if (p.checkIdentValue("next") || p.checkIdentValue("last") || p.checkIdentValue("this")) &&
+		isNotationLiteralToken(p.peekAhead(1).Type) {
+		dirTok := p.advance()
+		direction := strings.ToLower(string(dirTok.Value))
+		notationTok := p.advance()
+		prefix := notationLiteralPrefix(notationTok.Type)
+		return &ast.RelativeDateLiteral{
+			Keyword: direction + " " + prefix + ":" + string(notationTok.Value),
+			SourceText: string(dirTok.Value) + " " + string(notationTok.OriginalText),
+		}, nil
+	}
+
 	// Notation: Q1-Q4, FQ1-FQ4, FY26, CY2026
 	if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
 		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL) {
 		tok := p.previous()
 		// Encode as RelativeDateLiteral with prefix+value keyword
 		// e.g., "Q:1", "FQ:3", "FY:2026", "CY:26"
-		prefix := ""
-		switch tok.Type {
-		case lexer.CALENDAR_QUARTER_LITERAL:
-			prefix = "Q"
-		case lexer.FISCAL_QUARTER_LITERAL:
-			prefix = "FQ"
-		case lexer.FISCAL_YEAR_LITERAL:
-			prefix = "FY"
-		case lexer.CALENDAR_YEAR_LITERAL:
-			prefix = "CY"
-		}
+		prefix := notationLiteralPrefix(tok.Type)
 		return &ast.RelativeDateLiteral{
 			Keyword:    prefix + ":" + string(tok.Value),
 			SourceText: string(tok.OriginalText),
@@ -979,6 +987,36 @@ func (p *RecursiveDescentParser) parseFractionLiteral() (ast.Node, error) {
 // AST node types and reads their SourceText / Keyword / Name
 // fields. Falls back to the node's String() form for unrecognized
 // shapes -- not perfect for round-tripping but sufficient for
+// isNotationLiteralToken reports whether the given token type is
+// one of the date-notation literals (Q1, FQ1, FY2026, CY2026). Used
+// by the directed-notation parser path (`next FQ1`, etc.).
+func isNotationLiteralToken(t lexer.TokenType) bool {
+	switch t {
+	case lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
+		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL:
+		return true
+	}
+	return false
+}
+
+// notationLiteralPrefix returns the canonical Q / FQ / FY / CY prefix
+// for a notation-literal token type. Used to encode the keyword
+// string ("FQ:1" / "next FQ:1" / etc.) consumed by the interpreter's
+// evalNotation switch.
+func notationLiteralPrefix(t lexer.TokenType) string {
+	switch t {
+	case lexer.CALENDAR_QUARTER_LITERAL:
+		return "Q"
+	case lexer.FISCAL_QUARTER_LITERAL:
+		return "FQ"
+	case lexer.FISCAL_YEAR_LITERAL:
+		return "FY"
+	case lexer.CALENDAR_YEAR_LITERAL:
+		return "CY"
+	}
+	return ""
+}
+
 // diagnostic messages.
 func innerSourceText(n ast.Node) string {
 	switch v := n.(type) {

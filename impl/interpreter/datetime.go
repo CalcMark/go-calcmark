@@ -276,7 +276,25 @@ func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, ti
 // happens at the AST layer (evalEndOfExpr / evalStartOfExpr) and
 // flows back into evalEndOfNotation via the AST inner.
 func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Type, error) {
-	parts := strings.SplitN(keyword, ":", 2)
+	// Strip optional direction prefix: `next FQ:1` / `last CY:2026` /
+	// `this Q:1` mean "the Nth quarter / year of the relative
+	// fiscal/calendar year". The parser produces these forms when
+	// the user writes `next FQ1` / `last CY2026` etc. (see
+	// directed-notation parser path in spec/parser/primary.go).
+	yearOffset := 0
+	rest := keyword
+	for _, dir := range []struct {
+		prefix string
+		offset int
+	}{{"next ", +1}, {"last ", -1}, {"this ", 0}} {
+		if strings.HasPrefix(strings.ToLower(rest), dir.prefix) {
+			yearOffset = dir.offset
+			rest = rest[len(dir.prefix):]
+			break
+		}
+	}
+
+	parts := strings.SplitN(rest, ":", 2)
 	if len(parts) != 2 {
 		return nil, nil // not a notation
 	}
@@ -285,12 +303,13 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 	switch prefix {
 	case "Q":
 		// v2.0: Q1-Q4 evaluates to Period (calendar quarter of the
-		// current year). Resolved against `now`'s year.
+		// current calendar year). yearOffset shifts the year for
+		// `next Q1` / `last Q4`.
 		q, err := strconv.Atoi(value)
 		if err != nil || q < 1 || q > 4 {
 			return nil, fmt.Errorf("invalid calendar quarter: Q%s", value)
 		}
-		return types.NewCalendarQuarter(now.Year(), q)
+		return types.NewCalendarQuarter(now.Year()+yearOffset, q)
 
 	case "FQ":
 		if interp.fiscalYearStarts == nil {
@@ -303,9 +322,9 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		fc := interp.fiscalYearStarts
 		fyStartMonth := time.Month(fc.month)
 		fyStartDay := fc.day
-		// FQ1 starts at the fiscal year start; the fiscal year
-		// containing `now` anchors which FQ year-cycle this is.
-		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
+		// FQ1 starts at the fiscal year start; yearOffset selects
+		// next/last/this FY relative to `now`.
+		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
 		fyStart := time.Date(fy, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewFiscalQuarter(fyStart, q)
 
@@ -320,6 +339,7 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		if fyLabel < 100 {
 			fyLabel += 2000 // 2-digit: FY27 = 2027
 		}
+		fyLabel += yearOffset
 		fc := interp.fiscalYearStarts
 		return types.NewFiscalYear(fyLabel, time.Month(fc.month), fc.day), nil
 
@@ -331,6 +351,7 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		if year < 100 {
 			year += 2000 // 2-digit: CY26 = 2026
 		}
+		year += yearOffset
 		return types.NewCalendarYear(year), nil
 	}
 
