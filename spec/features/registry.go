@@ -779,6 +779,37 @@ func getDateFeatures() []Feature {
 			InsertText:  fmt.Sprintf("CY${1:%d}", time.Now().Year()),
 			Example:     "end of CY2026",
 		},
+		// v2.0 period operators: between A and B / from A to B
+		// construct a custom Period; length of / days in measure a
+		// Period's span. Discoverable via LSP completion so users
+		// don't have to guess the surface forms.
+		{
+			Name:        "between",
+			Category:    CategoryDate,
+			Syntax:      "between <date1> and <date2>",
+			Description: "Construct a custom Period spanning two dates (closed interval, inclusive). end >= start required.",
+			InsertText:  "between ${1:Apr 15 2026} and ${2:Jul 4 2026}",
+			Aliases: []Alias{
+				{Name: "from A to B", Parseable: true, Example: "from Apr 15 2026 to Jul 4 2026"},
+			},
+			Example: "between Apr 15 2026 and Jul 4 2026",
+		},
+		{
+			Name:        "length of",
+			Category:    CategoryDate,
+			Syntax:      "length of <period>",
+			Description: "Length of a period as a Duration in days (closed-interval, inclusive). Composes with duration arithmetic.",
+			InsertText:  "length of ${1:Q1}",
+			Example:     "length of Q1",
+		},
+		{
+			Name:        "days in",
+			Category:    CategoryDate,
+			Syntax:      "days in <period>",
+			Description: "Number of days in a period (integer count, closed-interval). Returns Number for use in arithmetic.",
+			InsertText:  "days in ${1:April}",
+			Example:     "days in April",
+		},
 	}
 }
 
