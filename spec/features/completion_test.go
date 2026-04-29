@@ -919,3 +919,91 @@ func nameSet(ss []Suggestion) map[string]bool {
 	}
 	return m
 }
+
+// TestDateSuggestions_BareFQSurfacesThisFQAlias — typing `FQ`
+// alone should surface `this FQ` (and friends) as suggestions
+// even though the lexer rejects bare `FQ`. The dropdown shows
+// the alias-name (`this FQ`), inserts the alias-name (which the
+// lexer accepts), and the user gets "current fiscal quarter"
+// semantics — what they probably wanted by typing FQ.
+//
+// Lexer-design context: spec/lexer/date_keywords.go:26 explicitly
+// excludes bare CY/FY/CQ/FQ from DateKeywords because they collide
+// with the notation parser (`FQ` would consume out of `FQ1`).
+// This suffix-matching path bridges the discoverability gap
+// without changing the lexer.
+func TestDateSuggestions_BareFQSurfacesThisFQAlias(t *testing.T) {
+	got := DateSuggestions("FQ")
+	wanted := []string{"this FQ", "next FQ", "last FQ"}
+	for _, want := range wanted {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			names := make([]string, len(got))
+			for i, s := range got {
+				names[i] = s.Name
+			}
+			t.Errorf("DateSuggestions(\"FQ\") missing %q; got %v", want, names)
+		}
+	}
+}
+
+// TestDateSuggestions_BareFYSurfacesThisFYAlias — same shape for FY.
+func TestDateSuggestions_BareFYSurfacesThisFYAlias(t *testing.T) {
+	got := DateSuggestions("FY")
+	wanted := []string{"this FY", "next FY", "last FY"}
+	for _, want := range wanted {
+		found := false
+		for _, s := range got {
+			if s.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("DateSuggestions(\"FY\") missing %q", want)
+		}
+	}
+}
+
+// TestDateSuggestions_BareCYSurfacesThisCYAlias — symmetric for
+// calendar year. `CY` aliases need to be registered first; this
+// test will exercise that wiring.
+func TestDateSuggestions_BareCYSurfacesThisCYAlias(t *testing.T) {
+	got := DateSuggestions("CY")
+	want := "this CY"
+	found := false
+	for _, s := range got {
+		if s.Name == want {
+			found = true
+			break
+		}
+	}
+	if !found {
+		// CY aliases not yet registered — this test will pass once
+		// the next commit adds them. Fail loudly so it doesn't slip.
+		t.Errorf("DateSuggestions(\"CY\") missing %q (CY aliases need to be registered on `this year`)", want)
+	}
+}
+
+// TestDateSuggestions_BareCQSurfacesThisCQAlias — calendar quarter
+// abbreviation.
+func TestDateSuggestions_BareCQSurfacesThisCQAlias(t *testing.T) {
+	got := DateSuggestions("CQ")
+	want := "this CQ"
+	found := false
+	for _, s := range got {
+		if s.Name == want {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("DateSuggestions(\"CQ\") missing %q (CQ aliases need to be registered on `this quarter`)", want)
+	}
+}

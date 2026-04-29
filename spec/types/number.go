@@ -67,6 +67,8 @@ func typeName(t Type) string {
 		return "Date"
 	case *Duration:
 		return "Duration"
+	case *Period:
+		return "Period"
 	case *Rate:
 		return "Rate"
 	case *Percentage:

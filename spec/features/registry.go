@@ -617,16 +617,36 @@ func getDateFeatures() []Feature {
 			Category:    CategoryDate,
 			Syntax:      "this year",
 			Description: "First day of the current calendar year",
-			Aliases:     []Alias{{Name: "next year", Parseable: true}, {Name: "last year", Parseable: true}},
-			Example:     "this year + 6 months",
+			// `this CY` / `next CY` / `last CY` shorthand forms are
+			// already lexed (spec/lexer/date_keywords.go) but were
+			// not registered. Surfacing as Parseable aliases means
+			// typing the bare abbreviation `CY` shows these as
+			// completions (via suffix-matching in DateSuggestions),
+			// even though the lexer rejects bare `CY` due to
+			// notation-collision (CY2026).
+			Aliases: []Alias{
+				{Name: "next year", Parseable: true},
+				{Name: "last year", Parseable: true},
+				{Name: "this CY", Parseable: true},
+				{Name: "next CY", Parseable: true},
+				{Name: "last CY", Parseable: true},
+			},
+			Example: "this year + 6 months",
 		},
 		{
 			Name:        "this quarter",
 			Category:    CategoryDate,
 			Syntax:      "this quarter",
 			Description: "First day of the current calendar quarter",
-			Aliases:     []Alias{{Name: "next quarter", Parseable: true}, {Name: "last quarter", Parseable: true}},
-			Example:     "this quarter + 30 days",
+			// `this CQ` / `next CQ` / `last CQ` symmetric to CY.
+			Aliases: []Alias{
+				{Name: "next quarter", Parseable: true},
+				{Name: "last quarter", Parseable: true},
+				{Name: "this CQ", Parseable: true},
+				{Name: "next CQ", Parseable: true},
+				{Name: "last CQ", Parseable: true},
+			},
+			Example: "this quarter + 30 days",
 		},
 		{
 			Name:        "fiscal quarter",

@@ -515,6 +515,10 @@ func ContainsScaleRef(node Node) bool {
 		return ContainsScaleRef(n.Amount)
 	case *QuantityLiteral:
 		return ContainsScaleRef(n.Expr)
+	case *EndOfExpr:
+		return ContainsScaleRef(n.Period)
+	case *StartOfExpr:
+		return ContainsScaleRef(n.Period)
 	default:
 		// Leaf nodes: NumberLiteral, FractionLiteral, CurrencyLiteral,
 		// DateLiteral, TimeLiteral, DurationLiteral,

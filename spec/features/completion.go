@@ -308,12 +308,29 @@ func DateSuggestions(prefix string) []Suggestion {
 				InsertText:  insertText,
 			})
 		}
-		// Also check aliases for parseable date expressions
+		// Also check aliases for parseable date expressions.
+		//
+		// Suffix matching for relative-period aliases: when an alias
+		// starts with `this `, `next `, or `last ` followed by an
+		// abbreviation like `FQ` / `CQ` / `FY` / `CY`, also match the
+		// abbreviation prefix on its own. The lexer rejects bare `FQ`
+		// (it collides with `FQ1` notation parsing — see
+		// spec/lexer/date_keywords.go), so the user types `FQ` to
+		// search but the dropdown surfaces `this FQ` (which lexes
+		// correctly). Inserting `this FQ` rather than `FQ` keeps the
+		// completion always parseable.
 		for _, alias := range f.Aliases {
 			if templateDateNames[alias.Name] {
 				continue
 			}
-			if alias.Parseable && MatchesPrefix(alias.Name, prefix) {
+			matched := alias.Parseable && MatchesPrefix(alias.Name, prefix)
+			if !matched && alias.Parseable {
+				// Try matching the period-abbreviation suffix.
+				if suffix, ok := relativePeriodSuffix(alias.Name); ok && MatchesPrefix(suffix, prefix) {
+					matched = true
+				}
+			}
+			if matched {
 				suggestions = append(suggestions, Suggestion{
 					Name:        alias.Name,
 					Category:    "Date",
@@ -457,4 +474,29 @@ func synthesizeEndStartOfPeriods(op string, opPrefix string) []Suggestion {
 		})
 	}
 	return out
+}
+
+// relativePeriodSuffix returns the trailing abbreviation of a
+// relative-period alias name. Given `"this FQ"` returns `"FQ"`,
+// `true`. Given anything that doesn't start with a relative
+// modifier OR whose suffix is a multi-word phrase rather than a
+// short abbreviation, returns `"", false`.
+//
+// Used by DateSuggestions to surface aliases like `this FQ` when
+// the user types just `FQ`. Only matches the recognized
+// abbreviations (FQ / CQ / FY / CY) so we don't accidentally let
+// `this fiscal quarter` match the prefix `fiscal` (that already
+// matches via the alias name itself).
+func relativePeriodSuffix(aliasName string) (string, bool) {
+	for _, modifier := range []string{"this ", "next ", "last "} {
+		if !strings.HasPrefix(aliasName, modifier) {
+			continue
+		}
+		rest := aliasName[len(modifier):]
+		switch rest {
+		case "FQ", "CQ", "FY", "CY":
+			return rest, true
+		}
+	}
+	return "", false
 }
