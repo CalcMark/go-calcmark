@@ -64,17 +64,22 @@ func TestDateKeywordTokenization(t *testing.T) {
 	}
 }
 
-// TestDateLiteralTokenization tests date literal recognition
+// TestDateLiteralTokenization tests date literal recognition.
+// Token Value format (v2.0): "Month:Day:Year:HasExplicitDay" where
+// the trailing field is "1" when the user wrote a day number in
+// source, "0" otherwise. Discriminator drives the parser's choice
+// between DateLiteral (specific date) and RelativeDateLiteral (bare
+// month → Period). See U5 in the v2.0 plan.
 func TestDateLiteralTokenization(t *testing.T) {
 	tests := []struct {
 		input         string
-		expectedValue string // Format: "Month:Day:Year"
+		expectedValue string // Format: "Month:Day:Year:HasExplicitDay"
 	}{
-		{"Dec 12", "December:12:"},
-		{"December 25", "December:25:"},
-		{"Dec 12 2026", "December:12:2026"},
-		{"December 25 2025", "December:25:2025"},
-		{"January 2026", "January:1:2026"},
+		{"Dec 12", "December:12::1"},
+		{"December 25", "December:25::1"},
+		{"Dec 12 2026", "December:12:2026:1"},
+		{"December 25 2025", "December:25:2025:1"},
+		{"January 2026", "January:1:2026:0"}, // year-only, no explicit day
 	}
 
 	for _, tt := range tests {

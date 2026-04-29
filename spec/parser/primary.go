@@ -403,22 +403,43 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
-	// Date literals: "Dec 12", "December 25 2025"
+	// Date literals: "Dec 12", "December 25 2025", and bare months
+	// like "April".
 	if p.match(lexer.DATE_LITERAL) {
 		tok := p.previous()
-		// Value format: "Month:Day:Year" (e.g., "December:25:2025")
+		// Value format: "Month:Day:Year:HasExplicitDay" where the
+		// last field is "1" or "0". Pre-v2.0 tokens may lack the
+		// 4th field; treat absence as HasExplicitDay = true so
+		// legacy callers (e.g., synthesized tokens) keep their
+		// existing Date semantics.
 		parts := strings.Split(string(tok.Value), ":")
 
 		var year *string
 		if len(parts) >= 3 && parts[2] != "" {
 			year = &parts[2]
 		}
+		hasExplicitDay := true
+		if len(parts) >= 4 {
+			hasExplicitDay = parts[3] == "1"
+		}
+
+		// Bare month name (no day, no year): semantically a Period
+		// (the whole month). Emit RelativeDateLiteral so it flows
+		// through the existing period-keyword evaluation path
+		// shared with `this April` / `next April`.
+		if !hasExplicitDay && year == nil {
+			return &ast.RelativeDateLiteral{
+				Keyword:    "this " + parts[0],
+				SourceText: string(tok.OriginalText),
+			}, nil
+		}
 
 		return &ast.DateLiteral{
-			Month:      parts[0],
-			Day:        parts[1],
-			Year:       year,
-			SourceText: string(tok.OriginalText),
+			Month:          parts[0],
+			Day:            parts[1],
+			Year:           year,
+			HasExplicitDay: hasExplicitDay,
+			SourceText:     string(tok.OriginalText),
 		}, nil
 	}
 
@@ -698,7 +719,10 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 		}, nil
 	}
 
-	// Try date literal (Dec 25, December 25 2025)
+	// Try date literal (Dec 25, December 25 2025). In `from <date>`
+	// position the user typically writes a specific date; we treat
+	// any DATE_LITERAL here as a Date and preserve HasExplicitDay
+	// for downstream consumers.
 	if p.match(lexer.DATE_LITERAL) {
 		tok := p.previous()
 		parts := strings.Split(string(tok.Value), ":")
@@ -707,12 +731,17 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 		if len(parts) >= 3 && parts[2] != "" {
 			year = &parts[2]
 		}
+		hasExplicitDay := true
+		if len(parts) >= 4 {
+			hasExplicitDay = parts[3] == "1"
+		}
 
 		return &ast.DateLiteral{
-			Month:      parts[0],
-			Day:        parts[1],
-			Year:       year,
-			SourceText: string(tok.OriginalText),
+			Month:          parts[0],
+			Day:            parts[1],
+			Year:           year,
+			HasExplicitDay: hasExplicitDay,
+			SourceText:     string(tok.OriginalText),
 		}, nil
 	}
 

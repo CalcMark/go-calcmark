@@ -206,6 +206,7 @@ func (l *Lexer) readDateLiteral() Token {
 
 	var day string
 	var year string
+	var hasExplicitDay bool
 
 	// Try to read day (number)
 	if unicode.IsDigit(l.currentChar()) {
@@ -214,12 +215,13 @@ func (l *Lexer) readDateLiteral() Token {
 
 		// Check if this number is a year (4 digits) or a day
 		if len(numStr) == 4 {
-			// It's a year: "January 2026"
+			// It's a year: "January 2026" — no day number scanned.
 			year = numStr
 			day = "1" // Default to 1st
 		} else {
 			// It's a day: "January 15"
 			day = numStr
+			hasExplicitDay = true
 
 			// Try to read year (4-digit number)
 			if unicode.IsDigit(l.currentChar()) {
@@ -233,13 +235,21 @@ func (l *Lexer) readDateLiteral() Token {
 		day = "1"
 	}
 
-	// Combine into value: "month:day:year"
+	// Combine into value: "month:day:year:hasExplicitDay" where
+	// the last field is "1" or "0". Parser splits by ":" and reads
+	// parts[3] when present; legacy callers reading parts[0..2] are
+	// unaffected.
+	flag := "0"
+	if hasExplicitDay {
+		flag = "1"
+	}
 	value := month + ":" + day
 	if year != "" {
 		value += ":" + year
 	} else {
 		value += ":"
 	}
+	value += ":" + flag
 
 	sourceText := string(l.text[startPos:l.pos])
 

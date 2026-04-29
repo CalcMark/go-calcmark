@@ -181,9 +181,21 @@ func (r *RateLiteral) GetRange() *Range {
 
 // DateLiteral represents a date literal: "Dec 25" or "Dec 25 2024"
 type DateLiteral struct {
-	Month      string  // "Dec", "December"
-	Day        string  // "25"
-	Year       *string // nil if not provided, "2024" if provided
+	Month string  // "Dec", "December"
+	Day   string  // "25" — the literal day. When the user wrote no
+	// day number in source, Day is "1" (lexer default) AND
+	// HasExplicitDay is false.
+	Year *string // nil if not provided, "2024" if provided
+
+	// HasExplicitDay reports whether a day number was scanned from
+	// the source. Discriminates `April 1` (true: specific date) from
+	// `April` (false: bare month, semantically a Period). The parser
+	// uses this flag to route bare-month forms to RelativeDateLiteral
+	// instead of DateLiteral. Lexer-driven so the discriminator
+	// doesn't depend on substring inspection of SourceText (which
+	// drifts with whitespace / future lexer changes).
+	HasExplicitDay bool
+
 	SourceText string
 	Range      *Range
 }
