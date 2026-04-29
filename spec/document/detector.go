@@ -329,6 +329,14 @@ func (d *Detector) looksLikeCalculation(tokens []lexer.Token) bool {
 		return true
 	}
 
+	// Period-bearing operator (end of / start of) followed by a
+	// literal period-bearing token. The look-ahead is required —
+	// `end of the day` is common English prose (END_OF + IDENTIFIER)
+	// and must not classify as a calculation.
+	if isPeriodOperatorToken(first.Type) {
+		return looksLikePeriodOperator(tokens)
+	}
+
 	// Identifier alone or followed by operator/function call = calculation
 	// But multiple consecutive identifiers = prose (like "More text")
 	// Single identifier = ambiguous, treat as prose in document context
@@ -427,6 +435,42 @@ func isFunctionToken(t lexer.TokenType) bool {
 		return true
 	}
 	return false
+}
+
+// isPeriodOperatorToken reports whether t is a period-bearing
+// operator that takes a period inner expression (e.g., `end of <P>`,
+// `start of <P>`). Pure function.
+//
+// New tokens added in v2.0 (LENGTH_OF, DAYS_IN, BETWEEN) plug in
+// here as they land — the classifier dispatch in
+// looksLikeCalculation already routes through this helper.
+func isPeriodOperatorToken(t lexer.TokenType) bool {
+	switch t {
+	case lexer.END_OF, lexer.START_OF:
+		return true
+	}
+	return false
+}
+
+// looksLikePeriodOperator reports whether a token stream beginning
+// with a period-bearing operator (END_OF / START_OF / ...) is a
+// calculation. Pure function. The decision rule is look-ahead on
+// tokens[1]: literal period-bearing tokens → calc; anything else
+// (notably IDENTIFIER) → prose. This keeps `end of the day` (common
+// English) out of calc classification while admitting `end of Q1`,
+// `end of this fiscal year`, `end of April`, etc.
+//
+// IDENTIFIER is rejected even though it would unlock the R9
+// variable-bound path (`q = Q1; e = end of q`). R9 is deferred to a
+// later PR; bare-line variable-bound forms revisit when R9 lands.
+// Assignment forms (`x = end of q`) classify via the assignment
+// shape, so the deferred path isn't blocked for users who write the
+// natural `x = ...` form.
+func looksLikePeriodOperator(tokens []lexer.Token) bool {
+	if len(tokens) < 2 {
+		return false
+	}
+	return isDateToken(tokens[1].Type)
 }
 
 // hasIndentedCodePrefix checks if a line starts with 4+ spaces or a tab,
