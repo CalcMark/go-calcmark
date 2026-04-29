@@ -112,6 +112,32 @@ func (c *Checker) checkEndOfStartOfInner(inner ast.Node, op string, r *ast.Range
 				Range:    r,
 			})
 		}
+	case *ast.DateLiteral:
+		// Bare month names like `April` parse as DateLiteral with
+		// implicit Day=1, Year=nil. Semantically these are calendar
+		// periods (the whole month), not specific dates -- they were
+		// accepted as period inners pre-PR-1b through the old
+		// string-prefix dispatch's resolveEndOfMonth fallback.
+		// Accept them here so `end of April` keeps working.
+		// Discriminator: SourceText with no digits => bare month
+		// name (no day, no year). With digits => specific date
+		// (e.g., `April 15`, `Apr 1 2026`) and reject.
+		//
+		// This is a transitional shim. The brainstorm at
+		// docs/brainstorms/2026-04-29-period-data-type-and-go-semantics-requirements.md
+		// (calcmark-web) decided April should become a Period type
+		// outright; once that migration lands, the parser will emit
+		// a Period-bearing node directly and this DateLiteral arm
+		// can collapse back to a single rejection rule.
+		if !sourceTextHasDigit(v.SourceText) {
+			break // accept as period
+		}
+		c.addDiagnostic(Diagnostic{
+			Severity: Error,
+			Code:     DiagInvalidEndOfPeriod,
+			Message:  fmt.Sprintf("%s requires a period; got Date", op),
+			Range:    r,
+		})
 	case *ast.Identifier:
 		// Variable-bound: type-checker permits, runtime catches
 		// non-Period values. R9 emergent capability is deferred to
@@ -128,13 +154,6 @@ func (c *Checker) checkEndOfStartOfInner(inner ast.Node, op string, r *ast.Range
 			Severity: Error,
 			Code:     DiagInvalidEndOfPeriod,
 			Message:  fmt.Sprintf("%s requires a period; got Currency", op),
-			Range:    r,
-		})
-	case *ast.DateLiteral:
-		c.addDiagnostic(Diagnostic{
-			Severity: Error,
-			Code:     DiagInvalidEndOfPeriod,
-			Message:  fmt.Sprintf("%s requires a period; got Date", op),
 			Range:    r,
 		})
 	case *ast.QuantityLiteral:
@@ -156,4 +175,17 @@ func (c *Checker) checkEndOfStartOfInner(inner ast.Node, op string, r *ast.Range
 	// undefined identifier — the existing identifier-check handles
 	// that).
 	c.checkNode(inner)
+}
+
+// sourceTextHasDigit reports whether s contains any digit character.
+// Used to distinguish bare month names (`April`) from specific date
+// literals (`April 15`, `Apr 1 2026`) since both parse as the same
+// AST node type but only the former is period-bearing.
+func sourceTextHasDigit(s string) bool {
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			return true
+		}
+	}
+	return false
 }

@@ -109,6 +109,61 @@ func TestSemantic_StartOfTomorrowRejected(t *testing.T) {
 	}
 }
 
+// TestSemantic_EndOfBareMonthNameIsAccepted — regression for a
+// PR-1b bug. Pre-PR-1b, `end of April` (bare month name, no `this`
+// modifier) worked because the old string-prefix dispatch was
+// forgiving. PR-1b's stricter AST-level type check rejects it
+// because the parser emits *ast.DateLiteral{Month: "April",
+// Day: "1", Year: nil, SourceText: "April"} for the bare form,
+// and DateLiteral wasn't recognized as a period. The downstream
+// brainstorm decided April should become a Period type entirely,
+// but until that migration lands, bare month names need to be
+// accepted as period-bearing inner expressions.
+//
+// Discriminator for "bare month name" (vs specific date like
+// `April 15`): SourceText contains no digits. Bare month names
+// don't have a day or year written; specific dates always do.
+func TestSemantic_EndOfBareMonthNameIsAccepted(t *testing.T) {
+	for _, input := range []string{
+		"x = end of April",
+		"x = end of January",
+		"x = end of December",
+		"x = end of Apr",
+		"x = end of jan", // case-insensitive
+		"x = start of April",
+		"x = start of November",
+	} {
+		t.Run(input, func(t *testing.T) {
+			diags := runChecker(t, input)
+			if hasEndOfPeriodDiagnostic(diags) {
+				t.Errorf("bare month name should be accepted as period; %q got %v",
+					input, diags)
+			}
+		})
+	}
+}
+
+// TestSemantic_EndOfSpecificDateRejected — the inverse: when the
+// user writes an explicit date (with day or year), it's a Date
+// not a Period, and `end of` rejects it. Discriminator: source
+// text contains digits.
+func TestSemantic_EndOfSpecificDateRejected(t *testing.T) {
+	for _, input := range []string{
+		"x = end of April 15",
+		"x = end of Apr 1 2026",
+		"x = end of December 25 2026",
+		"x = end of Jan 1",
+	} {
+		t.Run(input, func(t *testing.T) {
+			diags := runChecker(t, input)
+			if !hasEndOfPeriodDiagnostic(diags) {
+				t.Errorf("specific date should be rejected by end of; %q got no diagnostic",
+					input)
+			}
+		})
+	}
+}
+
 func TestSemantic_EndOfIdentifierAcceptedAtTypeCheck(t *testing.T) {
 	// Variable-bound case is the R9 demoted path -- semantic
 	// permits, runtime catches non-Period values. Asserts NO

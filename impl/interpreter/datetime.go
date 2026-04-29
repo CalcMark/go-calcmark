@@ -740,6 +740,25 @@ func (interp *Interpreter) evalEndOfExpr(e *ast.EndOfExpr) (types.Type, error) {
 		// at line 102 before its own switch, so dispatching here
 		// must do the same.
 		return interp.evalEndOfForKeyword(strings.ToLower(inner.Keyword), now)
+	case *ast.DateLiteral:
+		// Bare month names like `April` parse as DateLiteral with
+		// implicit Day=1, Year=nil and SourceText that contains no
+		// digits. Pre-PR-1b, `end of April` worked through the old
+		// string-prefix dispatch's resolveEndOfMonth fallback. The
+		// new AST-based dispatch initially rejected DateLiteral
+		// outright; this arm restores the bare-month-name path.
+		// Discriminator matches the semantic checker (see
+		// spec/semantic/end_of_check.go) -- accept iff SourceText
+		// has no digits.
+		//
+		// Transitional shim. The downstream brainstorm decided April
+		// should become a Period type entirely; once that migration
+		// lands, the parser will emit Period-bearing AST directly
+		// and this arm collapses.
+		if !sourceTextHasDigit(inner.SourceText) {
+			return interp.evalEndOfForKeyword("this "+strings.ToLower(inner.Month), now)
+		}
+		return nil, fmt.Errorf("end of: inner expression must be a period; got specific date %s", inner.SourceText)
 	case *ast.Identifier:
 		// R9 demoted -- the variable's bound value is a Date in the
 		// current value-type model, not a Period. Surfacing this as
@@ -764,9 +783,33 @@ func (interp *Interpreter) evalStartOfExpr(s *ast.StartOfExpr) (types.Type, erro
 	case *ast.RelativeDateLiteral:
 		// Inner literal's evaluation IS the period start.
 		return interp.evalRelativeDateLiteral(inner)
+	case *ast.DateLiteral:
+		// Bare month name (no digits in SourceText) means "the first
+		// day of <month>". Same shim as evalEndOfExpr's DateLiteral
+		// arm; mirrors the semantic checker's accept rule.
+		if !sourceTextHasDigit(inner.SourceText) {
+			// `start of April` = `this April` start = April 1.
+			node := &ast.RelativeDateLiteral{Keyword: "this " + strings.ToLower(inner.Month)}
+			return interp.evalRelativeDateLiteral(node)
+		}
+		return nil, fmt.Errorf("start of: inner expression must be a period; got specific date %s", inner.SourceText)
 	case *ast.Identifier:
 		return nil, fmt.Errorf("start of %s: variable-bound periods are not yet supported; use the period literal directly (e.g. `start of Q1`) until upstream Period value-type plumbing lands", inner.Name)
 	default:
 		return nil, fmt.Errorf("start of: inner expression must be a period (got %T); valid examples: `start of Q1`, `start of this month`", s.Period)
 	}
+}
+
+// sourceTextHasDigit reports whether s contains any digit. Used to
+// distinguish bare month names (`April`) from specific dates
+// (`April 15`, `Apr 1 2026`); both produce *ast.DateLiteral but only
+// the former is period-bearing. Mirrors the semantic checker's
+// helper of the same name.
+func sourceTextHasDigit(s string) bool {
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			return true
+		}
+	}
+	return false
 }
