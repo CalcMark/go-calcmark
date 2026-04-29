@@ -107,6 +107,42 @@ func TestPeriod_NewCalendarYear(t *testing.T) {
 	}
 }
 
+// TestPeriod_NewFiscalQuarter_YearIsFYLabel — Period.Year carries
+// the FY label (year FY ends in, Microsoft convention), not the
+// calendar year of the FQ's start. So FQ1 of FY2026 (Jul-start FY)
+// starts in calendar 2025 but labels as "Fiscal Q1 2026". The
+// calendar year of the start is recoverable from Period.Start when
+// users need it.
+func TestPeriod_NewFiscalQuarter_YearIsFYLabel(t *testing.T) {
+	cases := []struct {
+		name      string
+		fyStart   time.Time
+		quarter   int
+		wantLabel int
+	}{
+		// Jul-start FY → FY2026 (Jul 2025 – Jun 2026).
+		{"Jul-start FQ1", time.Date(2025, time.July, 1, 0, 0, 0, 0, time.UTC), 1, 2026},
+		{"Jul-start FQ4", time.Date(2025, time.July, 1, 0, 0, 0, 0, time.UTC), 4, 2026},
+		// Jan-start FY → FY label = start year.
+		{"Jan-start FQ1", time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC), 1, 2026},
+		// Apr-start FY → FY2027 (Apr 2026 – Mar 2027).
+		{"Apr-start FQ1", time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC), 1, 2027},
+		{"Apr-start FQ4", time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC), 4, 2027},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := NewFiscalQuarter(tc.fyStart, tc.quarter)
+			if err != nil {
+				t.Fatalf("NewFiscalQuarter: %v", err)
+			}
+			if p.Year != tc.wantLabel {
+				t.Errorf("Year = %d, want %d (FY label per Microsoft convention)",
+					p.Year, tc.wantLabel)
+			}
+		})
+	}
+}
+
 func TestPeriod_NewFiscalYear(t *testing.T) {
 	// FY2027 with July start = starts Jul 1, 2026. (Microsoft labeling.)
 	p := NewFiscalYear(2027, time.July, 1)

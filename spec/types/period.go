@@ -173,6 +173,15 @@ func NewCalendarQuarter(year, quarter int) (*Period, error) {
 // fyStart's day-of-month is preserved across all four quarters so a
 // July-15 fiscal start yields FQ2 = Oct 15, FQ3 = Jan 15, etc.
 // Returns an error for quarters outside [1, 4].
+//
+// Period.Year is the FY *label* (Microsoft convention: the calendar
+// year the FY ENDS in). For Jul-start FY, fyStart=Jul 1 2025 →
+// fiscal year ends Jun 30 2026 → label 2026. So FQ1 of FY2026 is
+// "Fiscal Q1 2026", not "Fiscal Q1 2025" — matching how users
+// reference the quarter in conversation. The calendar year of the
+// FQ's start (which can differ from the label, e.g. FQ1 starts in
+// 2025 but belongs to FY2026) is recoverable from Period.Start
+// when needed.
 func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
 	if quarter < 1 || quarter > 4 {
 		return nil, fmt.Errorf("invalid fiscal quarter: FQ%d (must be 1-4)", quarter)
@@ -186,12 +195,20 @@ func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
 	}
 	startT := time.Date(startYear, startMonth, fyStart.Day(), 0, 0, 0, 0, time.UTC)
 	endT := startT.AddDate(0, 3, -1)
+
+	// FY label: year FY ends in. When FY-start month > 1, the FY
+	// straddles two calendar years and the label is start-year + 1.
+	// When FY-start month == 1 (Jan-start), label = start-year.
+	fyLabel := fyStart.Year()
+	if fyStart.Month() > time.January {
+		fyLabel++
+	}
 	return &Period{
 		Start:        NewDateFromTime(startT),
 		End:          NewDateFromTime(endT),
 		Kind:         PeriodFiscalQuarter,
 		QuarterIndex: quarter,
-		Year:         fyStart.Year(),
+		Year:         fyLabel,
 	}, nil
 }
 
