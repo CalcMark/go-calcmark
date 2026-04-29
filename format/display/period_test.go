@@ -9,129 +9,112 @@ import (
 	"golang.org/x/text/language"
 )
 
-// U14 — display formatter renders *types.Period via FormatPeriod.
-// Default form includes both the kind label AND the date range so
-// users see concrete boundaries instead of an opaque label like
-// "last fiscal quarter".
-//
-// Format:
-//   Named/calendar:   "<label> (<start> – <end>)"
-//   Custom:           "<start> – <end>"  (no label; the dates are the value)
+// U14 — display formatter renders *types.Period via FormatPeriod
+// as a compact dd-MON-YYYY range. No kind label: the source
+// already names the period (`this fiscal quarter`, `Q1`), and
+// echoing the label is noise — same reason `today` doesn't echo
+// "today" in its formatted Date output.
 
 func TestFormatPeriod(t *testing.T) {
 	f := NewFormatter(DefaultConfig())
 
-	// Calendar quarter — label + range.
+	// Calendar quarter Q1 2026 = Jan 1 – Mar 31.
 	q1, err := types.NewCalendarQuarter(2026, 1)
 	if err != nil {
 		t.Fatalf("NewCalendarQuarter: %v", err)
 	}
-	got := f.Format(q1)
-	if !strings.HasPrefix(got, "Calendar Q1 2026 (") {
-		t.Errorf("Format(Q1 2026) = %q, should start with %q", got, "Calendar Q1 2026 (")
-	}
-	if !strings.Contains(got, "Jan") || !strings.Contains(got, "Mar") {
-		t.Errorf("Format(Q1 2026) = %q, should contain start/end month names", got)
+	if got, want := f.Format(q1), "01-Jan-2026 – 31-Mar-2026"; got != want {
+		t.Errorf("Format(Q1 2026) = %q, want %q", got, want)
 	}
 
-	// Calendar year.
+	// Calendar year 2026.
 	cy := types.NewCalendarYear(2026)
-	got = f.Format(cy)
-	if !strings.HasPrefix(got, "Calendar Year 2026 (") {
-		t.Errorf("Format(CY2026) = %q, should start with %q", got, "Calendar Year 2026 (")
+	if got, want := f.Format(cy), "01-Jan-2026 – 31-Dec-2026"; got != want {
+		t.Errorf("Format(CY2026) = %q, want %q", got, want)
 	}
 
-	// Fiscal year.
+	// Fiscal year 2027 (July start) = Jul 1 2026 – Jun 30 2027.
 	fy := types.NewFiscalYear(2027, time.July, 1)
-	got = f.Format(fy)
-	if !strings.HasPrefix(got, "Fiscal Year 2027 (") {
-		t.Errorf("Format(FY2027) = %q, should start with %q", got, "Fiscal Year 2027 (")
-	}
-	if !strings.Contains(got, "Jul") || !strings.Contains(got, "Jun") {
-		t.Errorf("Format(FY2027) = %q, should mention Jul/Jun boundaries", got)
+	if got, want := f.Format(fy), "01-Jul-2026 – 30-Jun-2027"; got != want {
+		t.Errorf("Format(FY2027) = %q, want %q", got, want)
 	}
 
-	// Calendar month.
+	// Calendar month April 2026.
 	apr := types.NewCalendarMonth(2026, time.April)
-	got = f.Format(apr)
-	if !strings.HasPrefix(got, "April 2026 (") {
-		t.Errorf("Format(April 2026) = %q, should start with %q", got, "April 2026 (")
+	if got, want := f.Format(apr), "01-Apr-2026 – 30-Apr-2026"; got != want {
+		t.Errorf("Format(April 2026) = %q, want %q", got, want)
 	}
 
-	// Custom period — dates only, no label.
+	// Custom period.
 	start := types.NewDateFromTime(time.Date(2026, time.April, 15, 0, 0, 0, 0, time.UTC))
 	end := types.NewDateFromTime(time.Date(2026, time.July, 4, 0, 0, 0, 0, time.UTC))
 	custom, err := types.NewCustomPeriod(start, end)
 	if err != nil {
 		t.Fatalf("NewCustomPeriod: %v", err)
 	}
-	got = f.Format(custom)
-	if strings.Contains(got, "Period") || strings.Contains(got, "(") {
-		t.Errorf("Format(custom period) = %q, should be dates only without label or parens", got)
-	}
-	if !strings.Contains(got, "Apr") || !strings.Contains(got, "Jul") {
-		t.Errorf("Format(custom period) = %q, should reference Apr and Jul", got)
+	if got, want := f.Format(custom), "15-Apr-2026 – 04-Jul-2026"; got != want {
+		t.Errorf("Format(custom) = %q, want %q", got, want)
 	}
 }
 
-// TestFormatPeriod_RelativeIncludesDates — regression for the
-// reported bug: `last fiscal quarter` (and other relative kinds)
-// rendered as just the bare kind label, giving no indication of
-// which dates the period covered. The display formatter must
-// surface concrete boundaries for every relative kind.
-func TestFormatPeriod_RelativeIncludesDates(t *testing.T) {
+// TestFormatPeriod_RelativeShowsOnlyDates — regression for the
+// reported bug: `this fiscal quarter` rendered as
+// "this fiscal quarter (Wed, Apr 1, 2026 – Tue, Jun 30, 2026)" —
+// echoing the source line and using the verbose Date format.
+// FormatPeriod must surface ONLY the resolved dates in the compact
+// dd-MON-YYYY layout.
+func TestFormatPeriod_RelativeShowsOnlyDates(t *testing.T) {
 	f := NewFormatter(DefaultConfig())
-	now := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC) // Apr 15, 2026
-	// fiscal_year_starts: June 1 → FQ4 of FY2026 = Mar 1 - May 31 2026.
-	// last fiscal quarter (FQ3) = Dec 1 2025 - Feb 28 2026.
-	p := types.NewRelativeFiscalQuarter(now, time.June, 1, -1)
+	now := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC)
+	p := types.NewRelativeFiscalQuarter(now, time.July, 1, 0) // FY starts July
 	got := f.Format(p)
-	if got == "last fiscal quarter" {
-		t.Fatalf("Format returned bare label %q with no date range — regression of the user-reported bug", got)
+
+	if strings.Contains(got, "fiscal quarter") {
+		t.Errorf("Format(this fiscal quarter) = %q, must not echo the kind label", got)
 	}
-	if !strings.Contains(got, "last fiscal quarter") {
-		t.Errorf("Format(last fiscal quarter) = %q, should contain the kind label", got)
+	if strings.Contains(got, "(") || strings.Contains(got, ")") {
+		t.Errorf("Format(this fiscal quarter) = %q, no parens — just dates", got)
 	}
-	if !strings.Contains(got, "(") || !strings.Contains(got, ")") {
-		t.Errorf("Format(last fiscal quarter) = %q, should include date range in parens", got)
+	if strings.Contains(got, "Wed") || strings.Contains(got, "Tue") {
+		t.Errorf("Format(this fiscal quarter) = %q, must use compact dd-MON-YYYY (no day-of-week)", got)
+	}
+	// FY starts July; April 15 sits in FQ4 (Apr-Jun) of FY2026.
+	want := "01-Apr-2026 – 30-Jun-2026"
+	if got != want {
+		t.Errorf("Format(this fiscal quarter) = %q, want %q", got, want)
 	}
 }
 
-// TestFormatPeriod_DatesAreLocalized — the date range in
-// FormatPeriod's output goes through FormatDate, which respects
-// the formatter's locale (Tag) via getDateFormat. en-US uses
-// month-first ("Apr 15"); de-DE uses day-first ("15. Apr."); etc.
-//
-// This locks the contract that period output IS locale-aware so a
-// future refactor can't accidentally hardcode an ASCII format that
-// regresses non-English users.
-func TestFormatPeriod_DatesAreLocalized(t *testing.T) {
-	q1, err := types.NewCalendarQuarter(2026, 1)
+// TestFormatPeriod_MonthAbbrevIsLocalized — the dd-MON-YYYY layout
+// still uses the locale's month-name abbreviation via the monday
+// library, so non-English users see e.g. "01-mars-2026" (fr) /
+// "01-Mär-2026" (de) / "01-Jan-2026" (en) for the same dates.
+// Locks the locale contract so a future refactor can't accidentally
+// hardcode English month names.
+func TestFormatPeriod_MonthAbbrevIsLocalized(t *testing.T) {
+	q3, err := types.NewCalendarQuarter(2026, 3) // Jul–Sep, distinctive across locales
 	if err != nil {
 		t.Fatalf("NewCalendarQuarter: %v", err)
 	}
 
 	usCfg := DefaultConfig()
 	usCfg.Tag = language.AmericanEnglish
-	usOut := NewFormatter(usCfg).Format(q1)
+	usOut := NewFormatter(usCfg).Format(q3)
 
-	deCfg := DefaultConfig()
-	deCfg.Tag = language.German
-	deOut := NewFormatter(deCfg).Format(q1)
+	frCfg := DefaultConfig()
+	frCfg.Tag = language.French
+	frOut := NewFormatter(frCfg).Format(q3)
 
-	// en-US uses "Jan" (English short month).
-	if !strings.Contains(usOut, "Jan") {
-		t.Errorf("en-US output %q should contain English `Jan`", usOut)
+	// en-US: "Jul" for July.
+	if !strings.Contains(usOut, "Jul") {
+		t.Errorf("en-US output %q should contain English `Jul`", usOut)
 	}
-	// de-DE uses "Jan." (German short month with period; monday lib's
-	// LocaleDeDE convention).
-	if !strings.Contains(deOut, "Jan.") {
-		t.Errorf("de-DE output %q should contain German short-month form `Jan.`", deOut)
+	// fr-FR: "juil." for juillet (monday LocaleFrFR convention).
+	if !strings.Contains(frOut, "juil") {
+		t.Errorf("fr-FR output %q should contain French `juil` (juillet abbrev)", frOut)
 	}
 
-	// Outputs must differ — if they're identical the locale path
-	// isn't being threaded through.
-	if usOut == deOut {
-		t.Errorf("en-US and de-DE outputs are identical (%q); locale isn't being applied", usOut)
+	if usOut == frOut {
+		t.Errorf("en-US and fr-FR outputs are identical (%q); locale isn't being applied", usOut)
 	}
 }

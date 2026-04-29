@@ -7,6 +7,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/goodsign/monday"
 	"github.com/shopspring/decimal"
 )
 
@@ -287,19 +288,30 @@ func (f Formatter) FormatDate(d *types.Date) string {
 	return formatDate(d.Time, df)
 }
 
-// FormatPeriod renders a Period for human display. v2.0 default
-// includes the resolved date range so the user sees concrete
-// boundaries — the bare kind label ("last fiscal quarter") gave
-// no indication of which dates it referred to. Format:
+// FormatPeriod renders a Period for human display as a compact
+// start–end range using the dd-MON-YYYY layout:
 //
-//   Named/calendar:  "Calendar Q1 2026 (Jan 1 – Mar 31, 2026)"
-//   Fiscal:          "Fiscal Year 2027 (Jul 1, 2026 – Jun 30, 2027)"
-//   Named-month:     "April 2026 (Apr 1 – Apr 30, 2026)"
-//   Relative:        "last fiscal quarter (Dec 1, 2025 – Feb 28, 2026)"
-//   Custom:          "Apr 15 – Jul 4, 2026"  (no kind label, dates only)
+//   Q1                       → "01-Jan-2026 – 31-Mar-2026"
+//   this fiscal quarter      → "01-Apr-2026 – 30-Jun-2026"
+//   April                    → "01-Apr-2026 – 30-Apr-2026"
+//   between Apr 15 and Jul 4 → "15-Apr-2026 – 04-Jul-2026"
 //
-// The dash is an en-dash to read naturally; uses FormatDate for
-// locale-aware month/day abbreviations.
+// Why no kind label: the source already names the period
+// (`this fiscal quarter`, `Q1`, etc.). Echoing the label as part
+// of the result is redundant — same reason `today` resolves to a
+// formatted date without echoing "today". Period values surface
+// the boundaries; the kind context lives in the source line.
+//
+// Why dd-MON-YYYY (not the regular FormatDate output): a Period
+// renders TWO dates side-by-side, so each one needs to be compact.
+// FormatDate's day-of-week prefix ("Wed, Apr 1, 2026") is great
+// for a single Date but reads as noise when twinned. dd-MON-YYYY
+// is unambiguous (no MM/DD vs DD/MM ambiguity) and locale-aware
+// for the month abbreviation via the existing monday library.
+//
+// The kind label is still available via Period.String() for
+// diagnostics / debug output / JSON `value` field, where the
+// surrounding source isn't visible.
 func (f Formatter) FormatPeriod(p *types.Period) string {
 	if p == nil {
 		return ""
@@ -309,12 +321,11 @@ func (f Formatter) FormatPeriod(p *types.Period) string {
 		// both. Fall back to the kind label if invariant breaks.
 		return p.String()
 	}
-	startStr := f.FormatDate(p.Start)
-	endStr := f.FormatDate(p.End)
-	if p.Kind == types.PeriodCustom {
-		return startStr + " – " + endStr
-	}
-	return p.String() + " (" + startStr + " – " + endStr + ")"
+	df := getDateFormat(f.cfg.Tag)
+	const layout = "02-Jan-2006"
+	startStr := monday.Format(p.Start.Time, layout, df.locale)
+	endStr := monday.Format(p.End.Time, layout, df.locale)
+	return startStr + " – " + endStr
 }
 
 // FormatPercentage formats a percentage in human-readable form.
