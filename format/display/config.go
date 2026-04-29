@@ -29,6 +29,20 @@ type DisplayConfig struct {
 	// UnicodeFractions enables Unicode Number Forms (e.g., ½, ⅓, ¾) for fraction display.
 	// Only used in TUI; JSON and CLI output always uses ASCII fractions.
 	UnicodeFractions bool
+
+	// DateFormat overrides the locale's default date layout when set.
+	// Uses the user-friendly DSL (see date_format_dsl.go): "MON dd,
+	// YYYY", "YYYY-MM-dd", etc. Empty string falls back to the
+	// locale's default ("Mon, Jan 2, 2006" for en-US).
+	DateFormat string
+
+	// PeriodDateFormat overrides the date layout used for endpoints
+	// inside a Period's display ("01-Jan-2026 – 31-Mar-2026"). Empty
+	// string falls back to the dd-MON-YYYY default. When DateFormat
+	// is set but PeriodDateFormat is not, the period default still
+	// applies — Period output stays compact even when single-Date
+	// output is set to a verbose layout.
+	PeriodDateFormat string
 }
 
 // DefaultConfig returns the en-US display configuration.

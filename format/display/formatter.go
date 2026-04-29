@@ -277,12 +277,21 @@ func (f Formatter) FormatDuration(d *types.Duration) string {
 // Uses abbreviated day-of-week and month names with locale-specific ordering.
 // Examples: "Wed, Jan 12, 2025" (en-US), "Mi., 12. Jan. 2025" (de-DE).
 //
+// When DisplayConfig.DateFormat is set, that DSL string overrides the
+// locale default — see date_format_dsl.go for the supported tokens
+// (MON dd, YYYY etc.). The locale still applies to month / weekday
+// names within the custom layout.
+//
 // The machine-readable Date.String() ("Monday, January 2, 2006") is intentionally
 // different — it is the model layer's precise representation. This method is the
 // display layer's human-friendly form.
 func (f Formatter) FormatDate(d *types.Date) string {
 	if d == nil {
 		return ""
+	}
+	if f.cfg.DateFormat != "" {
+		df := getDateFormat(f.cfg.Tag)
+		return formatDateWithDSL(d.Time, f.cfg.DateFormat, df.locale)
 	}
 	df := getDateFormat(f.cfg.Tag)
 	return formatDate(d.Time, df)
@@ -322,6 +331,21 @@ func (f Formatter) FormatPeriod(p *types.Period) string {
 		return p.String()
 	}
 	df := getDateFormat(f.cfg.Tag)
+
+	// Resolution order:
+	//   1. PeriodDateFormat (period-specific override)
+	//   2. DateFormat       (general date override)
+	//   3. dd-MON-YYYY      (compact default tuned for twin display)
+	dsl := f.cfg.PeriodDateFormat
+	if dsl == "" {
+		dsl = f.cfg.DateFormat
+	}
+	if dsl != "" {
+		startStr := formatDateWithDSL(p.Start.Time, dsl, df.locale)
+		endStr := formatDateWithDSL(p.End.Time, dsl, df.locale)
+		return startStr + " – " + endStr
+	}
+
 	const layout = "02-Jan-2006"
 	startStr := monday.Format(p.Start.Time, layout, df.locale)
 	endStr := monday.Format(p.End.Time, layout, df.locale)

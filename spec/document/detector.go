@@ -439,14 +439,17 @@ func isFunctionToken(t lexer.TokenType) bool {
 
 // isPeriodOperatorToken reports whether t is a period-bearing
 // operator that takes a period inner expression (e.g., `end of <P>`,
-// `start of <P>`). Pure function.
+// `start of <P>`, `length of <P>`, `days in <P>`) or a custom-period
+// constructor (`between A and B`, `from A to B`). Pure function.
 //
-// New tokens added in v2.0 (LENGTH_OF, DAYS_IN, BETWEEN) plug in
-// here as they land — the classifier dispatch in
-// looksLikeCalculation already routes through this helper.
+// LENGTH_OF / DAYS_IN take Period inner — same look-ahead rule as
+// END_OF (next token must be period-bearing). BETWEEN / FROM take
+// arbitrary expressions; their first operand can be any date-bearing
+// or period-bearing token, so the same look-ahead admits them.
 func isPeriodOperatorToken(t lexer.TokenType) bool {
 	switch t {
-	case lexer.END_OF, lexer.START_OF:
+	case lexer.END_OF, lexer.START_OF, lexer.LENGTH_OF, lexer.DAYS_IN,
+		lexer.BETWEEN, lexer.FROM:
 		return true
 	}
 	return false

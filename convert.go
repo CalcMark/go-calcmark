@@ -34,6 +34,17 @@ type Options struct {
 	Format   string // Output format: "html", "md", "text", "json" (default: "html")
 	Template string // Go template content for wrapping HTML output (optional)
 	Locale   string // BCP 47 locale for number formatting (default: "en-US")
+
+	// DateFormat overrides the locale's default date layout for Date
+	// values. Uses the user-friendly DSL ("MON dd, YYYY", etc.) —
+	// see format/display/date_format_dsl.go for tokens. Empty string
+	// uses locale default.
+	DateFormat string
+
+	// PeriodDateFormat overrides the date layout used for endpoints
+	// inside Period output. Empty falls back to DateFormat, then to
+	// the built-in compact "dd-MON-YYYY".
+	PeriodDateFormat string
 }
 
 // validFormats is the set of recognized output format names.
@@ -111,7 +122,7 @@ func convertCM(input string, opts Options) (string, error) {
 	}
 
 	eval := impldoc.NewEvaluator()
-	eval.SetDisplayFormatter(localeFormatter(opts.Locale))
+	eval.SetDisplayFormatter(localeFormatterWithFormats(opts.Locale, opts.DateFormat, opts.PeriodDateFormat))
 	evalErr := eval.Evaluate(doc)
 	if evalErr != nil && !errors.Is(evalErr, impldoc.ErrPartialEvaluation) {
 		return "", fmt.Errorf("evaluation error: %w", evalErr)
@@ -157,7 +168,7 @@ func convertEmbedded(input string, opts Options) (string, error) {
 	}
 
 	segments := embedded.Scan(input)
-	df := localeFormatter(opts.Locale)
+	df := localeFormatterWithFormats(opts.Locale, opts.DateFormat, opts.PeriodDateFormat)
 
 	var out strings.Builder
 	var errCount int
@@ -314,5 +325,25 @@ func localeFormatter(locale string) display.Formatter {
 	if err != nil {
 		return display.DefaultFormatter()
 	}
+	return display.NewFormatter(cfg)
+}
+
+// localeFormatterWithFormats is the localeFormatter overload that
+// also threads the user-configurable date format DSL strings into
+// the resulting Formatter. Used by Convert when the Options carry
+// DateFormat / PeriodDateFormat overrides.
+func localeFormatterWithFormats(locale, dateFormat, periodDateFormat string) display.Formatter {
+	var cfg display.DisplayConfig
+	if locale == "" {
+		cfg = display.DefaultConfig()
+	} else {
+		var err error
+		cfg, err = display.NewConfig(locale)
+		if err != nil {
+			cfg = display.DefaultConfig()
+		}
+	}
+	cfg.DateFormat = dateFormat
+	cfg.PeriodDateFormat = periodDateFormat
 	return display.NewFormatter(cfg)
 }
