@@ -67,6 +67,18 @@ type FormatterConfig struct {
 	Verbose       bool   `mapstructure:"verbose" toml:"verbose"`
 	IncludeErrors bool   `mapstructure:"include_errors" toml:"include_errors"`
 	DefaultFormat string `mapstructure:"default_format" toml:"default_format"`
+
+	// DateFormat is a user DSL string overriding the locale default
+	// for Date display (e.g., "MON dd, YYYY", "YYYY-MM-dd").
+	// See format/display/date_format_dsl.go for supported tokens.
+	// Empty (default) uses the locale's date layout.
+	DateFormat string `mapstructure:"date_format" toml:"date_format"`
+
+	// PeriodDateFormat is the user DSL for date endpoints inside
+	// Period output. Empty falls back to DateFormat, then to the
+	// built-in compact "dd-MON-YYYY". Set this independently when
+	// the verbose DateFormat would make twin-date output unreadable.
+	PeriodDateFormat string `mapstructure:"period_date_format" toml:"period_date_format"`
 }
 
 // MeasurementConfig holds default measurement conventions.

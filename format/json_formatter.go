@@ -72,6 +72,16 @@ type JSONResult struct {
 	IsExplicit    bool     `json:"is_explicit,omitempty"`
 	Error         string   `json:"error,omitempty"`
 	Variable      string   `json:"variable,omitempty"`
+	// Period decomposition (v2.0). Populated only when Type ==
+	// "period". Start and End are ISO date strings (YYYY-MM-DD)
+	// covering the closed-interval span. PeriodKind is the canonical
+	// kind name: calendar_quarter / fiscal_quarter / calendar_year /
+	// fiscal_year / calendar_month / named_month / relative_week /
+	// relative_month / relative_year / relative_quarter /
+	// relative_fiscal_quarter / relative_fiscal_year / custom.
+	PeriodStart string `json:"period_start,omitempty"`
+	PeriodEnd   string `json:"period_end,omitempty"`
+	PeriodKind  string `json:"period_kind,omitempty"`
 }
 
 // JSONDiagnostic represents an error or warning with position info.
@@ -151,7 +161,55 @@ func populateResult(jr *JSONResult, result types.Type) {
 		}
 	case *types.Boolean:
 		jr.Type = "boolean"
+	case *types.Period:
+		// v2.0 Period: human-readable label via String() in Value;
+		// machine-readable Start/End/Kind for downstream consumers.
+		jr.Type = "period"
+		if v.Start != nil {
+			jr.PeriodStart = v.Start.Time.Format("2006-01-02")
+		}
+		if v.End != nil {
+			jr.PeriodEnd = v.End.Time.Format("2006-01-02")
+		}
+		jr.PeriodKind = periodKindName(v.Kind)
 	}
+}
+
+// periodKindName returns the canonical lowercased name for a
+// PeriodKind. JSON consumers (cmw, LSP, integrations) match against
+// these strings — keep them stable. New kinds added to types.PeriodKind
+// must register a name here too; "unknown" is a fallback that signals
+// drift between the two enums.
+func periodKindName(k types.PeriodKind) string {
+	switch k {
+	case types.PeriodCalendarQuarter:
+		return "calendar_quarter"
+	case types.PeriodFiscalQuarter:
+		return "fiscal_quarter"
+	case types.PeriodCalendarMonth:
+		return "calendar_month"
+	case types.PeriodCalendarYear:
+		return "calendar_year"
+	case types.PeriodFiscalYear:
+		return "fiscal_year"
+	case types.PeriodNamedMonth:
+		return "named_month"
+	case types.PeriodRelativeWeek:
+		return "relative_week"
+	case types.PeriodRelativeMonth:
+		return "relative_month"
+	case types.PeriodRelativeYear:
+		return "relative_year"
+	case types.PeriodRelativeQuarter:
+		return "relative_quarter"
+	case types.PeriodRelativeFiscalQuarter:
+		return "relative_fiscal_quarter"
+	case types.PeriodRelativeFiscalYear:
+		return "relative_fiscal_year"
+	case types.PeriodCustom:
+		return "custom"
+	}
+	return "unknown"
 }
 
 // Format writes the document as JSON to the writer.

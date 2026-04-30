@@ -83,3 +83,44 @@ func TestComputeLexicon_ExcludesControlFlowKeywords(t *testing.T) {
 		}
 	}
 }
+
+// TestComputeLexicon_KeywordPhrasesIncludesMultiWord — pins the
+// contract that the LSP exposes multi-word date / period operator
+// phrases so the client tokenizer can render each as a single
+// highlighted pill.
+func TestComputeLexicon_KeywordPhrasesIncludesMultiWord(t *testing.T) {
+	lex := computeLexicon()
+	wantSubset := []string{
+		// Multi-word date keywords
+		"this year", "next month", "last quarter",
+		"this fiscal quarter", "next fiscal year", "last fiscal quarter",
+		// Period operators
+		"end of", "start of", "length of", "days in", "between",
+		// Single-word vocabulary
+		"as", "in", "by", "of", "per", "and",
+		// Date keyword aliases
+		"fiscal quarter", "fiscal year",
+		// Single-word date keywords
+		"today", "tomorrow", "yesterday",
+	}
+	for _, kw := range wantSubset {
+		if !slices.Contains(lex.KeywordPhrases, kw) {
+			t.Errorf("KeywordPhrases missing expected entry %q", kw)
+		}
+	}
+}
+
+// TestComputeLexicon_KeywordPhrasesSortedLongestFirst — the client
+// matches greedy-longest, so ordering matters: `this fiscal quarter`
+// must precede `this fiscal` (and `this`, etc.) in the wire output.
+func TestComputeLexicon_KeywordPhrasesSortedLongestFirst(t *testing.T) {
+	lex := computeLexicon()
+	for i := 1; i < len(lex.KeywordPhrases); i++ {
+		prev, curr := lex.KeywordPhrases[i-1], lex.KeywordPhrases[i]
+		if len(prev) < len(curr) {
+			t.Errorf("KeywordPhrases not longest-first: %q (len %d) before %q (len %d)",
+				prev, len(prev), curr, len(curr))
+			break
+		}
+	}
+}

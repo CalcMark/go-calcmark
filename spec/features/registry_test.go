@@ -266,16 +266,22 @@ func TestRegistry_FrontmatterCategory(t *testing.T) {
 	r := NewRegistry()
 	features := r.ByCategory(CategoryFrontmatter)
 
-	if len(features) != 5 {
-		t.Errorf("expected 5 frontmatter features, got %d", len(features))
+	// Bumped from 5 to 7 when fiscal_year_starts and
+	// calendar_year_offset were added to the features registry
+	// (they were already in the document Registry but were missing
+	// from the docs feature-table). 2026-04-30.
+	if len(features) != 7 {
+		t.Errorf("expected 7 frontmatter features, got %d", len(features))
 	}
 
 	expected := map[string]bool{
-		"exchange":    false,
-		"globals":     false,
-		"scale":       false,
-		"convert_to":  false,
-		"measurement": false,
+		"exchange":             false,
+		"globals":              false,
+		"scale":                false,
+		"convert_to":           false,
+		"measurement":          false,
+		"fiscal_year_starts":   false,
+		"calendar_year_offset": false,
 	}
 	for _, f := range features {
 		if _, ok := expected[f.Name]; !ok {

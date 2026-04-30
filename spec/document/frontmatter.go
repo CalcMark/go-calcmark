@@ -102,6 +102,15 @@ type Frontmatter struct {
 	// to this configuration. When nil, fiscal expressions produce an error diagnostic.
 	FiscalYearStarts *FiscalYearConfig
 
+	// CalendarYearOffset selects which calendar year an FY label refers
+	// to. CalendarYearOffsetBefore (default) labels by the calendar
+	// year the FY ENDS in (matches the Australian government year,
+	// the US tax year, and most companies). CalendarYearOffsetAfter
+	// labels by the calendar year the FY STARTS in. Only has effect
+	// when FiscalYearStarts is non-nil and the start month is not
+	// January.
+	CalendarYearOffset CalendarYearOffset
+
 	// exchangeKeys preserves insertion order of exchange rate keys.
 	// Go maps have non-deterministic iteration order; frontmatter variables
 	// must be processed in document order (they are *front* matter).
@@ -339,13 +348,27 @@ func (f *Frontmatter) HasExchangeRate(key string) bool {
 // frontmatterYAML is the intermediate struct for YAML unmarshaling.
 // This keeps the YAML structure separate from the normalized Frontmatter type.
 type frontmatterYAML struct {
-	Exchange         map[string]float64 `yaml:"exchange"`
-	Globals          map[string]string  `yaml:"globals"`
-	Scale            any                `yaml:"scale"`
-	ConvertTo        any                `yaml:"convert_to"`
-	Measurement      any                `yaml:"measurement"`
-	FiscalYearStarts string             `yaml:"fiscal_year_starts"`
+	Exchange           map[string]float64 `yaml:"exchange"`
+	Globals            map[string]string  `yaml:"globals"`
+	Scale              any                `yaml:"scale"`
+	ConvertTo          any                `yaml:"convert_to"`
+	Measurement        any                `yaml:"measurement"`
+	FiscalYearStarts   string             `yaml:"fiscal_year_starts"`
+	CalendarYearOffset string             `yaml:"calendar_year_offset"`
 }
+
+// CalendarYearOffset enumerates the FY-label conventions a document
+// can declare via the `calendar_year_offset` frontmatter key.
+type CalendarYearOffset int
+
+const (
+	// CalendarYearOffsetBefore is the default. The FY label corresponds
+	// to the calendar year the FY ENDS in.
+	CalendarYearOffsetBefore CalendarYearOffset = iota
+	// CalendarYearOffsetAfter labels by the calendar year the FY
+	// STARTS in.
+	CalendarYearOffsetAfter
+)
 
 // parseScaleConfig parses the scale field which can be a scalar number or a map
 // with factor and unit_categories keys.
@@ -726,6 +749,15 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 		fm.FiscalYearStarts = fc
 	}
 
+	// Parse calendar_year_offset directive (defaults to "before").
+	if raw.CalendarYearOffset != "" {
+		off, err := parseCalendarYearOffset(raw.CalendarYearOffset)
+		if err != nil {
+			return nil, "", fmt.Errorf("frontmatter: %w", err)
+		}
+		fm.CalendarYearOffset = off
+	}
+
 	// Capture per-key source ranges for every top-level key (registered + Extra).
 	// Lines are document-relative (1-based); the YAML body starts on line 2
 	// because line 1 is the opening "---" fence, hence yamlLineOffset = 1.
@@ -798,6 +830,23 @@ func parseFiscalYearStarts(value string) (*FiscalYearConfig, error) {
 	}
 
 	return &FiscalYearConfig{Month: month, Day: day}, nil
+}
+
+// parseCalendarYearOffset parses the `calendar_year_offset` value.
+// Accepts the strings "before" (default — FY label = year FY ends in)
+// and "after" (FY label = year FY starts in). Comparison is
+// case-insensitive; surrounding whitespace is tolerated. Any other
+// value returns an error.
+func parseCalendarYearOffset(value string) (CalendarYearOffset, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "before":
+		return CalendarYearOffsetBefore, nil
+	case "after":
+		return CalendarYearOffsetAfter, nil
+	default:
+		return CalendarYearOffsetBefore, fmt.Errorf(
+			"calendar_year_offset: invalid value %q (expected 'before' or 'after')", value)
+	}
 }
 
 // parseYAMLMapping parses YAML content and returns the root mapping node.

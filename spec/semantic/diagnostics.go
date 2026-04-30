@@ -63,6 +63,11 @@ const (
 	DiagInvalidLeapYear    = "invalid_leap_year"
 	DiagInvalidEndOfPeriod = "invalid_end_of_period"
 
+	// Period operator diagnostics (v2.0)
+	DiagInvalidLengthOfPeriod  = "invalid_length_of_period"  // length of / days in inner not Period
+	DiagInvalidBetweenEndpoint = "invalid_between_endpoint" // between A and B endpoint not Date
+	DiagInvalidPeriodRange     = "invalid_period_range"     // between A and B where end < start (statically detectable)
+
 	// Variable diagnostics
 	DiagUndefinedVariable    = "undefined_variable"
 	DiagVariableRedefinition = "variable_redefinition"

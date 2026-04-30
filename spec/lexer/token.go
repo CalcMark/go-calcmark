@@ -134,8 +134,11 @@ const (
 	AGO // "ago" — as in "2 weeks ago"
 
 	// Period modifier keywords
-	START_OF // "start of" — explicit form of "this quarter" (resolves to first day)
-	END_OF   // "end of" — as in "end of this quarter" (resolves to last day)
+	START_OF  // "start of" — explicit form of "this quarter" (resolves to first day)
+	END_OF    // "end of" — as in "end of this quarter" (resolves to last day)
+	BETWEEN   // "between" — `between A and B` constructs a custom Period (v2.0)
+	LENGTH_OF // "length of" — `length of <Period>` returns Duration (v2.0)
+	DAYS_IN   // "days in" — `days in <Period>` returns Number (v2.0)
 
 	// Quarter keywords
 	DATE_THIS_QUARTER // "this quarter"
@@ -343,6 +346,12 @@ func (tt TokenType) String() string {
 		return "START_OF"
 	case END_OF:
 		return "END_OF"
+	case BETWEEN:
+		return "BETWEEN"
+	case LENGTH_OF:
+		return "LENGTH_OF"
+	case DAYS_IN:
+		return "DAYS_IN"
 	case DATE_THIS_QUARTER:
 		return "DATE_THIS_QUARTER"
 	case DATE_NEXT_QUARTER:

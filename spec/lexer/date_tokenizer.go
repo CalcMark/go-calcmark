@@ -5,6 +5,30 @@ import (
 	"unicode"
 )
 
+// isPotentialNotationFollow reports whether the rune at pos is a
+// digit AND the matched phrase ends with a notation prefix (FQ /
+// CQ / FY / CY). This indicates the user intends notation literal
+// (FQ1, CY2026) and we should NOT consume the matched phrase
+// keyword. Lowercased compare on the trailing two letters of the
+// phrase.
+func isPotentialNotationFollow(text []rune, pos int, phrase string) bool {
+	if pos >= len(text) {
+		return false
+	}
+	if !unicode.IsDigit(text[pos]) {
+		return false
+	}
+	if len(phrase) < 2 {
+		return false
+	}
+	tail := strings.ToLower(phrase[len(phrase)-2:])
+	switch tail {
+	case "fq", "cq", "fy", "cy":
+		return true
+	}
+	return false
+}
+
 // tryReadDateKeyword attempts to read a date keyword (today, tomorrow, etc.)
 // Returns token type and true if matched, otherwise 0 and false
 // Performance: O(1) map lookups
@@ -19,12 +43,25 @@ func (l *Lexer) tryReadDateKeyword() (TokenType, bool) {
 		return tokenType, true
 	}
 
-	// Try two-word phrases (this week, next month, last year)
+	// Try two-word phrases (this week, next month, last year). When
+	// the phrase ends with a notation prefix (FQ, CQ, FY, CY) and is
+	// followed immediately by a digit, do NOT match — `next FQ1`
+	// means "FQ1 of next FY" (notation literal), not the bare-phrase
+	// `next FQ` keyword. Without this guard the lexer greedily eats
+	// `next FQ` and leaves `1` dangling as a NUMBER.
 	twoWords := l.peekTwoWords()
 	if tokenType, ok := RelativeDateKeywords[strings.ToLower(twoWords)]; ok {
-		// Consume both words
-		l.pos = startPos + len([]rune(twoWords))
-		return tokenType, true
+		consumed := len([]rune(twoWords))
+		nextPos := startPos + consumed
+		// Peek the rune after the matched phrase. Reject the match if
+		// it's a digit and the second word is a 2-char notation prefix
+		// — covers `next FQ1`, `last CY26`, `this FY2027`, etc.
+		if isPotentialNotationFollow(l.text, nextPos, twoWords) {
+			// Fall through to single-word match below.
+		} else {
+			l.pos = startPos + consumed
+			return tokenType, true
+		}
 	}
 
 	// Try three-word phrases (this fiscal quarter, next fiscal year)
@@ -206,6 +243,7 @@ func (l *Lexer) readDateLiteral() Token {
 
 	var day string
 	var year string
+	var hasExplicitDay bool
 
 	// Try to read day (number)
 	if unicode.IsDigit(l.currentChar()) {
@@ -214,12 +252,13 @@ func (l *Lexer) readDateLiteral() Token {
 
 		// Check if this number is a year (4 digits) or a day
 		if len(numStr) == 4 {
-			// It's a year: "January 2026"
+			// It's a year: "January 2026" — no day number scanned.
 			year = numStr
 			day = "1" // Default to 1st
 		} else {
 			// It's a day: "January 15"
 			day = numStr
+			hasExplicitDay = true
 
 			// Try to read year (4-digit number)
 			if unicode.IsDigit(l.currentChar()) {
@@ -233,13 +272,21 @@ func (l *Lexer) readDateLiteral() Token {
 		day = "1"
 	}
 
-	// Combine into value: "month:day:year"
+	// Combine into value: "month:day:year:hasExplicitDay" where
+	// the last field is "1" or "0". Parser splits by ":" and reads
+	// parts[3] when present; legacy callers reading parts[0..2] are
+	// unaffected.
+	flag := "0"
+	if hasExplicitDay {
+		flag = "1"
+	}
 	value := month + ":" + day
 	if year != "" {
 		value += ":" + year
 	} else {
 		value += ":"
 	}
+	value += ":" + flag
 
 	sourceText := string(l.text[startPos:l.pos])
 

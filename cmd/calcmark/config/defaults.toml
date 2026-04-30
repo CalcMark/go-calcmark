@@ -50,6 +50,24 @@ verbose = false
 include_errors = true
 default_format = "text"
 
+# Date display format. DSL tokens (longest match first):
+#   YYYY = 4-digit year   YY = 2-digit year
+#   MMMM = January   MMM = Jan
+#   MON = JAN (uppercase)   mon = jan (lowercase)
+#   MM = 01   M = 1   dd = 02   d = 2
+#   EEEE = Monday   EEE = Mon
+# Quote literal letters with single quotes: 'T'YYYY -> T2026.
+# Empty (default) uses the locale's date layout (e.g., "Mon, Jan 2, 2026" en-US).
+# Example: date_format = "MON dd, YYYY"   ->   APR 01, 2026
+date_format = ""
+
+# Date format for endpoints inside Period output ("01-Jan-2026 – 31-Mar-2026").
+# Falls back to date_format then to the built-in compact "dd-MON-YYYY".
+# Set this independently when a verbose date_format would make twin-date
+# output hard to read.
+# Example: period_date_format = "YYYY-MM-dd"   ->   2026-01-01 – 2026-03-31
+period_date_format = ""
+
 [measurement]
 # How bare volume names (gallon, pint, cup, fl oz) are interpreted.
 # "us" = US Customary (default), "imperial" = Imperial (UK).

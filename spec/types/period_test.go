@@ -107,8 +107,47 @@ func TestPeriod_NewCalendarYear(t *testing.T) {
 	}
 }
 
+// TestPeriod_NewFiscalQuarter_YearIsFYLabel — Period.Year carries
+// the FY label (year FY ends in, default labeling), not the
+// calendar year of the FQ's start. So FQ1 of FY2026 (Jul-start FY)
+// starts in calendar 2025 but labels as "Fiscal Q1 2026". The
+// calendar year of the start is recoverable from Period.Start when
+// users need it.
+func TestPeriod_NewFiscalQuarter_YearIsFYLabel(t *testing.T) {
+	cases := []struct {
+		name      string
+		fyStart   time.Time
+		quarter   int
+		wantLabel int
+	}{
+		// Jul-start FY → FY2026 (Jul 2025 – Jun 2026).
+		{"Jul-start FQ1", time.Date(2025, time.July, 1, 0, 0, 0, 0, time.UTC), 1, 2026},
+		{"Jul-start FQ4", time.Date(2025, time.July, 1, 0, 0, 0, 0, time.UTC), 4, 2026},
+		// Jan-start FY → FY label = start year.
+		{"Jan-start FQ1", time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC), 1, 2026},
+		// Apr-start FY → FY2027 (Apr 2026 – Mar 2027).
+		{"Apr-start FQ1", time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC), 1, 2027},
+		{"Apr-start FQ4", time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC), 4, 2027},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p, err := NewFiscalQuarter(tc.fyStart, tc.quarter)
+			if err != nil {
+				t.Fatalf("NewFiscalQuarter: %v", err)
+			}
+			if p.Year != tc.wantLabel {
+				t.Errorf("Year = %d, want %d (FY label per default end-year convention)",
+					p.Year, tc.wantLabel)
+			}
+		})
+	}
+}
+
 func TestPeriod_NewFiscalYear(t *testing.T) {
-	// FY2027 with July start = starts Jul 1, 2026. (Microsoft labeling.)
+	// FY2027 with July start under default labeling = starts Jul 1, 2026.
+	// Default mode (FYLabelByEndYear) labels by the year the FY ENDS in,
+	// matching the Australian government year, US tax year, and most
+	// publicly traded companies.
 	p := NewFiscalYear(2027, time.July, 1)
 	if p.Kind != PeriodFiscalYear {
 		t.Errorf("Kind = %v, want PeriodFiscalYear", p.Kind)
@@ -123,6 +162,74 @@ func TestPeriod_NewFiscalYear(t *testing.T) {
 	// String must surface the FY label, not the start year.
 	if !strings.Contains(p.String(), "2027") {
 		t.Errorf("String() = %q should contain FY label 2027", p.String())
+	}
+}
+
+// TestPeriod_NewFiscalYearWithMode_LabelByStartYear — when a document
+// declares `calendar_year_offset: after`, the FY label corresponds to
+// the calendar year the FY STARTS in (some companies use this
+// labeling). FY2026 with a Feb 2 start under start-year labeling
+// starts Feb 2, 2026 and ends Feb 1, 2027.
+func TestPeriod_NewFiscalYearWithMode_LabelByStartYear(t *testing.T) {
+	p := NewFiscalYearWithMode(2026, time.February, 2, FYLabelByStartYear)
+	if p.Kind != PeriodFiscalYear {
+		t.Errorf("Kind = %v, want PeriodFiscalYear", p.Kind)
+	}
+	if p.Year != 2026 {
+		t.Errorf("Year = %d, want 2026", p.Year)
+	}
+	wantStart := time.Date(2026, time.February, 2, 0, 0, 0, 0, time.UTC)
+	if !p.Start.Time.Equal(wantStart) {
+		t.Errorf("Start = %v, want %v", p.Start.Time, wantStart)
+	}
+	wantEnd := time.Date(2027, time.February, 1, 0, 0, 0, 0, time.UTC)
+	if !p.End.Time.Equal(wantEnd) {
+		t.Errorf("End = %v, want %v", p.End.Time, wantEnd)
+	}
+}
+
+// TestPeriod_NewFiscalYearWithMode_LabelByEndYear — explicit
+// FYLabelByEndYear matches the default factory exactly. FY2027 with
+// July start = Jul 1 2026 → Jun 30 2027.
+func TestPeriod_NewFiscalYearWithMode_LabelByEndYear(t *testing.T) {
+	p := NewFiscalYearWithMode(2027, time.July, 1, FYLabelByEndYear)
+	if p.Year != 2027 {
+		t.Errorf("Year = %d, want 2027", p.Year)
+	}
+	wantStart := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+	if !p.Start.Time.Equal(wantStart) {
+		t.Errorf("Start = %v, want %v", p.Start.Time, wantStart)
+	}
+}
+
+// TestPeriod_NewFiscalQuarterWithMode_LabelByStartYear — under
+// start-year labeling, an Apr 2026 fiscal-year-start produces FQ1
+// labeled FY2026 (not FY2027). The quarter itself spans Apr–Jun
+// 2026 either way; only the year stamped on Period.Year differs.
+func TestPeriod_NewFiscalQuarterWithMode_LabelByStartYear(t *testing.T) {
+	apr2026 := time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC)
+	p, err := NewFiscalQuarterWithMode(apr2026, 1, FYLabelByStartYear)
+	if err != nil {
+		t.Fatalf("NewFiscalQuarterWithMode: %v", err)
+	}
+	if p.Year != 2026 {
+		t.Errorf("Year = %d, want 2026 (start-year labeling)", p.Year)
+	}
+	if p.QuarterIndex != 1 {
+		t.Errorf("QuarterIndex = %d, want 1", p.QuarterIndex)
+	}
+}
+
+// TestPeriod_NewFiscalQuarterWithMode_LabelByEndYear — sanity check
+// that explicit end-year mode matches the existing default behavior.
+func TestPeriod_NewFiscalQuarterWithMode_LabelByEndYear(t *testing.T) {
+	apr2026 := time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC)
+	p, err := NewFiscalQuarterWithMode(apr2026, 1, FYLabelByEndYear)
+	if err != nil {
+		t.Fatalf("NewFiscalQuarterWithMode: %v", err)
+	}
+	if p.Year != 2027 {
+		t.Errorf("Year = %d, want 2027 (end-year labeling)", p.Year)
 	}
 }
 
@@ -235,4 +342,252 @@ func mustFiscalQuarter(t *testing.T, year int, fyStartMonth time.Month, fyStartD
 		t.Fatalf("NewFiscalQuarter: %v", err)
 	}
 	return p
+}
+
+// --- v2.0 contract tests ---
+//
+// The v2.0 plan requires Period to store End as a struct field
+// (rather than computing it from Kind+context at access time). End
+// must be populated by every factory at construction. This pins the
+// invariant: any code path producing a *Period must produce a
+// fully-formed [Start, End] interval.
+
+func TestPeriod_NewCalendarQuarter_PopulatesEnd(t *testing.T) {
+	cases := []struct {
+		year, quarter int
+		wantEnd       time.Time
+	}{
+		{2026, 1, time.Date(2026, time.March, 31, 0, 0, 0, 0, time.UTC)},
+		{2026, 2, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},
+		{2026, 3, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)},
+		{2026, 4, time.Date(2026, time.December, 31, 0, 0, 0, 0, time.UTC)},
+	}
+	for _, tc := range cases {
+		p, err := NewCalendarQuarter(tc.year, tc.quarter)
+		if err != nil {
+			t.Fatalf("NewCalendarQuarter(%d, %d): %v", tc.year, tc.quarter, err)
+		}
+		if p.End == nil {
+			t.Fatalf("Q%d %d: End is nil — must be populated at construction", tc.quarter, tc.year)
+		}
+		if !p.End.Time.Equal(tc.wantEnd) {
+			t.Errorf("Q%d %d: End = %v, want %v", tc.quarter, tc.year, p.End.Time, tc.wantEnd)
+		}
+	}
+}
+
+func TestPeriod_NewFiscalQuarter_PopulatesEnd(t *testing.T) {
+	// FY starts April 1; FQ1 = Apr 1 - Jun 30; FQ4 = Jan 1 - Mar 31 (next cal year).
+	apr1 := time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC)
+	cases := []struct {
+		quarter int
+		wantEnd time.Time
+	}{
+		{1, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},
+		{2, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)},
+		{3, time.Date(2026, time.December, 31, 0, 0, 0, 0, time.UTC)},
+		{4, time.Date(2027, time.March, 31, 0, 0, 0, 0, time.UTC)},
+	}
+	for _, tc := range cases {
+		p, err := NewFiscalQuarter(apr1, tc.quarter)
+		if err != nil {
+			t.Fatalf("NewFiscalQuarter(Apr 1, %d): %v", tc.quarter, err)
+		}
+		if p.End == nil {
+			t.Fatalf("FQ%d: End is nil", tc.quarter)
+		}
+		if !p.End.Time.Equal(tc.wantEnd) {
+			t.Errorf("FQ%d: End = %v, want %v", tc.quarter, p.End.Time, tc.wantEnd)
+		}
+	}
+}
+
+func TestPeriod_NewCalendarYear_PopulatesEnd(t *testing.T) {
+	p := NewCalendarYear(2026)
+	if p.End == nil {
+		t.Fatalf("End is nil")
+	}
+	want := time.Date(2026, time.December, 31, 0, 0, 0, 0, time.UTC)
+	if !p.End.Time.Equal(want) {
+		t.Errorf("End = %v, want %v", p.End.Time, want)
+	}
+}
+
+func TestPeriod_NewFiscalYear_PopulatesEnd(t *testing.T) {
+	// FY2027 with July start = Jul 1 2026 - Jun 30 2027 (default end-year labeling).
+	p := NewFiscalYear(2027, time.July, 1)
+	if p.End == nil {
+		t.Fatalf("End is nil")
+	}
+	want := time.Date(2027, time.June, 30, 0, 0, 0, 0, time.UTC)
+	if !p.End.Time.Equal(want) {
+		t.Errorf("End = %v, want %v", p.End.Time, want)
+	}
+}
+
+func TestPeriod_NewCalendarMonth_PopulatesEnd(t *testing.T) {
+	cases := []struct {
+		year    int
+		month   time.Month
+		wantEnd time.Time
+	}{
+		{2026, time.January, time.Date(2026, time.January, 31, 0, 0, 0, 0, time.UTC)},
+		{2026, time.April, time.Date(2026, time.April, 30, 0, 0, 0, 0, time.UTC)},
+		{2026, time.February, time.Date(2026, time.February, 28, 0, 0, 0, 0, time.UTC)}, // non-leap
+		{2024, time.February, time.Date(2024, time.February, 29, 0, 0, 0, 0, time.UTC)}, // leap
+		{2026, time.December, time.Date(2026, time.December, 31, 0, 0, 0, 0, time.UTC)},
+	}
+	for _, tc := range cases {
+		p := NewCalendarMonth(tc.year, tc.month)
+		if p.End == nil {
+			t.Fatalf("%v %d: End is nil", tc.month, tc.year)
+		}
+		if !p.End.Time.Equal(tc.wantEnd) {
+			t.Errorf("%v %d: End = %v, want %v", tc.month, tc.year, p.End.Time, tc.wantEnd)
+		}
+	}
+}
+
+func TestPeriod_NewRelativeQuarter_PopulatesEnd(t *testing.T) {
+	// May 15 2026 sits in Q2 (Apr-Jun). this/next/last cal-quarter ends:
+	now := time.Date(2026, time.May, 15, 0, 0, 0, 0, time.UTC)
+	cases := []struct {
+		direction int
+		wantEnd   time.Time
+	}{
+		{0, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},      // this Q (Q2 2026)
+		{+1, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)}, // next Q (Q3 2026)
+		{-1, time.Date(2026, time.March, 31, 0, 0, 0, 0, time.UTC)},     // last Q (Q1 2026)
+	}
+	for _, tc := range cases {
+		p := NewRelativeQuarter(now, tc.direction)
+		if p.End == nil {
+			t.Fatalf("direction=%d: End is nil", tc.direction)
+		}
+		if !p.End.Time.Equal(tc.wantEnd) {
+			t.Errorf("direction=%d: End = %v, want %v", tc.direction, p.End.Time, tc.wantEnd)
+		}
+	}
+}
+
+func TestPeriod_NewRelativeFiscalQuarter_PopulatesEnd(t *testing.T) {
+	// FY starts April 1; May 15 sits in FQ1 (Apr-Jun).
+	now := time.Date(2026, time.May, 15, 0, 0, 0, 0, time.UTC)
+	cases := []struct {
+		direction int
+		wantEnd   time.Time
+	}{
+		{0, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},        // this FQ (FQ1 = Apr-Jun)
+		{+1, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)},  // next FQ (FQ2 = Jul-Sep)
+		{-1, time.Date(2026, time.March, 31, 0, 0, 0, 0, time.UTC)},      // last FQ (FQ4 of prior FY = Jan-Mar)
+	}
+	for _, tc := range cases {
+		p := NewRelativeFiscalQuarter(now, time.April, 1, tc.direction)
+		if p.End == nil {
+			t.Fatalf("direction=%d: End is nil", tc.direction)
+		}
+		if !p.End.Time.Equal(tc.wantEnd) {
+			t.Errorf("direction=%d: End = %v, want %v", tc.direction, p.End.Time, tc.wantEnd)
+		}
+	}
+}
+
+// --- NewCustomPeriod (PeriodCustom kind) ---
+//
+// User-defined periods via `between A and B` / `from A to B`. Plan
+// U1: PeriodCustom enum constant + NewCustomPeriod factory that
+// validates end >= start and stores both endpoints directly.
+
+func TestPeriod_NewCustomPeriod_HappyPath(t *testing.T) {
+	start := NewDateFromTime(time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC))
+	end := NewDateFromTime(time.Date(2026, time.April, 30, 0, 0, 0, 0, time.UTC))
+	p, err := NewCustomPeriod(start, end)
+	if err != nil {
+		t.Fatalf("NewCustomPeriod: %v", err)
+	}
+	if p.Kind != PeriodCustom {
+		t.Errorf("Kind = %v, want PeriodCustom", p.Kind)
+	}
+	if !p.Start.Time.Equal(start.Time) {
+		t.Errorf("Start = %v, want %v", p.Start.Time, start.Time)
+	}
+	if !p.End.Time.Equal(end.Time) {
+		t.Errorf("End = %v, want %v", p.End.Time, end.Time)
+	}
+}
+
+func TestPeriod_NewCustomPeriod_SameDay(t *testing.T) {
+	// A single-day period (start == end) is the minimal valid period.
+	d := NewDateFromTime(time.Date(2026, time.April, 15, 0, 0, 0, 0, time.UTC))
+	p, err := NewCustomPeriod(d, d)
+	if err != nil {
+		t.Fatalf("same-day period should be valid: %v", err)
+	}
+	if !p.Start.Time.Equal(p.End.Time) {
+		t.Errorf("same-day: Start (%v) != End (%v)", p.Start.Time, p.End.Time)
+	}
+}
+
+func TestPeriod_NewCustomPeriod_EndBeforeStart(t *testing.T) {
+	start := NewDateFromTime(time.Date(2026, time.April, 30, 0, 0, 0, 0, time.UTC))
+	end := NewDateFromTime(time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC))
+	if _, err := NewCustomPeriod(start, end); err == nil {
+		t.Errorf("expected error for end-before-start; got nil")
+	}
+}
+
+func TestPeriod_NewCustomPeriod_NilEndpoint(t *testing.T) {
+	d := NewDateFromTime(time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC))
+	if _, err := NewCustomPeriod(nil, d); err == nil {
+		t.Errorf("expected error for nil start; got nil")
+	}
+	if _, err := NewCustomPeriod(d, nil); err == nil {
+		t.Errorf("expected error for nil end; got nil")
+	}
+}
+
+func TestPeriod_PeriodCustom_StringNonEmpty(t *testing.T) {
+	start := NewDateFromTime(time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC))
+	end := NewDateFromTime(time.Date(2026, time.April, 30, 0, 0, 0, 0, time.UTC))
+	p, err := NewCustomPeriod(start, end)
+	if err != nil {
+		t.Fatalf("NewCustomPeriod: %v", err)
+	}
+	got := p.String()
+	if got == "" {
+		t.Errorf("String() must not be empty for PeriodCustom")
+	}
+	// Must surface both endpoints so diagnostics are debuggable.
+	if !strings.Contains(got, "2026") {
+		t.Errorf("String() = %q should mention the year", got)
+	}
+}
+
+// TestPeriod_AllFactoriesPopulateEnd is a single-point invariant
+// assertion: NO factory in this package may return a *Period with
+// nil End. Locks the v2.0 contract — if a future maintainer adds a
+// factory that forgets End, this test catches it.
+func TestPeriod_AllFactoriesPopulateEnd(t *testing.T) {
+	now := time.Date(2026, time.May, 15, 0, 0, 0, 0, time.UTC)
+	periods := []*Period{
+		mustCalendarQuarter(t, 2026, 1),
+		mustFiscalQuarter(t, 2026, time.April, 1, 2),
+		NewCalendarYear(2026),
+		NewFiscalYear(2027, time.July, 1),
+		NewCalendarMonth(2026, time.July),
+		NewRelativeQuarter(now, 0),
+		NewRelativeFiscalQuarter(now, time.April, 1, 0),
+	}
+	for i, p := range periods {
+		if p.End == nil {
+			t.Errorf("periods[%d] (Kind=%v): End is nil — every factory must populate End", i, p.Kind)
+		}
+		if p.Start == nil {
+			t.Errorf("periods[%d] (Kind=%v): Start is nil", i, p.Kind)
+		}
+		if p.End != nil && p.Start != nil && p.End.Time.Before(p.Start.Time) {
+			t.Errorf("periods[%d] (Kind=%v): End (%v) before Start (%v)",
+				i, p.Kind, p.End.Time, p.Start.Time)
+		}
+	}
 }

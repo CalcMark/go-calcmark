@@ -554,10 +554,14 @@ func TestFrontmatter_Unit9_ConsolidatedSession(t *testing.T) {
 	s, uri := prepareServerDoc(t, source)
 
 	// R1 — Registry shape and membership.
-	if got := len(document.Registry); got != 6 {
-		t.Errorf("R1: Registry has %d entries, want 6", got)
+	// Bumped from 6 to 7 when calendar_year_offset was added (2026-04-30).
+	if got := len(document.Registry); got != 7 {
+		t.Errorf("R1: Registry has %d entries, want 7", got)
 	}
-	for _, name := range []string{"exchange", "globals", "scale", "convert_to", "measurement", "fiscal_year_starts"} {
+	for _, name := range []string{
+		"exchange", "globals", "scale", "convert_to", "measurement",
+		"fiscal_year_starts", "calendar_year_offset",
+	} {
 		if !document.IsRegisteredKey(name) {
 			t.Errorf("R1: IsRegisteredKey(%q) = false, want true", name)
 		}

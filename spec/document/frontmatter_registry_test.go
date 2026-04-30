@@ -133,8 +133,10 @@ func TestRegistry_IsRegisteredKey(t *testing.T) {
 	}
 }
 
-func TestRegistry_HasAllSixKnownKeys(t *testing.T) {
-	if len(Registry) != 6 {
-		t.Errorf("expected 6 registered keys, got %d", len(Registry))
+func TestRegistry_HasAllKnownKeys(t *testing.T) {
+	// Bumped from 6 to 7 when calendar_year_offset was added (2026-04-30)
+	// to support `before` (default) / `after` FY-label conventions.
+	if len(Registry) != 7 {
+		t.Errorf("expected 7 registered keys, got %d", len(Registry))
 	}
 }

@@ -269,6 +269,14 @@ func (p *RecursiveDescentParser) parseStatement() (ast.Node, error) {
 		return p.parseAssignment()
 	}
 
+	// v2.0 migration diagnostic: `between = <expr>`. Pre-v2.0,
+	// `between` could be used as a variable name. v2.0 reserves it
+	// for the period operator. Surface a clear migration message
+	// rather than the generic "unexpected token: BETWEEN".
+	if p.check(lexer.BETWEEN) && p.peekAhead(1).Type == lexer.ASSIGN {
+		return nil, p.error("'between' is a reserved keyword in v2.0; rename the variable (e.g., 'between_value')")
+	}
+
 	// Otherwise, it's an expression
 	return p.parseExpression()
 }

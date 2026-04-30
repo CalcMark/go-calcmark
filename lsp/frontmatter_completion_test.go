@@ -12,6 +12,7 @@ import (
 // frontmatter key names. Kept inline so the test fails loudly if Registry
 // changes unexpectedly.
 var registryKeyNames = []string{
+	"calendar_year_offset",
 	"convert_to",
 	"exchange",
 	"fiscal_year_starts",

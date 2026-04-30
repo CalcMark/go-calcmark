@@ -89,16 +89,31 @@ func (interp *Interpreter) SetMeasurement(mc *units.MeasurementConfig) {
 	interp.measurement = mc
 }
 
-// fiscalConfig holds the fiscal year start month and day.
+// fiscalConfig holds the fiscal year start month/day plus the FY-label
+// convention. labelMode defaults to FYLabelByEndYear (matches Australian
+// government year, US tax year, and most publicly traded companies);
+// documents can declare `calendar_year_offset: after` to switch to
+// FYLabelByStartYear.
 type fiscalConfig struct {
-	month int // 1-12
-	day   int // 1-31
+	month     int // 1-12
+	day       int // 1-31
+	labelMode types.FYLabelMode
 }
 
-// SetFiscalYearStarts configures the start of the fiscal year.
-// Month is 1-12 (January-December), day is the start day (1-31, typically 1).
+// SetFiscalYearStarts configures the start of the fiscal year using
+// the default FY-label convention (FYLabelByEndYear). Existing
+// callers stay on this entry point unchanged. Month is 1-12, day is
+// 1-31 (typically 1).
 func (interp *Interpreter) SetFiscalYearStarts(month, day int) {
-	interp.fiscalYearStarts = &fiscalConfig{month: month, day: day}
+	interp.SetFiscalCalendar(month, day, types.FYLabelByEndYear)
+}
+
+// SetFiscalCalendar configures the fiscal-year start month/day plus
+// the labeling convention. `mode` corresponds to the document's
+// `calendar_year_offset` frontmatter setting (`before` →
+// FYLabelByEndYear, `after` → FYLabelByStartYear).
+func (interp *Interpreter) SetFiscalCalendar(month, day int, mode types.FYLabelMode) {
+	interp.fiscalYearStarts = &fiscalConfig{month: month, day: day, labelMode: mode}
 }
 
 // resolveUnit maps a bare ambiguous unit name to its qualified form using
@@ -164,6 +179,10 @@ func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 		return interp.evalEndOfExpr(n)
 	case *ast.StartOfExpr:
 		return interp.evalStartOfExpr(n)
+	case *ast.BetweenExpr:
+		return interp.evalBetweenExpr(n)
+	case *ast.LengthOfExpr:
+		return interp.evalLengthOfExpr(n)
 	case *ast.FractionLiteral:
 		return interp.evalFractionLiteral(n)
 	case *ast.QuantityLiteral:
