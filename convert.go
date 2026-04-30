@@ -11,11 +11,11 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 
-	"github.com/CalcMark/go-calcmark/format"
-	"github.com/CalcMark/go-calcmark/format/display"
-	impldoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/impl/embedded"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	impldoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/impl/embedded"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // Mode selects the conversion pipeline.

@@ -3,9 +3,9 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // TestNapkinTypePreservation verifies that napkin conversion preserves the input type.

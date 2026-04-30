@@ -3,9 +3,9 @@ package document
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/features"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // Detector analyzes source text and splits it into blocks.

@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 	"github.com/shopspring/decimal"
 )
 

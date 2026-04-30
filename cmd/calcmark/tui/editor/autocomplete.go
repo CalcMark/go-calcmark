@@ -3,10 +3,10 @@ package editor
 import (
 	"sort"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 )
 
 // implementedFunctionNames returns a set of function names that have interpreter

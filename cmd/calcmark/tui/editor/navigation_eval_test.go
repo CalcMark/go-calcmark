@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestArrowUpEvaluatesLine tests that pressing arrow up saves and evaluates the current line.

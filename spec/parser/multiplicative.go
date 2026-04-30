@@ -3,10 +3,10 @@ package parser
 import (
 	"fmt"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // parseMultiplicative parses multiplication, division, modulus, and unit conversions.

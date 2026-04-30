@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestSecurityNestingDepthLimit tests that deeply nested expressions are rejected

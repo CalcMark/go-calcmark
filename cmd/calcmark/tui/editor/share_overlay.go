@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config/theme"
 )
 
 // handleShareOverlayKey processes keys when the Share To Gist overlay is visible.

@@ -1,6 +1,6 @@
 package lsp
 
-import "github.com/CalcMark/go-calcmark/spec/types"
+import "github.com/CalcMark/go-calcmark/v2/spec/types"
 
 // runtimeTypeToArgType maps a concrete evaluator runtime type to the ArgType
 // string used by ParamSpec. Unknown or nil values collapse to ArgTypeAny.

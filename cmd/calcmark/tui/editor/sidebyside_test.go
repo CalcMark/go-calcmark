@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 func TestSideBySide_BasicRendering(t *testing.T) {

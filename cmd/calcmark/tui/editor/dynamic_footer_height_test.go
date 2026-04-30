@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestFooterShowsFullHintOnErrorLine verifies that when the cursor is on an

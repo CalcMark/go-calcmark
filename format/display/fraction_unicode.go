@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // unicodeFractions maps numerator/denominator pairs to Unicode Number Forms characters.

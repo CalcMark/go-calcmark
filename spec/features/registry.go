@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/spec/identifiers"
-	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/identifiers"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // Category represents a type of CalcMark feature.

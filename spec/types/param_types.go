@@ -1,6 +1,6 @@
 package types
 
-import "github.com/CalcMark/go-calcmark/spec/identifiers"
+import "github.com/CalcMark/go-calcmark/v2/spec/identifiers"
 
 // ArgType represents the semantic type expected for a function argument.
 // This defines what kinds of values are valid for each parameter position.

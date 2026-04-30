@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config/theme"
 )
 
 // ExportOverlayState holds the state for the export format selection overlay.

@@ -3,7 +3,7 @@ package document
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestMultibyteDocumentEvaluation validates that a CalcMark document containing

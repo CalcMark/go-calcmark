@@ -3,7 +3,7 @@ package lsp
 import (
 	"sort"
 
-	specDoc "github.com/CalcMark/go-calcmark/spec/document"
+	specDoc "github.com/CalcMark/go-calcmark/v2/spec/document"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 

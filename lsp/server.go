@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/format"
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	specDoc "github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	specDoc "github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/gorilla/websocket"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"

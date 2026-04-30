@@ -3,7 +3,7 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // resultStartDate returns the start Date from a result that's

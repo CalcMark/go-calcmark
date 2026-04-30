@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui"
 )
 
 // runEdit starts the editor mode, optionally with a file

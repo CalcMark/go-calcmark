@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // CheckFrontmatter validates the populated CalcMark fields of a Frontmatter

@@ -1,8 +1,8 @@
 package editor
 
 import (
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // EditorState represents the core editing state of the editor.

@@ -3,10 +3,10 @@ package lsp
 import (
 	"sort"
 
-	"github.com/CalcMark/go-calcmark/spec/features"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // LexiconResult is the wire shape returned by `calcmark/lexicon`.

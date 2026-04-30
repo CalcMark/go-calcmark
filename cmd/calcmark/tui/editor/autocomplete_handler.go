@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 )
 
 // minAutocompletePrefix is the minimum number of characters needed to trigger autosuggest.

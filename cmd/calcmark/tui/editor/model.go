@@ -28,13 +28,13 @@ import (
 
 	"charm.land/bubbles/v2/filepicker"
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
-	"github.com/CalcMark/go-calcmark/format/display"
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // ========================================

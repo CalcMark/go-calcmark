@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // TestHelpFunctionsOutput verifies that help functions shows all function names.

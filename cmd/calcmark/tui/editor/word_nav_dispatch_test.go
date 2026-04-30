@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestWordNavigationDispatch verifies that Ctrl+Left/Right, Alt+Left/Right,

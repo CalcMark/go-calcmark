@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/CalcMark/go-calcmark/lsp"
+	"github.com/CalcMark/go-calcmark/v2/lsp"
 	"github.com/spf13/cobra"
 )
 

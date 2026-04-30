@@ -3,7 +3,7 @@ package lsp
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 

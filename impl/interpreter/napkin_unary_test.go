@@ -3,7 +3,7 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestNapkinWithNegativeNumbers tests that negative numbers work correctly with napkin conversion

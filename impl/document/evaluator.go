@@ -6,14 +6,14 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
-	"github.com/CalcMark/go-calcmark/spec/transform"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/semantic"
+	"github.com/CalcMark/go-calcmark/v2/spec/transform"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	"github.com/shopspring/decimal"
 )
 

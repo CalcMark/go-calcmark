@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/identifiers"
+	"github.com/CalcMark/go-calcmark/v2/spec/identifiers"
 )
 
 // TestNetworkMapsMatchCanonicalIdentifiers verifies bidirectional consistency:

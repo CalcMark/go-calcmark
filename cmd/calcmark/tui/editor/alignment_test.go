@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestAlignment_OneToOneMapping verifies that every source line maps to exactly one preview line.

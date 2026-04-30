@@ -6,11 +6,11 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/constants"
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/features"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/constants"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // nlTriggerKeywords is the set of NL function trigger keywords, derived from

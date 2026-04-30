@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // testdataRoot is the path to testdata directory relative to this test file

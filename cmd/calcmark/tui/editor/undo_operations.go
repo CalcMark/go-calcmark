@@ -5,7 +5,7 @@ package editor
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // handleUndo handles Ctrl+Z - undo last edit batch.

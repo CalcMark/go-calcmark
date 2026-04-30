@@ -3,7 +3,7 @@ package document
 import (
 	"fmt"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )

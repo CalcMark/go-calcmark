@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
 )
 
 // TestMain ensures all editor tests run with default config (dark mode),

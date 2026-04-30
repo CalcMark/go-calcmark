@@ -3,7 +3,7 @@ package lexer_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
 )
 
 // U6 — new period-operator keywords for v2.0:

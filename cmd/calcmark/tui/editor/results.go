@@ -3,10 +3,10 @@ package editor
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
-	"github.com/CalcMark/go-calcmark/spec/transform"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/semantic"
+	"github.com/CalcMark/go-calcmark/v2/spec/transform"
 )
 
 // LineResult represents a line's evaluation result.

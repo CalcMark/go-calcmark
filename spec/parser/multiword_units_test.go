@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // TestMultiWordUnitParsing tests parsing of multi-word units like "nautical mile" and "metric ton"

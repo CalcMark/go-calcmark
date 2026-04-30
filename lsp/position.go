@@ -4,7 +4,7 @@
 package lsp
 
 import (
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 

@@ -6,7 +6,7 @@ import (
 	"unicode"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/components"
 )
 
 // ========================================

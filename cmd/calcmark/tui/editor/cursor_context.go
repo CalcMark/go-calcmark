@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // CursorContext describes what the cursor is positioned on/in.

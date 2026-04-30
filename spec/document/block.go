@@ -12,8 +12,8 @@ package document
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // BlockType identifies the type of block.

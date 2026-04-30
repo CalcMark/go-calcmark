@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TextFormatter formats CalcMark documents as plain text.

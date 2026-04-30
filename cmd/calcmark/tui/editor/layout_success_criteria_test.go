@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/mattn/go-runewidth"
 )
 

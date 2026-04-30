@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // TestParseFunctionCallsStandalone tests that standalone function calls parse correctly

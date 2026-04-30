@@ -1,7 +1,7 @@
 package calcmark
 
 import (
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
 )
 
 // Session maintains state for live editor use.

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CalcMark/go-calcmark"
-	"github.com/CalcMark/go-calcmark/format"
+	"github.com/CalcMark/go-calcmark/v2"
+	"github.com/CalcMark/go-calcmark/v2/format"
 	"github.com/fsnotify/fsnotify"
 )
 

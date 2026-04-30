@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // DependencyAnalyzer extracts variable dependencies from CalcBlocks.

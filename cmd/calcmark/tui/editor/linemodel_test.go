@@ -3,7 +3,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/geometry"
 )
 
 func TestWrapText(t *testing.T) {

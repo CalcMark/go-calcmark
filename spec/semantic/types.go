@@ -3,8 +3,8 @@ package semantic
 import (
 	"fmt"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // TypeInfo represents type information for a node.

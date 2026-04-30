@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // Parse parses CalcMark source code into an AST

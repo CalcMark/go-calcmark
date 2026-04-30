@@ -3,9 +3,9 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // TestLogicalOperators tests AND, OR, NOT operators

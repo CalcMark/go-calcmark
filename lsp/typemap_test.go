@@ -3,7 +3,7 @@ package lsp
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	"github.com/shopspring/decimal"
 )
 

@@ -5,8 +5,8 @@ import (
 	"io"
 	"maps"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // JSONFormatter formats CalcMark documents as JSON.

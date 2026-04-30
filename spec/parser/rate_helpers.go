@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
 )
 
 // parseCapacityValue parses a capacity value for "at ... per UNIT" syntax.

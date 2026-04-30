@@ -3,7 +3,7 @@ package lsp
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
 )
 
 // --- Token type mapping tests ---

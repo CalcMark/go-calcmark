@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // parseFirstStmt extracts the first statement's expression body

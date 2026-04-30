@@ -3,7 +3,7 @@ package editor
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/geometry"
 )
 
 // AlignedModel represents the computed visual line structure for both panes.

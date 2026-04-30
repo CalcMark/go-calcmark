@@ -1,7 +1,7 @@
 package calcmark
 
 import (
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // Result contains the evaluation results and any diagnostics.

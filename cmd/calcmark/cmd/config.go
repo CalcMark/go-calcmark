@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
-	"github.com/CalcMark/go-calcmark/format"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/format"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )

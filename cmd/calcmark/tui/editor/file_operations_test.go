@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/format"
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 func TestSaveFile(t *testing.T) {

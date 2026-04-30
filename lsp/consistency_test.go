@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 )
 
 // TestEveryFeatureProducesValidCompletion verifies that every feature in the

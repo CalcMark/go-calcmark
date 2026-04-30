@@ -3,7 +3,7 @@ package editor
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // BlockRenderResult maps rendered preview lines back to their source lines for alignment.

@@ -3,8 +3,8 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // coerceSpeedToRate converts a Speed quantity (e.g., "60 mph") to a Rate (e.g., 60 mi/h).

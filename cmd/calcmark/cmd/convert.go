@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/CalcMark/go-calcmark"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
-	"github.com/CalcMark/go-calcmark/format"
+	"github.com/CalcMark/go-calcmark/v2"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/format"
 	"github.com/spf13/cobra"
 )
 

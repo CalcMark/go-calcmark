@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // ContextFooterHeight is the fixed height for the context footer / helper area.

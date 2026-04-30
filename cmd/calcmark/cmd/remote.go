@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/filecheck"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/editor/store"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/filecheck"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/editor/store"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/spf13/cobra"
 )
 

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestMultibyteVariableAssignment validates that multi-byte UTF-8 identifiers

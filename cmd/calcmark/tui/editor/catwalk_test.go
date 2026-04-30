@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/cockroachdb/datadriven"
 )
 

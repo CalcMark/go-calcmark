@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestViewAlignment_EditMode tests that source and preview panes

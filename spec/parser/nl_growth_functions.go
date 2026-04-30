@@ -3,8 +3,8 @@ package parser
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
 )
 
 // parseNLCompoundFunction parses: compound <principal> by <rate> [per <period> | compounded <freq>] over <duration>

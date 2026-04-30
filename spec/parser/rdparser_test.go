@@ -3,7 +3,7 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestRecursiveDescentBasics tests the basic functionality of the new parser.

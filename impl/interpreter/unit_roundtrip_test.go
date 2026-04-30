@@ -5,8 +5,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestUnitRoundtrip verifies that unit conversions are accurate within float64 tolerance.

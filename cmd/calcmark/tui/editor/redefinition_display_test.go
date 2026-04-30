@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	impldoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	impldoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestRedefinitionErrorDisplayLine tests that redefinition errors show on the correct line

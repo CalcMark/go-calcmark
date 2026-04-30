@@ -13,7 +13,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestRegressionGetLineReferencesBasic verifies that getLineReferences returns

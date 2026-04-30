@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // isPeriodKeyword reports whether the given RelativeDateLiteral

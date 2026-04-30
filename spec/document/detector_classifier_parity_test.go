@@ -3,7 +3,7 @@ package document
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/classifier"
+	"github.com/CalcMark/go-calcmark/v2/spec/classifier"
 )
 
 // testResolver is a simple IdentifierResolver for parity tests.

@@ -3,8 +3,8 @@ package semantic_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/semantic"
 )
 
 // TestDateValidation_February30 tests that February 30 produces an error

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/microcosm-cc/bluemonday"
 )
 

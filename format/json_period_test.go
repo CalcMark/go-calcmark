@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // U14 — JSON formatter populates period_start, period_end, and
