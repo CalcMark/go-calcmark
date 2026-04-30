@@ -3,8 +3,8 @@ package editor
 import (
 	"testing"
 
-	impldoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	impldoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestFunctionResultDisplay verifies that function calls display results in preview.

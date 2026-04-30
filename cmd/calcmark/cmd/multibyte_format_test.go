@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/format"
+	"github.com/CalcMark/go-calcmark/v2/format"
 )
 
 // TestMultibyteEvalTextFormat verifies that cm eval with text format

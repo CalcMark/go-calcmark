@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/components"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/components"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // renderContextFooter renders the context footer showing errors or referenced variables.

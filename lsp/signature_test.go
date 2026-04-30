@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/identifiers"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/identifiers"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // TestSignatureHelp_ActiveParameterClampedForVariadic asserts that activeParameter

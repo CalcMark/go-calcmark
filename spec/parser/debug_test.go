@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/lexer"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestTokenization verifies the lexer produces tokens correctly

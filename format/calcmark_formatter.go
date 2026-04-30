@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // CalcMarkFormatter formats CalcMark documents back to CalcMark format.

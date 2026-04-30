@@ -4,8 +4,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/spec/features"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // argumentContext describes where a cursor sits relative to an enclosing

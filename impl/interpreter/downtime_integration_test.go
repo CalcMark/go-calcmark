@@ -3,7 +3,7 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // TestDowntimeFunctionIntegration - tests the full downtime() function via interpreter

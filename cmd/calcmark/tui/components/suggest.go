@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 )
 
 // Suggestion is an alias for the shared suggestion type in spec/features.

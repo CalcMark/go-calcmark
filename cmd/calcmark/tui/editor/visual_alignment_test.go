@@ -5,7 +5,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 func TestSourceToVisualMapping_BasicCase(t *testing.T) {

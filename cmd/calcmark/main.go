@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/cmd"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/cmd"
 )
 
 // Version info set via ldflags at build time

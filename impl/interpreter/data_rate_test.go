@@ -3,9 +3,9 @@ package interpreter
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // TestDataRateUnitConversions tests that all data rate unit variations work correctly.

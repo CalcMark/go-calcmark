@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // Mode represents the current TUI mode.

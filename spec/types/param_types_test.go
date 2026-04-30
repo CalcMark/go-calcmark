@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/identifiers"
+	"github.com/CalcMark/go-calcmark/v2/spec/identifiers"
 )
 
 func TestCompoundFunctionSpec_HasPeriodParam(t *testing.T) {

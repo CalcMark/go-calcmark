@@ -3,8 +3,8 @@ package document_test
 import (
 	"testing"
 
-	impldoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	impldoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestDocumentEvaluationStoresResults verifies document evaluation stores LastValue

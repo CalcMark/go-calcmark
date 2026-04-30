@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/shared"
 )
 
 // View implements tea.Model.

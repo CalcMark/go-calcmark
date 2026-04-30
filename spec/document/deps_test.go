@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestDependencyExtraction validates that we correctly extract dependencies.

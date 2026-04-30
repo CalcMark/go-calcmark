@@ -3,7 +3,7 @@ package editor
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestPreviewWithEmptyLineAfterHeading tests that empty lines between blocks

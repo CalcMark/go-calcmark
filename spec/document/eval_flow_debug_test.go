@@ -9,9 +9,9 @@ package document_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/semantic"
 )
 
 // TestEvalFlowWithTwoBlocks simulates the exact flow that happens when evaluating

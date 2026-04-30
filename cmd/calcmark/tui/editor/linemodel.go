@@ -1,6 +1,6 @@
 package editor
 
-import "github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+import "github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/geometry"
 
 // LineModel computes the visual line layout for source and preview panes.
 // This is a pure computation - no rendering, no side effects.

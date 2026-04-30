@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 )
 
 // JSONFeature is the JSON representation of a single feature.

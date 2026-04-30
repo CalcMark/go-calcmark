@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 	"github.com/shopspring/decimal"
 	"gopkg.in/yaml.v3"
 )

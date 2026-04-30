@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // U10 — period-bearing keywords evaluate to *types.Period.

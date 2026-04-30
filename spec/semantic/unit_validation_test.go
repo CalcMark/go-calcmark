@@ -3,8 +3,8 @@ package semantic_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
-	"github.com/CalcMark/go-calcmark/spec/semantic"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/semantic"
 )
 
 // TestUnitCompatibility_IncompatibleUnits tests that incompatible units produce errors

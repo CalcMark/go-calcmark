@@ -3,7 +3,7 @@ package semantic
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // Severity represents the severity level of a diagnostic.

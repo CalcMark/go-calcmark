@@ -4,10 +4,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/transform"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/transform"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // interpolationPattern matches {{variable_name}}, {{@scale}}, or {{@globals.field}}

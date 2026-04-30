@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/CalcMark/go-calcmark"
-	"github.com/CalcMark/go-calcmark/format"
+	"github.com/CalcMark/go-calcmark/v2"
+	"github.com/CalcMark/go-calcmark/v2/format"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/websocket"

@@ -3,7 +3,7 @@ package spec_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestNumberMultipliers tests number multiplier suffixes (k, M, B, T) and scientific notation

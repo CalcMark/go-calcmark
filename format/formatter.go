@@ -3,8 +3,8 @@ package format
 import (
 	"io"
 
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // Formatter formats CalcMark documents for output.

@@ -3,12 +3,12 @@ package tui
 import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2/compat"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/editor"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/repl"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/shared"
-	"github.com/CalcMark/go-calcmark/format/display"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/editor"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/repl"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/shared"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // initializeColorProfile sets up lipgloss color settings.

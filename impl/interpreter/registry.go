@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/v2/spec/features"
 )
 
 // FunctionInfo contains metadata about a CalcMark function for help output.

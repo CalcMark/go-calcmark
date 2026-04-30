@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // BooleanKeywords defines the valid boolean keyword values (case-insensitive).

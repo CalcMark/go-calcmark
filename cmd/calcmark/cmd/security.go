@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/filecheck"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/filecheck"
 )
 
 // validateReadFilePath performs security checks on a file path for read-only

@@ -14,7 +14,7 @@ package semantic
 import (
 	"fmt"
 
-	"github.com/CalcMark/go-calcmark/spec/ast"
+	"github.com/CalcMark/go-calcmark/v2/spec/ast"
 )
 
 // checkLengthOfInner validates the inner expression of `length of

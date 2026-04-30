@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/identifiers"
+	"github.com/CalcMark/go-calcmark/v2/spec/identifiers"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 

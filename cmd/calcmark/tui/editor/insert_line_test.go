@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 func TestInsertLineBelow_CursorPosition(t *testing.T) {

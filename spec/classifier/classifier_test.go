@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/constants"
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/impl/types"
+	"github.com/CalcMark/go-calcmark/v2/constants"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/impl/types"
 )
 
 // Helper function to wrap ClassifyLine calls in tests

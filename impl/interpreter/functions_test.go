@@ -3,8 +3,8 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/impl/interpreter"
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/impl/interpreter"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 func TestFunctionEvaluation(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/format/display"
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/format/display"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // helper creates a document, evaluates it, and formats it as JSON.

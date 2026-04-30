@@ -3,7 +3,7 @@ package semantic
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestRedefinitionDiagnosticLineNumber verifies that when a variable is redefined,

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	"golang.org/x/text/language"
 )
 

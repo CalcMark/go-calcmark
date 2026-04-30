@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // TestVisualLayout_GutterSpace verifies that there is a space between line numbers and content

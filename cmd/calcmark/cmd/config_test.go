@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config"
 	toml "github.com/pelletier/go-toml/v2"
 )
 

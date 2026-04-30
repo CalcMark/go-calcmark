@@ -1,4 +1,4 @@
-module github.com/CalcMark/go-calcmark
+module github.com/CalcMark/go-calcmark/v2
 
 go 1.25.1
 

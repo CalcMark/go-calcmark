@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // TestSpecInvalidFilesActuallyFailParse verifies that spec/invalid files fail to parse.

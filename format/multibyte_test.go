@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // multibyteSource is the test document used across all format round-trip tests.

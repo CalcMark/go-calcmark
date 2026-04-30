@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/filecheck"
-	"github.com/CalcMark/go-calcmark/format"
-	implDoc "github.com/CalcMark/go-calcmark/impl/document"
-	"github.com/CalcMark/go-calcmark/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/filecheck"
+	"github.com/CalcMark/go-calcmark/v2/format"
+	implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
 // saveFile saves the document to a file.

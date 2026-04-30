@@ -8,7 +8,7 @@ import (
 	"os/exec"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/editor/store"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/editor/store"
 	"github.com/atotto/clipboard"
 )
 

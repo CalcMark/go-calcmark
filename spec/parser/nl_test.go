@@ -3,7 +3,7 @@ package parser_test
 import (
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/lexer"
+	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
 )
 
 // TestNaturalLanguageTokenization checks how "average of" is tokenized

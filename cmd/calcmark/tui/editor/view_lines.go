@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/config/theme"
-	"github.com/CalcMark/go-calcmark/cmd/calcmark/tui/geometry"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/config/theme"
+	"github.com/CalcMark/go-calcmark/v2/cmd/calcmark/tui/geometry"
 )
 
 // selectionStyle returns the lipgloss style for selected text.

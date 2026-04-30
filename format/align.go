@@ -3,8 +3,8 @@ package format
 import (
 	"strings"
 
-	"github.com/CalcMark/go-calcmark/spec/document"
-	"github.com/CalcMark/go-calcmark/spec/types"
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
 // AlignedStatement maps a source line to its evaluated result.

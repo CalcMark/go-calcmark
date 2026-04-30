@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/CalcMark/go-calcmark/v2/spec/units"
 )
 
 // TestNormalizeUnitName_Comprehensive tests all unit mappings

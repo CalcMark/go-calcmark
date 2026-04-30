@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	specDoc "github.com/CalcMark/go-calcmark/spec/document"
+	specDoc "github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )

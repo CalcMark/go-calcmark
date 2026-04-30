@@ -1,7 +1,7 @@
 package interpreter
 
 import (
-	"github.com/CalcMark/go-calcmark/spec/parser"
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 )
 
 // Evaluate is a convenience wrapper for parsing and evaluating CalcMark source.

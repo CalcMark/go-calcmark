@@ -19,6 +19,21 @@ formatters, and editor surfaces. The work spans 26 commits since v1.14.0.
 
 ### Breaking
 
+- **Module path is now `github.com/CalcMark/go-calcmark/v2`.** Per Go's
+  [module versioning rules](https://go.dev/ref/mod#major-version-suffixes),
+  any major version ≥ 2 must encode the major version in the module
+  path. Go consumers update their imports:
+  ```diff
+  - import "github.com/CalcMark/go-calcmark"
+  - import "github.com/CalcMark/go-calcmark/spec/types"
+  + import "github.com/CalcMark/go-calcmark/v2"
+  + import "github.com/CalcMark/go-calcmark/v2/spec/types"
+  ```
+  And bump the `require` line: `github.com/CalcMark/go-calcmark/v2 v2.0.0`.
+  Mechanical: every existing import gets a `/v2` segment after
+  `go-calcmark`. Non-Go consumers (the CLI binary, the lark playground,
+  the calcmark-web embedded server) are unaffected — only direct Go
+  module consumers need to change anything.
 - **Period-bearing keywords now evaluate to `*types.Period`, not `Date`.**
   `Q1`, `FQ2`, `CY2026`, `FY2027`, `this month`, `this fiscal quarter`, bare
   month names like `April`, etc. now produce a `Period` value instead of
@@ -146,6 +161,14 @@ to v2.0.0:
    in the 3-arg form. Replace `over 5 years` with `over 5`.
 3. Use a variable named `between`. Rename it.
 4. Have a multi-word identifier with spaces. Rename to use underscores.
+
+If your **Go code** imports go-calcmark as a library, also:
+
+5. Add `/v2` to every import path:
+   `github.com/CalcMark/go-calcmark/...` → `github.com/CalcMark/go-calcmark/v2/...`.
+   Run `gofmt -w -r '"github.com/CalcMark/go-calcmark" -> "github.com/CalcMark/go-calcmark/v2"'`
+   plus a sed pass for the sub-package paths, then `go mod tidy` against
+   `github.com/CalcMark/go-calcmark/v2 v2.0.0`.
 
 Documents that don't touch any of the above need no changes — period
 literals (`Q1`, `FY2027`) read identically; `start of <period>` was
