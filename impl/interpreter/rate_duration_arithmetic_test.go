@@ -5,6 +5,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 	"github.com/CalcMark/go-calcmark/v2/spec/types"
+	"github.com/shopspring/decimal"
 )
 
 // Rate × Duration / Rate × Rate arithmetic with time-unit cancellation
@@ -159,7 +160,77 @@ func TestRateDuration_ChainedIntermediateRate(t *testing.T) {
 	}
 }
 
-// Out-of-scope for this round (documented for the follow-up):
+// AE3 (engine-level) — same-dimension Custom-unit cancellation. The
+// language-level form `100 cakes / box * 5 boxes` doesn't parse
+// today because `box` isn't recognised as a rate denominator at
+// the lexer/parser level (it's treated as a variable lookup and
+// fails). The cancellation engine itself is correct — this test
+// constructs the Rate programmatically and verifies the engine
+// handles same-string Custom cancellation. Parser-level support
+// for arbitrary Custom-unit rate denominators is tracked as a
+// follow-up.
+func TestRateDuration_QuantityCustomCancellation_Engine(t *testing.T) {
+	rate := &types.Rate{
+		Amount:  &types.Quantity{Value: decimal.NewFromInt(100), Unit: "cake"},
+		PerUnit: "box",
+	}
+	qty := &types.Quantity{Value: decimal.NewFromInt(5), Unit: "box"}
+	result, cancelled, err := rateTimesQuantity(rate, qty)
+	if err != nil {
+		t.Fatalf("rateTimesQuantity errored: %v", err)
+	}
+	if !cancelled {
+		t.Fatal("expected cancellation, got false")
+	}
+	resQty, ok := result.(*types.Quantity)
+	if !ok {
+		t.Fatalf("want *types.Quantity, got %T", result)
+	}
+	if resQty.Unit != "cake" {
+		t.Errorf("Unit = %q, want 'cake'", resQty.Unit)
+	}
+	if got := resQty.Value.String(); got != "500" {
+		t.Errorf("Value = %s, want 500", got)
+	}
+}
+
+// AE3 (engine-level, refusal) — distinct Custom units do NOT cancel.
+// `cake / box * 5 cake` would naively look like cancellation since
+// both sides have Custom-category units, but `cake != box` so the
+// engine refuses (returns cancelled=false). Dispatch then routes
+// to U4's R6 refusal at the operator level.
+func TestRateDuration_DistinctCustomDoesNotCancel(t *testing.T) {
+	rate := &types.Rate{
+		Amount:  &types.Quantity{Value: decimal.NewFromInt(100), Unit: "cake"},
+		PerUnit: "box",
+	}
+	qty := &types.Quantity{Value: decimal.NewFromInt(5), Unit: "cake"}
+	_, cancelled, err := rateTimesQuantity(rate, qty)
+	if err != nil {
+		t.Fatalf("rateTimesQuantity errored unexpectedly: %v", err)
+	}
+	if cancelled {
+		t.Fatal("expected no cancellation between cake/box and cake (distinct Custom units)")
+	}
+}
+
+// AE6 — Rate × Number stays as scaling. Confirms R5 — bare numbers
+// don't get treated as implicit durations in the rate's denominator.
+func TestRateDuration_NumberScalingPreserved(t *testing.T) {
+	res := evalSingleResult(t, "$100 / hour * 2\n")
+	rate, ok := res.(*types.Rate)
+	if !ok {
+		t.Fatalf("want *types.Rate (scaled), got %T (%v)", res, res)
+	}
+	if rate.PerUnit != "hour" {
+		t.Errorf("PerUnit = %q, want 'hour'", rate.PerUnit)
+	}
+	if got := rate.Amount.Value.String(); got != "200" {
+		t.Errorf("Amount.Value = %s, want 200", got)
+	}
+}
+
+// Out-of-scope for v2.1 (documented for the follow-up):
 //
 //   - `3 weeks * $100 / hour` (duration on the left). Operator
 //     precedence parses this as `((3 weeks) * $100) / hour` rather
@@ -167,6 +238,5 @@ func TestRateDuration_ChainedIntermediateRate(t *testing.T) {
 //     parentheses around the rate. The natural form is rate-on-left
 //     and we lock that one above.
 //   - `$100 / hour * 5 kg` should error with a dimensional-mismatch
-//     diagnostic. Today the existing Rate × Quantity branch silently
-//     coerces the result to `500 kg` — pre-existing behavior we
-//     don't tighten in this PR to keep the soak window stable.
+//     diagnostic — locked by the U4 refusal-contract tests in this
+//     same PR (see TestRateDuration_RefusalForCrossCategory_*).

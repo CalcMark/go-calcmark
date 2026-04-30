@@ -71,5 +71,10 @@ scale = 3
 scaled_bw = scale * bandwidth
 scaled_qps_val = 10 * qps
 
-# Rate * Quantity = Quantity
-total_data = bandwidth * 500 MB
+# Rate * matching-category Quantity → cancellation (v2.1).
+# The pre-v2.1 silent-coercion rule that produced "50000 MB" from
+# `bandwidth * 500 MB` (multiplying MB/s by MB without canceling) has
+# been retired; that expression now errors with a dimensional-mismatch
+# diagnostic. The cancellation engine replaces it with a same-
+# category-only rule.
+total_data = bandwidth * 10 seconds

@@ -23,35 +23,64 @@ import (
 // categoryOf + convertWithinCategory helpers below paper over that
 // split so the cancellation engine itself doesn't have to care.
 
-// rateTimesDuration multiplies a Rate by a Duration. The Duration is
-// converted into the rate's PerUnit (e.g. weeks → hours when the
-// rate is `$/hour`); once both sides agree on the time unit, that
-// dimension cancels and the rate's numerator is the result type.
+// tryRateCancellation attempts to cancel the rate's PerUnit against
+// the unit on a scalar operand (a Duration's Unit, a Quantity's Unit).
+// Used by `Rate × Duration` and `Rate × Quantity` dispatch.
 //
-// Errors when:
-//   - The rate's PerUnit is not a recognised time unit (so the
-//     conversion has nowhere to land — e.g. `100 req/server * 3
-//     weeks` doesn't compose).
-//   - The Duration's unit can't convert to the PerUnit (defence in
-//     depth — Duration values from the parser already use the
-//     canonical time-unit set, but a future feature could surface a
-//     different unit name).
-func rateTimesDuration(r *types.Rate, d *types.Duration) (types.Type, error) {
-	// PerUnit must be a time unit for the conversion to be meaningful.
-	// `100 req / server * 3 weeks` is a category error; surface it.
-	if !types.IsValidDurationUnit(r.PerUnit) {
-		return nil, fmt.Errorf(
-			"cannot multiply rate (%s) by duration (%s): rate's PerUnit %q is not a time unit",
-			r, d, r.PerUnit)
+// Returns:
+//   - (result, true, nil) when cancellation succeeded — the rate's
+//     numerator is reconstructed via `rateNumeratorAsResult`.
+//   - (nil, false, nil) when the cancellation predicate did NOT match,
+//     OR matched but the conversion failed. In both cases the caller
+//     should fall through to R6 refusal at the dispatch level rather
+//     than surface the convert-error string. (Plan G3 resolution:
+//     leak no internal "cannot convert X to Y" messages as user-
+//     facing errors; R6's contract takes over.)
+//
+// The predicate: cancellation applies when (a) `categoryOf(r.PerUnit)`
+// equals `categoryOf(oppUnit)` and both are non-empty, AND (b) for
+// `Custom` units, the strings are equal (since Custom has no
+// converter).
+func tryRateCancellation(r *types.Rate, oppValue decimal.Decimal, oppUnit string) (types.Type, bool, error) {
+	rateCat := categoryOf(r.PerUnit)
+	oppCat := categoryOf(oppUnit)
+	if rateCat == "" || oppCat == "" {
+		return nil, false, nil
 	}
-	converted, err := d.Convert(r.PerUnit)
+	if rateCat != oppCat {
+		return nil, false, nil
+	}
+	// Custom units cancel only when literally the same string. Distinct
+	// Custom names (cake vs box) fall through to refusal.
+	if rateCat == "Custom" && r.PerUnit != oppUnit {
+		return nil, false, nil
+	}
+	converted, err := convertWithinCategory(oppValue, oppUnit, r.PerUnit)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"cannot multiply rate (%s) by duration (%s): %w",
-			r, d, err)
+		// Predicate matched but conversion math failed. Treat as
+		// "no cancellation" so dispatch routes to R6's friendlier
+		// refusal message rather than leaking the converter's
+		// internal error string.
+		return nil, false, nil
 	}
-	value := r.Amount.Value.Mul(converted.Value)
-	return rateNumeratorAsResult(r, value), nil
+	value := r.Amount.Value.Mul(converted)
+	return rateNumeratorAsResult(r, value), true, nil
+}
+
+// rateTimesDuration is a thin wrapper around `tryRateCancellation` for
+// the Rate × Duration call site in operators.go. Returns the same
+// 3-tuple shape as `tryRateRateCancellation` so the dispatch can
+// uniformly check `cancelled` and fall through to R6 on false.
+func rateTimesDuration(r *types.Rate, d *types.Duration) (types.Type, bool, error) {
+	return tryRateCancellation(r, d.Value, d.Unit)
+}
+
+// rateTimesQuantity is a thin wrapper for the Rate × Quantity call
+// site. Same shape as `rateTimesDuration`. This replaces the
+// long-standing `operators.go:367-371` silent-coercion rule that
+// ignored the rate's `PerUnit` entirely.
+func rateTimesQuantity(r *types.Rate, q *types.Quantity) (types.Type, bool, error) {
+	return tryRateCancellation(r, q.Value, q.Unit)
 }
 
 // tryRateRateCancellation handles `Rate × Rate` when one rate's
@@ -85,14 +114,13 @@ func rateTimesDuration(r *types.Rate, d *types.Duration) (types.Type, error) {
 //     Amount type itself.
 func tryRateRateCancellation(left, right *types.Rate) (types.Type, bool, error) {
 	// Shape 1: left.PerUnit ↔ right.Amount.Unit
-	if isTimeUnit(left.PerUnit) && isTimeUnit(right.Amount.Unit) {
-		// Convert right's Amount value into left.PerUnit so we can
-		// multiply against left's Amount cleanly.
-		factor, err := convertTimeValue(right.Amount.Value, right.Amount.Unit, left.PerUnit)
+	if cancellable(left.PerUnit, right.Amount.Unit) {
+		factor, err := convertWithinCategory(right.Amount.Value, right.Amount.Unit, left.PerUnit)
 		if err != nil {
-			return nil, false, fmt.Errorf(
-				"cannot cancel %q on (%s) * (%s): %w",
-				left.PerUnit, left, right, err)
+			// Predicate matched but conversion failed — treat as
+			// no-cancellation so dispatch routes to R6 refusal.
+			// (Same plan G3 rule as `tryRateCancellation`.)
+			return nil, false, nil
 		}
 		newAmount := left.Amount.Value.Mul(factor)
 		return &types.Rate{
@@ -105,12 +133,10 @@ func tryRateRateCancellation(left, right *types.Rate) (types.Type, bool, error) 
 	}
 
 	// Shape 2: left.Amount.Unit ↔ right.PerUnit (the commuted case).
-	if isTimeUnit(left.Amount.Unit) && isTimeUnit(right.PerUnit) {
-		factor, err := convertTimeValue(left.Amount.Value, left.Amount.Unit, right.PerUnit)
+	if cancellable(right.PerUnit, left.Amount.Unit) {
+		factor, err := convertWithinCategory(left.Amount.Value, left.Amount.Unit, right.PerUnit)
 		if err != nil {
-			return nil, false, fmt.Errorf(
-				"cannot cancel %q on (%s) * (%s): %w",
-				right.PerUnit, left, right, err)
+			return nil, false, nil
 		}
 		newAmount := factor.Mul(right.Amount.Value)
 		return &types.Rate{
@@ -123,6 +149,21 @@ func tryRateRateCancellation(left, right *types.Rate) (types.Type, bool, error) 
 	}
 
 	return nil, false, nil
+}
+
+// cancellable reports whether two units can cancel against each other:
+// they share a non-empty category, and for `Custom` (which has no
+// converter) the strings are equal.
+func cancellable(a, b string) bool {
+	catA := categoryOf(a)
+	catB := categoryOf(b)
+	if catA == "" || catB == "" || catA != catB {
+		return false
+	}
+	if catA == "Custom" && a != b {
+		return false
+	}
+	return true
 }
 
 // rateNumeratorAsResult reconstructs the rate's numerator as a

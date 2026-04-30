@@ -372,11 +372,11 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		// → Quantity (e.g. `40 hours/week * 3 weeks` → `120 hours`),
 		// unitless-numerator → Number.
 		if rightDur, ok := right.(*types.Duration); ok && operator == "*" {
-			result, err := rateTimesDuration(leftRate, rightDur)
-			if err != nil {
-				return nil, err
+			if result, cancelled, _ := rateTimesDuration(leftRate, rightDur); cancelled {
+				return result, nil
 			}
-			return result, nil
+			// No cancellation — fall through to R6 refusal below.
+			// (U4 wires the message at the rate-on-left fall-through.)
 		}
 
 		// Rate * Rate → Rate (with one time unit cancelled), or fully
@@ -398,10 +398,17 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 			}
 		}
 
-		// Rate * Quantity → Quantity (e.g., "100/second * 10 KB" = "1000 KB")
+		// Rate × Quantity — same-category cancellation (U2). Replaces
+		// the long-standing too-permissive rule that silently dropped
+		// the rate's PerUnit (`100/second × 10 KB → 1000 KB`). Now:
+		// only cancels when units share a category (or are the same
+		// Custom string). No cancellation → falls through to U4's
+		// R6 refusal below.
 		if rightQty, ok := right.(*types.Quantity); ok && operator == "*" {
-			result := leftRate.Amount.Value.Mul(rightQty.Value)
-			return &types.Quantity{Value: result, Unit: rightQty.Unit}, nil
+			if result, cancelled, _ := rateTimesQuantity(leftRate, rightQty); cancelled {
+				return result, nil
+			}
+			// No cancellation — fall through to R6 refusal.
 		}
 	}
 
