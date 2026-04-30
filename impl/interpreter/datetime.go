@@ -194,6 +194,7 @@ func (interp *Interpreter) evalFiscalExpression(keyword string, now time.Time) (
 	fc := interp.fiscalYearStarts
 	fyStartMonth := time.Month(fc.month)
 	fyStartDay := fc.day
+	mode := fc.labelMode
 
 	// v2.0: fiscal relatives return *types.Period.
 	switch keyword {
@@ -204,26 +205,29 @@ func (interp *Interpreter) evalFiscalExpression(keyword string, now time.Time) (
 	case "last fiscal quarter":
 		return types.NewRelativeFiscalQuarter(now, fyStartMonth, fyStartDay, -1), nil
 	case "this fiscal year":
-		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay)
-		return types.NewFiscalYear(fy, fyStartMonth, fyStartDay), nil
+		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay, mode)
+		return types.NewFiscalYearWithMode(fy, fyStartMonth, fyStartDay, mode), nil
 	case "next fiscal year":
-		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay) + 1
-		return types.NewFiscalYear(fy, fyStartMonth, fyStartDay), nil
+		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay, mode) + 1
+		return types.NewFiscalYearWithMode(fy, fyStartMonth, fyStartDay, mode), nil
 	case "last fiscal year":
-		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay) - 1
-		return types.NewFiscalYear(fy, fyStartMonth, fyStartDay), nil
+		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay, mode) - 1
+		return types.NewFiscalYearWithMode(fy, fyStartMonth, fyStartDay, mode), nil
 	default:
 		return nil, fmt.Errorf("unknown fiscal expression: %q", keyword)
 	}
 }
 
-// fiscalYearLabel returns the FY *label* (the year the FY ENDS in,
-// per Microsoft convention) for the fiscal year containing `now`.
-// E.g., now = 2026-08-15 with fyStart = July → FY label = 2027.
-func fiscalYearLabel(now time.Time, fyStartMonth time.Month, fyStartDay int) int {
-	// fiscalYearWithDay returns the calendar year the FY STARTS in.
+// fiscalYearLabel returns the FY *label* for the fiscal year
+// containing `now`, honoring the document's labeling convention.
+//
+//   - FYLabelByEndYear (default): label = calendar year the FY ENDS
+//     in. E.g., now=2026-08-15 with Jul-start FY → label 2027.
+//   - FYLabelByStartYear: label = calendar year the FY STARTS in.
+//     Same `now` with `calendar_year_offset: after` → label 2026.
+func fiscalYearLabel(now time.Time, fyStartMonth time.Month, fyStartDay int, mode types.FYLabelMode) int {
 	startYear := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
-	if fyStartMonth > time.January {
+	if mode == types.FYLabelByEndYear && fyStartMonth > time.January {
 		return startYear + 1
 	}
 	return startYear
@@ -326,7 +330,7 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		// next/last/this FY relative to `now`.
 		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
 		fyStart := time.Date(fy, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewFiscalQuarter(fyStart, q)
+		return types.NewFiscalQuarterWithMode(fyStart, q, fc.labelMode)
 
 	case "FY":
 		if interp.fiscalYearStarts == nil {
@@ -341,7 +345,7 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		}
 		fyLabel += yearOffset
 		fc := interp.fiscalYearStarts
-		return types.NewFiscalYear(fyLabel, time.Month(fc.month), fc.day), nil
+		return types.NewFiscalYearWithMode(fyLabel, time.Month(fc.month), fc.day, fc.labelMode), nil
 
 	case "CY":
 		year, err := strconv.Atoi(value)

@@ -202,11 +202,12 @@ func (interp *Interpreter) toFiscalBasis(p *types.Period) (*types.Period, error)
 	fc := interp.fiscalYearStarts
 	fyStartMonth := time.Month(fc.month)
 	fyStartDay := fc.day
+	mode := fc.labelMode
 
 	switch p.Kind {
 	case types.PeriodCalendarYear:
 		// CY<Y> → FY<Y>: numeric label carries across.
-		return types.NewFiscalYear(p.Year, fyStartMonth, fyStartDay), nil
+		return types.NewFiscalYearWithMode(p.Year, fyStartMonth, fyStartDay, mode), nil
 
 	case types.PeriodFiscalYear, types.PeriodRelativeYear, types.PeriodRelativeFiscalYear:
 		// CY<Y> seen via `this year` etc. → use the calendar year of
@@ -214,7 +215,7 @@ func (interp *Interpreter) toFiscalBasis(p *types.Period) (*types.Period, error)
 		// it's already fiscal (no-op of sorts; reuse the same label).
 		span := p.End.Time.Sub(p.Start.Time)
 		midpoint := p.Start.Time.Add(span / 2)
-		return types.NewFiscalYear(midpoint.Year(), fyStartMonth, fyStartDay), nil
+		return types.NewFiscalYearWithMode(midpoint.Year(), fyStartMonth, fyStartDay, mode), nil
 
 	case types.PeriodCalendarQuarter, types.PeriodFiscalQuarter,
 		types.PeriodRelativeQuarter, types.PeriodRelativeFiscalQuarter:
@@ -229,7 +230,7 @@ func (interp *Interpreter) toFiscalBasis(p *types.Period) (*types.Period, error)
 			fqStart := fyStart.AddDate(0, (q-1)*3, 0)
 			fqEnd := fqStart.AddDate(0, 3, -1)
 			if !midpoint.Before(fqStart) && !midpoint.After(fqEnd) {
-				return types.NewFiscalQuarter(fyStart, q)
+				return types.NewFiscalQuarterWithMode(fyStart, q, mode)
 			}
 		}
 		return nil, fmt.Errorf("internal: midpoint %v not in any FQ of FY starting %v", midpoint, fyStart)

@@ -1533,7 +1533,7 @@ func TestFiscalExpressions(t *testing.T) {
 		wantMonth        int
 		wantDay          int
 	}{
-		// Microsoft FY starts July. Aug 2026 = FQ1 of FY starting Jul 2026
+		// July-start fiscal calendar. Aug 2026 = FQ1 of FY starting Jul 2026
 		{"this fiscal quarter Aug+July", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
 			"d = this fiscal quarter\n", 2026, 7, 1},
 		// Oct 2026 = FQ2 (Oct-Dec)
@@ -1939,7 +1939,8 @@ func TestFiscalYearNotation(t *testing.T) {
 		wantMonth int
 		wantDay   int
 	}{
-		// FY = year it ENDS in (Microsoft convention).
+		// Default labeling: FY = year it ENDS in (Australian government year,
+		// US tax year, most publicly traded companies).
 		// FY2027 with July start = Jul 1, 2026 (ends Jun 30, 2027)
 		// FY2026 with July start = Jul 1, 2025 (ends Jun 30, 2026)
 		{"FY2027 (ends 2027)", "d = FY2027\n", 2026, 7, 1},
@@ -1955,6 +1956,50 @@ func TestFiscalYearNotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			interp := newTestInterpreterWithClock(clock)
 			interp.SetFiscalYearStarts(7, 1)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date := resultStartDate(t, results[0])
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestFiscalYearNotation_LabelByStartYear pins the
+// `calendar_year_offset: after` behavior — FY label = year FY
+// STARTS in. Mirrors TestFiscalYearNotation but configures the
+// interpreter via SetFiscalCalendar with FYLabelByStartYear, so
+// `fy2026` with a Feb-2 start resolves to Feb 2 2026 → Feb 1 2027
+// (the case from the user's 2026-04-30 bug report).
+func TestFiscalYearNotation_LabelByStartYear(t *testing.T) {
+	clock := time.Date(2026, 4, 30, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// Feb 2 start, label-by-start-year:
+		//   FY2026 → starts Feb 2 2026, ends Feb 1 2027
+		//   FY2025 → starts Feb 2 2025, ends Feb 1 2026
+		{"FY2026 (Feb-2 start, by-start-year)", "d = FY2026\n", 2026, 2, 2},
+		{"FY2025 (Feb-2 start, by-start-year)", "d = FY2025\n", 2025, 2, 2},
+		{"fy2026 lowercase", "d = fy2026\n", 2026, 2, 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			interp.SetFiscalCalendar(2, 2, types.FYLabelByStartYear)
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
 				t.Fatalf("Parse(%q) error = %v", tt.input, err)

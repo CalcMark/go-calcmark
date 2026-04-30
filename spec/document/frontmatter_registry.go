@@ -102,6 +102,12 @@ var Registry = []RegisteredKey{
 		Type: FrontmatterKeyStruct,
 		Doc:  "Anchors fiscal-period expressions (FQ1, FY26, 'this fiscal quarter') to a calendar start. String value naming a month, optionally with a day (e.g., 'July', 'October 1').",
 	},
+	{
+		Name:       "calendar_year_offset",
+		Type:       FrontmatterKeyEnumString,
+		Doc:        "Selects which calendar year a fiscal-year label refers to. 'before' (default) — FY label = year FY ends in (Australian government year, US tax year, most companies). 'after' — FY label = year FY starts in (some companies). Has no effect when fiscal_year_starts is January.",
+		EnumValues: []string{"before", "after"},
+	},
 }
 
 // IsRegisteredKey reports whether name is a CalcMark-grammar frontmatter key.

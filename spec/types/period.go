@@ -51,7 +51,7 @@ type Period struct {
 
 	// Year is the calendar/fiscal year label:
 	//   - PeriodCalendarQuarter / PeriodCalendarYear / PeriodCalendarMonth: calendar year
-	//   - PeriodFiscalQuarter / PeriodFiscalYear: fiscal year label (Microsoft convention)
+	//   - PeriodFiscalQuarter / PeriodFiscalYear: fiscal year label (per FYLabelMode; default = year FY ends in)
 	//   - Relative kinds: 0 (Direction is the relevant signal)
 	//   - PeriodCustom: 0
 	Year int
@@ -167,22 +167,49 @@ func NewCalendarQuarter(year, quarter int) (*Period, error) {
 	}, nil
 }
 
+// FYLabelMode controls which calendar year the fiscal-year label
+// corresponds to. Documents declare it via the `calendar_year_offset`
+// frontmatter key.
+//
+//   - FYLabelByEndYear (default; `calendar_year_offset: before`) —
+//     the FY label = the calendar year the FY ENDS in. The bulk of
+//     the FY's days fall in the calendar year before the label. Used
+//     by the Australian government year, the US tax year for non-
+//     calendar fiscal periods, and most publicly traded companies.
+//   - FYLabelByStartYear (`calendar_year_offset: after`) — the FY
+//     label = the calendar year the FY STARTS in. The bulk of the
+//     FY's days fall in the calendar year after the label. Used by
+//     some companies that align their FY label to its starting CY.
+type FYLabelMode int
+
+const (
+	// FYLabelByEndYear labels each FY by the calendar year it ends in.
+	// This is the default when `calendar_year_offset` is omitted.
+	FYLabelByEndYear FYLabelMode = iota
+	// FYLabelByStartYear labels each FY by the calendar year it starts in.
+	FYLabelByStartYear
+)
+
 // NewFiscalQuarter creates a Period for the Nth fiscal quarter
-// starting from `fyStart` (the first day of FQ1). FQ1 == fyStart;
-// FQ2 = fyStart + 3 months; ... FQ4 = fyStart + 9 months.
+// starting from `fyStart` (the first day of FQ1) under the default
+// FY labeling (FYLabelByEndYear). See NewFiscalQuarterWithMode for
+// documents that declare `calendar_year_offset: after`.
+func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
+	return NewFiscalQuarterWithMode(fyStart, quarter, FYLabelByEndYear)
+}
+
+// NewFiscalQuarterWithMode creates a Period for the Nth fiscal
+// quarter starting from `fyStart` (the first day of FQ1). FQ1 ==
+// fyStart; FQ2 = fyStart + 3 months; ... FQ4 = fyStart + 9 months.
 // fyStart's day-of-month is preserved across all four quarters so a
 // July-15 fiscal start yields FQ2 = Oct 15, FQ3 = Jan 15, etc.
 // Returns an error for quarters outside [1, 4].
 //
-// Period.Year is the FY *label* (Microsoft convention: the calendar
-// year the FY ENDS in). For Jul-start FY, fyStart=Jul 1 2025 →
-// fiscal year ends Jun 30 2026 → label 2026. So FQ1 of FY2026 is
-// "Fiscal Q1 2026", not "Fiscal Q1 2025" — matching how users
-// reference the quarter in conversation. The calendar year of the
-// FQ's start (which can differ from the label, e.g. FQ1 starts in
-// 2025 but belongs to FY2026) is recoverable from Period.Start
-// when needed.
-func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
+// `mode` controls how Period.Year is labeled. Under FYLabelByEndYear
+// (the default), Jul-start FY with fyStart=Jul 1 2025 → FY ends Jun
+// 30 2026 → label 2026, so FQ1 reads "Fiscal Q1 2026". Under
+// FYLabelByStartYear, the same FQ1 reads "Fiscal Q1 2025".
+func NewFiscalQuarterWithMode(fyStart time.Time, quarter int, mode FYLabelMode) (*Period, error) {
 	if quarter < 1 || quarter > 4 {
 		return nil, fmt.Errorf("invalid fiscal quarter: FQ%d (must be 1-4)", quarter)
 	}
@@ -196,11 +223,11 @@ func NewFiscalQuarter(fyStart time.Time, quarter int) (*Period, error) {
 	startT := time.Date(startYear, startMonth, fyStart.Day(), 0, 0, 0, 0, time.UTC)
 	endT := startT.AddDate(0, 3, -1)
 
-	// FY label: year FY ends in. When FY-start month > 1, the FY
-	// straddles two calendar years and the label is start-year + 1.
-	// When FY-start month == 1 (Jan-start), label = start-year.
 	fyLabel := fyStart.Year()
-	if fyStart.Month() > time.January {
+	if mode == FYLabelByEndYear && fyStart.Month() > time.January {
+		// End-year labeling: when FY-start month > 1, the FY straddles
+		// two calendar years and the label is start-year + 1. Jan-start
+		// FY collapses both modes to the same label (start == end year).
 		fyLabel++
 	}
 	return &Period{
@@ -225,14 +252,28 @@ func NewCalendarYear(year int) *Period {
 	}
 }
 
-// NewFiscalYear creates a Period whose start is fyStartMonth /
-// fyStartDay of the calendar year (fyLabel - 1) when fyStartMonth >
-// 1, else of fyLabel itself. Microsoft convention: FY2027 with July
-// start = Jul 1 2026 -> Jun 30 2027. The Period's Year field stores
-// the FY label (the year the FY ENDS), not the start year.
+// NewFiscalYear creates a Period for the fiscal year identified by
+// fyLabel under the default labeling (FYLabelByEndYear). FY2027 with
+// July start = Jul 1 2026 → Jun 30 2027. See NewFiscalYearWithMode
+// for documents that declare `calendar_year_offset: after`.
 func NewFiscalYear(fyLabel int, fyStartMonth time.Month, fyStartDay int) *Period {
+	return NewFiscalYearWithMode(fyLabel, fyStartMonth, fyStartDay, FYLabelByEndYear)
+}
+
+// NewFiscalYearWithMode creates a Period for the fiscal year
+// identified by fyLabel. `mode` controls how the label maps to a
+// calendar-year start:
+//
+//   - FYLabelByEndYear: start is fyStartMonth/fyStartDay of (fyLabel-1)
+//     when fyStartMonth > 1, else fyLabel itself. FY2027 with July
+//     start = Jul 1 2026 → Jun 30 2027.
+//   - FYLabelByStartYear: start is fyStartMonth/fyStartDay of fyLabel
+//     itself. FY2026 with Feb 2 start = Feb 2 2026 → Feb 1 2027.
+//
+// In both modes Period.Year stores the label as-given.
+func NewFiscalYearWithMode(fyLabel int, fyStartMonth time.Month, fyStartDay int, mode FYLabelMode) *Period {
 	startYear := fyLabel
-	if fyStartMonth > time.January {
+	if mode == FYLabelByEndYear && fyStartMonth > time.January {
 		startYear = fyLabel - 1
 	}
 	startT := time.Date(startYear, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)

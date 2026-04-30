@@ -767,7 +767,7 @@ func getDateFeatures() []Feature {
 			Name:        "FY",
 			Category:    CategoryDate,
 			Syntax:      "FY<NNNN>",
-			Description: "Specific fiscal year start (Microsoft convention: FY2027 with July start = Jul 1 2026 -> Jun 30 2027). Requires fiscal_year_starts frontmatter.",
+			Description: "Specific fiscal year start. Default labeling is by the year the FY ENDS in (matches the Australian government year, US tax year, and most publicly traded companies): FY2027 with July start = Jul 1 2026 -> Jun 30 2027. Set 'calendar_year_offset: after' in frontmatter to label by start year instead. Requires fiscal_year_starts frontmatter.",
 			InsertText:  fmt.Sprintf("FY${1:%d}", time.Now().Year()),
 			Example:     "end of FY2027",
 		},
@@ -1189,6 +1189,25 @@ func getFrontmatterFeatures() []Feature {
 				"\"troy\" mass is for precious metals (1 troy oz = 31.10g). " +
 				"Optional strict: true/false controls whether formatter annotates bare ambiguous units in output.",
 			Example: "measurement:\n  volume: imperial\n  mass: troy",
+		},
+		{
+			Name:     "fiscal_year_starts",
+			Category: CategoryFrontmatter,
+			Syntax:   "fiscal_year_starts: <Month> [<Day>]",
+			Description: "Anchors fiscal-period expressions (FQ1, FY26, 'this fiscal quarter') to a calendar start. " +
+				"Accepts a month name (january through december, or short forms jul/oct), optionally followed by a day of the month (defaults to 1). " +
+				"Without this key, all fiscal expressions error out.",
+			Example: "fiscal_year_starts: July 1",
+		},
+		{
+			Name:     "calendar_year_offset",
+			Category: CategoryFrontmatter,
+			Syntax:   "calendar_year_offset: before|after",
+			Description: "Selects which calendar year a fiscal-year label refers to. " +
+				"'before' (default) — FY label = year FY ends in (Australian government year, US tax year, most publicly traded companies). " +
+				"'after' — FY label = year FY starts in (some companies). " +
+				"Has no effect when fiscal_year_starts is January.",
+			Example: "calendar_year_offset: after",
 		},
 		{
 			Name:        "@scale",

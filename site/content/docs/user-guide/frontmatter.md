@@ -197,3 +197,25 @@ The editor results pane shows symbols next to values that have been transformed:
 | _(none)_ | Untransformed | `10 m` -- no transforms applied |
 
 For details on measurement conventions that interact with scaling and conversion, see [Units & Measurement: Measurement Conventions](../units/#measurement-conventions).
+
+### Fiscal Calendar {#fiscal-calendar}
+
+Two keys configure how `FQ1`–`FQ4`, `FYxxxx`, `this fiscal quarter`, and `this fiscal year` resolve:
+
+```yaml
+---
+fiscal_year_starts: february 2     # required for any fiscal expression
+calendar_year_offset: before       # optional — `before` (default) or `after`
+---
+```
+
+`fiscal_year_starts` accepts a month name (`july`, `oct`) or a month + day (`July 15`, `April 1`).
+
+`calendar_year_offset` controls how an FY label maps to a calendar year when the fiscal year does not start in January:
+
+- `before` (default) — FY label = year FY ends in. Matches the Australian government year, the US tax year for non-calendar fiscal periods, and most publicly traded companies. With `fiscal_year_starts: february 2`, `FY2026` = Feb 2 2025 → Feb 1 2026.
+- `after` — FY label = year FY starts in. With the same start, `FY2026` = Feb 2 2026 → Feb 1 2027.
+
+The setting only affects labeling; the duration and quarter shape of the fiscal year are unchanged. It has no effect when `fiscal_year_starts: january`.
+
+See [Dates & Time → Fiscal Periods](../dates/#fiscal) for fiscal expressions and worked examples.

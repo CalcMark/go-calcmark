@@ -108,7 +108,7 @@ func TestPeriod_NewCalendarYear(t *testing.T) {
 }
 
 // TestPeriod_NewFiscalQuarter_YearIsFYLabel — Period.Year carries
-// the FY label (year FY ends in, Microsoft convention), not the
+// the FY label (year FY ends in, default labeling), not the
 // calendar year of the FQ's start. So FQ1 of FY2026 (Jul-start FY)
 // starts in calendar 2025 but labels as "Fiscal Q1 2026". The
 // calendar year of the start is recoverable from Period.Start when
@@ -136,7 +136,7 @@ func TestPeriod_NewFiscalQuarter_YearIsFYLabel(t *testing.T) {
 				t.Fatalf("NewFiscalQuarter: %v", err)
 			}
 			if p.Year != tc.wantLabel {
-				t.Errorf("Year = %d, want %d (FY label per Microsoft convention)",
+				t.Errorf("Year = %d, want %d (FY label per default end-year convention)",
 					p.Year, tc.wantLabel)
 			}
 		})
@@ -144,7 +144,10 @@ func TestPeriod_NewFiscalQuarter_YearIsFYLabel(t *testing.T) {
 }
 
 func TestPeriod_NewFiscalYear(t *testing.T) {
-	// FY2027 with July start = starts Jul 1, 2026. (Microsoft labeling.)
+	// FY2027 with July start under default labeling = starts Jul 1, 2026.
+	// Default mode (FYLabelByEndYear) labels by the year the FY ENDS in,
+	// matching the Australian government year, US tax year, and most
+	// publicly traded companies.
 	p := NewFiscalYear(2027, time.July, 1)
 	if p.Kind != PeriodFiscalYear {
 		t.Errorf("Kind = %v, want PeriodFiscalYear", p.Kind)
@@ -159,6 +162,74 @@ func TestPeriod_NewFiscalYear(t *testing.T) {
 	// String must surface the FY label, not the start year.
 	if !strings.Contains(p.String(), "2027") {
 		t.Errorf("String() = %q should contain FY label 2027", p.String())
+	}
+}
+
+// TestPeriod_NewFiscalYearWithMode_LabelByStartYear — when a document
+// declares `calendar_year_offset: after`, the FY label corresponds to
+// the calendar year the FY STARTS in (some companies use this
+// labeling). FY2026 with a Feb 2 start under start-year labeling
+// starts Feb 2, 2026 and ends Feb 1, 2027.
+func TestPeriod_NewFiscalYearWithMode_LabelByStartYear(t *testing.T) {
+	p := NewFiscalYearWithMode(2026, time.February, 2, FYLabelByStartYear)
+	if p.Kind != PeriodFiscalYear {
+		t.Errorf("Kind = %v, want PeriodFiscalYear", p.Kind)
+	}
+	if p.Year != 2026 {
+		t.Errorf("Year = %d, want 2026", p.Year)
+	}
+	wantStart := time.Date(2026, time.February, 2, 0, 0, 0, 0, time.UTC)
+	if !p.Start.Time.Equal(wantStart) {
+		t.Errorf("Start = %v, want %v", p.Start.Time, wantStart)
+	}
+	wantEnd := time.Date(2027, time.February, 1, 0, 0, 0, 0, time.UTC)
+	if !p.End.Time.Equal(wantEnd) {
+		t.Errorf("End = %v, want %v", p.End.Time, wantEnd)
+	}
+}
+
+// TestPeriod_NewFiscalYearWithMode_LabelByEndYear — explicit
+// FYLabelByEndYear matches the default factory exactly. FY2027 with
+// July start = Jul 1 2026 → Jun 30 2027.
+func TestPeriod_NewFiscalYearWithMode_LabelByEndYear(t *testing.T) {
+	p := NewFiscalYearWithMode(2027, time.July, 1, FYLabelByEndYear)
+	if p.Year != 2027 {
+		t.Errorf("Year = %d, want 2027", p.Year)
+	}
+	wantStart := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+	if !p.Start.Time.Equal(wantStart) {
+		t.Errorf("Start = %v, want %v", p.Start.Time, wantStart)
+	}
+}
+
+// TestPeriod_NewFiscalQuarterWithMode_LabelByStartYear — under
+// start-year labeling, an Apr 2026 fiscal-year-start produces FQ1
+// labeled FY2026 (not FY2027). The quarter itself spans Apr–Jun
+// 2026 either way; only the year stamped on Period.Year differs.
+func TestPeriod_NewFiscalQuarterWithMode_LabelByStartYear(t *testing.T) {
+	apr2026 := time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC)
+	p, err := NewFiscalQuarterWithMode(apr2026, 1, FYLabelByStartYear)
+	if err != nil {
+		t.Fatalf("NewFiscalQuarterWithMode: %v", err)
+	}
+	if p.Year != 2026 {
+		t.Errorf("Year = %d, want 2026 (start-year labeling)", p.Year)
+	}
+	if p.QuarterIndex != 1 {
+		t.Errorf("QuarterIndex = %d, want 1", p.QuarterIndex)
+	}
+}
+
+// TestPeriod_NewFiscalQuarterWithMode_LabelByEndYear — sanity check
+// that explicit end-year mode matches the existing default behavior.
+func TestPeriod_NewFiscalQuarterWithMode_LabelByEndYear(t *testing.T) {
+	apr2026 := time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC)
+	p, err := NewFiscalQuarterWithMode(apr2026, 1, FYLabelByEndYear)
+	if err != nil {
+		t.Fatalf("NewFiscalQuarterWithMode: %v", err)
+	}
+	if p.Year != 2027 {
+		t.Errorf("Year = %d, want 2027 (end-year labeling)", p.Year)
 	}
 }
 
@@ -343,7 +414,7 @@ func TestPeriod_NewCalendarYear_PopulatesEnd(t *testing.T) {
 }
 
 func TestPeriod_NewFiscalYear_PopulatesEnd(t *testing.T) {
-	// FY2027 with July start = Jul 1 2026 - Jun 30 2027 (Microsoft labeling).
+	// FY2027 with July start = Jul 1 2026 - Jun 30 2027 (default end-year labeling).
 	p := NewFiscalYear(2027, time.July, 1)
 	if p.End == nil {
 		t.Fatalf("End is nil")

@@ -205,6 +205,26 @@ fy_end = end of this fiscal year
 
 Fiscal quarter numbering: FQ1 begins at the configured start month. With `fiscal_year_starts: july`: FQ1 = Jul-Sep, FQ2 = Oct-Dec, FQ3 = Jan-Mar, FQ4 = Apr-Jun.
 
+#### Choosing how an FY label maps to a calendar year {#calendar-year-offset}
+
+When the fiscal year does not start in January it straddles two calendar years, and different organisations label that span differently. CalcMark exposes the choice as a single frontmatter key:
+
+```yaml
+---
+fiscal_year_starts: february 2
+calendar_year_offset: before   # default — can be omitted
+---
+```
+
+The two values:
+
+- `calendar_year_offset: before` (the default). The FY label is the calendar year the FY **ends** in. Used by the Australian government year (`FY2026` = Jul 1, 2025 → Jun 30, 2026), the US tax year for non-calendar fiscal periods, and most publicly traded companies. With `fiscal_year_starts: february 2`, `FY2026` resolves to Feb 2, 2025 → Feb 1, 2026.
+- `calendar_year_offset: after`. The FY label is the calendar year the FY **starts** in. Some organisations label by the starting year — `FY2026` = Feb 2, 2026 → Feb 1, 2027 under this convention.
+
+The setting only affects labeling — the duration and quarter shape of the fiscal year are unchanged. It also has no effect when `fiscal_year_starts: january` (start year and end year are the same).
+
+If your team's CFO or finance system uses a different label than CalcMark gives you by default, set `calendar_year_offset: after` once in frontmatter and `FY2026`, `FQ1`, `this fiscal year`, etc. will all line up with what they expect.
+
 ### Quarter and Year Shorthand {#notation}
 
 CalcMark supports compact notation for quarters and years:
@@ -227,7 +247,7 @@ cy_start = CY2026
 ```
 
 - `FQ1`-`FQ4` — fiscal quarters (requires `fiscal_year_starts`)
-- `FY27` or `FY2027` — first day of fiscal year 2027. **FY is labeled by the year it ends in** (Microsoft/Australian convention). With `fiscal_year_starts: july`, FY2027 = July 1, 2026 through June 30, 2027
+- `FY27` or `FY2027` — first day of fiscal year 2027. By default the FY label is the year it **ends** in (matches the Australian government year, the US tax year, and most publicly traded companies). With `fiscal_year_starts: july`, FY2027 = July 1, 2026 through June 30, 2027. Set [`calendar_year_offset: after`](#calendar-year-offset) to label by the **starting** year instead.
 - `CY26` or `CY2026` — January 1 of calendar year 2026. Disambiguates a year from a bare number (`2026` is the number 2,026; `CY2026` is January 1, 2026)
 
 All notation is case-insensitive: `q1`, `fq3`, `fy27`, `cy2026` all work.

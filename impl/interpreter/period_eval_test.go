@@ -114,7 +114,7 @@ func TestPeriodEval_FiscalYear(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *types.Period, got %T", results[0])
 	}
-	// FY2027 with July start = Jul 1 2026 - Jun 30 2027 (Microsoft).
+	// FY2027 with July start = Jul 1 2026 - Jun 30 2027 (default end-year labeling).
 	wantStart := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
 	wantEnd := time.Date(2027, time.June, 30, 0, 0, 0, 0, time.UTC)
 	if !p.Start.Time.Equal(wantStart) {
