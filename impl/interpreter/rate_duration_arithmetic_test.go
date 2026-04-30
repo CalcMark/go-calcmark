@@ -305,6 +305,59 @@ func TestRateDuration_NumberScalingPreserved(t *testing.T) {
 	}
 }
 
+// AE4 — `60 mph × 2 hours → 120 miles`. The Speed-shaped Quantity
+// gets widened to its underlying Rate before the cancellation engine
+// sees it, then the time dimension cancels and the result is a
+// distance Quantity. Routes through the U6 widening + U2 cancellation
+// engine.
+func TestRateDuration_SpeedQuantityTimesDuration(t *testing.T) {
+	res := evalSingleResult(t, "60 mph * 2 hours\n")
+	qty, ok := res.(*types.Quantity)
+	if !ok {
+		t.Fatalf("want *types.Quantity, got %T (%v)", res, res)
+	}
+	// `mi` is the canonical unit name (DecomposeSpeedUnit returns "mi").
+	if qty.Unit != "mi" {
+		t.Errorf("Unit = %q, want \"mi\"", qty.Unit)
+	}
+	if got := qty.Value.String(); got != "120" {
+		t.Errorf("Value = %s, want 120", got)
+	}
+}
+
+func TestRateDuration_SpeedQuantityKph(t *testing.T) {
+	// `100 kph × 30 minutes`: U6 coerces kph → km/hour, U2 cancels
+	// hour ↔ minutes via the time-conversion path. Expected:
+	// 100 km/hour × 0.5 hour = 50 km.
+	res := evalSingleResult(t, "100 kph * 30 minutes\n")
+	qty, ok := res.(*types.Quantity)
+	if !ok {
+		t.Fatalf("want *types.Quantity, got %T (%v)", res, res)
+	}
+	if qty.Unit != "km" {
+		t.Errorf("Unit = %q, want \"km\"", qty.Unit)
+	}
+	if got := qty.Value.String(); got != "50" {
+		t.Errorf("Value = %s, want 50", got)
+	}
+}
+
+func TestRateDuration_NonSpeedQuantityNotCoerced(t *testing.T) {
+	// `5 kg × 3 hours` — kg isn't a Speed unit. The U6 widening
+	// must NOT fire; dispatch falls through to standard handling.
+	// Today, Quantity × Duration has no handler and produces an
+	// error — exactly what we want for a dimensional-mismatch case.
+	interp := NewInterpreter()
+	nodes, err := parser.Parse("5 kg * 3 hours\n")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("expected error for kg × hours, got nil")
+	}
+}
+
 // R6 — refusal contract for dimensional mismatches. Locks the
 // substring contract from Decision 6 of the plan: tests verify the
 // error mentions both operands' display strings and the offending

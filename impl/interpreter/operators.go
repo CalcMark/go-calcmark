@@ -104,6 +104,27 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		right = fractionToNumber(rightFrac)
 	}
 
+	// Speed-quantity left-side widening (U6, AE4). When the left
+	// operand is a Speed-shaped Quantity (e.g., `60 mph`, `100 kph`)
+	// and the right is a Duration, coerce the speed to its underlying
+	// Rate (`60 mph` → `60 mi/hour`) and recurse through the
+	// cancellation engine. The result is the distance:
+	// `60 mph × 2 hours` → coerce → `60 mi/hour × 2 hours` → cancel
+	// hour → `120 mi` (Quantity).
+	//
+	// Mirrors the rate-on-RIGHT widening below in shape but fires
+	// only for `Quantity × Duration` where the Quantity is a known
+	// Speed unit. Anything else falls through to standard dispatch.
+	if operator == "*" {
+		if leftQty, ok := left.(*types.Quantity); ok {
+			if _, rightIsDur := right.(*types.Duration); rightIsDur {
+				if coercedRate, isSpeed := coerceSpeedQuantityToRate(leftQty); isSpeed {
+					return evalBinaryOperation(coercedRate, right, operator)
+				}
+			}
+		}
+	}
+
 	// Rate arithmetic widening: when a Rate appears on the RIGHT side of
 	// * or /, extract the rate's Amount (a Quantity) and drop the time
 	// denominator. This makes "2 * (2 posts/week)" yield "4 posts".

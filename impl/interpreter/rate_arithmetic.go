@@ -316,6 +316,24 @@ func isCurrencyCode(s string) bool {
 	return false
 }
 
+// coerceSpeedQuantityToRate widens a Speed-shaped Quantity into the
+// Rate it represents (e.g. `60 mph` → `Rate{60 mi, hour}`). Returns
+// (nil, false) when the quantity's unit isn't a recognised Speed
+// unit. Used by operators.go's left-side widening to make AE4
+// (`60 mph × 2 hours → 120 miles`) flow through the cancellation
+// engine.
+//
+// Free-function variant of `Interpreter.coerceSpeedToRate` —
+// intentionally has no Interpreter receiver since the binary-op
+// dispatch in `evalBinaryOperation` is also a free function.
+func coerceSpeedQuantityToRate(qty *types.Quantity) (*types.Rate, bool) {
+	numUnit, timeUnit, ok := units.DecomposeSpeedUnit(qty.Unit)
+	if !ok {
+		return nil, false
+	}
+	return types.NewRate(&types.Quantity{Value: qty.Value, Unit: numUnit}, timeUnit), true
+}
+
 // rateMismatchError builds the R6 refusal message for `Rate × X`
 // where the cancellation engine couldn't find a shared dimension.
 // The message names both operands AND the categorical reason the
