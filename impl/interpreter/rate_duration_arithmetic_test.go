@@ -160,6 +160,80 @@ func TestRateDuration_ChainedIntermediateRate(t *testing.T) {
 	}
 }
 
+// R7 — currency identity preservation. When the cancellation engine
+// produces a Currency-shaped result, the Code and Symbol on the
+// Currency must reflect the user's typed form. `$100/hour × 3 weeks`
+// → "$50,400" (Symbol=$, Code=USD). `100 USD/hour × 3 weeks` →
+// "50,400 USD" preserving the ISO-code form.
+func TestRateDuration_CurrencyIdentity_Symbol(t *testing.T) {
+	res := evalSingleResult(t, "$100 / hour * 3 weeks\n")
+	cur, ok := res.(*types.Currency)
+	if !ok {
+		t.Fatalf("want *types.Currency, got %T (%v)", res, res)
+	}
+	if cur.Symbol != "$" {
+		t.Errorf("Symbol = %q, want \"$\"", cur.Symbol)
+	}
+	if cur.Code != "USD" {
+		t.Errorf("Code = %q, want \"USD\"", cur.Code)
+	}
+	if got := cur.Value.String(); got != "50400" {
+		t.Errorf("Value = %s, want 50400", got)
+	}
+}
+
+func TestRateDuration_CurrencyIdentity_ISOCode(t *testing.T) {
+	res := evalSingleResult(t, "100 USD / hour * 3 weeks\n")
+	cur, ok := res.(*types.Currency)
+	if !ok {
+		t.Fatalf("want *types.Currency, got %T (%v)", res, res)
+	}
+	if cur.Code != "USD" {
+		t.Errorf("Code = %q, want \"USD\"", cur.Code)
+	}
+	if got := cur.Value.String(); got != "50400" {
+		t.Errorf("Value = %s, want 50400", got)
+	}
+}
+
+func TestRateDuration_CurrencyIdentity_Euro(t *testing.T) {
+	res := evalSingleResult(t, "€50 / hour * 8 hours\n")
+	cur, ok := res.(*types.Currency)
+	if !ok {
+		t.Fatalf("want *types.Currency, got %T (%v)", res, res)
+	}
+	if cur.Symbol != "€" {
+		t.Errorf("Symbol = %q, want \"€\"", cur.Symbol)
+	}
+	if cur.Code != "EUR" {
+		t.Errorf("Code = %q, want \"EUR\"", cur.Code)
+	}
+	if got := cur.Value.String(); got != "400" {
+		t.Errorf("Value = %s, want 400", got)
+	}
+}
+
+// Regression: Quantity-numerator rate must NOT false-positive into
+// Currency. `40 hours/week × 3 weeks → 120 hour` is a Quantity, not a
+// Currency, even though "hour" isn't a currency code/symbol — confirms
+// IsCurrencyCode doesn't catch non-currency strings.
+func TestRateDuration_QuantityNumeratorStaysQuantity(t *testing.T) {
+	res := evalSingleResult(t, "40 hours / week * 3 weeks\n")
+	if _, isCurrency := res.(*types.Currency); isCurrency {
+		t.Fatalf("Quantity-numerator result must not be Currency, got %v", res)
+	}
+	qty, ok := res.(*types.Quantity)
+	if !ok {
+		t.Fatalf("want *types.Quantity, got %T", res)
+	}
+	if qty.Unit != "hour" {
+		t.Errorf("Unit = %q, want \"hour\"", qty.Unit)
+	}
+	if got := qty.Value.String(); got != "120" {
+		t.Errorf("Value = %s, want 120", got)
+	}
+}
+
 // AE3 (engine-level) — same-dimension Custom-unit cancellation. The
 // language-level form `100 cakes / box * 5 boxes` doesn't parse
 // today because `box` isn't recognised as a rate denominator at

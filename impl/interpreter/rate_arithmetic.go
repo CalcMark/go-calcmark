@@ -175,13 +175,23 @@ func rateNumeratorAsResult(r *types.Rate, value decimal.Decimal) types.Type {
 	if unit == "" {
 		return types.NewNumber(value)
 	}
+	// Currency-symbol numerator (e.g. "$100/hour") → Currency.
+	// `types.SymbolToCode` keys are the user-typed symbols ("$",
+	// "€", "£", "¥"); membership means the unit string is a
+	// recognised currency symbol.
 	if _, ok := types.SymbolToCode[unit]; ok {
+		// `NewCurrency` accepts either symbol or code and computes
+		// the missing field, so passing the symbol back round-trips
+		// to a Currency with both Symbol and Code populated.
 		return types.NewCurrency(value, unit)
 	}
-	// ISO codes (USD, EUR, ...) live in the symbol→code map values
-	// AND can appear as Amount.Unit when the user wrote "100 USD/day"
-	// rather than "$100/day". Reverse-lookup catches them.
-	if isCurrencyCode(unit) {
+	// ISO-code numerator (e.g. "100 USD/day" — the user wrote the
+	// code, not the symbol). `types.IsCurrencyCode` checks both
+	// directions of the code↔symbol maps, so it covers any
+	// recognised code regardless of which side of the map it lives
+	// in. R7 contract: preserve the user's typed form — pass the
+	// code through verbatim and let NewCurrency canonicalise.
+	if types.IsCurrencyCode(unit) {
 		return types.NewCurrency(value, unit)
 	}
 	return &types.Quantity{Value: value, Unit: unit}
