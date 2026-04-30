@@ -199,7 +199,7 @@ func evalRateLiteral(n *ast.RateLiteral) (types.Type, error) {
 		return nil, fmt.Errorf("rate amount evaluation failed: %w", err)
 	}
 
-	// Convert amount to Quantity
+	// Convert amount to Quantity (mirrors impl/interpreter/rate_eval.go)
 	var amountQty *types.Quantity
 	switch v := amountVal.(type) {
 	case *types.Quantity:
@@ -214,8 +214,14 @@ func evalRateLiteral(n *ast.RateLiteral) (types.Type, error) {
 			Value: v.Value,
 			Unit:  v.Symbol,
 		}
+	case *types.Duration:
+		// Duration as rate amount (e.g., "40 hours / week").
+		amountQty = &types.Quantity{
+			Value: v.Value,
+			Unit:  v.Unit,
+		}
 	default:
-		return nil, fmt.Errorf("rate amount must be a number, quantity, or currency, got %T", amountVal)
+		return nil, fmt.Errorf("rate amount must be a number, quantity, currency, or duration, got %T", amountVal)
 	}
 
 	return types.NewRate(amountQty, n.PerUnit), nil

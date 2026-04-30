@@ -364,6 +364,40 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 				return types.NewNumber(result), nil
 			}
 		}
+		// Rate * Duration → Currency / Quantity / Number, with the
+		// duration converted to the rate's PerUnit before multiplying.
+		// `$100/hour * 3 weeks` runs as: 3 weeks → 504 hours, then
+		// 504 × $100 = $50,400. Result type tracks the rate's
+		// numerator: currency-numerator → Currency, quantity-numerator
+		// → Quantity (e.g. `40 hours/week * 3 weeks` → `120 hours`),
+		// unitless-numerator → Number.
+		if rightDur, ok := right.(*types.Duration); ok && operator == "*" {
+			result, err := rateTimesDuration(leftRate, rightDur)
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
+		}
+
+		// Rate * Rate → Rate (with one time unit cancelled), or fully
+		// reduced when the result has no remaining denominator. Used by
+		// chained expressions like `$100/hour * 40 hours/week`:
+		//   left.PerUnit=hour cancels right.Amount.Unit=hour
+		//   → Rate{Amount: $4000, PerUnit: week}
+		// We only attempt cancellation against the immediately
+		// adjacent factor (left.PerUnit ↔ right.Amount.Unit). The
+		// commuted case (right.PerUnit ↔ left.Amount.Unit) is handled
+		// symmetrically. Anything else falls through to the existing
+		// per-unit-equality `Rate / Rate → Number` rule above and the
+		// generic error otherwise.
+		if rightRate, ok := right.(*types.Rate); ok && operator == "*" {
+			if result, ok, err := tryRateRateCancellation(leftRate, rightRate); err != nil {
+				return nil, err
+			} else if ok {
+				return result, nil
+			}
+		}
+
 		// Rate * Quantity → Quantity (e.g., "100/second * 10 KB" = "1000 KB")
 		if rightQty, ok := right.(*types.Quantity); ok && operator == "*" {
 			result := leftRate.Amount.Value.Mul(rightQty.Value)
