@@ -32,16 +32,18 @@ func (r *ValidationResult) OK() bool {
 // struct understands (excluding tui.theme.* which has its own known set).
 var knownKeys = map[string]bool{
 	"locale":                   true,
-	"tui.color_mode":           true,
-	"tui.dark_mode":            true,
-	"tui.unicode_fractions":    true,
-	"formatter.verbose":        true,
-	"formatter.include_errors": true,
-	"formatter.default_format": true,
-	"measurement.volume":       true,
-	"measurement.mass":         true,
-	"measurement.ton":          true,
-	"measurement.strict":       true,
+	"tui.color_mode":               true,
+	"tui.dark_mode":                true,
+	"tui.unicode_fractions":        true,
+	"formatter.verbose":            true,
+	"formatter.include_errors":     true,
+	"formatter.default_format":     true,
+	"formatter.date_format":        true,
+	"formatter.period_date_format": true,
+	"measurement.volume":           true,
+	"measurement.mass":             true,
+	"measurement.ton":              true,
+	"measurement.strict":           true,
 }
 
 // ValidateHexColor reports whether s is a valid hex color string.

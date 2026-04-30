@@ -94,8 +94,8 @@ func TestValidDateCreation(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			if _, ok := results[0].(*types.Date); !ok {
-				t.Errorf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			if !resultIsDateOrPeriod(results[0]) {
+				t.Errorf("Expected *types.Date or *types.Period, got %T (%v)", results[0], results[0])
 			}
 		})
 	}
@@ -273,10 +273,7 @@ func TestDateKeywords(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -344,10 +341,7 @@ func TestPinnedClockIsolation(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -397,10 +391,7 @@ func TestDateLiterals(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			wantYear := tt.wantYear
 			if wantYear == 0 {
@@ -485,10 +476,7 @@ func TestDateArithmeticEval(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -573,10 +561,7 @@ func TestCalendarCorrectMonthArithmetic(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -685,10 +670,7 @@ func TestDateLiteralArithmetic(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -909,10 +891,7 @@ func TestExtendedRelativeDates(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -978,10 +957,7 @@ func TestXFromYSyntax(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1054,10 +1030,7 @@ func TestWeekdayExpressions(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1124,10 +1097,7 @@ func TestRelativeMonthExpressions(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1183,10 +1153,7 @@ func TestFiscalWithDayOffset(t *testing.T) {
 				t.Fatalf("Eval error = %v", err)
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1235,10 +1202,7 @@ func TestAgoExpressions(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1284,10 +1248,7 @@ func TestSubDayAgoExpressions(t *testing.T) {
 				t.Fatalf("Eval error = %v", err)
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			if date.Time.Day() != tt.wantDay {
 				t.Errorf("Day = %d, want %d", date.Time.Day(), tt.wantDay)
@@ -1368,10 +1329,7 @@ func TestEndOfExpressions(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1400,7 +1358,7 @@ func TestEndOfComposition(t *testing.T) {
 		t.Fatalf("Eval error = %v", err)
 	}
 
-	date := results[0].(*types.Date)
+	date := resultStartDate(t, results[0])
 	if date.Time.Month() != 6 || date.Time.Day() != 16 {
 		t.Errorf("end of this quarter - 2 weeks: got %s, want Jun 16",
 			date.Time.Format("2006-01-02"))
@@ -1422,7 +1380,7 @@ func TestFromNow(t *testing.T) {
 		t.Fatalf("Eval error = %v", err)
 	}
 
-	date := results[0].(*types.Date)
+	date := resultStartDate(t, results[0])
 	// "now" preserves time, so 2 weeks from now at 14:30 = Apr 22 14:30
 	if date.Time.Day() != 22 || date.Time.Month() != 4 {
 		t.Errorf("2 weeks from now: got %s, want Apr 22",
@@ -1488,10 +1446,7 @@ func TestExtendedFromTargets(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1553,10 +1508,7 @@ func TestCalendarQuarterExpressions(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1581,7 +1533,7 @@ func TestFiscalExpressions(t *testing.T) {
 		wantMonth        int
 		wantDay          int
 	}{
-		// Microsoft FY starts July. Aug 2026 = FQ1 of FY starting Jul 2026
+		// July-start fiscal calendar. Aug 2026 = FQ1 of FY starting Jul 2026
 		{"this fiscal quarter Aug+July", time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC), 7,
 			"d = this fiscal quarter\n", 2026, 7, 1},
 		// Oct 2026 = FQ2 (Oct-Dec)
@@ -1620,10 +1572,7 @@ func TestFiscalExpressions(t *testing.T) {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1673,7 +1622,7 @@ func TestWeekdayComposition(t *testing.T) {
 		t.Fatalf("Eval error = %v", err)
 	}
 
-	date := results[0].(*types.Date)
+	date := resultStartDate(t, results[0])
 	if date.Time.Year() != 2026 || date.Time.Month() != 4 || date.Time.Day() != 24 {
 		t.Errorf("next Friday + 2 weeks: got %s, want 2026-04-24",
 			date.Time.Format("2006-01-02"))
@@ -1798,10 +1747,7 @@ func TestSubDayDurationArithmetic(t *testing.T) {
 				t.Fatalf("Eval error = %v", err)
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			if date.HasTime != tt.wantHas {
 				t.Errorf("HasTime = %v, want %v", date.HasTime, tt.wantHas)
@@ -1856,10 +1802,7 @@ func TestFiscalYearAndQuarterCompleteCoverage(t *testing.T) {
 				t.Fatalf("Eval error = %v", err)
 			}
 
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T", results[0])
-			}
+			date := resultStartDate(t, results[0])
 
 			gotYear := date.Time.Year()
 			gotMonth := int(date.Time.Month())
@@ -1888,13 +1831,21 @@ func TestCalendarQuarterNotation(t *testing.T) {
 		wantMonth int
 		wantDay   int
 	}{
+		// resultStartDate unwraps Period.Start, so Q1's start (Jan 1)
+		// is what these check against.
 		{"Q1", "d = Q1\n", 2026, 1, 1},
 		{"Q2", "d = Q2\n", 2026, 4, 1},
 		{"Q3", "d = Q3\n", 2026, 7, 1},
 		{"Q4", "d = Q4\n", 2026, 10, 1},
 		{"q1 lowercase", "d = q1\n", 2026, 1, 1},
 		{"q3 lowercase", "d = q3\n", 2026, 7, 1},
-		{"Q1 + 30 days", "d = Q1 + 30 days\n", 2026, 1, 31},
+		// v2.0 BREAKING: Period + Duration extends from the END of
+		// the period (per the brainstorm's asymmetric arithmetic).
+		// Pre-v2: Q1 + 30 days = Jan 1 + 30 = Jan 31.
+		// v2:     Q1 + 30 days = Mar 31 + 30 = Apr 30.
+		// Users who want Jan 31 write `start of Q1 + 30 days`.
+		{"Q1 + 30 days (v2 end-extends)", "d = Q1 + 30 days\n", 2026, 4, 30},
+		{"start of Q1 + 30 days (date arith)", "d = start of Q1 + 30 days\n", 2026, 1, 31},
 	}
 
 	for _, tt := range tests {
@@ -1911,10 +1862,7 @@ func TestCalendarQuarterNotation(t *testing.T) {
 			if len(results) != 1 {
 				t.Fatalf("Expected 1 result, got %d", len(results))
 			}
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
-			}
+			date := resultStartDate(t, results[0])
 			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
 				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
 					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
@@ -1954,10 +1902,7 @@ func TestFiscalQuarterNotation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Eval(%q) error = %v", tt.input, err)
 			}
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
-			}
+			date := resultStartDate(t, results[0])
 			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
 				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
 					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
@@ -1994,7 +1939,8 @@ func TestFiscalYearNotation(t *testing.T) {
 		wantMonth int
 		wantDay   int
 	}{
-		// FY = year it ENDS in (Microsoft convention).
+		// Default labeling: FY = year it ENDS in (Australian government year,
+		// US tax year, most publicly traded companies).
 		// FY2027 with July start = Jul 1, 2026 (ends Jun 30, 2027)
 		// FY2026 with July start = Jul 1, 2025 (ends Jun 30, 2026)
 		{"FY2027 (ends 2027)", "d = FY2027\n", 2026, 7, 1},
@@ -2018,10 +1964,51 @@ func TestFiscalYearNotation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Eval(%q) error = %v", tt.input, err)
 			}
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
+			date := resultStartDate(t, results[0])
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
 			}
+		})
+	}
+}
+
+// TestFiscalYearNotation_LabelByStartYear pins the
+// `calendar_year_offset: after` behavior — FY label = year FY
+// STARTS in. Mirrors TestFiscalYearNotation but configures the
+// interpreter via SetFiscalCalendar with FYLabelByStartYear, so
+// `fy2026` with a Feb-2 start resolves to Feb 2 2026 → Feb 1 2027
+// (the case from the user's 2026-04-30 bug report).
+func TestFiscalYearNotation_LabelByStartYear(t *testing.T) {
+	clock := time.Date(2026, 4, 30, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// Feb 2 start, label-by-start-year:
+		//   FY2026 → starts Feb 2 2026, ends Feb 1 2027
+		//   FY2025 → starts Feb 2 2025, ends Feb 1 2026
+		{"FY2026 (Feb-2 start, by-start-year)", "d = FY2026\n", 2026, 2, 2},
+		{"FY2025 (Feb-2 start, by-start-year)", "d = FY2025\n", 2025, 2, 2},
+		{"fy2026 lowercase", "d = fy2026\n", 2026, 2, 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			interp.SetFiscalCalendar(2, 2, types.FYLabelByStartYear)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date := resultStartDate(t, results[0])
 			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
 				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
 					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
@@ -2046,7 +2033,11 @@ func TestCalendarYearNotation(t *testing.T) {
 		{"CY26 short", "d = CY26\n", 2026, 1, 1},
 		{"CY01 short", "d = CY01\n", 2001, 1, 1},
 		{"cy2026 lowercase", "d = cy2026\n", 2026, 1, 1},
-		{"CY2026 + 6 months", "d = CY2026 + 6 months\n", 2026, 7, 1},
+		// v2.0 BREAKING: Period + Duration extends from the END.
+		// CY2026 = Jan 1 2026 - Dec 31 2026. + 6 months = Jun 30 2027.
+		// Users who want Jul 1 2026 write `start of CY2026 + 6 months`.
+		{"CY2026 + 6 months (v2 end-extends)", "d = CY2026 + 6 months\n", 2027, 6, 30},
+		{"start of CY2026 + 6 months (date arith)", "d = start of CY2026 + 6 months\n", 2026, 7, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2059,10 +2050,7 @@ func TestCalendarYearNotation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Eval(%q) error = %v", tt.input, err)
 			}
-			date, ok := results[0].(*types.Date)
-			if !ok {
-				t.Fatalf("Expected *types.Date, got %T (%v)", results[0], results[0])
-			}
+			date := resultStartDate(t, results[0])
 			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
 				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
 					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),

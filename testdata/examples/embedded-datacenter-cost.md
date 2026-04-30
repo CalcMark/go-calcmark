@@ -84,8 +84,8 @@ Operating costs don't stay flat. Assuming 4% annual inflation, here's
 where opex lands after 5 and 10 years:
 
 ```calcmark
-opex_5yr = compound $75000 by 4% over 5 years
-opex_10yr = compound $75000 by 4% over 10 years
+opex_5yr = compound $75000 by 4% over 5
+opex_10yr = compound $75000 by 4% over 10
 ```
 
 ## Equipment Depreciation
@@ -94,14 +94,14 @@ Servers lose value quickly. Declining-balance depreciation at 20%/year
 over a 5-year refresh cycle:
 
 ```cm
-servers = depreciate $200000 by 20% over 5 years
+servers = depreciate $200000 by 20% over 5
 ```
 
 Cooling systems last longer — a $45,000 unit at 15%/year with a $5,000
 salvage floor:
 
 ```cm
-cooling = depreciate $45000 by 15% over 10 years to $5000
+cooling = depreciate $45000 by 15% over 10 to $5000
 ```
 
 ## Colocation Alternative

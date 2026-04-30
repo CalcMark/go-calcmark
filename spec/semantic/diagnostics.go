@@ -56,11 +56,17 @@ const (
 	DiagIncompatibleUnits    = "incompatible_units"
 
 	// Date diagnostics (USER REQUIREMENT)
-	DiagInvalidDate     = "invalid_date"
-	DiagInvalidMonth    = "invalid_month"
-	DiagInvalidDay      = "invalid_day"
-	DiagInvalidYear     = "invalid_year"
-	DiagInvalidLeapYear = "invalid_leap_year"
+	DiagInvalidDate        = "invalid_date"
+	DiagInvalidMonth       = "invalid_month"
+	DiagInvalidDay         = "invalid_day"
+	DiagInvalidYear        = "invalid_year"
+	DiagInvalidLeapYear    = "invalid_leap_year"
+	DiagInvalidEndOfPeriod = "invalid_end_of_period"
+
+	// Period operator diagnostics (v2.0)
+	DiagInvalidLengthOfPeriod  = "invalid_length_of_period"  // length of / days in inner not Period
+	DiagInvalidBetweenEndpoint = "invalid_between_endpoint" // between A and B endpoint not Date
+	DiagInvalidPeriodRange     = "invalid_period_range"     // between A and B where end < start (statically detectable)
 
 	// Variable diagnostics
 	DiagUndefinedVariable    = "undefined_variable"

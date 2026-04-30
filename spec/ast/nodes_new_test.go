@@ -240,3 +240,220 @@ func TestDurationLiteralUnits(t *testing.T) {
 		})
 	}
 }
+
+// TestEndOfExpr_StringIncludesInner verifies the AST debug shape.
+// String() output is used in interpreter trace logs; nesting must
+// be visible.
+func TestEndOfExpr_StringIncludesInner(t *testing.T) {
+	inner := &RelativeDateLiteral{Keyword: "Q:1", SourceText: "Q1"}
+	node := &EndOfExpr{
+		Period:     inner,
+		SourceText: "end of Q1",
+		Range:      &Range{Start: Position{Line: 5, Column: 1}, End: Position{Line: 5, Column: 10}},
+	}
+	got := node.String()
+	if got == "" {
+		t.Fatal("EndOfExpr.String() should not be empty")
+	}
+	// Sanity: must mention the inner node so trace logs are useful.
+	if !contains(got, "Q") {
+		t.Errorf("EndOfExpr.String() = %q should mention inner; expected to contain %q", got, "Q")
+	}
+}
+
+// TestEndOfExpr_GetRangeReturnsStored — pin the Range pass-through.
+func TestEndOfExpr_GetRangeReturnsStored(t *testing.T) {
+	r := &Range{Start: Position{Line: 7, Column: 3}, End: Position{Line: 7, Column: 12}}
+	node := &EndOfExpr{Range: r}
+	if node.GetRange() != r {
+		t.Errorf("GetRange() should return the stored Range pointer")
+	}
+}
+
+// TestStartOfExpr_String — symmetric to EndOf.
+func TestStartOfExpr_String(t *testing.T) {
+	inner := &RelativeDateLiteral{Keyword: "FQ:1", SourceText: "FQ1"}
+	node := &StartOfExpr{Period: inner, SourceText: "start of FQ1"}
+	if got := node.String(); got == "" {
+		t.Errorf("StartOfExpr.String() should not be empty")
+	}
+}
+
+// TestEndOfExpr_PeriodFieldAcceptsAnyNode — the inner is `Node`,
+// not a constrained interface. Identifier / RelativeDateLiteral /
+// any expression-producing node must work. Type-check happens in
+// spec/semantic; at the AST layer this is unconstrained.
+func TestEndOfExpr_PeriodFieldAcceptsAnyNode(t *testing.T) {
+	cases := []Node{
+		&RelativeDateLiteral{Keyword: "Q:1"},
+		&Identifier{Name: "q"},
+		&NumberLiteral{Value: "5"}, // semantic checker rejects this; AST allows it
+	}
+	for _, inner := range cases {
+		_ = &EndOfExpr{Period: inner, SourceText: "end of <expr>"}
+	}
+}
+
+// contains is a tiny helper to avoid importing strings just for this file.
+func contains(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
+
+// --- U3: BetweenExpr ---
+//
+// `between A and B` / `from A to B` — user-defined custom periods.
+// AST shape mirrors EndOfExpr: Start and End are generic Node so any
+// expression types as Date at semantic check time. Variable-bound
+// (`between start_dt and end_dt`) typechecks at semantic; runtime
+// validates Date.
+
+func TestBetweenExpr_StringIncludesEndpoints(t *testing.T) {
+	start := &DateLiteral{Month: "April", Day: "1", SourceText: "April 1"}
+	end := &DateLiteral{Month: "June", Day: "30", SourceText: "June 30"}
+	node := &BetweenExpr{
+		Start:      start,
+		End:        end,
+		SourceText: "between April 1 and June 30",
+		Range:      &Range{Start: Position{Line: 3, Column: 5}, End: Position{Line: 3, Column: 30}},
+	}
+	got := node.String()
+	if got == "" {
+		t.Fatal("BetweenExpr.String() should not be empty")
+	}
+	if !contains(got, "April") {
+		t.Errorf("BetweenExpr.String() = %q should reference Start child", got)
+	}
+	if !contains(got, "June") {
+		t.Errorf("BetweenExpr.String() = %q should reference End child", got)
+	}
+}
+
+func TestBetweenExpr_GetRangeReturnsStored(t *testing.T) {
+	r := &Range{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 25}}
+	node := &BetweenExpr{Range: r}
+	if node.GetRange() != r {
+		t.Errorf("GetRange() should return the stored Range pointer")
+	}
+}
+
+// TestBetweenExpr_FieldsAcceptAnyNode — Start and End are typed
+// `Node`, not constrained at the AST layer. Semantic checks (U7)
+// enforce both endpoints type as Date.
+func TestBetweenExpr_FieldsAcceptAnyNode(t *testing.T) {
+	cases := []struct{ start, end Node }{
+		{&DateLiteral{Month: "April", Day: "1"}, &DateLiteral{Month: "June", Day: "30"}},
+		{&Identifier{Name: "start_dt"}, &Identifier{Name: "end_dt"}},
+		{&NumberLiteral{Value: "5"}, &NumberLiteral{Value: "10"}}, // semantic rejects; AST allows
+	}
+	for _, c := range cases {
+		_ = &BetweenExpr{Start: c.start, End: c.end, SourceText: "between <a> and <b>"}
+	}
+}
+
+// TestContainsScaleRef_BetweenExpr — the new arm in
+// ContainsScaleRef. Recurses into both endpoints.
+func TestContainsScaleRef_BetweenExpr(t *testing.T) {
+	scaleNode := &DirectiveRef{Directive: "scale"}
+	plain := &DateLiteral{Month: "April", Day: "1"}
+
+	// Scale on Start
+	n1 := &BetweenExpr{Start: scaleNode, End: plain}
+	if !ContainsScaleRef(n1) {
+		t.Error("BetweenExpr with @scale on Start should return true")
+	}
+	// Scale on End
+	n2 := &BetweenExpr{Start: plain, End: scaleNode}
+	if !ContainsScaleRef(n2) {
+		t.Error("BetweenExpr with @scale on End should return true")
+	}
+	// Neither
+	n3 := &BetweenExpr{Start: plain, End: plain}
+	if ContainsScaleRef(n3) {
+		t.Error("BetweenExpr without @scale should return false")
+	}
+}
+
+// --- U4: LengthOfExpr ---
+//
+// `length of <Period>` returns Duration; `days in <Period>` returns
+// Number. Both desugar to LengthOfExpr; AsNumber discriminates.
+
+func TestLengthOfExpr_StringDistinguishesForms(t *testing.T) {
+	inner := &RelativeDateLiteral{Keyword: "Q:1", SourceText: "Q1"}
+
+	asDuration := &LengthOfExpr{
+		Period:     inner,
+		AsNumber:   false,
+		SourceText: "length of Q1",
+	}
+	asNumber := &LengthOfExpr{
+		Period:     inner,
+		AsNumber:   true,
+		SourceText: "days in Q1",
+	}
+
+	got1 := asDuration.String()
+	got2 := asNumber.String()
+	if got1 == "" || got2 == "" {
+		t.Fatal("LengthOfExpr.String() should not be empty")
+	}
+	if got1 == got2 {
+		t.Errorf("LengthOfExpr.String() should distinguish AsNumber forms; got %q for both", got1)
+	}
+	// Each form must surface the inner.
+	if !contains(got1, "Q") || !contains(got2, "Q") {
+		t.Errorf("String() should reference inner Period child; got %q / %q", got1, got2)
+	}
+}
+
+func TestLengthOfExpr_GetRangeReturnsStored(t *testing.T) {
+	r := &Range{Start: Position{Line: 2, Column: 1}, End: Position{Line: 2, Column: 14}}
+	node := &LengthOfExpr{Range: r}
+	if node.GetRange() != r {
+		t.Errorf("GetRange() should return the stored Range pointer")
+	}
+}
+
+// TestLengthOfExpr_AsNumberRoundtrip — pin the discriminator field.
+func TestLengthOfExpr_AsNumberRoundtrip(t *testing.T) {
+	inner := &RelativeDateLiteral{Keyword: "Q:1"}
+	asDuration := &LengthOfExpr{Period: inner, AsNumber: false}
+	asNumber := &LengthOfExpr{Period: inner, AsNumber: true}
+	if asDuration.AsNumber {
+		t.Error("AsNumber should be false for `length of` form")
+	}
+	if !asNumber.AsNumber {
+		t.Error("AsNumber should be true for `days in` form")
+	}
+}
+
+func TestLengthOfExpr_PeriodAcceptsAnyNode(t *testing.T) {
+	cases := []Node{
+		&RelativeDateLiteral{Keyword: "Q:1"},
+		&Identifier{Name: "p"},
+		&NumberLiteral{Value: "5"}, // semantic rejects; AST allows
+	}
+	for _, inner := range cases {
+		_ = &LengthOfExpr{Period: inner, SourceText: "length of <expr>"}
+	}
+}
+
+// TestContainsScaleRef_LengthOfExpr — recurses into Period child.
+func TestContainsScaleRef_LengthOfExpr(t *testing.T) {
+	scaleNode := &DirectiveRef{Directive: "scale"}
+	plain := &RelativeDateLiteral{Keyword: "Q:1"}
+
+	n1 := &LengthOfExpr{Period: scaleNode}
+	if !ContainsScaleRef(n1) {
+		t.Error("LengthOfExpr with @scale on Period should return true")
+	}
+	n2 := &LengthOfExpr{Period: plain}
+	if ContainsScaleRef(n2) {
+		t.Error("LengthOfExpr without @scale should return false")
+	}
+}

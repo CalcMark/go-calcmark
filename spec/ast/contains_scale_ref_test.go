@@ -186,3 +186,48 @@ func TestContainsScaleRef_PreciseConversion(t *testing.T) {
 		t.Error("precise conversion with @scale should return true")
 	}
 }
+
+// EndOfExpr / StartOfExpr — composite operator nodes whose inner
+// can carry a scale reference. The transform pipeline (used for
+// `@scale` propagation) must descend through these or the scale
+// reference becomes invisible to scaling logic.
+//
+// Per the cross-layer checklist (docs/solutions/logic-errors/
+// adding-new-type-fraction-cross-layer-checklist.md): every new
+// composite AST node needs an explicit ContainsScaleRef arm even
+// if the wrapped expression rarely contains @scale in practice.
+
+func TestContainsScaleRef_EndOfExpr_InnerHasScale(t *testing.T) {
+	node := &EndOfExpr{
+		Period: &BinaryOp{
+			Operator: "*",
+			Left:     &RelativeDateLiteral{Keyword: "this quarter"},
+			Right:    &DirectiveRef{Directive: "scale"},
+		},
+	}
+	if !ContainsScaleRef(node) {
+		t.Error("EndOfExpr with @scale in inner should return true")
+	}
+}
+
+func TestContainsScaleRef_EndOfExpr_InnerNoScale(t *testing.T) {
+	node := &EndOfExpr{
+		Period: &RelativeDateLiteral{Keyword: "this quarter"},
+	}
+	if ContainsScaleRef(node) {
+		t.Error("EndOfExpr without @scale should return false")
+	}
+}
+
+func TestContainsScaleRef_StartOfExpr_InnerHasScale(t *testing.T) {
+	node := &StartOfExpr{
+		Period: &BinaryOp{
+			Operator: "+",
+			Left:     &RelativeDateLiteral{Keyword: "Q:1"},
+			Right:    &DirectiveRef{Directive: "scale"},
+		},
+	}
+	if !ContainsScaleRef(node) {
+		t.Error("StartOfExpr with @scale in inner should return true")
+	}
+}

@@ -324,60 +324,180 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		return p.parseNaturalLanguageFunction()
 	}
 
+	// Directed notation: `next FQ1`, `last CY2026`, `this Q1`. The
+	// IDENTIFIER `this`/`next`/`last` followed by a notation literal
+	// (Q/FQ/FY/CY) means "the Nth quarter / year of the relative
+	// fiscal year". Lexer no longer greedy-matches `next FQ` (etc.)
+	// when followed by a digit, so the direction word arrives here
+	// as an IDENTIFIER.
+	if (p.checkIdentValue("next") || p.checkIdentValue("last") || p.checkIdentValue("this")) &&
+		isNotationLiteralToken(p.peekAhead(1).Type) {
+		dirTok := p.advance()
+		direction := strings.ToLower(string(dirTok.Value))
+		notationTok := p.advance()
+		prefix := notationLiteralPrefix(notationTok.Type)
+		return &ast.RelativeDateLiteral{
+			Keyword: direction + " " + prefix + ":" + string(notationTok.Value),
+			SourceText: string(dirTok.Value) + " " + string(notationTok.OriginalText),
+		}, nil
+	}
+
 	// Notation: Q1-Q4, FQ1-FQ4, FY26, CY2026
 	if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
 		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL) {
 		tok := p.previous()
 		// Encode as RelativeDateLiteral with prefix+value keyword
 		// e.g., "Q:1", "FQ:3", "FY:2026", "CY:26"
-		prefix := ""
-		switch tok.Type {
-		case lexer.CALENDAR_QUARTER_LITERAL:
-			prefix = "Q"
-		case lexer.FISCAL_QUARTER_LITERAL:
-			prefix = "FQ"
-		case lexer.FISCAL_YEAR_LITERAL:
-			prefix = "FY"
-		case lexer.CALENDAR_YEAR_LITERAL:
-			prefix = "CY"
-		}
+		prefix := notationLiteralPrefix(tok.Type)
 		return &ast.RelativeDateLiteral{
 			Keyword:    prefix + ":" + string(tok.Value),
 			SourceText: string(tok.OriginalText),
 		}, nil
 	}
 
-	// "start of <period>" — explicit form, equivalent to bare period (first day)
-	// "end of <period>" — resolves to last day of the period
+	// "start of <period>" / "end of <period>" — first-class language
+	// operators. The inner is parsed via parsePrimary() so any
+	// expression that resolves to a Period at semantic-check time
+	// works (literal periods, identifiers bound to periods,
+	// parenthesized period expressions). Precedence is preserved:
+	// `end of Q1 + 1 day` parses as `(end of Q1) + 1 day` because
+	// parsePrimary() doesn't reach across the additive boundary.
+	//
+	// Replaces the previous bounded-token-list + string-flattening
+	// where the inner had to be one of an enumerated set of tokens
+	// and the AST stored `Keyword: modifier + " " + innerKeyword`.
+	// See spec/ast/nodes.go EndOfExpr / StartOfExpr.
 	if p.match(lexer.START_OF, lexer.END_OF) {
-		modifier := string(p.previous().Value) // "start of" or "end of"
-		// Parse the period expression that follows
-		if p.match(lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
-			lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
-			lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR,
-			lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
-			lexer.DATE_THIS_FISCAL_QUARTER, lexer.DATE_NEXT_FISCAL_QUARTER, lexer.DATE_LAST_FISCAL_QUARTER,
-			lexer.DATE_THIS_FISCAL_YEAR, lexer.DATE_NEXT_FISCAL_YEAR, lexer.DATE_LAST_FISCAL_YEAR,
-			lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME) {
-			tok := p.previous()
-			return &ast.RelativeDateLiteral{
-				Keyword:    modifier + " " + string(tok.Value),
-				SourceText: modifier + " " + string(tok.Value),
-			}, nil
+		op := p.previous()
+		modifier := string(op.Value) // "start of" or "end of"
+		startRange := tokenRange(op)
+		inner, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month' or '" + modifier + " Q1'); got: " + err.Error())
 		}
-		// Also accept notation tokens: "end of Q2", "end of FQ1"
-		if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL) {
-			tok := p.previous()
-			prefix := "Q"
-			if tok.Type == lexer.FISCAL_QUARTER_LITERAL {
-				prefix = "FQ"
-			}
-			return &ast.RelativeDateLiteral{
-				Keyword:    modifier + " " + prefix + ":" + string(tok.Value),
-				SourceText: modifier + " " + string(tok.OriginalText),
-			}, nil
+		if inner == nil {
+			return nil, p.error("expected period expression after '" + modifier + "'")
 		}
-		return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " this month')")
+		// Span from the operator's start through the inner's end.
+		full := startRange
+		if innerR := inner.GetRange(); innerR != nil {
+			full = &ast.Range{Start: startRange.Start, End: innerR.End}
+		}
+		// SourceText spans from the operator through the inner --
+		// the inner's SourceText if available, else fall back to its
+		// String() form. Used in diagnostics and AST round-tripping.
+		innerText := innerSourceText(inner)
+		sourceText := modifier + " " + innerText
+		if op.Type == lexer.END_OF {
+			return &ast.EndOfExpr{Period: inner, SourceText: sourceText, Range: full}, nil
+		}
+		return &ast.StartOfExpr{Period: inner, SourceText: sourceText, Range: full}, nil
+	}
+
+	// `length of <Period>` / `days in <Period>` — v2.0 query
+	// operators. Inner parses via parsePrimary so precedence
+	// preserves: `length of Q1 + 2 days` parses as
+	// `(length of Q1) + 2 days`. Type-check enforces Period inner
+	// in U9.
+	if p.match(lexer.LENGTH_OF, lexer.DAYS_IN) {
+		op := p.previous()
+		asNumber := op.Type == lexer.DAYS_IN
+		modifier := "length of"
+		if asNumber {
+			modifier = "days in"
+		}
+		startRange := tokenRange(op)
+		inner, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected period expression after '" + modifier + "' (e.g., '" + modifier + " April', '" + modifier + " Q1'); got: " + err.Error())
+		}
+		if inner == nil {
+			return nil, p.error("expected period expression after '" + modifier + "'")
+		}
+		full := startRange
+		if innerR := inner.GetRange(); innerR != nil {
+			full = &ast.Range{Start: startRange.Start, End: innerR.End}
+		}
+		sourceText := modifier + " " + innerSourceText(inner)
+		return &ast.LengthOfExpr{
+			Period:     inner,
+			AsNumber:   asNumber,
+			SourceText: sourceText,
+			Range:      full,
+		}, nil
+	}
+
+	// `between A and B` — v2.0 user-defined Period.
+	if p.match(lexer.BETWEEN) {
+		op := p.previous()
+		startRange := tokenRange(op)
+		startExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'between'; got: " + err.Error())
+		}
+		if startExpr == nil {
+			return nil, p.error("expected expression after 'between'")
+		}
+		if !p.match(lexer.AND) {
+			return nil, p.error("expected 'and' after 'between <expr>' (e.g., 'between Apr 1 2026 and Jul 4 2026')")
+		}
+		endExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'and'; got: " + err.Error())
+		}
+		if endExpr == nil {
+			return nil, p.error("expected expression after 'and'")
+		}
+		full := startRange
+		if endR := endExpr.GetRange(); endR != nil {
+			full = &ast.Range{Start: startRange.Start, End: endR.End}
+		}
+		sourceText := "between " + innerSourceText(startExpr) + " and " + innerSourceText(endExpr)
+		return &ast.BetweenExpr{
+			Start:      startExpr,
+			End:        endExpr,
+			SourceText: sourceText,
+			Range:      full,
+		}, nil
+	}
+
+	// `from A to B` — synonym for `between A and B`. Only fires when
+	// FROM is at the start of a primary expression. The existing
+	// `<duration> from <date>` arithmetic consumes FROM inside the
+	// DURATION_LITERAL branch (below), so a FROM reaching here is
+	// always the start of the period synonym.
+	if p.match(lexer.FROM) {
+		op := p.previous()
+		startRange := tokenRange(op)
+		startExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'from'; got: " + err.Error())
+		}
+		if startExpr == nil {
+			return nil, p.error("expected expression after 'from'")
+		}
+		if !p.checkIdentValue("to") {
+			return nil, p.error("expected 'to' after 'from <expr>' (e.g., 'from Apr 1 2026 to Jul 4 2026')")
+		}
+		p.advance() // consume "to"
+		endExpr, err := p.parsePrimary()
+		if err != nil {
+			return nil, p.error("expected expression after 'to'; got: " + err.Error())
+		}
+		if endExpr == nil {
+			return nil, p.error("expected expression after 'to'")
+		}
+		full := startRange
+		if endR := endExpr.GetRange(); endR != nil {
+			full = &ast.Range{Start: startRange.Start, End: endR.End}
+		}
+		sourceText := "from " + innerSourceText(startExpr) + " to " + innerSourceText(endExpr)
+		return &ast.BetweenExpr{
+			Start:      startExpr,
+			End:        endExpr,
+			SourceText: sourceText,
+			Range:      full,
+		}, nil
 	}
 
 	// Date keywords: today, tomorrow, yesterday, this/next/last week/month/year, weekdays
@@ -397,22 +517,43 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		}, nil
 	}
 
-	// Date literals: "Dec 12", "December 25 2025"
+	// Date literals: "Dec 12", "December 25 2025", and bare months
+	// like "April".
 	if p.match(lexer.DATE_LITERAL) {
 		tok := p.previous()
-		// Value format: "Month:Day:Year" (e.g., "December:25:2025")
+		// Value format: "Month:Day:Year:HasExplicitDay" where the
+		// last field is "1" or "0". Pre-v2.0 tokens may lack the
+		// 4th field; treat absence as HasExplicitDay = true so
+		// legacy callers (e.g., synthesized tokens) keep their
+		// existing Date semantics.
 		parts := strings.Split(string(tok.Value), ":")
 
 		var year *string
 		if len(parts) >= 3 && parts[2] != "" {
 			year = &parts[2]
 		}
+		hasExplicitDay := true
+		if len(parts) >= 4 {
+			hasExplicitDay = parts[3] == "1"
+		}
+
+		// Bare month name (no day, no year): semantically a Period
+		// (the whole month). Emit RelativeDateLiteral so it flows
+		// through the existing period-keyword evaluation path
+		// shared with `this April` / `next April`.
+		if !hasExplicitDay && year == nil {
+			return &ast.RelativeDateLiteral{
+				Keyword:    "this " + parts[0],
+				SourceText: string(tok.OriginalText),
+			}, nil
+		}
 
 		return &ast.DateLiteral{
-			Month:      parts[0],
-			Day:        parts[1],
-			Year:       year,
-			SourceText: string(tok.OriginalText),
+			Month:          parts[0],
+			Day:            parts[1],
+			Year:           year,
+			HasExplicitDay: hasExplicitDay,
+			SourceText:     string(tok.OriginalText),
 		}, nil
 	}
 
@@ -679,20 +820,42 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 		}, nil
 	}
 
-	// Try relative date expressions (weekdays, months, periods)
-	if p.match(lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY,
-		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
-		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
-		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
-		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
-		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {
+	// Try relative date expressions (weekdays, months, periods).
+	//
+	// Period-bearing tokens (DATE_THIS_QUARTER, DATE_NEXT_MONTH,
+	// DATE_THIS_YEAR, etc.) evaluate to *types.Period in v2.0. The
+	// `from <X>` arithmetic context is a Date-narrowing context — the
+	// user means "starting from the start of that period" — so we
+	// wrap period-bearing tokens in StartOfExpr at parse time.
+	// Day-bearing tokens (weekdays) stay as RelativeDateLiteral.
+	if p.match(lexer.DATE_WEEKDAY, lexer.DATE_THIS_WEEKDAY, lexer.DATE_NEXT_WEEKDAY, lexer.DATE_LAST_WEEKDAY) {
 		return &ast.RelativeDateLiteral{
 			Keyword:    string(p.previous().Value),
 			SourceText: string(p.previous().OriginalText),
 		}, nil
 	}
+	if p.match(
+		lexer.DATE_THIS_MONTH_NAME, lexer.DATE_NEXT_MONTH_NAME, lexer.DATE_LAST_MONTH_NAME,
+		lexer.DATE_THIS_QUARTER, lexer.DATE_NEXT_QUARTER, lexer.DATE_LAST_QUARTER,
+		lexer.DATE_THIS_WEEK, lexer.DATE_THIS_MONTH, lexer.DATE_THIS_YEAR,
+		lexer.DATE_NEXT_WEEK, lexer.DATE_NEXT_MONTH, lexer.DATE_NEXT_YEAR,
+		lexer.DATE_LAST_WEEK, lexer.DATE_LAST_MONTH, lexer.DATE_LAST_YEAR) {
+		tok := p.previous()
+		inner := &ast.RelativeDateLiteral{
+			Keyword:    string(tok.Value),
+			SourceText: string(tok.OriginalText),
+		}
+		return &ast.StartOfExpr{
+			Period:     inner,
+			SourceText: "start of " + string(tok.OriginalText),
+			Range:      tokenRange(tok),
+		}, nil
+	}
 
-	// Try date literal (Dec 25, December 25 2025)
+	// Try date literal (Dec 25, December 25 2025). In `from <date>`
+	// position the user typically writes a specific date; we treat
+	// any DATE_LITERAL here as a Date and preserve HasExplicitDay
+	// for downstream consumers.
 	if p.match(lexer.DATE_LITERAL) {
 		tok := p.previous()
 		parts := strings.Split(string(tok.Value), ":")
@@ -701,12 +864,17 @@ func (p *RecursiveDescentParser) parseFromTarget() (ast.Node, error) {
 		if len(parts) >= 3 && parts[2] != "" {
 			year = &parts[2]
 		}
+		hasExplicitDay := true
+		if len(parts) >= 4 {
+			hasExplicitDay = parts[3] == "1"
+		}
 
 		return &ast.DateLiteral{
-			Month:      parts[0],
-			Day:        parts[1],
-			Year:       year,
-			SourceText: string(tok.OriginalText),
+			Month:          parts[0],
+			Day:            parts[1],
+			Year:           year,
+			HasExplicitDay: hasExplicitDay,
+			SourceText:     string(tok.OriginalText),
 		}, nil
 	}
 
@@ -811,4 +979,61 @@ func (p *RecursiveDescentParser) parseFractionLiteral() (ast.Node, error) {
 	}
 
 	return fracNode, nil
+}
+
+// innerSourceText returns a best-effort source-text representation
+// of an expression-producing AST node, used to populate
+// EndOfExpr.SourceText / StartOfExpr.SourceText. Walks the common
+// AST node types and reads their SourceText / Keyword / Name
+// fields. Falls back to the node's String() form for unrecognized
+// shapes -- not perfect for round-tripping but sufficient for
+// isNotationLiteralToken reports whether the given token type is
+// one of the date-notation literals (Q1, FQ1, FY2026, CY2026). Used
+// by the directed-notation parser path (`next FQ1`, etc.).
+func isNotationLiteralToken(t lexer.TokenType) bool {
+	switch t {
+	case lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
+		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL:
+		return true
+	}
+	return false
+}
+
+// notationLiteralPrefix returns the canonical Q / FQ / FY / CY prefix
+// for a notation-literal token type. Used to encode the keyword
+// string ("FQ:1" / "next FQ:1" / etc.) consumed by the interpreter's
+// evalNotation switch.
+func notationLiteralPrefix(t lexer.TokenType) string {
+	switch t {
+	case lexer.CALENDAR_QUARTER_LITERAL:
+		return "Q"
+	case lexer.FISCAL_QUARTER_LITERAL:
+		return "FQ"
+	case lexer.FISCAL_YEAR_LITERAL:
+		return "FY"
+	case lexer.CALENDAR_YEAR_LITERAL:
+		return "CY"
+	}
+	return ""
+}
+
+// diagnostic messages.
+func innerSourceText(n ast.Node) string {
+	switch v := n.(type) {
+	case *ast.RelativeDateLiteral:
+		if v.SourceText != "" {
+			return v.SourceText
+		}
+		return v.Keyword
+	case *ast.Identifier:
+		return v.Name
+	case *ast.NumberLiteral:
+		return v.Value
+	case *ast.DateLiteral:
+		if v.SourceText != "" {
+			return v.SourceText
+		}
+		return v.Month + " " + v.Day
+	}
+	return n.String()
 }

@@ -34,6 +34,17 @@ func NewDirectiveResolver(fm *document.Frontmatter) interpreter.DirectiveResolve
 	return &frontmatterDirectiveResolver{fm: fm}
 }
 
+// toFYLabelMode bridges the document layer's CalendarYearOffset enum
+// to the types layer's FYLabelMode. Kept narrow so the document
+// package doesn't import the types package's mode constants directly
+// at every call site.
+func toFYLabelMode(off document.CalendarYearOffset) types.FYLabelMode {
+	if off == document.CalendarYearOffsetAfter {
+		return types.FYLabelByStartYear
+	}
+	return types.FYLabelByEndYear
+}
+
 type frontmatterDirectiveResolver struct {
 	fm *document.Frontmatter
 }
@@ -534,9 +545,14 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 		if fm.Measurement != nil {
 			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
 		}
-		// Wire fiscal year configuration for FQ/FY expressions
+		// Wire fiscal year configuration for FQ/FY expressions, including
+		// the optional calendar_year_offset (defaults to "before").
 		if fm.FiscalYearStarts != nil {
-			interp.SetFiscalYearStarts(fm.FiscalYearStarts.Month, fm.FiscalYearStarts.Day)
+			interp.SetFiscalCalendar(
+				fm.FiscalYearStarts.Month,
+				fm.FiscalYearStarts.Day,
+				toFYLabelMode(fm.CalendarYearOffset),
+			)
 		}
 	}
 	results := make([]types.Type, 0, len(nodes))
@@ -757,9 +773,14 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 		if fm.Measurement != nil {
 			interp.SetMeasurement(&fm.Measurement.MeasurementConfig)
 		}
-		// Wire fiscal year configuration for FQ/FY expressions
+		// Wire fiscal year configuration for FQ/FY expressions, including
+		// the optional calendar_year_offset (defaults to "before").
 		if fm.FiscalYearStarts != nil {
-			interp.SetFiscalYearStarts(fm.FiscalYearStarts.Month, fm.FiscalYearStarts.Day)
+			interp.SetFiscalCalendar(
+				fm.FiscalYearStarts.Month,
+				fm.FiscalYearStarts.Day,
+				toFYLabelMode(fm.CalendarYearOffset),
+			)
 		}
 	}
 	results := make([]types.Type, 0, len(nodes))

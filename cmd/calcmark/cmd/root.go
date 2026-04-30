@@ -119,15 +119,21 @@ func init() {
 // Must be called after config.Load() (i.e., inside or after PersistentPreRunE).
 // Invalid locale falls back to en-US with a warning to stderr.
 func localeFormatter() display.Formatter {
-	locale := config.Get().Locale
+	cfg := config.Get()
+	locale := cfg.Locale
+	var dcfg display.DisplayConfig
 	if locale == "" {
-		return display.DefaultFormatter()
+		dcfg = display.DefaultConfig()
+	} else {
+		var err error
+		dcfg, err = display.NewConfig(locale)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "calcmark: invalid locale %q, using en-US: %v\n", locale, err)
+			dcfg = display.DefaultConfig()
+		}
 	}
-	dcfg, err := display.NewConfig(locale)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "calcmark: invalid locale %q, using en-US: %v\n", locale, err)
-		return display.DefaultFormatter()
-	}
+	dcfg.DateFormat = cfg.Formatter.DateFormat
+	dcfg.PeriodDateFormat = cfg.Formatter.PeriodDateFormat
 	return display.NewFormatter(dcfg)
 }
 
@@ -152,6 +158,9 @@ func tuiFormatter() display.Formatter {
 
 	// Enable Unicode fractions by default; user can disable in config
 	dcfg.UnicodeFractions = cfg.TUI.UnicodeFractions == nil || *cfg.TUI.UnicodeFractions
+
+	dcfg.DateFormat = cfg.Formatter.DateFormat
+	dcfg.PeriodDateFormat = cfg.Formatter.PeriodDateFormat
 
 	return display.NewFormatter(dcfg)
 }

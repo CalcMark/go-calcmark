@@ -7,6 +7,7 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
+	"github.com/goodsign/monday"
 	"github.com/shopspring/decimal"
 )
 
@@ -105,6 +106,8 @@ func (f Formatter) Format(t types.Type) string {
 		return f.FormatPercentage(v)
 	case *types.Time:
 		return v.String()
+	case *types.Period:
+		return f.FormatPeriod(v)
 	default:
 		return fmt.Sprintf("%v", t)
 	}
@@ -274,6 +277,11 @@ func (f Formatter) FormatDuration(d *types.Duration) string {
 // Uses abbreviated day-of-week and month names with locale-specific ordering.
 // Examples: "Wed, Jan 12, 2025" (en-US), "Mi., 12. Jan. 2025" (de-DE).
 //
+// When DisplayConfig.DateFormat is set, that DSL string overrides the
+// locale default — see date_format_dsl.go for the supported tokens
+// (MON dd, YYYY etc.). The locale still applies to month / weekday
+// names within the custom layout.
+//
 // The machine-readable Date.String() ("Monday, January 2, 2006") is intentionally
 // different — it is the model layer's precise representation. This method is the
 // display layer's human-friendly form.
@@ -281,8 +289,67 @@ func (f Formatter) FormatDate(d *types.Date) string {
 	if d == nil {
 		return ""
 	}
+	if f.cfg.DateFormat != "" {
+		df := getDateFormat(f.cfg.Tag)
+		return formatDateWithDSL(d.Time, f.cfg.DateFormat, df.locale)
+	}
 	df := getDateFormat(f.cfg.Tag)
 	return formatDate(d.Time, df)
+}
+
+// FormatPeriod renders a Period for human display as a compact
+// start–end range using the dd-MON-YYYY layout:
+//
+//   Q1                       → "01-Jan-2026 – 31-Mar-2026"
+//   this fiscal quarter      → "01-Apr-2026 – 30-Jun-2026"
+//   April                    → "01-Apr-2026 – 30-Apr-2026"
+//   between Apr 15 and Jul 4 → "15-Apr-2026 – 04-Jul-2026"
+//
+// Why no kind label: the source already names the period
+// (`this fiscal quarter`, `Q1`, etc.). Echoing the label as part
+// of the result is redundant — same reason `today` resolves to a
+// formatted date without echoing "today". Period values surface
+// the boundaries; the kind context lives in the source line.
+//
+// Why dd-MON-YYYY (not the regular FormatDate output): a Period
+// renders TWO dates side-by-side, so each one needs to be compact.
+// FormatDate's day-of-week prefix ("Wed, Apr 1, 2026") is great
+// for a single Date but reads as noise when twinned. dd-MON-YYYY
+// is unambiguous (no MM/DD vs DD/MM ambiguity) and locale-aware
+// for the month abbreviation via the existing monday library.
+//
+// The kind label is still available via Period.String() for
+// diagnostics / debug output / JSON `value` field, where the
+// surrounding source isn't visible.
+func (f Formatter) FormatPeriod(p *types.Period) string {
+	if p == nil {
+		return ""
+	}
+	if p.Start == nil || p.End == nil {
+		// Defensive: every factory in spec/types/period.go populates
+		// both. Fall back to the kind label if invariant breaks.
+		return p.String()
+	}
+	df := getDateFormat(f.cfg.Tag)
+
+	// Resolution order:
+	//   1. PeriodDateFormat (period-specific override)
+	//   2. DateFormat       (general date override)
+	//   3. dd-MON-YYYY      (compact default tuned for twin display)
+	dsl := f.cfg.PeriodDateFormat
+	if dsl == "" {
+		dsl = f.cfg.DateFormat
+	}
+	if dsl != "" {
+		startStr := formatDateWithDSL(p.Start.Time, dsl, df.locale)
+		endStr := formatDateWithDSL(p.End.Time, dsl, df.locale)
+		return startStr + " – " + endStr
+	}
+
+	const layout = "02-Jan-2006"
+	startStr := monday.Format(p.Start.Time, layout, df.locale)
+	endStr := monday.Format(p.End.Time, layout, df.locale)
+	return startStr + " – " + endStr
 }
 
 // FormatPercentage formats a percentage in human-readable form.

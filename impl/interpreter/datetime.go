@@ -8,7 +8,6 @@ import (
 
 	"github.com/CalcMark/go-calcmark/spec/ast"
 	"github.com/CalcMark/go-calcmark/spec/types"
-	"github.com/shopspring/decimal"
 )
 
 // Date and time literal evaluation.
@@ -95,6 +94,13 @@ var periodAbbreviationExpansion = map[string]string{
 	"this fq": "this fiscal quarter",
 	"next fq": "next fiscal quarter",
 	"last fq": "last fiscal quarter",
+
+	// Bare-form fiscal aliases (lexer admits the phrase, eval treats
+	// it as `this <X>`). `end of fiscal quarter` reads naturally —
+	// users already configure fiscal_year_starts in frontmatter, so
+	// the implicit `this` is unambiguous.
+	"fiscal quarter": "this fiscal quarter",
+	"fiscal year":    "this fiscal year",
 }
 
 func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (types.Type, error) {
@@ -105,6 +111,7 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 	}
 
 	switch keyword {
+	// True date keywords — single point in time, return Date.
 	case "today":
 		return types.NewDateFromTime(now), nil
 	case "now":
@@ -115,49 +122,41 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 		return types.NewDateFromTime(now.AddDate(0, 0, 1)), nil
 	case "yesterday":
 		return types.NewDateFromTime(now.AddDate(0, 0, -1)), nil
-	// Period expressions: this/next/last week/month/year
+
+	// v2.0: period keywords return *types.Period (the whole span)
+	// rather than the START date. Callers that historically
+	// type-asserted *types.Date use asDate() to unwrap to Period.Start.
 	case "this week":
-		// Monday of current week
-		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
-		return types.NewDateFromTime(now.AddDate(0, 0, -daysFromMonday)), nil
+		return relativeWeekPeriod(now, 0), nil
 	case "next week":
-		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
-		monday := now.AddDate(0, 0, -daysFromMonday)
-		return types.NewDateFromTime(monday.AddDate(0, 0, 7)), nil
+		return relativeWeekPeriod(now, +1), nil
 	case "last week":
-		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
-		monday := now.AddDate(0, 0, -daysFromMonday)
-		return types.NewDateFromTime(monday.AddDate(0, 0, -7)), nil
+		return relativeWeekPeriod(now, -1), nil
 	case "this month":
-		return types.NewDateFromTime(time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)), nil
+		return relativeMonthPeriod(now, 0), nil
 	case "next month":
-		return types.NewDateFromTime(time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)), nil
+		return relativeMonthPeriod(now, +1), nil
 	case "last month":
-		return types.NewDateFromTime(time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, time.UTC)), nil
+		return relativeMonthPeriod(now, -1), nil
 	case "this year":
-		return types.NewDateFromTime(time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)), nil
+		return relativeYearPeriod(now, 0), nil
 	case "next year":
-		return types.NewDateFromTime(time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC)), nil
+		return relativeYearPeriod(now, +1), nil
 	case "last year":
-		return types.NewDateFromTime(time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, time.UTC)), nil
+		return relativeYearPeriod(now, -1), nil
 
 	// Fiscal expressions (require fiscal_year_starts)
 	case "this fiscal quarter", "next fiscal quarter", "last fiscal quarter",
 		"this fiscal year", "next fiscal year", "last fiscal year":
 		return interp.evalFiscalExpression(keyword, now)
 
-	// Calendar quarter expressions
+	// Calendar quarter expressions — return Period.
 	case "this quarter":
-		q := calendarQuarterStart(now.Month())
-		return types.NewDateFromTime(time.Date(now.Year(), q, 1, 0, 0, 0, 0, time.UTC)), nil
+		return types.NewRelativeQuarter(now, 0), nil
 	case "next quarter":
-		q := calendarQuarterStart(now.Month())
-		t := time.Date(now.Year(), q+3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes month > 12
-		return types.NewDateFromTime(t), nil
+		return types.NewRelativeQuarter(now, +1), nil
 	case "last quarter":
-		q := calendarQuarterStart(now.Month())
-		t := time.Date(now.Year(), q-3, 1, 0, 0, 0, 0, time.UTC) // Go normalizes month < 1
-		return types.NewDateFromTime(t), nil
+		return types.NewRelativeQuarter(now, -1), nil
 
 	default:
 		// Notation: Q:1, FQ:3, FY:2026, CY:26
@@ -165,18 +164,13 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 			return d, err
 		}
 
-		// "start of <period>" — strip prefix and evaluate the inner period
-		if strings.HasPrefix(keyword, "start of ") {
-			inner := keyword[len("start of "):]
-			innerNode := &ast.RelativeDateLiteral{Keyword: inner, SourceText: inner}
-			return interp.evalRelativeDateLiteral(innerNode)
-		}
-
-		// "end of <period>" — evaluate inner period to get start, then find last day
-		if strings.HasPrefix(keyword, "end of ") {
-			inner := keyword[len("end of "):]
-			return interp.evalEndOf(inner, now)
-		}
+		// "start of <period>" / "end of <period>" string-prefix
+		// dispatches were retired here (and at the equivalent site
+		// in evalNotation) when the parser started emitting
+		// ast.EndOfExpr / ast.StartOfExpr structured nodes. Operator
+		// dispatch now happens at the AST layer (see evalEndOfExpr /
+		// evalStartOfExpr); reaching this branch with a string-form
+		// "end of ..." keyword would mean the parser regressed.
 
 		// Try weekday expressions: "friday", "this friday", "next friday", "last friday"
 		if d, ok := interp.resolveWeekdayExpression(keyword, now); ok {
@@ -190,119 +184,6 @@ func (interp *Interpreter) evalRelativeDateLiteral(r *ast.RelativeDateLiteral) (
 	}
 }
 
-// evalEndOf resolves "end of <period>" to the last day of that period.
-// Strategy: find the start of the NEXT period, then subtract 1 day.
-func (interp *Interpreter) evalEndOf(innerKeyword string, now time.Time) (types.Type, error) {
-	// Map the period to its "next" equivalent to find the boundary
-	nextPeriod := ""
-	switch innerKeyword {
-	case "this week":
-		nextPeriod = "next week"
-	case "next week":
-		// end of next week = start of the week after next - 1 day
-		daysFromMonday := (int(now.Weekday()) - int(time.Monday) + 7) % 7
-		monday := now.AddDate(0, 0, -daysFromMonday)
-		startOfWeekAfterNext := monday.AddDate(0, 0, 14)
-		return types.NewDateFromTime(startOfWeekAfterNext.AddDate(0, 0, -1)), nil
-	case "last week":
-		nextPeriod = "this week"
-	case "this month":
-		nextPeriod = "next month"
-	case "next month":
-		t := time.Date(now.Year(), now.Month()+2, 1, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(t.AddDate(0, 0, -1)), nil
-	case "last month":
-		nextPeriod = "this month"
-	case "this year":
-		return types.NewDateFromTime(time.Date(now.Year(), 12, 31, 0, 0, 0, 0, time.UTC)), nil
-	case "next year":
-		return types.NewDateFromTime(time.Date(now.Year()+1, 12, 31, 0, 0, 0, 0, time.UTC)), nil
-	case "last year":
-		return types.NewDateFromTime(time.Date(now.Year()-1, 12, 31, 0, 0, 0, 0, time.UTC)), nil
-	case "this quarter":
-		q := calendarQuarterStart(now.Month())
-		nextQ := time.Date(now.Year(), q+3, 1, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextQ.AddDate(0, 0, -1)), nil
-	case "next quarter":
-		q := calendarQuarterStart(now.Month())
-		nextNextQ := time.Date(now.Year(), q+6, 1, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextNextQ.AddDate(0, 0, -1)), nil
-	case "last quarter":
-		q := calendarQuarterStart(now.Month())
-		thisQ := time.Date(now.Year(), q, 1, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(thisQ.AddDate(0, 0, -1)), nil
-	case "this fiscal quarter", "next fiscal quarter", "last fiscal quarter",
-		"this fiscal year", "next fiscal year", "last fiscal year":
-		return interp.evalEndOfFiscal(innerKeyword, now)
-	default:
-		// Try named months: "end of january", "end of next april"
-		if d, ok := resolveEndOfMonth(innerKeyword, now); ok {
-			return d, nil
-		}
-		return nil, fmt.Errorf("'end of' not supported for: %q", innerKeyword)
-	}
-
-	// Generic path: evaluate the next period and subtract 1 day
-	nextNode := &ast.RelativeDateLiteral{Keyword: nextPeriod, SourceText: nextPeriod}
-	nextStart, err := interp.evalRelativeDateLiteral(nextNode)
-	if err != nil {
-		return nil, err
-	}
-	nextDate := nextStart.(*types.Date)
-	return types.NewDateFromTime(nextDate.Time.AddDate(0, 0, -1)), nil
-}
-
-// evalEndOfFiscal handles "end of this/next/last fiscal quarter/year".
-func (interp *Interpreter) evalEndOfFiscal(keyword string, now time.Time) (types.Type, error) {
-	if interp.fiscalYearStarts == nil {
-		return nil, fmt.Errorf("fiscal expressions require a 'fiscal_year_starts' frontmatter key")
-	}
-
-	fc := interp.fiscalYearStarts
-	fyStartMonth := time.Month(fc.month)
-	fyStartDay := fc.day
-
-	switch keyword {
-	case "this fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
-		nextFQ := time.Date(y, m+3, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextFQ.AddDate(0, 0, -1)), nil
-	case "next fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
-		nextNextFQ := time.Date(y, m+6, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextNextFQ.AddDate(0, 0, -1)), nil
-	case "last fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
-		thisFQ := time.Date(y, m, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(thisFQ.AddDate(0, 0, -1)), nil
-	case "this fiscal year":
-		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
-		nextFYStart := time.Date(fy+1, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextFYStart.AddDate(0, 0, -1)), nil
-	case "next fiscal year":
-		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + 1
-		nextFYStart := time.Date(fy+1, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextFYStart.AddDate(0, 0, -1)), nil
-	case "last fiscal year":
-		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) - 1
-		nextFYStart := time.Date(fy+1, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
-		return types.NewDateFromTime(nextFYStart.AddDate(0, 0, -1)), nil
-	}
-	return nil, fmt.Errorf("unknown fiscal end-of expression: %q", keyword)
-}
-
-// resolveEndOfMonth handles "end of january", "end of next april", etc.
-func resolveEndOfMonth(keyword string, now time.Time) (*types.Date, bool) {
-	// First resolve the month start, then find the last day
-	startDate, ok := resolveMonthExpression(keyword, now)
-	if !ok {
-		return nil, false
-	}
-	// Last day of the month = first day of next month - 1 day
-	lastDay := time.Date(startDate.Time.Year(), startDate.Time.Month()+1, 0, 0, 0, 0, 0, time.UTC)
-	return types.NewDateFromTime(lastDay), true
-}
-
 // evalFiscalExpression evaluates fiscal quarter and fiscal year expressions.
 // Requires fiscal_year_starts to be configured via frontmatter.
 func (interp *Interpreter) evalFiscalExpression(keyword string, now time.Time) (types.Type, error) {
@@ -313,31 +194,43 @@ func (interp *Interpreter) evalFiscalExpression(keyword string, now time.Time) (
 	fc := interp.fiscalYearStarts
 	fyStartMonth := time.Month(fc.month)
 	fyStartDay := fc.day
+	mode := fc.labelMode
 
+	// v2.0: fiscal relatives return *types.Period.
 	switch keyword {
 	case "this fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
-		return types.NewDateFromTime(time.Date(y, m, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
+		return types.NewRelativeFiscalQuarter(now, fyStartMonth, fyStartDay, 0), nil
 	case "next fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
-		t := time.Date(y, m+3, fyStartDay, 0, 0, 0, 0, time.UTC) // Go normalizes
-		return types.NewDateFromTime(t), nil
+		return types.NewRelativeFiscalQuarter(now, fyStartMonth, fyStartDay, +1), nil
 	case "last fiscal quarter":
-		y, m := fiscalQuarterStart(now.Year(), now.Month(), fyStartMonth)
-		t := time.Date(y, m-3, fyStartDay, 0, 0, 0, 0, time.UTC) // Go normalizes
-		return types.NewDateFromTime(t), nil
+		return types.NewRelativeFiscalQuarter(now, fyStartMonth, fyStartDay, -1), nil
 	case "this fiscal year":
-		y := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
-		return types.NewDateFromTime(time.Date(y, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
+		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay, mode)
+		return types.NewFiscalYearWithMode(fy, fyStartMonth, fyStartDay, mode), nil
 	case "next fiscal year":
-		y := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + 1
-		return types.NewDateFromTime(time.Date(y, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
+		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay, mode) + 1
+		return types.NewFiscalYearWithMode(fy, fyStartMonth, fyStartDay, mode), nil
 	case "last fiscal year":
-		y := fiscalYearWithDay(now, fyStartMonth, fyStartDay) - 1
-		return types.NewDateFromTime(time.Date(y, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
+		fy := fiscalYearLabel(now, fyStartMonth, fyStartDay, mode) - 1
+		return types.NewFiscalYearWithMode(fy, fyStartMonth, fyStartDay, mode), nil
 	default:
 		return nil, fmt.Errorf("unknown fiscal expression: %q", keyword)
 	}
+}
+
+// fiscalYearLabel returns the FY *label* for the fiscal year
+// containing `now`, honoring the document's labeling convention.
+//
+//   - FYLabelByEndYear (default): label = calendar year the FY ENDS
+//     in. E.g., now=2026-08-15 with Jul-start FY → label 2027.
+//   - FYLabelByStartYear: label = calendar year the FY STARTS in.
+//     Same `now` with `calendar_year_offset: after` → label 2026.
+func fiscalYearLabel(now time.Time, fyStartMonth time.Month, fyStartDay int, mode types.FYLabelMode) int {
+	startYear := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
+	if mode == types.FYLabelByEndYear && fyStartMonth > time.January {
+		return startYear + 1
+	}
+	return startYear
 }
 
 // fiscalYear returns the calendar year in which the fiscal year begins (month-only, day=1).
@@ -380,18 +273,32 @@ func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, ti
 
 // evalNotation handles Q:N, FQ:N, FY:YYYY, CY:YYYY notation.
 // Returns (nil, nil) if keyword is not a notation pattern.
+//
+// The two HasPrefix(keyword, "end of ") / "start of " dispatches
+// that lived here previously were retired when the parser started
+// emitting ast.EndOfExpr / ast.StartOfExpr -- operator dispatch
+// happens at the AST layer (evalEndOfExpr / evalStartOfExpr) and
+// flows back into evalEndOfNotation via the AST inner.
 func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Type, error) {
-	// Check for "end of" + notation
-	if strings.HasPrefix(keyword, "end of ") {
-		inner := keyword[len("end of "):]
-		return interp.evalEndOfNotation(inner, now)
-	}
-	if strings.HasPrefix(keyword, "start of ") {
-		inner := keyword[len("start of "):]
-		return interp.evalNotation(inner, now)
+	// Strip optional direction prefix: `next FQ:1` / `last CY:2026` /
+	// `this Q:1` mean "the Nth quarter / year of the relative
+	// fiscal/calendar year". The parser produces these forms when
+	// the user writes `next FQ1` / `last CY2026` etc. (see
+	// directed-notation parser path in spec/parser/primary.go).
+	yearOffset := 0
+	rest := keyword
+	for _, dir := range []struct {
+		prefix string
+		offset int
+	}{{"next ", +1}, {"last ", -1}, {"this ", 0}} {
+		if strings.HasPrefix(strings.ToLower(rest), dir.prefix) {
+			yearOffset = dir.offset
+			rest = rest[len(dir.prefix):]
+			break
+		}
 	}
 
-	parts := strings.SplitN(keyword, ":", 2)
+	parts := strings.SplitN(rest, ":", 2)
 	if len(parts) != 2 {
 		return nil, nil // not a notation
 	}
@@ -399,12 +306,14 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 
 	switch prefix {
 	case "Q":
+		// v2.0: Q1-Q4 evaluates to Period (calendar quarter of the
+		// current calendar year). yearOffset shifts the year for
+		// `next Q1` / `last Q4`.
 		q, err := strconv.Atoi(value)
 		if err != nil || q < 1 || q > 4 {
 			return nil, fmt.Errorf("invalid calendar quarter: Q%s", value)
 		}
-		month := time.Month((q-1)*3 + 1) // Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct
-		return types.NewDateFromTime(time.Date(now.Year(), month, 1, 0, 0, 0, 0, time.UTC)), nil
+		return types.NewCalendarQuarter(now.Year()+yearOffset, q)
 
 	case "FQ":
 		if interp.fiscalYearStarts == nil {
@@ -417,15 +326,11 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		fc := interp.fiscalYearStarts
 		fyStartMonth := time.Month(fc.month)
 		fyStartDay := fc.day
-		// FQ1 starts at fiscal year start month, FQ2 = +3 months, etc.
-		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay)
-		fqMonth := time.Month(int(fyStartMonth) + (q-1)*3)
-		fqYear := fy
-		for fqMonth > 12 {
-			fqMonth -= 12
-			fqYear++
-		}
-		return types.NewDateFromTime(time.Date(fqYear, fqMonth, fyStartDay, 0, 0, 0, 0, time.UTC)), nil
+		// FQ1 starts at the fiscal year start; yearOffset selects
+		// next/last/this FY relative to `now`.
+		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
+		fyStart := time.Date(fy, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
+		return types.NewFiscalQuarterWithMode(fyStart, q, fc.labelMode)
 
 	case "FY":
 		if interp.fiscalYearStarts == nil {
@@ -438,15 +343,9 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		if fyLabel < 100 {
 			fyLabel += 2000 // 2-digit: FY27 = 2027
 		}
+		fyLabel += yearOffset
 		fc := interp.fiscalYearStarts
-		// FY is labeled by the year it ENDS in (Microsoft convention).
-		// FY2027 with July start = starts Jul 1, 2026 (ends Jun 30, 2027).
-		// When fiscal starts in January, FY label = start year (no offset).
-		startYear := fyLabel
-		if fc.month > 1 {
-			startYear = fyLabel - 1
-		}
-		return types.NewDateFromTime(time.Date(startYear, time.Month(fc.month), fc.day, 0, 0, 0, 0, time.UTC)), nil
+		return types.NewFiscalYearWithMode(fyLabel, time.Month(fc.month), fc.day, fc.labelMode), nil
 
 	case "CY":
 		year, err := strconv.Atoi(value)
@@ -456,104 +355,11 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		if year < 100 {
 			year += 2000 // 2-digit: CY26 = 2026
 		}
-		return types.NewDateFromTime(time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)), nil
+		year += yearOffset
+		return types.NewCalendarYear(year), nil
 	}
 
 	return nil, nil
-}
-
-// evalEndOfNotation handles "end of Q2", "end of FQ1".
-func (interp *Interpreter) evalEndOfNotation(keyword string, now time.Time) (types.Type, error) {
-	startDate, err := interp.evalNotation(keyword, now)
-	if err != nil {
-		return nil, err
-	}
-	if startDate == nil {
-		return nil, nil
-	}
-	d := startDate.(*types.Date)
-	// End of quarter = start of quarter + 3 months - 1 day
-	endDate := time.Date(d.Time.Year(), d.Time.Month()+3, d.Time.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
-	return types.NewDateFromTime(endDate), nil
-}
-
-// periodToDuration converts a period expression AST node to its duration in days.
-// Returns an error if the node is a point (today, next Friday) rather than a period.
-func (interp *Interpreter) periodToDuration(node ast.Node) (*types.Duration, error) {
-	rel, ok := node.(*ast.RelativeDateLiteral)
-	if !ok {
-		return nil, fmt.Errorf("cannot convert date to duration — use a period expression like 'this month', 'Q1', or 'FQ1'")
-	}
-
-	keyword := strings.ToLower(rel.Keyword)
-	if !isPeriodExpression(keyword) {
-		return nil, fmt.Errorf("cannot convert '%s' to duration — it is a point in time, not a period. Use a period like 'this month', 'Q1', or 'FQ1'",
-			rel.SourceText)
-	}
-
-	now := interp.now()
-
-	// Get start date
-	startResult, err := interp.evalRelativeDateLiteral(rel)
-	if err != nil {
-		return nil, err
-	}
-	startDate := startResult.(*types.Date)
-
-	// Get end date via evalEndOf
-	endResult, err := interp.evalEndOfForKeyword(keyword, now)
-	if err != nil {
-		return nil, err
-	}
-	endDate := endResult.(*types.Date)
-
-	// Duration = end - start + 1 day
-	days := endDate.DaysBetween(startDate) + 1
-	return &types.Duration{
-		Value: decimal.NewFromInt(int64(days)),
-		Unit:  "day",
-	}, nil
-}
-
-// isPeriodExpression returns true if the keyword represents a span (not a point).
-func isPeriodExpression(keyword string) bool {
-	// Periods: this/next/last week/month/year/quarter, fiscal quarter/year, named months, Q/FQ notation
-	switch keyword {
-	case "this week", "next week", "last week",
-		"this month", "next month", "last month",
-		"this year", "next year", "last year",
-		"this quarter", "next quarter", "last quarter",
-		"this fiscal quarter", "next fiscal quarter", "last fiscal quarter",
-		"this fiscal year", "next fiscal year", "last fiscal year":
-		return true
-	}
-	// Named months: "this april", "next dec", etc.
-	for _, prefix := range []string{"this ", "next ", "last "} {
-		if strings.HasPrefix(keyword, prefix) {
-			rest := keyword[len(prefix):]
-			if _, ok := canonicalMonths[rest]; ok {
-				return true
-			}
-		}
-	}
-	// Q/FQ notation
-	upper := strings.ToUpper(keyword)
-	if strings.HasPrefix(upper, "Q:") || strings.HasPrefix(upper, "FQ:") {
-		return true
-	}
-	return false
-}
-
-// evalEndOfForKeyword resolves the end date for a period keyword.
-// Delegates to evalEndOf for period expressions, and handles notation.
-func (interp *Interpreter) evalEndOfForKeyword(keyword string, now time.Time) (types.Type, error) {
-	// Handle notation (Q:1, FQ:3)
-	upper := strings.ToUpper(keyword)
-	if strings.HasPrefix(upper, "Q:") || strings.HasPrefix(upper, "FQ:") {
-		return interp.evalEndOfNotation(keyword, now)
-	}
-	// Handle period expressions
-	return interp.evalEndOf(keyword, now)
 }
 
 // calendarQuarterStart returns the first month of the calendar quarter containing m.
@@ -578,8 +384,11 @@ var canonicalMonths = map[string]time.Month{
 	"december": time.December, "dec": time.December,
 }
 
-// resolveMonthExpression handles "this april", "next april", "last april".
-func resolveMonthExpression(keyword string, now time.Time) (*types.Date, bool) {
+// resolveMonthExpression handles "this april", "next april", "last
+// april" forms. v2.0: returns *types.Period (the whole month).
+// Pre-v2.0 it returned the 1st-of-month Date; sites that need that
+// behavior call asDate on the result.
+func resolveMonthExpression(keyword string, now time.Time) (*types.Period, bool) {
 	modifier := ""
 	monthStr := keyword
 
@@ -599,29 +408,36 @@ func resolveMonthExpression(keyword string, now time.Time) (*types.Date, bool) {
 	currentYear := now.Year()
 	currentMonth := now.Month()
 
+	year := currentYear
 	switch modifier {
 	case "this":
-		// This <month> = the 1st of that month in the current year
-		return types.NewDateFromTime(time.Date(currentYear, target, 1, 0, 0, 0, 0, time.UTC)), true
-
+		// `this <month>` = the named month in the current year
+		// (existing behavior preserved).
 	case "next":
-		// Next <month> = the 1st of that month, next occurrence strictly after current month
-		year := currentYear
 		if target <= currentMonth {
-			year++ // target month is current or past — next year
+			year++
 		}
-		return types.NewDateFromTime(time.Date(year, target, 1, 0, 0, 0, 0, time.UTC)), true
-
 	case "last":
-		// Last <month> = the 1st of that month, most recent past occurrence
-		year := currentYear
 		if target >= currentMonth {
-			year-- // target month is current or future — last year
+			year--
 		}
-		return types.NewDateFromTime(time.Date(year, target, 1, 0, 0, 0, 0, time.UTC)), true
+	default:
+		return nil, false
 	}
 
-	return nil, false
+	p := types.NewCalendarMonth(year, target)
+	p.Kind = types.PeriodNamedMonth
+	// Direction reflects user-typed modifier so format / debug
+	// output can name the form.
+	switch modifier {
+	case "next":
+		p.Direction = +1
+	case "last":
+		p.Direction = -1
+	default:
+		p.Direction = 0
+	}
+	return p, true
 }
 
 // weekdayNames maps lowercase weekday names to Go's time.Weekday.
@@ -704,4 +520,50 @@ func parseUTCOffset(offset *ast.UTCOffset) (int, error) {
 	}
 
 	return totalMinutes, nil
+}
+
+// evalEndOfExpr evaluates `end of <period>`. v2.0 implementation:
+// eval the inner (which now returns *types.Period for period-bearing
+// keywords thanks to U10) and return Period.End directly.
+//
+// Variable-bound case: when the inner is an Identifier and resolves
+// to a *types.Period at runtime, this works emergently — the Period
+// value flows through evalNode → here → Period.End. R9-deferred
+// path now opens up because U10 makes Period a real value type.
+//
+// Pre-U10 the inner could resolve to *types.Date for period
+// keywords; that path is gone after U10. A defensive guard remains
+// for the rare case where an Identifier holds a Date (user wrote
+// `q = today; end of q`) — the semantic check accepts the
+// identifier and runtime catches the type mismatch here.
+func (interp *Interpreter) evalEndOfExpr(e *ast.EndOfExpr) (types.Type, error) {
+	if e.Period == nil {
+		return nil, fmt.Errorf("end of: missing inner expression")
+	}
+	inner, err := interp.evalNode(e.Period)
+	if err != nil {
+		return nil, err
+	}
+	p, err := asPeriod(inner)
+	if err != nil {
+		return nil, fmt.Errorf("end of: inner expression must be a period; got %T", inner)
+	}
+	return p.End, nil
+}
+
+// evalStartOfExpr evaluates `start of <period>`. Symmetric to
+// evalEndOfExpr — returns Period.Start directly.
+func (interp *Interpreter) evalStartOfExpr(s *ast.StartOfExpr) (types.Type, error) {
+	if s.Period == nil {
+		return nil, fmt.Errorf("start of: missing inner expression")
+	}
+	inner, err := interp.evalNode(s.Period)
+	if err != nil {
+		return nil, err
+	}
+	p, err := asPeriod(inner)
+	if err != nil {
+		return nil, fmt.Errorf("start of: inner expression must be a period; got %T", inner)
+	}
+	return p.Start, nil
 }

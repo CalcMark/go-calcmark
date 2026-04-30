@@ -42,6 +42,7 @@ var ReservedKeywords = map[string]TokenType{
 	"over":    OVER,    // Rate accumulation: "100 MB/s over 1 day"
 	"with":    WITH,    // Capacity planning (legacy): "10000 req/s with 450 req/s"
 	// NOTE: "downtime" is NOT a reserved keyword - checked contextually in parser
+	"between":  BETWEEN, // v2.0 Period: `between A and B` — breaking change, was an identifier pre-v2.0
 	"while":    WHILE,
 	"return":   RETURN,
 	"break":    BREAK,

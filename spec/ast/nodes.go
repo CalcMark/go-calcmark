@@ -181,9 +181,21 @@ func (r *RateLiteral) GetRange() *Range {
 
 // DateLiteral represents a date literal: "Dec 25" or "Dec 25 2024"
 type DateLiteral struct {
-	Month      string  // "Dec", "December"
-	Day        string  // "25"
-	Year       *string // nil if not provided, "2024" if provided
+	Month string  // "Dec", "December"
+	Day   string  // "25" — the literal day. When the user wrote no
+	// day number in source, Day is "1" (lexer default) AND
+	// HasExplicitDay is false.
+	Year *string // nil if not provided, "2024" if provided
+
+	// HasExplicitDay reports whether a day number was scanned from
+	// the source. Discriminates `April 1` (true: specific date) from
+	// `April` (false: bare month, semantically a Period). The parser
+	// uses this flag to route bare-month forms to RelativeDateLiteral
+	// instead of DateLiteral. Lexer-driven so the discriminator
+	// doesn't depend on substring inspection of SourceText (which
+	// drifts with whitespace / future lexer changes).
+	HasExplicitDay bool
+
 	SourceText string
 	Range      *Range
 }
@@ -261,6 +273,145 @@ func (r *RelativeDateLiteral) String() string {
 
 func (r *RelativeDateLiteral) GetRange() *Range {
 	return r.Range
+}
+
+// EndOfExpr represents `end of <period>` -- the operator that
+// resolves a Period-typed inner expression to its last day. The
+// inner is a generic Node so any expression that types as Period
+// (literal, identifier-bound period, parenthesized period
+// expression) parses uniformly. Type-check enforcement of "must be
+// a Period" lives in spec/semantic; at the AST layer the constraint
+// is unenforced -- a NumberLiteral here is well-formed but
+// semantically rejected.
+//
+// Replaces the previous string-flatten in spec/parser/primary.go
+// which produced ast.RelativeDateLiteral{Keyword: "end of " +
+// innerKeyword} -- losing the inner's structure, bounding the
+// inner-token set to an enumeration, and forcing string-prefix
+// dispatch in the interpreter.
+type EndOfExpr struct {
+	// Period is the inner expression. Must type as Period at semantic
+	// check time; runtime panics if non-Period flows through. Parser
+	// uses parsePrimary() so precedence is preserved
+	// (`end of Q1 + 1 day` parses as `(end of Q1) + 1 day`).
+	Period Node
+
+	// SourceText is the original source slice ("end of Q1") for
+	// diagnostics + AST round-tripping.
+	SourceText string
+
+	Range *Range
+}
+
+func (e *EndOfExpr) String() string {
+	if e.Period == nil {
+		return "EndOfExpr(<nil>)"
+	}
+	return fmt.Sprintf("EndOfExpr(%s)", e.Period.String())
+}
+
+func (e *EndOfExpr) GetRange() *Range {
+	return e.Range
+}
+
+// StartOfExpr is the symmetric partner of EndOfExpr -- resolves a
+// Period to its first day. Parser-level identical to EndOfExpr;
+// interpreter just returns Period.Start unchanged. Useful in
+// expressions where intent matters (e.g.
+// `forecast = start of next fiscal quarter` reads better than the
+// implicit `next fiscal quarter` even though they evaluate the
+// same).
+type StartOfExpr struct {
+	Period     Node
+	SourceText string
+	Range      *Range
+}
+
+func (s *StartOfExpr) String() string {
+	if s.Period == nil {
+		return "StartOfExpr(<nil>)"
+	}
+	return fmt.Sprintf("StartOfExpr(%s)", s.Period.String())
+}
+
+func (s *StartOfExpr) GetRange() *Range {
+	return s.Range
+}
+
+// BetweenExpr represents `between A and B` / `from A to B` -- a
+// user-defined custom Period spanning two Date endpoints. Both
+// endpoints are generic Node so any expression typing as Date is
+// well-formed at the AST layer; semantic check (spec/semantic) is
+// where Date typing + start <= end constraints are enforced. The
+// runtime constructs a *types.Period (PeriodCustom kind) from the
+// evaluated endpoints.
+type BetweenExpr struct {
+	// Start is the period's first day; End is its last (closed
+	// interval, day precision -- mirrors *types.Period).
+	Start Node
+	End   Node
+
+	// SourceText is the original source slice for diagnostics +
+	// AST round-tripping.
+	SourceText string
+
+	Range *Range
+}
+
+func (b *BetweenExpr) String() string {
+	startStr := "<nil>"
+	endStr := "<nil>"
+	if b.Start != nil {
+		startStr = b.Start.String()
+	}
+	if b.End != nil {
+		endStr = b.End.String()
+	}
+	return fmt.Sprintf("BetweenExpr(%s, %s)", startStr, endStr)
+}
+
+func (b *BetweenExpr) GetRange() *Range {
+	return b.Range
+}
+
+// LengthOfExpr represents `length of <Period>` (returns Duration)
+// and `days in <Period>` (returns Number). Both forms desugar to
+// the same node; AsNumber discriminates the return shape.
+//
+// AST layer doesn't enforce that Period types as Period -- semantic
+// (spec/semantic) does. Period field is generic Node so any
+// expression typing as Period (literal, variable-bound,
+// parenthesized) parses uniformly.
+type LengthOfExpr struct {
+	// Period is the inner expression. Must type as Period at
+	// semantic check time. Parser uses parsePrimary() so precedence
+	// is preserved.
+	Period Node
+
+	// AsNumber discriminates the surface form: false = `length of`
+	// (returns Duration); true = `days in` (returns Number, integer
+	// day count).
+	AsNumber bool
+
+	// SourceText is the original source slice.
+	SourceText string
+
+	Range *Range
+}
+
+func (l *LengthOfExpr) String() string {
+	form := "length of"
+	if l.AsNumber {
+		form = "days in"
+	}
+	if l.Period == nil {
+		return fmt.Sprintf("LengthOfExpr(%s <nil>)", form)
+	}
+	return fmt.Sprintf("LengthOfExpr(%s %s)", form, l.Period.String())
+}
+
+func (l *LengthOfExpr) GetRange() *Range {
+	return l.Range
 }
 
 // DurationLiteral represents a duration literal: "5 days", "3 hours"
@@ -452,6 +603,14 @@ func ContainsScaleRef(node Node) bool {
 		return ContainsScaleRef(n.Amount)
 	case *QuantityLiteral:
 		return ContainsScaleRef(n.Expr)
+	case *EndOfExpr:
+		return ContainsScaleRef(n.Period)
+	case *StartOfExpr:
+		return ContainsScaleRef(n.Period)
+	case *BetweenExpr:
+		return ContainsScaleRef(n.Start) || ContainsScaleRef(n.End)
+	case *LengthOfExpr:
+		return ContainsScaleRef(n.Period)
 	default:
 		// Leaf nodes: NumberLiteral, FractionLiteral, CurrencyLiteral,
 		// DateLiteral, TimeLiteral, DurationLiteral,

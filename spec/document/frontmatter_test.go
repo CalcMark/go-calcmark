@@ -1700,6 +1700,64 @@ func TestFiscalYearStartsParsing(t *testing.T) {
 	}
 }
 
+// TestCalendarYearOffsetParsing pins the parse of the
+// `calendar_year_offset` frontmatter key. Default = before; explicit
+// `before` and `after` round-trip to the matching enum value;
+// invalid values error out; absent key leaves the field at its zero
+// value (CalendarYearOffsetBefore).
+func TestCalendarYearOffsetParsing(t *testing.T) {
+	tests := []struct {
+		name    string
+		source  string
+		want    CalendarYearOffset
+		wantErr bool
+	}{
+		{
+			name:   "absent → default before",
+			source: "---\nfiscal_year_starts: february 2\n---\n",
+			want:   CalendarYearOffsetBefore,
+		},
+		{
+			name:   "explicit before",
+			source: "---\nfiscal_year_starts: february 2\ncalendar_year_offset: before\n---\n",
+			want:   CalendarYearOffsetBefore,
+		},
+		{
+			name:   "explicit after",
+			source: "---\nfiscal_year_starts: february 2\ncalendar_year_offset: after\n---\n",
+			want:   CalendarYearOffsetAfter,
+		},
+		{
+			name:   "case-insensitive AFTER",
+			source: "---\nfiscal_year_starts: february 2\ncalendar_year_offset: AFTER\n---\n",
+			want:   CalendarYearOffsetAfter,
+		},
+		{
+			name:    "invalid value rejected",
+			source:  "---\nfiscal_year_starts: february 2\ncalendar_year_offset: middle\n---\n",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm, _, err := ParseFrontmatter(tt.source)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if fm.CalendarYearOffset != tt.want {
+				t.Errorf("CalendarYearOffset = %v, want %v", fm.CalendarYearOffset, tt.want)
+			}
+		})
+	}
+}
+
 // TestParseFrontmatter_RegistryDrivesKnownKeyRouting pins the architectural
 // property that the Registry — not an inline allowlist — decides which
 // frontmatter keys are CalcMark-known. Every Registry entry must be routed

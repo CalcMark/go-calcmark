@@ -774,3 +774,60 @@ func TestDetectorRegressionAllCMFiles(t *testing.T) {
 		}
 	}
 }
+
+// TestPeriodOperatorClassification — U2.5 Layer-5 gap fix.
+// Pre-v2.0, bare-line `end of Q1` and `start of Q1` were silently
+// classified as prose because END_OF / START_OF tokens were never
+// added to the calc-line classifier. These tests pin the look-ahead
+// rule: END_OF / START_OF + literal period-bearing token → calc;
+// END_OF / START_OF + IDENTIFIER → prose (so common English like
+// `end of the day` stays prose).
+func TestPeriodOperatorClassification(t *testing.T) {
+	detector := NewDetector()
+	tests := []struct {
+		name   string
+		line   string
+		isCalc bool
+	}{
+		// Calc — END_OF / START_OF followed by a period-bearing literal.
+		{"end of Q1", "end of Q1", true},
+		{"start of Q1", "start of Q1", true},
+		{"end of Q4", "end of Q4", true},
+		{"end of FQ1", "end of FQ1", true},
+		{"end of FY2027", "end of FY2027", true},
+		{"end of CY2026", "end of CY2026", true},
+		{"end of this quarter", "end of this quarter", true},
+		{"start of this quarter", "start of this quarter", true},
+		{"end of next quarter", "end of next quarter", true},
+		{"end of last fiscal year", "end of last fiscal year", true},
+		{"end of this fiscal year", "end of this fiscal year", true},
+		{"end of this fiscal quarter", "end of this fiscal quarter", true},
+		{"end of next fiscal quarter", "end of next fiscal quarter", true},
+		{"end of this month", "end of this month", true},
+		{"end of this year", "end of this year", true},
+		{"end of April", "end of April", true},     // bare month → DATE_LITERAL
+		{"start of April", "start of April", true}, // bare month → DATE_LITERAL
+
+		// Prose — END_OF / START_OF followed by IDENTIFIER (not period-bearing).
+		// This is the critical regression guard: `end of the day` is common
+		// English and must NOT be classified as a calculation.
+		{"end of the day", "end of the day", false},
+		{"start of the year", "start of the year", false},
+		{"by the end of the day", "by the end of the day", false},
+
+		// Existing assignment paths must still work (regression guard).
+		{"x = end of Q1", "x = end of Q1", true},
+		{"y = start of this fiscal year", "y = start of this fiscal year", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := detector.IsCalculation(tt.line)
+			if err != nil {
+				t.Fatalf("IsCalculation(%q): %v", tt.line, err)
+			}
+			if got != tt.isCalc {
+				t.Errorf("IsCalculation(%q) = %v, want %v", tt.line, got, tt.isCalc)
+			}
+		})
+	}
+}

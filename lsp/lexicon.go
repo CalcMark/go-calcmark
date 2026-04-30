@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/CalcMark/go-calcmark/spec/features"
+	"github.com/CalcMark/go-calcmark/spec/lexer"
 	"github.com/CalcMark/go-calcmark/spec/types"
 	"github.com/CalcMark/go-calcmark/spec/units"
 )
@@ -37,6 +38,26 @@ type LexiconResult struct {
 	// `spec/units` automatically lights it up in the UI without a
 	// client-side mirror needing to follow.
 	UnitCategories []string `json:"unitCategories"`
+	// KeywordPhrases is the full set of keyword phrases the lexer
+	// recognizes — single-word AND multi-word — so the client
+	// tokenizer can render each as a single highlighted pill rather
+	// than splitting `this fiscal quarter` across three segments. The
+	// list is sorted longest-first so the client matches greedy
+	// without ambiguity at the front of an identifier sequence.
+	//
+	// Sources: spec/lexer DateKeywords (today, tomorrow, weekdays),
+	// RelativeDateKeywords (`this week`, `next month`, `end of`,
+	// `length of`, `between`, …), ThreeWordDateKeywords
+	// (`this fiscal quarter`, `last fiscal year`, …), plus the
+	// hand-curated ConversionKeywords list above (the single-word
+	// vocabulary like `as`, `in`, `napkin`).
+	//
+	// Synthetic parser phrases like `as a % of` are NOT in this list —
+	// they're stitched from individual keyword tokens (`as`, `%`,
+	// `of`) which each already appear here. Frontend rendering can
+	// merge adjacent keyword spans visually if the styling calls for
+	// it.
+	KeywordPhrases []string `json:"keywordPhrases"`
 }
 
 // computeLexicon returns the static lexicon. Pure: no I/O, no document
@@ -74,6 +95,7 @@ func computeLexicon() LexiconResult {
 		"and",
 		"as",
 		"at",
+		"between", // v2.0 — `between A and B`
 		"by",
 		"compounded",
 		"from",
@@ -96,9 +118,39 @@ func computeLexicon() LexiconResult {
 	unitCategories := append([]string(nil), units.Categories()...)
 	sort.Strings(unitCategories)
 
+	// Keyword phrases: union of all lexer keyword maps + the hand-
+	// curated single-word ConversionKeywords list. Sorted longest-
+	// first so the client can match greedy without ambiguity (e.g.
+	// `this fiscal quarter` matches before `this fiscal`).
+	keywordSet := make(map[string]struct{})
+	for k := range lexer.DateKeywords {
+		keywordSet[k] = struct{}{}
+	}
+	for k := range lexer.RelativeDateKeywords {
+		keywordSet[k] = struct{}{}
+	}
+	for k := range lexer.ThreeWordDateKeywords {
+		keywordSet[k] = struct{}{}
+	}
+	for _, kw := range conversionKeywords {
+		keywordSet[kw] = struct{}{}
+	}
+	keywordPhrases := make([]string, 0, len(keywordSet))
+	for k := range keywordSet {
+		keywordPhrases = append(keywordPhrases, k)
+	}
+	sort.Slice(keywordPhrases, func(i, j int) bool {
+		// Longest first; tiebreak alphabetical for stable output.
+		if len(keywordPhrases[i]) != len(keywordPhrases[j]) {
+			return len(keywordPhrases[i]) > len(keywordPhrases[j])
+		}
+		return keywordPhrases[i] < keywordPhrases[j]
+	})
+
 	return LexiconResult{
 		Functions:          functions,
 		ConversionKeywords: conversionKeywords,
 		UnitCategories:     unitCategories,
+		KeywordPhrases:     keywordPhrases,
 	}
 }

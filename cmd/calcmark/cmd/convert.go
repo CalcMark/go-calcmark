@@ -127,11 +127,14 @@ func runConvert(filename string) error {
 	}
 
 	// Build conversion options.
+	cfg := config.Get()
 	opts := calcmark.Options{
-		Mode:     mode,
-		Format:   formatName,
-		Template: templateContent,
-		Locale:   config.Get().Locale,
+		Mode:             mode,
+		Format:           formatName,
+		Template:         templateContent,
+		Locale:           cfg.Locale,
+		DateFormat:       cfg.Formatter.DateFormat,
+		PeriodDateFormat: cfg.Formatter.PeriodDateFormat,
 	}
 
 	// Convert.
