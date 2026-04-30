@@ -303,8 +303,10 @@ func convertTimeValue(value decimal.Decimal, fromUnit, toUnit string) (decimal.D
 // in the SymbolToCode map (e.g. "USD"). Symbols like "$" are matched
 // directly by membership; codes are matched via the values side.
 //
-// Kept local for now; U3 may switch call sites to `types.IsCurrencyCode`
-// (which checks both SymbolToCode and CodeToSymbol) for completeness.
+// Retained as a thin local helper. The result-construction path
+// in `rateNumeratorAsResult` uses `types.IsCurrencyCode` directly
+// for completeness; this local helper is preserved as a back-compat
+// shim for any historical callers.
 func isCurrencyCode(s string) bool {
 	for _, code := range types.SymbolToCode {
 		if code == s {
@@ -312,4 +314,81 @@ func isCurrencyCode(s string) bool {
 		}
 	}
 	return false
+}
+
+// rateMismatchError builds the R6 refusal message for `Rate × X`
+// where the cancellation engine couldn't find a shared dimension.
+// The message names both operands AND the categorical reason the
+// multiplication doesn't compose, and includes the word "cancel" so
+// substring-matching tests have a stable anchor.
+//
+// Two distinct templates so the message reads naturally for the
+// two main cases:
+//
+//   - Rate × Currency or Rate × Rate-with-same-numerator-currency →
+//     "cannot multiply two currencies" form.
+//   - Everything else → "cannot multiply rate (X) by Y — Z is a
+//     <category> unit; the rate's denominator is <unit>, a <category>
+//     unit. No shared dimension to cancel."
+//
+// The exact wording is *not* part of the contract — tests verify
+// substrings (`cancel`, both operand displays, both unit names).
+// Future tuning of the wording is welcome as long as those substrings
+// survive.
+func rateMismatchError(left *types.Rate, right types.Type) error {
+	// Special case: Currency × Currency (when right collapses to a
+	// Currency-numerator rate or is a bare Currency operand). Plan
+	// G10: same R6 contract, slightly different template since
+	// "no shared dimension" doesn't quite apply when both sides ARE
+	// the same dimension (currency).
+	if _, ok := right.(*types.Currency); ok {
+		return fmt.Errorf(
+			"cannot multiply rate (%s) by currency (%s): multiplying two currencies has no meaningful unit. "+
+				"To accumulate a rate over time, multiply by a duration that cancels the rate's denominator instead.",
+			left, formatTypeForError(right))
+	}
+
+	// Pull units off the right operand for the message body.
+	var rightUnit string
+	switch r := right.(type) {
+	case *types.Duration:
+		rightUnit = r.Unit
+	case *types.Quantity:
+		rightUnit = r.Unit
+	case *types.Rate:
+		rightUnit = r.PerUnit
+	}
+
+	leftCat := categoryOf(left.PerUnit)
+	rightCat := categoryOf(rightUnit)
+
+	// Build a category description that names both sides clearly.
+	// Keep it short: the substring contract requires the unit names
+	// and the word "cancel"; richer prose can come later.
+	leftCatPhrase := categoryPhrase(left.PerUnit, leftCat)
+	rightCatPhrase := categoryPhrase(rightUnit, rightCat)
+
+	return fmt.Errorf(
+		"cannot multiply rate (%s) by %s: %s, but %s. No shared dimension to cancel.",
+		left, formatTypeForError(right), leftCatPhrase, rightCatPhrase)
+}
+
+// categoryPhrase produces a short natural phrase describing a unit
+// and its category, for use in rateMismatchError.
+//
+//	categoryPhrase("hour", "time")    → `the rate's denominator is "hour" (a time unit)`
+//	categoryPhrase("kg", "Mass")      → `"kg" is a Mass unit`
+//	categoryPhrase("box", "Custom")   → `"box" is a custom unit`
+//	categoryPhrase("", "")            → `the operand has no unit`
+func categoryPhrase(unit, category string) string {
+	if unit == "" {
+		return "the operand has no unit"
+	}
+	if category == "" {
+		return fmt.Sprintf("%q is an unrecognised unit", unit)
+	}
+	if category == "Custom" {
+		return fmt.Sprintf("%q is a custom unit", unit)
+	}
+	return fmt.Sprintf("%q is a %s unit", unit, category)
 }

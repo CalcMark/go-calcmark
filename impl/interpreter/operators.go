@@ -408,7 +408,20 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 			if result, cancelled, _ := rateTimesQuantity(leftRate, rightQty); cancelled {
 				return result, nil
 			}
-			// No cancellation — fall through to R6 refusal.
+			// No cancellation — fall through to R6 refusal at the end
+			// of the leftRate block (a few lines below).
+		}
+
+		// U4 — R6 refusal contract for dimensional mismatch on
+		// multiplication. When none of the Rate × X branches above
+		// matched (or a cancellation was attempted and refused), the
+		// operation has no sensible interpretation. Emit a friendly
+		// "those don't compose" message that names both operands and
+		// explains why, replacing the generic fallback at the bottom
+		// of evalBinaryOperation. Division and other operators on Rate
+		// still fall through to the generic error path.
+		if operator == "*" {
+			return nil, rateMismatchError(leftRate, right)
 		}
 	}
 

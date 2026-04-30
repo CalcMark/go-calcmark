@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/CalcMark/go-calcmark/v2/spec/parser"
@@ -301,6 +302,100 @@ func TestRateDuration_NumberScalingPreserved(t *testing.T) {
 	}
 	if got := rate.Amount.Value.String(); got != "200" {
 		t.Errorf("Amount.Value = %s, want 200", got)
+	}
+}
+
+// R6 — refusal contract for dimensional mismatches. Locks the
+// substring contract from Decision 6 of the plan: tests verify the
+// error mentions both operands' display strings and the offending
+// unit names. They do NOT assert the verbatim message format.
+
+func TestRateDuration_RefusalForCrossCategory_RateTimesQuantity(t *testing.T) {
+	// AE5 — `$100/hour × 5 kg` doesn't compose. mass ≠ time.
+	interp := NewInterpreter()
+	nodes, err := parser.Parse("$100 / hour * 5 kg\n")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	msg := err.Error()
+	for _, want := range []string{"kg", "hour", "cancel"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error %q must mention %q", msg, want)
+		}
+	}
+}
+
+func TestRateDuration_RefusalForCrossCategory_DataRateTimesMass(t *testing.T) {
+	// `100 MB/s × 5 kg` — DataSize/time × Mass. No shared dimension.
+	interp := NewInterpreter()
+	nodes, err := parser.Parse("r = 100 MB / s\nresult = r * 5 kg\n")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	msg := err.Error()
+	for _, want := range []string{"kg", "cancel"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error %q must mention %q", msg, want)
+		}
+	}
+}
+
+func TestRateDuration_RefusalForCrossCategory_TimeRateTimesData(t *testing.T) {
+	// The case the old line-367 silent-coercion exercised:
+	// `100/second × 10 KB`. Now refuses.
+	interp := NewInterpreter()
+	nodes, err := parser.Parse("r = 100 / second\nresult = r * 10 KB\n")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "cancel") {
+		t.Errorf("error %q must mention 'cancel'", msg)
+	}
+}
+
+func TestRateDuration_RefusalForCurrencyTimesCurrency(t *testing.T) {
+	// G10 — multiplying rate by a currency uses the special template
+	// (no "shared dimension" framing since both ARE the same kind).
+	interp := NewInterpreter()
+	nodes, err := parser.Parse("$100 / hour * $50\n")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, err = interp.Eval(nodes)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	// Substring contract: rate display + currency operand display
+	// + the "currency" framing. The exact display format uses the
+	// rate's String() ("100 $/h") and formatTypeForError on the
+	// right ("currency ($50.00)"), so we check for "100" + "$/h"
+	// for the left, and "$50" for the right. These survive any
+	// future tuning of the message wording.
+	msg := err.Error()
+	if !strings.Contains(msg, "100") || !strings.Contains(msg, "$/h") {
+		t.Errorf("error %q must mention left rate (100 / $/h)", msg)
+	}
+	if !strings.Contains(msg, "$50") {
+		t.Errorf("error %q must mention '$50' (right operand)", msg)
+	}
+	// The currency-×-currency template uses "currencies" or
+	// "currency" rather than "cancel" — verify the wording differs
+	// from the standard template.
+	if !strings.Contains(msg, "currenc") {
+		t.Errorf("error %q must mention 'currency' or 'currencies'", msg)
 	}
 }
 
