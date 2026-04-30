@@ -101,6 +101,7 @@ Press Ctrl+H (or F1) in the TUI editor for keybindings.
 
 - [Documentation](https://calcmark.org/docs/) - Complete documentation with examples
 - [Language Reference](https://calcmark.org/docs/language-reference/) - Formal language specification
+- [CHANGELOG](CHANGELOG.md) - Release notes and migration guides
 
 ## Development
 
