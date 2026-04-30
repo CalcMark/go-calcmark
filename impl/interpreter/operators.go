@@ -104,6 +104,27 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		right = fractionToNumber(rightFrac)
 	}
 
+	// Speed-quantity left-side widening (U6, AE4). When the left
+	// operand is a Speed-shaped Quantity (e.g., `60 mph`, `100 kph`)
+	// and the right is a Duration, coerce the speed to its underlying
+	// Rate (`60 mph` → `60 mi/hour`) and recurse through the
+	// cancellation engine. The result is the distance:
+	// `60 mph × 2 hours` → coerce → `60 mi/hour × 2 hours` → cancel
+	// hour → `120 mi` (Quantity).
+	//
+	// Mirrors the rate-on-RIGHT widening below in shape but fires
+	// only for `Quantity × Duration` where the Quantity is a known
+	// Speed unit. Anything else falls through to standard dispatch.
+	if operator == "*" {
+		if leftQty, ok := left.(*types.Quantity); ok {
+			if _, rightIsDur := right.(*types.Duration); rightIsDur {
+				if coercedRate, isSpeed := coerceSpeedQuantityToRate(leftQty); isSpeed {
+					return evalBinaryOperation(coercedRate, right, operator)
+				}
+			}
+		}
+	}
+
 	// Rate arithmetic widening: when a Rate appears on the RIGHT side of
 	// * or /, extract the rate's Amount (a Quantity) and drop the time
 	// denominator. This makes "2 * (2 posts/week)" yield "4 posts".
@@ -364,10 +385,64 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 				return types.NewNumber(result), nil
 			}
 		}
-		// Rate * Quantity → Quantity (e.g., "100/second * 10 KB" = "1000 KB")
+		// Rate * Duration → Currency / Quantity / Number, with the
+		// duration converted to the rate's PerUnit before multiplying.
+		// `$100/hour * 3 weeks` runs as: 3 weeks → 504 hours, then
+		// 504 × $100 = $50,400. Result type tracks the rate's
+		// numerator: currency-numerator → Currency, quantity-numerator
+		// → Quantity (e.g. `40 hours/week * 3 weeks` → `120 hours`),
+		// unitless-numerator → Number.
+		if rightDur, ok := right.(*types.Duration); ok && operator == "*" {
+			if result, cancelled, _ := rateTimesDuration(leftRate, rightDur); cancelled {
+				return result, nil
+			}
+			// No cancellation — fall through to R6 refusal below.
+			// (U4 wires the message at the rate-on-left fall-through.)
+		}
+
+		// Rate * Rate → Rate (with one time unit cancelled), or fully
+		// reduced when the result has no remaining denominator. Used by
+		// chained expressions like `$100/hour * 40 hours/week`:
+		//   left.PerUnit=hour cancels right.Amount.Unit=hour
+		//   → Rate{Amount: $4000, PerUnit: week}
+		// We only attempt cancellation against the immediately
+		// adjacent factor (left.PerUnit ↔ right.Amount.Unit). The
+		// commuted case (right.PerUnit ↔ left.Amount.Unit) is handled
+		// symmetrically. Anything else falls through to the existing
+		// per-unit-equality `Rate / Rate → Number` rule above and the
+		// generic error otherwise.
+		if rightRate, ok := right.(*types.Rate); ok && operator == "*" {
+			if result, ok, err := tryRateRateCancellation(leftRate, rightRate); err != nil {
+				return nil, err
+			} else if ok {
+				return result, nil
+			}
+		}
+
+		// Rate × Quantity — same-category cancellation (U2). Replaces
+		// the long-standing too-permissive rule that silently dropped
+		// the rate's PerUnit (`100/second × 10 KB → 1000 KB`). Now:
+		// only cancels when units share a category (or are the same
+		// Custom string). No cancellation → falls through to U4's
+		// R6 refusal below.
 		if rightQty, ok := right.(*types.Quantity); ok && operator == "*" {
-			result := leftRate.Amount.Value.Mul(rightQty.Value)
-			return &types.Quantity{Value: result, Unit: rightQty.Unit}, nil
+			if result, cancelled, _ := rateTimesQuantity(leftRate, rightQty); cancelled {
+				return result, nil
+			}
+			// No cancellation — fall through to R6 refusal at the end
+			// of the leftRate block (a few lines below).
+		}
+
+		// U4 — R6 refusal contract for dimensional mismatch on
+		// multiplication. When none of the Rate × X branches above
+		// matched (or a cancellation was attempted and refused), the
+		// operation has no sensible interpretation. Emit a friendly
+		// "those don't compose" message that names both operands and
+		// explains why, replacing the generic fallback at the bottom
+		// of evalBinaryOperation. Division and other operators on Rate
+		// still fall through to the generic error path.
+		if operator == "*" {
+			return nil, rateMismatchError(leftRate, right)
 		}
 	}
 

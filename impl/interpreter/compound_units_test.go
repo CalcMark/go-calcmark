@@ -630,31 +630,60 @@ func TestNumberTimesRate(t *testing.T) {
 	})
 }
 
-// TestRateTimesQuantity verifies Rate * Quantity → Quantity and Quantity * Rate → Quantity.
+// TestRateTimesQuantity verifies Rate × Quantity dispatch under the
+// v2.1 cancellation engine. Pre-v2.1, this exercised the now-retired
+// silent-coercion rule that ignored the rate's PerUnit and just
+// multiplied the values (`100/second * 10 KB → 1000 KB`); that rule
+// was a long-standing dimensional-correctness gap and is replaced by
+// same-category cancellation only.
+//
+// New semantics:
+//   - Same-category Rate × Quantity → cancels, produces the rate's
+//     numerator type (`100 MB/s × 10 s → 1000 MB`).
+//   - Cross-category Rate × Quantity → errors (no cancellation).
+//   - Quantity × Rate (commuted) — still goes through the existing
+//     rate-on-right widening at operators.go:107-122; U4 will gate
+//     this on the same cancellation predicate, but until then the
+//     widening continues to silently strip the rate's denominator.
 func TestRateTimesQuantity(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         string
-		expectedUnit  string
-		expectNonZero bool
+		name           string
+		input          string
+		expectError    bool
+		expectedUnit   string
+		expectNonZero  bool
+		expectedString string
 	}{
 		{
-			name:          "rate * quantity",
-			input:         "r = 100/second\nresult = r * 10 KB\n",
-			expectedUnit:  "KB",
-			expectNonZero: true,
+			// Same category (DataSize × time-rate where the time
+			// cancels): the canonical "rate × quantity that cancels"
+			// shape. Replaces the old "rate × unrelated quantity"
+			// case below.
+			name:           "rate × matching-category quantity (cancels)",
+			input:          "r = 100 MB/s\nresult = r * 10 seconds\n",
+			expectError:    false,
+			expectedUnit:   "MB",
+			expectNonZero:  true,
+			expectedString: "1000",
 		},
 		{
-			name:          "quantity * rate (commutative)",
+			// Cross-category: data-rate × DataSize doesn't cancel
+			// (rate's PerUnit is `s` (time), quantity's unit is `KB`
+			// (DataSize)). Pre-v2.1 silently produced `1000 KB`;
+			// v2.1 errors so the user can spot the dimensional bug.
+			name:        "rate × cross-category quantity (refuses)",
+			input:       "r = 100/second\nresult = r * 10 KB\n",
+			expectError: true,
+		},
+		{
+			// Commuted form still works via the existing rate-on-right
+			// widening (operators.go:107-122). U4 will gate this; for
+			// now it continues to silently strip the rate.
+			name:          "quantity × rate (commuted, widening still applies)",
 			input:         "r = 100/second\nresult = 10 KB * r\n",
+			expectError:   false,
 			expectedUnit:  "KB",
 			expectNonZero: true,
-		},
-		{
-			name:          "zero rate * quantity",
-			input:         "r = 0/second\nresult = r * 10 KB\n",
-			expectedUnit:  "KB",
-			expectNonZero: false,
 		},
 	}
 
@@ -666,6 +695,12 @@ func TestRateTimesQuantity(t *testing.T) {
 			}
 			interp := NewInterpreter()
 			results, err := interp.Eval(nodes)
+			if tt.expectError {
+				if err == nil {
+					t.Fatalf("expected error, got result %v", results[len(results)-1])
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("Eval error: %v", err)
 			}
@@ -679,6 +714,9 @@ func TestRateTimesQuantity(t *testing.T) {
 			}
 			if tt.expectNonZero && qty.Value.IsZero() {
 				t.Error("Result value should not be zero")
+			}
+			if tt.expectedString != "" && qty.Value.String() != tt.expectedString {
+				t.Errorf("Expected value %q, got %q", tt.expectedString, qty.Value.String())
 			}
 		})
 	}

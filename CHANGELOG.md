@@ -10,6 +10,56 @@ track every release going forward.
 
 ## [Unreleased]
 
+### Added
+
+- **`Rate × Duration`, `Rate × Quantity`, and `Rate × Rate` arithmetic
+  with same-dimension unit cancellation across every category.** A
+  long-standing gap closed: rates can now be multiplied by durations,
+  cancellable quantities, and other rates, and the dimension cancels
+  rather than erroring or silently coercing. The user-facing
+  principle: *CalcMark works when a normal human reading the
+  expression aloud would expect it to work — and refuses with a
+  clear message when they wouldn't.* Concretely:
+  - `cost = $100/hour; work = 3 weeks; fee = cost * work` → `$50,400`
+    (the duration is auto-converted to the rate's `PerUnit`).
+  - `$100/hour * 40 hours/week * 3 weeks` → `$12,000` (chained
+    cancellation through Rate × Rate).
+  - `100 MB/s * 10 seconds` → `1000 MB` (data-rate × time → data).
+  - `60 mph * 2 hours` → `120 miles` (Speed-quantity widens to its
+    underlying rate, then the cancellation engine handles it).
+  - Rate literals can carry a Duration numerator: `40 hours / week`.
+  - Currency identity is preserved through the pipeline: `100 USD/hour
+    × 3 weeks → 50,400 USD` (Code preserved); `€50/hour × 8 hours →
+    €400` (Symbol/Code both populated from `NewCurrency`).
+
+### Changed
+
+- **Retired the long-standing too-permissive `Rate × Quantity →
+  Quantity` rule** (`100/second * 10 KB → 1000 KB`, ignoring the
+  rate's `PerUnit`). It silently produced dimensionally-wrong results.
+  Replaced with same-category cancellation: `100 MB/s * 10 seconds →
+  1000 MB` cancels cleanly, but `100/second * 10 KB` (cross-category)
+  now errors with a friendly message naming both operands and
+  explaining the non-cancellation. Documents that exercised the old
+  rule will see new errors and need updating; the [migration note in
+  rates.cm](testdata/eval/success/features/rates.cm) shows the
+  pattern.
+
+### Internal
+
+- New helpers in `impl/interpreter/rate_arithmetic.go`:
+  `categoryOf(unit)`, `convertWithinCategory(value, from, to)`,
+  `tryRateCancellation(rate, value, unit)`, `cancellable(a, b)`,
+  `coerceSpeedQuantityToRate(qty)`, `rateMismatchError(left, right)`,
+  `categoryPhrase(unit, category)`. Foundation generalised from
+  PR #148's time-only first slice.
+
+## [2.0.0] — 2026-04-30
+
+Promoted from 2.0.0-rc.1; same content. Tagged stable after the soak
+window closed without surfacing issues. See the 2.0.0-rc.1 section
+below for full release notes, breaking changes, and migration guidance.
+
 ## [2.0.0-rc.1] — 2026-04-30
 
 The 2.0 cycle promotes calendar/fiscal periods to a first-class type and
@@ -175,5 +225,6 @@ literals (`Q1`, `FY2027`) read identically; `start of <period>` was
 always the explicit form; the new `between` / `length of` / `days in`
 keywords are net-new vocabulary.
 
-[Unreleased]: https://github.com/CalcMark/go-calcmark/compare/v2.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/CalcMark/go-calcmark/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/CalcMark/go-calcmark/compare/v1.14.0...v2.0.0
 [2.0.0-rc.1]: https://github.com/CalcMark/go-calcmark/compare/v1.14.0...v2.0.0-rc.1

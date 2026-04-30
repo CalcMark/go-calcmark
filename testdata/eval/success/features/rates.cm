@@ -71,5 +71,34 @@ scale = 3
 scaled_bw = scale * bandwidth
 scaled_qps_val = 10 * qps
 
-# Rate * Quantity = Quantity
-total_data = bandwidth * 500 MB
+# Rate * matching-category Quantity → cancellation (v2.1).
+# The pre-v2.1 silent-coercion rule that produced "50000 MB" from
+# `bandwidth * 500 MB` (multiplying MB/s by MB without canceling) has
+# been retired; that expression now errors with a dimensional-mismatch
+# diagnostic. The cancellation engine replaces it with a same-
+# category-only rule.
+total_data = bandwidth * 10 seconds
+
+# Rate × Duration with auto-conversion (v2.1) — AE1 from the
+# brainstorm: $100/hour × 3 weeks → $50,400. The duration converts
+# into the rate's PerUnit (3 weeks → 504 hours) before multiplying.
+hourly_cost = $100 / hour
+project_length = 3 weeks
+project_fee = hourly_cost * project_length
+
+# Chained Rate × Rate × Duration (v2.1) — AE2 from the brainstorm:
+# $100/hour × 40 hours/week × 3 weeks → $12,000. Left-associative
+# reduction: first Rate × Rate cancels hour to give $4000/week,
+# then Rate × Duration cancels week to give $12000.
+rate_per_hour = $100 / hour
+hours_per_week = 40 hours / week
+weekly_rate = rate_per_hour * hours_per_week
+total_salary = rate_per_hour * hours_per_week * 3 weeks
+
+# Speed Quantity × Duration (v2.1) — AE4 from the brainstorm:
+# 60 mph × 2 hours → 120 mi. The Speed-shaped Quantity widens to
+# its underlying Rate (60 mi/hour) before the cancellation engine
+# sees it.
+speed = 60 mph
+trip_duration = 2 hours
+trip_distance = speed * trip_duration
