@@ -10,6 +10,35 @@ track every release going forward.
 
 ## [Unreleased]
 
+### Added
+
+- **`Rate × Duration` and `Rate × Rate` arithmetic with time-unit
+  cancellation.** A long-standing gap closed: rates can now be
+  multiplied by durations (and other rates) and the time dimension
+  cancels rather than erroring with "cannot multiply rate and
+  duration". Three slices ship together:
+  1. `Rate × Duration → Currency / Quantity / Number` with
+     auto-conversion of the duration into the rate's `PerUnit`.
+     `$100/hour * 3 weeks` evaluates as `3 weeks → 504 hours`,
+     then `504 × $100 = $50,400`. The result type tracks the
+     rate's numerator: `$/hour` → Currency, `40 hours/week` →
+     Quantity (e.g. `40 hours/week * 3 weeks = 120 hours`),
+     unitless-numerator → Number.
+  2. `Rate` literals can carry a `Duration` numerator. `40 hours
+     / week` now constructs a valid `Rate{Amount: 40 hours,
+     PerUnit: week}` rather than rejecting with "rate amount
+     must be a number, quantity, or currency".
+  3. `Rate × Rate` cancels matching time units across the two
+     rates: `($100/hour) * (40 hours/week) → $4,000/week`. Chained
+     forms like `$100/hour * 40 hours/week * 3 weeks` reduce to
+     `$12,000` (Currency) by left-associative cancellation.
+
+  Out of scope for this round (documented in the test file as
+  follow-ups): `3 weeks * $100/hour` (operator precedence requires
+  parentheses around the rate); `$100/hour * 5 kg` continues to
+  silently coerce via the long-standing `Rate × Quantity` rule
+  rather than erroring on dimensional mismatch.
+
 ## [2.0.0-rc.1] — 2026-04-30
 
 The 2.0 cycle promotes calendar/fiscal periods to a first-class type and
