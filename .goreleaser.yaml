@@ -65,6 +65,12 @@ changelog:
 
 homebrew_casks:
   - name: calcmark
+    # `skip_upload: auto` keeps pre-releases (v2.0.0-rc.1, v2.0.0-beta.X,
+    # anything matching SemVer's prerelease syntax) OUT of the Homebrew
+    # tap, so users running `brew install calcmark/tap/calcmark` keep
+    # getting the latest stable. Stable tags (vX.Y.Z) still update the
+    # cask normally.
+    skip_upload: auto
     repository:
       owner: CalcMark
       name: homebrew-tap
