@@ -43,22 +43,61 @@ import (
 //     with the fence's inner content as its source.
 //   - Each passthrough markdown segment becomes one *specDoc.TextBlock
 //     with the passthrough text as its source.
+//   - A leading ---...--- segment is parsed as the document's
+//     *specDoc.Frontmatter via spec/document.ParseFrontmatter and
+//     does NOT also produce a TextBlock. Any text remaining after
+//     the closing --- (in the same passthrough segment) projects
+//     as a TextBlock.
 //
 // Empty source returns an empty *Document with zero blocks. Sources
 // with zero cm/calcmark fences return a single TextBlock containing
 // the whole source (Embedded mode degrades gracefully to "all
 // passthrough markdown" for fence-less input).
 //
-// Currently always returns nil for the error — the underlying Scan
-// is total. The error return exists for future expansion (e.g.,
-// frontmatter parse errors in U4) without breaking the signature.
+// Frontmatter parse failures (e.g., unclosed `---`) silently fall
+// back to projecting the offending segment as a TextBlock so the
+// body still renders — matches NewDocument's tolerance for
+// malformed frontmatter at the body level.
 func BuildDocument(source string) (*specDoc.Document, error) {
 	segments := Scan(source)
+	if len(segments) == 0 {
+		return specDoc.NewDocumentFromBlocks(nil, nil), nil
+	}
+
+	var fm *specDoc.Frontmatter
 	blocks := make([]specDoc.Block, 0, len(segments))
-	for _, seg := range segments {
+
+	first := segments[0]
+	startIdx := 0
+	if first.Kind == Passthrough && hasLeadingFrontmatter(first.Text) {
+		parsedFm, remaining, err := specDoc.ParseFrontmatter(first.Text)
+		if err == nil {
+			fm = parsedFm
+			// Any non-frontmatter text in the same passthrough segment
+			// (typical: prose immediately after the closing `---`) gets
+			// its own TextBlock so it doesn't disappear from the doc.
+			if remaining != "" {
+				blocks = append(blocks, specDoc.NewTextBlock(splitSegmentText(remaining)))
+			}
+			startIdx = 1
+		}
+		// On error, fall through and project the segment as a TextBlock
+		// (the loop below handles it).
+	}
+
+	for _, seg := range segments[startIdx:] {
 		blocks = append(blocks, projectSegment(seg))
 	}
-	return specDoc.NewDocumentFromBlocks(nil, blocks), nil
+	return specDoc.NewDocumentFromBlocks(fm, blocks), nil
+}
+
+// hasLeadingFrontmatter reports whether the given text begins with
+// `---\n` — the opening of a YAML frontmatter block. Used to gate
+// the frontmatter-parsing branch in BuildDocument so non-frontmatter
+// passthrough segments aren't fed through ParseFrontmatter
+// unnecessarily.
+func hasLeadingFrontmatter(text string) bool {
+	return strings.HasPrefix(text, "---\n") || strings.HasPrefix(text, "---\r\n")
 }
 
 // projectSegment turns one embedded.Segment into one specDoc.Block.
