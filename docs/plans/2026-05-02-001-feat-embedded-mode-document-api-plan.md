@@ -1,7 +1,7 @@
 ---
 title: 'feat: structured Document API for Embedded-mode sources'
 type: feat
-status: active
+status: completed
 date: 2026-05-02
 ---
 
