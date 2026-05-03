@@ -32,6 +32,20 @@ type Document struct {
 type BlockNode struct {
 	ID    string // UUID (session-ephemeral)
 	Block Block  // Underlying block (CalcBlock or TextBlock)
+
+	// HostLineOffset is the count of host-document lines that
+	// precede this block's first source line. A diagnostic on the
+	// block's source line N (1-based) maps to host-document line
+	// HostLineOffset + N.
+	//
+	// Default 0 — flat-CM parsing (NewDocument) leaves it unset and
+	// the evaluator falls back to its contiguous-block-source
+	// arithmetic (impl/document.blockLineOffset). Explicit-segmentation
+	// parsers like impl/embedded.BuildDocument set it per-block to
+	// account for fence delimiter lines that aren't represented in
+	// any block's Source(). If you set it, set it on every block
+	// for clarity.
+	HostLineOffset int
 }
 
 // NewDocument creates a new document from CalcMark source and eagerly parses it.

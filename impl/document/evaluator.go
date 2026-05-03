@@ -866,7 +866,18 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 // blockLineOffset computes the document-absolute line offset for a block.
 // This counts frontmatter lines + all source lines of preceding blocks so that
 // the semantic checker can produce document-absolute line numbers in diagnostics.
+//
+// Explicit-segmentation parsers (notably impl/embedded.BuildDocument for
+// fenced sources) set BlockNode.HostLineOffset per-block so fence delimiter
+// lines that aren't represented in any block's Source() get accounted for
+// correctly. Prefer it when nonzero; otherwise fall back to the flat-CM
+// contiguous-block-source arithmetic, which is correct for sources where
+// every host-doc line lives inside some block's Source().
 func blockLineOffset(doc *document.Document, targetID string) int {
+	if node, ok := doc.GetBlock(targetID); ok && node.HostLineOffset > 0 {
+		return node.HostLineOffset
+	}
+
 	offset := 0
 
 	// Count frontmatter lines (including both --- delimiters)

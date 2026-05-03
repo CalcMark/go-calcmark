@@ -371,7 +371,7 @@ Lines are classified in this order:
 
 1. **BLANK** — Empty or only whitespace
 2. **INDENTED CODE** → MARKDOWN — Line starts with 4+ spaces or a tab
-3. **FENCED CODE BLOCK** → MARKDOWN — Lines between `` ``` `` or `~~~` fences (stateful; all content inside is Markdown regardless of what it looks like)
+3. **FENCED CODE BLOCK** → MARKDOWN — Lines between `` ``` `` or `~~~` fences (stateful; all content inside is Markdown regardless of what it looks like). **Embedded mode exception:** when the fence's info-string is exactly `cm` or `calcmark` (e.g., `` ```cm ``, `` ```calcmark ``), an Embedded-mode parser (see `calcmark.NewDocumentEmbedded` and `Convert(Mode: Embedded)`) treats the fenced content as a calc block instead. To deliberately render CalcMark code STATICALLY (as a syntax-highlighted code block, not as a live calc), use any other info-string — `` ```text ``, `` ```go ``, `` ```output `` all work and are the conventional escape hatch.
 4. **MARKDOWN pattern** — Matches a known CommonMark construct:
    - Block-level: `#` (ATX heading), `>` (blockquote), `- ` / `* ` / `+ ` (unordered list), `digit.` (ordered list), `---` / `***` / `___` (horizontal rule), `===` / `---` (setext heading underline), `` ``` `` / `~~~` (fenced code fence)
    - Inline-level at start of line: `![` (image), `[text](url)` (inline link), `[id]: url` (link definition), `**text**` (bold formatting)
