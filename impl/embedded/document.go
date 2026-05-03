@@ -66,6 +66,16 @@ func BuildDocument(source string) (*specDoc.Document, error) {
 
 	var fm *specDoc.Frontmatter
 	blocks := make([]specDoc.Block, 0, len(segments))
+	// offsets[i] is the host-doc line offset for blocks[i] —
+	// applied to the resulting BlockNode after construction so the
+	// evaluator's blockLineOffset picks it up. See spec/document
+	// BlockNode.HostLineOffset comment for semantics.
+	offsets := make([]int, 0, len(segments))
+
+	// cursorLine tracks the 0-based line position in the host-doc
+	// where the next-to-be-projected segment begins. Updated after
+	// each segment is projected.
+	cursorLine := 0
 
 	first := segments[0]
 	startIdx := 0
@@ -73,22 +83,65 @@ func BuildDocument(source string) (*specDoc.Document, error) {
 		parsedFm, remaining, err := specDoc.ParseFrontmatter(first.Text)
 		if err == nil {
 			fm = parsedFm
-			// Any non-frontmatter text in the same passthrough segment
-			// (typical: prose immediately after the closing `---`) gets
-			// its own TextBlock so it doesn't disappear from the doc.
+			// Compute frontmatter line consumption from the diff
+			// between the segment's full text and the post-FM
+			// remainder. This is more reliable than introspecting
+			// the Frontmatter struct's LineCount() across edge cases.
+			fmLines := lineCount(first.Text) - lineCount(remaining)
+			cursorLine += fmLines
 			if remaining != "" {
 				blocks = append(blocks, specDoc.NewTextBlock(splitSegmentText(remaining)))
+				offsets = append(offsets, cursorLine)
+				cursorLine += lineCount(remaining)
 			}
 			startIdx = 1
 		}
-		// On error, fall through and project the segment as a TextBlock
-		// (the loop below handles it).
+		// On error, fall through (cursorLine stays 0 and the loop
+		// below projects the segment as a TextBlock at offset 0).
 	}
 
 	for _, seg := range segments[startIdx:] {
-		blocks = append(blocks, projectSegment(seg))
+		switch seg.Kind {
+		case CalcMarkBlock:
+			blocks = append(blocks, specDoc.NewCalcBlock(splitSegmentText(seg.Text)))
+			// seg.OpenLine is the 1-based host-doc line of the
+			// opening fence. Inner content's first line is at
+			// host-doc line OpenLine+1, so HostLineOffset = OpenLine
+			// (block source line 1 + offset = host line OpenLine+1).
+			offsets = append(offsets, seg.OpenLine)
+			// Cursor jumps past the close fence: open fence (1) +
+			// inner content lines + close fence (1).
+			cursorLine = seg.OpenLine + lineCount(seg.Text) + 1
+		case Passthrough:
+			blocks = append(blocks, specDoc.NewTextBlock(splitSegmentText(seg.Text)))
+			offsets = append(offsets, cursorLine)
+			cursorLine += lineCount(seg.Text)
+		}
 	}
-	return specDoc.NewDocumentFromBlocks(fm, blocks), nil
+
+	doc := specDoc.NewDocumentFromBlocks(fm, blocks)
+	nodes := doc.GetBlocks()
+	for i, off := range offsets {
+		if i < len(nodes) {
+			nodes[i].HostLineOffset = off
+		}
+	}
+	return doc, nil
+}
+
+// lineCount returns the number of newline-terminated or
+// newline-separated lines in text. Empty text → 0. "a" → 1.
+// "a\n" → 1. "a\nb" → 2. "a\nb\n" → 2. Used to advance the host-doc
+// line cursor as BuildDocument projects each segment.
+func lineCount(text string) int {
+	if text == "" {
+		return 0
+	}
+	n := strings.Count(text, "\n")
+	if !strings.HasSuffix(text, "\n") {
+		n++
+	}
+	return n
 }
 
 // hasLeadingFrontmatter reports whether the given text begins with
