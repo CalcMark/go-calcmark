@@ -1,6 +1,7 @@
 package document
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -110,14 +111,7 @@ func TestNewDocumentFromBlocks_DependencyGraphRebuilt(t *testing.T) {
 		t.Errorf("expected calc B to be a dependent of `price`, got empty list")
 	}
 	calcBID := doc.GetBlocks()[1].ID
-	found := false
-	for _, dep := range deps {
-		if dep == calcBID {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(deps, calcBID) {
 		t.Errorf("expected calc B's ID (%s) in dependents, got %v", calcBID, deps)
 	}
 }

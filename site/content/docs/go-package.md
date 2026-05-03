@@ -192,6 +192,61 @@ fmt.Println(profit) // $200,000.00
 
 The document evaluator handles block ordering, dependency resolution, frontmatter directives (exchange rates, globals, scale, measurement), and variable interpolation in text blocks.
 
+### Evaluate an Embedded-Mode Document (Markdown with Calc Fences)
+
+For sources that are standard markdown with `cm`/`calcmark` fenced code blocks, use the structural-parsing peer to `NewDocument`:
+
+```go
+import (
+    "github.com/CalcMark/go-calcmark/v2"
+    implDoc "github.com/CalcMark/go-calcmark/v2/impl/document"
+)
+
+source := "" +
+    "# Budget\n" +
+    "\n" +
+    "Some prose.\n" +
+    "\n" +
+    "```cm\n" +
+    "revenue = 500K USD\n" +
+    "costs = revenue * 0.6\n" +
+    "```\n" +
+    "\n" +
+    "Profit is {{ profit }}.\n" +
+    "\n" +
+    "```cm\n" +
+    "profit = revenue - costs\n" +
+    "```\n"
+
+doc, err := calcmark.NewDocumentEmbedded(source)
+if err != nil {
+    log.Fatal(err)
+}
+
+eval := implDoc.NewEvaluator()
+if err := eval.Evaluate(doc); err != nil {
+    log.Fatal(err)
+}
+// `profit` is visible across fences (whole-doc evaluator scoping).
+```
+
+`NewDocumentEmbedded` projects each `cm`/`calcmark` fence as one `*specDoc.CalcBlock` (source = the fence's inner content) and each passthrough markdown segment as one `*specDoc.TextBlock`. A leading `---...---` region is parsed as the document's frontmatter via `spec/document.ParseFrontmatter`.
+
+All `CalcBlock`s land in the same `*specDoc.Document`, so the existing evaluator naturally resolves variables across fences and into passthrough interpolation (`{{ varName }}`). This intentionally diverges from `Convert(Mode: Embedded)`'s rendering pipeline, which evaluates each fence in isolation. Use `NewDocumentEmbedded` when you want cross-fence variable resolution and structured access to blocks; use `Convert` when you just want a rendered HTML/Markdown string with per-fence-isolated evaluation.
+
+#### Static-Rendering Escape Hatch
+
+To show CalcMark code statically (as syntax-highlighted code, not as a live calc block), use any fenced code block whose info-string is **not** exactly `cm` or `calcmark`. The conventional choice is `text`:
+
+````markdown
+```text
+price = 100
+tax = price * 0.1
+```
+````
+
+This renders as a regular markdown code block, untouched by the CalcMark scanner. Do not invent new info-strings such as `calcmark-source` — they are not part of the language spec and a future spec change could collide with them. Any non-`cm`/non-`calcmark` info-string already covers this case by virtue of how the embedded scanner tokenizes the fence header.
+
 ### Configuring the Evaluator
 
 The evaluator accepts optional configuration before calling `Evaluate`:
