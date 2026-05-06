@@ -181,6 +181,56 @@ func (r *Registry) Categories() []Category {
 	return cats
 }
 
+// IdentCallableFunctionNames returns the names of all registered functions
+// that lex as a plain IDENTIFIER (i.e., the lexer does NOT assign them a
+// dedicated `FUNC_*` token). These are the only function names that the
+// document detector needs to treat specially when classifying lines like
+// `name(args)`: built-in functions with dedicated lexer tokens (avg, sum,
+// sqrt, number) already drive the calc verdict via their own token type
+// in `isFunctionToken`, so they are intentionally omitted here.
+//
+// Names are returned lower-cased to match the case-folding used by the
+// detector and classifier when looking up identifiers.
+//
+// The detector consults this list (alongside NLTriggerKeywords and
+// doc-defined names) so a line `accumulate(5mb, 1 hour)` — registered
+// function, no dedicated lexer token — admits as a calculation, while
+// `frobnicate(x)` — not registered — is correctly demoted to text.
+func (r *Registry) IdentCallableFunctionNames() []string {
+	seen := make(map[string]bool)
+	for _, f := range r.features {
+		if f.Category != CategoryFunction {
+			continue
+		}
+		// Skip names that lex as a dedicated function token — those
+		// never reach the IDENT path of the classifier.
+		if isDedicatedFunctionToken(f.Name) {
+			continue
+		}
+		seen[strings.ToLower(f.Name)] = true
+	}
+	result := make([]string, 0, len(seen))
+	for name := range seen {
+		result = append(result, name)
+	}
+	slices.Sort(result)
+	return result
+}
+
+// isDedicatedFunctionToken reports whether the lexer assigns this name
+// its own `FUNC_*` token type rather than a generic IDENTIFIER. The
+// list mirrors the dedicated-token cases in `spec/lexer` and the
+// `isFunctionToken` switch in `spec/document/detector.go`. Kept as a
+// hard-coded list rather than re-lexing each name to keep the registry
+// package free of any back-edge into `spec/lexer`.
+func isDedicatedFunctionToken(name string) bool {
+	switch strings.ToLower(name) {
+	case "avg", "sqrt", "sum", "number":
+		return true
+	}
+	return false
+}
+
 // NLTriggerKeywords returns the set of keywords that begin NL function syntax.
 // These are extracted from parseable aliases: the first word of each alias name
 // (before "...") is the trigger keyword. Both the document detector and the

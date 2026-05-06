@@ -9,8 +9,28 @@ import (
 )
 
 // Detector analyzes source text and splits it into blocks.
+//
+// `recognisedIdentLeads` is the union of:
+//   - NL trigger keywords (registry-derived) like `compound`, `read`, …
+//   - Registered function names that lex as IDENTIFIER (registry-derived)
+//     like `accumulate`, `transfer_time`, `convert_rate`, …
+//
+// Built-in functions with dedicated lexer tokens (`avg`, `sqrt`, `sum`,
+// `number`) are NOT in this set — they are caught earlier in
+// `looksLikeCalculation` via `isFunctionToken` and never reach the
+// IDENT path.
+//
+// The classifier consults this set for the IDENT-leading line shapes
+// that have markdown ambiguity: `name * other`, `name(args)`, etc. A
+// line that lexes as `IDENT op …` or `IDENT LPAREN …` is admitted as
+// calculation only when the leading name is in this set OR in the
+// doc-scoped `knownNames` (assigned earlier in the same document).
+// Anything outside both sets is prose typed by a user who happened to
+// hit a token that the lexer recognises (e.g., `also *this` lexing as
+// IDENT MULTIPLY IDENT).
 type Detector struct {
-	nlTriggers map[string]bool // NL function trigger keywords from the feature registry
+	nlTriggers           map[string]bool
+	recognisedIdentLeads map[string]bool
 }
 
 // NewDetector creates a new block detector.
@@ -20,7 +40,14 @@ func NewDetector() *Detector {
 	for _, kw := range r.NLTriggerKeywords() {
 		triggers[kw] = true
 	}
-	return &Detector{nlTriggers: triggers}
+	leads := make(map[string]bool, len(triggers))
+	for k := range triggers {
+		leads[k] = true
+	}
+	for _, name := range r.IdentCallableFunctionNames() {
+		leads[name] = true
+	}
+	return &Detector{nlTriggers: triggers, recognisedIdentLeads: leads}
 }
 
 // DetectBlocks splits source into blocks using these rules:
@@ -37,6 +64,15 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 	currentBlockType := BlockText // Default to text
 	emptyLineCount := 0
 	var pendingEmpties []string // Track trailing empties for TUI line preservation
+
+	// Names defined earlier in the document. Each successful assignment
+	// (`name = …`) on a calc line adds its LHS to this set. The
+	// classifier consults it to decide whether a leading-identifier
+	// line like `x * 5` is calc (when `x` was assigned earlier) or
+	// prose (when it was not). Built-in functions and keywords have
+	// dedicated lexer token types and are recognised separately, so
+	// this set is doc-scoped user names only.
+	knownNames := map[string]bool{}
 
 	// Fenced code block state machine
 	inFencedCodeBlock := false
@@ -121,11 +157,20 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 				continue
 			}
 
-			// Determine if this line is a calculation
-			isCalc, err := d.IsCalculation(line)
+			// Determine if this line is a calculation. Pass the
+			// running set of names assigned earlier in the doc so a
+			// later `x * 5` line can be promoted to calc when `x`
+			// was previously defined; without context, leading-
+			// identifier-then-operator lines demote to prose.
+			isCalc, err := d.isCalculationWithKnownNames(line, knownNames)
 			if err != nil {
 				// Lexer error on calc-like line - propagate immediately
 				return nil, err
+			}
+			if isCalc {
+				if name := assignmentTargetOf(line); name != "" {
+					knownNames[name] = true
+				}
 			}
 
 			// If first line of new block, set type
@@ -202,7 +247,16 @@ func allEmpty(lines []string) bool {
 //
 // This is the public API for determining line type. Used by the TUI to
 // decide how to render lines in the preview pane.
+//
+// Has no doc context, so the classifier treats every leading user
+// identifier as unknown. `DetectBlocks` calls the context-aware
+// `isCalculationWithKnownNames` so prior `name = …` lines promote later
+// `name * other` lines correctly.
 func (d *Detector) IsCalculation(line string) (bool, error) {
+	return d.isCalculationWithKnownNames(line, nil)
+}
+
+func (d *Detector) isCalculationWithKnownNames(line string, knownNames map[string]bool) (bool, error) {
 	trimmed := strings.TrimSpace(line)
 
 	if trimmed == "" {
@@ -248,7 +302,7 @@ func (d *Detector) IsCalculation(line string) (bool, error) {
 	}
 
 	// A valid calculation must have recognizable structure
-	return d.looksLikeCalculation(meaningfulTokens), nil
+	return d.looksLikeCalculation(meaningfulTokens, knownNames), nil
 }
 
 // filterNonNewlineTokens returns tokens excluding NEWLINE and EOF.
@@ -266,7 +320,18 @@ func filterNonNewlineTokens(tokens []lexer.Token) []lexer.Token {
 // looksLikeCalculation checks if tokens represent a calculation structure.
 // Deterministic, no side effects. Uses nlTriggers from the feature registry
 // to recognize NL function patterns without hard-coding keyword lists.
-func (d *Detector) looksLikeCalculation(tokens []lexer.Token) bool {
+//
+// `knownNames` is the doc-scoped set of identifiers assigned earlier in
+// the document (built up by `DetectBlocks`). It only matters for the
+// leading-IDENTIFIER case: a line that lexes as `IDENT op …` is treated
+// as a calculation only when the leading identifier is in `knownNames`,
+// is followed by `=` (assignment), or matches an NL-trigger pattern.
+// Everything else (prose like `also *this*`, `something + else`) is
+// classified as text.
+//
+// Pass `nil` for `knownNames` to apply the rule at the line level with
+// no doc context.
+func (d *Detector) looksLikeCalculation(tokens []lexer.Token, knownNames map[string]bool) bool {
 	if len(tokens) == 0 {
 		return false
 	}
@@ -337,19 +402,51 @@ func (d *Detector) looksLikeCalculation(tokens []lexer.Token) bool {
 		return looksLikePeriodOperator(tokens)
 	}
 
-	// Identifier alone or followed by operator/function call = calculation
-	// But multiple consecutive identifiers = prose (like "More text")
-	// Single identifier = ambiguous, treat as prose in document context
+	// Identifier alone or followed by operator/function call:
+	// historically classified as a calculation, but a leading user
+	// identifier with no `=` and no doc-context match is almost
+	// always prose (e.g., `also *this* is a test`, `alpha * beta`).
+	// The user-stated rule: `something *` is calc only when
+	// `something` is a known name (defined earlier in the doc) or
+	// the line is an assignment.
 	if first.Type == lexer.IDENTIFIER {
-		// Single identifier is ambiguous - could be variable reference or prose
-		// In document context, treat as prose (text) since undefined vars are common text
+		// Single identifier is ambiguous - could be variable reference or prose.
+		// In document context, treat as prose (text) since undefined vars
+		// are common text.
 		if len(tokens) == 1 {
 			return false
 		}
-		// Identifier followed by operator or paren (function call) = calculation
 		second := tokens[1]
-		if isOperatorToken(second.Type) || second.Type == lexer.LPAREN {
-			return true
+		leadingName := strings.ToLower(string(first.Value))
+		// A leading IDENT is "recognised" if it's:
+		//   - in the registry (NL trigger or IDENT-callable function), or
+		//   - assigned earlier in this document.
+		//
+		// Built-in functions like `avg`/`sum`/`sqrt`/`number` have
+		// dedicated lexer tokens and are caught by `isFunctionToken`
+		// above — they never reach this branch. Anything else IS a
+		// user identifier the parser/evaluator has nothing to say
+		// about, so we cannot promote it to calc on shape alone.
+		leadingRecognised := d.recognisedIdentLeads[leadingName] || knownNames[leadingName]
+
+		// `name(args)` shape: registry-recognised function call OR a
+		// reference to a doc-defined name → calc; otherwise the user
+		// typed something function-call-shaped using an unknown name
+		// (`frobnicate(x)`), which is prose to us — there is no
+		// `name(...)` construct in markdown but there is also no
+		// CalcMark obligation to evaluate truly unknown names. The
+		// downstream layers (parser/LSP) own the "did you mean…?"
+		// diagnostic for those.
+		if second.Type == lexer.LPAREN {
+			return leadingRecognised
+		}
+		// Identifier followed by an arithmetic / comparison operator
+		// (`*`, `+`, `-`, `==`, …) is a calculation only when the
+		// leading identifier is recognised. Otherwise this is the
+		// prose-typing pattern (`also *t`, `alpha * beta`) and must
+		// classify as text.
+		if isOperatorToken(second.Type) {
+			return leadingRecognised
 		}
 		// Identifier followed by another identifier = likely prose,
 		// EXCEPT NL function patterns where the first token is a known
@@ -357,13 +454,20 @@ func (d *Detector) looksLikeCalculation(tokens []lexer.Token) bool {
 		// The parser already validated the line parses successfully,
 		// so we only need to confirm the trigger keyword matches.
 		if second.Type == lexer.IDENTIFIER {
-			return d.nlTriggers[strings.ToLower(string(first.Value))]
+			return d.nlTriggers[leadingName]
 		}
-		// Identifier followed by keyword (like "in", "as") = calculation
+		// Identifier followed by a CalcMark keyword (`in`, `as`, …):
+		// recognised leads are calc, others are prose ("this is some
+		// text" lexes as IDENT KEYWORD IDENT and must not promote).
 		if isKeywordToken(second.Type) {
-			return true
+			return leadingRecognised
 		}
-		return true // Default: treat as calculation
+		// Identifier followed by anything else the parser accepted
+		// (NUMBER, QUANTITY, CURRENCY, KEYWORD-flavoured tokens for
+		// NL function args like `100 MB from ssd`): only recognise as
+		// calc when the leading identifier is recognised. NL triggers
+		// are the dominant case here.
+		return leadingRecognised
 	}
 
 	return false
@@ -517,6 +621,50 @@ func isHorizontalRule(line string) bool {
 		}
 	}
 	return count >= 3
+}
+
+// assignmentTargetOf returns the LHS identifier of `name = expr` lines,
+// or "" when the line is not a top-level assignment. Lower-cased to
+// match the case-folding used by `knownNames` lookups in
+// `looksLikeCalculation`. Pure function.
+//
+// Distinguishes assignment (`=`) from comparison (`==`) by requiring
+// the character after `=` to be anything other than another `=`.
+func assignmentTargetOf(line string) string {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return ""
+	}
+	// Walk an identifier prefix. Must start with a letter or `_`,
+	// then letters/digits/`_`.
+	end := 0
+	for i, r := range trimmed {
+		if i == 0 {
+			if !(r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
+				return ""
+			}
+			end = i + 1
+			continue
+		}
+		if r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			end = i + 1
+			continue
+		}
+		break
+	}
+	if end == 0 {
+		return ""
+	}
+	name := trimmed[:end]
+	rest := strings.TrimLeft(trimmed[end:], " \t")
+	if !strings.HasPrefix(rest, "=") {
+		return ""
+	}
+	// Reject `==` (comparison) — must be a single `=`.
+	if len(rest) >= 2 && rest[1] == '=' {
+		return ""
+	}
+	return strings.ToLower(name)
 }
 
 // isFencedCodeFence checks if a line is a fenced code block delimiter.
