@@ -306,6 +306,21 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 			}, nil
 		}
 
+		// User-asked 2026-05-07: `2026 Q3` lexes as QUANTITY (`2026:Q3`)
+		// because the lexer matches `<digits>(SP)Q<digit>` as a quantity-
+		// shape token. Pre-fix that produced a Quantity with unit "Q3" —
+		// confusing because `length of q` errored ("got Quantity, not
+		// Period") even though the rendered form looked like a period.
+		// Promote to a calendar-quarter Period when the unit slot holds
+		// a Q1-Q4 / FQ1-FQ4 token. The encoding mirrors the parser's
+		// year-bearing keyword: `Q:<n>@<year>`.
+		if qPrefix, qNum, ok := matchQuarterUnit(unit); ok {
+			return &ast.RelativeDateLiteral{
+				Keyword:    qPrefix + ":" + qNum + "@" + parts[0],
+				SourceText: string(tok.OriginalText),
+			}, nil
+		}
+
 		// Regular quantity (unit of measurement)
 		return &ast.QuantityLiteral{
 			Value: parts[0],
@@ -346,6 +361,17 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 	if p.match(lexer.CALENDAR_QUARTER_LITERAL, lexer.FISCAL_QUARTER_LITERAL,
 		lexer.FISCAL_YEAR_LITERAL, lexer.CALENDAR_YEAR_LITERAL) {
 		tok := p.previous()
+		// User-asked 2026-05-07: combine an adjacent year + quarter
+		// literal into a single Period. `CY2026 Q3`, `Q3 CY2026`,
+		// `FY2027 FQ1`, `FQ1 FY2027` all canonicalise to the same
+		// year-bearing keyword (`Q:3@2026`, `FQ:1@2027`). Bare forms
+		// (`Q1`, `CY2026`) are unchanged. See `tryCombinePeriodYearQuarter`.
+		if combinedKw, combinedSource, ok := p.tryCombinePeriodYearQuarter(tok); ok {
+			return &ast.RelativeDateLiteral{
+				Keyword:    combinedKw,
+				SourceText: combinedSource,
+			}, nil
+		}
 		// Encode as RelativeDateLiteral with prefix+value keyword
 		// e.g., "Q:1", "FQ:3", "FY:2026", "CY:26"
 		prefix := notationLiteralPrefix(tok.Type)
@@ -1015,6 +1041,93 @@ func notationLiteralPrefix(t lexer.TokenType) string {
 		return "CY"
 	}
 	return ""
+}
+
+// tryCombinePeriodYearQuarter examines the token immediately after a
+// notation literal (Q/FQ/CY/FY) and, if it's the complementary literal
+// (a year after a quarter, or a quarter after a year, with matching
+// calendar/fiscal flavor), consumes it and returns a year-bearing
+// keyword.
+//
+// All four input orderings canonicalise to the quarter-first form:
+//
+//   `Q3 2026`      → Q:3@2026
+//   `Q3 CY2026`    → Q:3@2026
+//   `2026 Q3`      → handled in the QUANTITY branch (separate path).
+//   `CY2026 Q3`    → Q:3@2026  (we flip when we see year-then-quarter)
+//   `FQ1 FY2027`   → FQ:1@2027
+//   `FY2027 FQ1`   → FQ:1@2027
+//
+// Returns ("", "", false) when the next token isn't a complementary
+// literal — caller falls back to the existing single-token path. Pure:
+// only inspects + advances tokens.
+func (p *RecursiveDescentParser) tryCombinePeriodYearQuarter(first lexer.Token) (string, string, bool) {
+	next := p.peek()
+	switch first.Type {
+	case lexer.CALENDAR_QUARTER_LITERAL:
+		// `Q3` followed by a year-shape token. Bare NUMBER is admitted
+		// as a calendar year (matches the existing `2026 Q3` quantity-
+		// shape behaviour); CY-literals are admitted explicitly. FY
+		// literals are NOT admitted with a calendar quarter — that
+		// would mix calendars and would need separate semantics.
+		if next.Type == lexer.NUMBER || next.Type == lexer.CALENDAR_YEAR_LITERAL {
+			p.advance()
+			return "Q:" + string(first.Value) + "@" + string(next.Value),
+				string(first.OriginalText) + " " + string(next.OriginalText), true
+		}
+	case lexer.FISCAL_QUARTER_LITERAL:
+		// `FQ1` followed by a fiscal-year literal. Bare NUMBER is NOT
+		// admitted here — `FQ1 2027` is ambiguous (calendar or fiscal
+		// year?), require explicit `FY` to disambiguate.
+		if next.Type == lexer.FISCAL_YEAR_LITERAL {
+			p.advance()
+			return "FQ:" + string(first.Value) + "@" + string(next.Value),
+				string(first.OriginalText) + " " + string(next.OriginalText), true
+		}
+	case lexer.CALENDAR_YEAR_LITERAL:
+		// `CY2026` followed by `Q3` — flip to the quarter-first
+		// canonical encoding so downstream sees one shape regardless
+		// of input order.
+		if next.Type == lexer.CALENDAR_QUARTER_LITERAL {
+			p.advance()
+			return "Q:" + string(next.Value) + "@" + string(first.Value),
+				string(first.OriginalText) + " " + string(next.OriginalText), true
+		}
+	case lexer.FISCAL_YEAR_LITERAL:
+		// `FY2027` followed by `FQ1` — same flip for fiscal.
+		if next.Type == lexer.FISCAL_QUARTER_LITERAL {
+			p.advance()
+			return "FQ:" + string(next.Value) + "@" + string(first.Value),
+				string(first.OriginalText) + " " + string(next.OriginalText), true
+		}
+	}
+	return "", "", false
+}
+
+// matchQuarterUnit detects when a QUANTITY token's unit slot holds a
+// quarter literal (Q1-Q4, FQ1-FQ4), so `2026 Q3` (which the lexer
+// pre-folds into a single QUANTITY token) can be promoted from a
+// Quantity to a calendar-quarter Period at the parser level. Returns
+// (prefix, number, true) on match, ("", "", false) otherwise.
+//
+// Case-insensitive — the lexer canonicalises units to lower-case but
+// the original-text path may surface mixed case; matching on either
+// is the safer contract.
+func matchQuarterUnit(unit string) (string, string, bool) {
+	if len(unit) >= 2 && (unit[0] == 'Q' || unit[0] == 'q') {
+		// Q[1-4]
+		if len(unit) == 2 && unit[1] >= '1' && unit[1] <= '4' {
+			return "Q", string(unit[1]), true
+		}
+	}
+	if len(unit) >= 3 && (unit[0] == 'F' || unit[0] == 'f') &&
+		(unit[1] == 'Q' || unit[1] == 'q') {
+		// FQ[1-4]
+		if len(unit) == 3 && unit[2] >= '1' && unit[2] <= '4' {
+			return "FQ", string(unit[2]), true
+		}
+	}
+	return "", "", false
 }
 
 // diagnostic messages.

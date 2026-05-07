@@ -1872,6 +1872,107 @@ func TestCalendarQuarterNotation(t *testing.T) {
 	}
 }
 
+// TestCalendarQuarterNotation_ExplicitYear — User-asked 2026-05-07:
+// `Q1`-`Q4` alone resolves to the current calendar year, but the user
+// needed syntax to specify a quarter of an explicit year. The parser
+// canonicalises every form (`2026 Q3`, `CY2026 Q3`, `Q3 2026`,
+// `Q3 CY2026`) to `Q:<n>@<year>`; this test pins the interpreter
+// dispatch on the explicit year regardless of the clock.
+func TestCalendarQuarterNotation_ExplicitYear(t *testing.T) {
+	// Clock at 2030 to prove the explicit year wins — without the
+	// fix, the test would resolve `Q3` to 2030 Q3.
+	clock := time.Date(2030, 1, 15, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// Quarter-first orderings: parser produces `Q:3@2026` regardless
+		// of which token came first in the source.
+		{"Q3 followed by NUMBER year", "d = Q3 2026\n", 2026, 7, 1},
+		{"Q3 followed by CY year", "d = Q3 CY2026\n", 2026, 7, 1},
+		{"NUMBER year followed by Q3", "d = 2026 Q3\n", 2026, 7, 1},
+		{"CY year followed by Q3", "d = CY2026 Q3\n", 2026, 7, 1},
+		// Two-digit years follow the existing CY/FY 2-digit rule
+		// (CY26 → 2026); explicit year suffix gets the same expansion.
+		{"CY26 Q3 expands to 2026", "d = CY26 Q3\n", 2026, 7, 1},
+		{"Q3 CY26 expands to 2026", "d = Q3 CY26\n", 2026, 7, 1},
+		// Different quarters confirm we're routing on the parsed
+		// value, not coincidentally landing on Q3.
+		{"CY2027 Q1", "d = CY2027 Q1\n", 2027, 1, 1},
+		{"CY2025 Q4", "d = CY2025 Q4\n", 2025, 10, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date := resultStartDate(t, results[0])
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
+// TestFiscalQuarterNotation_ExplicitYear — companion to the calendar
+// case. `FY2027 FQ1` and `FQ1 FY2027` both produce `FQ:1@2027`; the
+// interpreter routes against the explicit fiscal year label.
+func TestFiscalQuarterNotation_ExplicitYear(t *testing.T) {
+	// Clock at 2030 (fiscal config: July → FY2031 in early 2030 with
+	// june-end label-mode). The explicit year overrides regardless.
+	clock := time.Date(2030, 8, 15, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name      string
+		input     string
+		wantYear  int
+		wantMonth int
+		wantDay   int
+	}{
+		// fiscal_year_starts: July 1, so FY2027 starts 2027-07-01.
+		// FQ1 of FY2027 = July 2027.
+		{"FY2027 FQ1", "d = FY2027 FQ1\n", 2027, 7, 1},
+		{"FQ1 FY2027", "d = FQ1 FY2027\n", 2027, 7, 1},
+		// 2-digit year expansion mirrors CY behaviour.
+		{"FY27 FQ1 expands to 2027", "d = FY27 FQ1\n", 2027, 7, 1},
+		{"FQ1 FY27 expands to 2027", "d = FQ1 FY27\n", 2027, 7, 1},
+		// Different fiscal quarters within the same FY.
+		{"FY2027 FQ3", "d = FY2027 FQ3\n", 2028, 1, 1}, // FQ3 = Jan of fiscal year+1
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			interp := newTestInterpreterWithClock(clock)
+			interp.SetFiscalYearStarts(7, 1)
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse(%q) error = %v", tt.input, err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval(%q) error = %v", tt.input, err)
+			}
+			date := resultStartDate(t, results[0])
+			if date.Time.Year() != tt.wantYear || int(date.Time.Month()) != tt.wantMonth || date.Time.Day() != tt.wantDay {
+				t.Errorf("Got %d-%02d-%02d, want %d-%02d-%02d",
+					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
+					tt.wantYear, tt.wantMonth, tt.wantDay)
+			}
+		})
+	}
+}
+
 // TestFiscalQuarterNotation tests FQ1-FQ4 shorthand.
 func TestFiscalQuarterNotation(t *testing.T) {
 	clock := time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)
