@@ -304,16 +304,40 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 	}
 	prefix, value := strings.ToUpper(parts[0]), parts[1]
 
+	// User-asked 2026-05-07: explicit-year suffix `@YYYY`. The parser
+	// canonicalises year+quarter combinations (`CY2026 Q3`, `Q3 2026`,
+	// `FY2027 FQ1`, etc.) to `Q:<n>@<year>` / `FQ:<n>@<year>`. Strip
+	// the suffix here so the existing quarter dispatch can route
+	// against the explicit year instead of `now.Year() + yearOffset`.
+	// 2-digit years follow the same expansion rule the bare CY/FY
+	// notation uses (CY26 → 2026), so `Q:3@26` resolves to 2026.
+	explicitYear := 0
+	if at := strings.Index(value, "@"); at >= 0 {
+		yStr := value[at+1:]
+		value = value[:at]
+		if y, err := strconv.Atoi(yStr); err == nil {
+			if y < 100 {
+				y += 2000
+			}
+			explicitYear = y
+		}
+	}
+
 	switch prefix {
 	case "Q":
 		// v2.0: Q1-Q4 evaluates to Period (calendar quarter of the
 		// current calendar year). yearOffset shifts the year for
-		// `next Q1` / `last Q4`.
+		// `next Q1` / `last Q4`. An explicit `@YYYY` suffix overrides
+		// both — it's the user-typed year for `2026 Q3` / `CY2026 Q3`.
 		q, err := strconv.Atoi(value)
 		if err != nil || q < 1 || q > 4 {
 			return nil, fmt.Errorf("invalid calendar quarter: Q%s", value)
 		}
-		return types.NewCalendarQuarter(now.Year()+yearOffset, q)
+		year := now.Year() + yearOffset
+		if explicitYear != 0 {
+			year = explicitYear
+		}
+		return types.NewCalendarQuarter(year, q)
 
 	case "FQ":
 		if interp.fiscalYearStarts == nil {
@@ -327,8 +351,15 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		fyStartMonth := time.Month(fc.month)
 		fyStartDay := fc.day
 		// FQ1 starts at the fiscal year start; yearOffset selects
-		// next/last/this FY relative to `now`.
-		fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
+		// next/last/this FY relative to `now`. Explicit `@YYYY`
+		// (`FY2027 FQ1`) overrides — that's the FY label the user
+		// typed.
+		var fy int
+		if explicitYear != 0 {
+			fy = explicitYear
+		} else {
+			fy = fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
+		}
 		fyStart := time.Date(fy, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewFiscalQuarterWithMode(fyStart, q, fc.labelMode)
 
