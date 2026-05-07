@@ -277,3 +277,14 @@ tasks:
       - task: security      # Security tests + fuzzing
       - task: build:all
       - echo 'Release binaries built in dist/'
+
+  release:dogfood:
+    desc: |
+      Verify the LOCAL go-calcmark working tree against cmw's full task check
+      before tagging. Catches downstream regressions while the version is still
+      cheap (no published tag to live with). Always restores cmw's go.mod / go.sum
+      on exit. Runs cmw's pre-push gate only — Playwright e2e is excluded by
+      design, so this is not a flaky-test surface. Set CMW_PATH to override the
+      default sibling directory location.
+    cmds:
+      - bash scripts/release-dogfood.sh

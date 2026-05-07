@@ -69,9 +69,32 @@ task test
 
 # Run quality checks
 task quality
+
+# Dogfood the change against cmw — catches downstream regressions
+# BEFORE the tag is public (which is much cheaper than yanking or
+# cutting follow-up patch tags). Requires a sibling cmw checkout at
+# ../cmw, or set CMW_PATH=/path/to/cmw.
+task release:dogfood
 ```
 
-All tests and quality checks must pass before tagging. Do not skip this.
+All four steps must pass before tagging. Do not skip this.
+
+### Why `release:dogfood` matters
+
+In May 2026, three patch tags shipped in 13 minutes (v2.2.2 → v2.2.4) for
+what should have been one. The fix in v2.2.2 broke an existing cmw test
+(`TestLSPDispatcher_AtGlobalsDot_ReturnsGlobalsFields`), but go-calcmark's
+own suite was green so the tag went out. Two follow-up patches restored
+parity. `release:dogfood` makes that mistake structurally hard to repeat:
+it points cmw's go.mod at the local go-calcmark working tree via a
+`replace` directive, runs cmw's full `task check`, and restores cmw's
+state on exit. The tag doesn't need to exist yet — that's the whole
+point. If cmw fails, you fix go-calcmark BEFORE tagging.
+
+The script deliberately runs cmw's `task check` only (fmt + lint + build +
+unit + Go API + tdd-gate), NOT `task test:e2e`. Playwright e2e is the
+known flaky surface in cmw and would be a poor release gate. The pre-push
+gate cmw uses for itself is the right gate for go-calcmark releases too.
 
 **Dry run (optional):** To test what GoReleaser would produce without publishing:
 
