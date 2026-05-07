@@ -711,3 +711,110 @@ func TestFrontmatter_Unit9_ExtraOnlyNoLSPResponse(t *testing.T) {
 		t.Errorf("expected Variable 'price' even with Extra-only frontmatter; got %+v", syms)
 	}
 }
+
+// TestBugB_ProseLineDoesNotSurfaceCompletions — cmw user-asked 2026-05-06:
+// typing prose like `some te` in a text block surfaced unit completions
+// (`teaspoon`, `terahertz`, `tesla`, …). The detector knows `some te` is
+// not a valid calculation; the LSP must consult that classifier and
+// suppress general completions for prose lines.
+func TestBugB_ProseLineDoesNotSurfaceCompletions(t *testing.T) {
+	source := "some te"
+	s, uri := prepareServerDoc(t, source)
+
+	// Cursor at end of `some te` — what the user types before the
+	// dropdown surfaces. col = 7.
+	items := completionAt(t, s, uri, 0, 7)
+
+	// Positive contract: nothing comes back. The classifier returns
+	// completionContextMarkdown which the handler maps to nil.
+	if len(items) != 0 {
+		var labels []string
+		for _, it := range items {
+			labels = append(labels, it.Label)
+		}
+		t.Errorf("prose line surfaced completions: %v", labels)
+	}
+}
+
+// TestBugB_KnownVariableLeadingPositionAdmitsCompletions — when a prior
+// line in the document defined `revenue`, typing `revenue *` is a calc
+// expression (variable * pending number/expr). Completions should still
+// fire so the user gets variable / function suggestions for the RHS.
+func TestBugB_KnownVariableLeadingPositionAdmitsCompletions(t *testing.T) {
+	source := "revenue = 1000\nrevenue * "
+	s, uri := prepareServerDoc(t, source)
+
+	// Line 1 is `revenue * ` — cursor at end (col = 10) is in the
+	// expression position. The classifier sees `revenue` as a known
+	// IDENT so the line is calc, not prose.
+	items := completionAt(t, s, uri, 1, 10)
+	if len(items) == 0 {
+		t.Fatal("expected completions for in-flight calc expression `revenue * `")
+	}
+}
+
+// TestBugB_InsideInterpolationReturnsVariableCompletionsOnly — inside
+// `{{ ... }}` in prose, the user is typing a variable reference. The
+// LSP returns variable items only (no functions, no units, no dates),
+// which keeps the dropdown focused on the only completion shape that
+// the interpolation syntax accepts.
+func TestBugB_InsideInterpolationReturnsVariableCompletionsOnly(t *testing.T) {
+	// Flat mode: top-level calc assignment defines `price`; subsequent
+	// lines (after a blank-line block boundary) are a text block where
+	// the user can write prose containing `{{ price }}` interpolation.
+	// The LSP server parses flat-mode sources via specDoc.NewDocument
+	// (see lsp/server.go evaluate); embedded fenced sources don't
+	// evaluate through this path, so this test stays in flat mode.
+	source := "price = 100\n\nThe total is {{ pri"
+	s, uri := prepareServerDoc(t, source)
+
+	// Line 2 is `The total is {{ pri` — cursor at end (col = 19).
+	items := completionAt(t, s, uri, 2, 19)
+	if len(items) == 0 {
+		t.Fatal("expected variable completion items inside `{{ ... }}` interpolation")
+	}
+
+	// Every returned item must be a variable. Functions / units / dates
+	// would clutter the dropdown for a slot that only accepts a var ref.
+	for _, it := range items {
+		d, ok := it.Data.(completionItemData)
+		if !ok {
+			t.Errorf("interpolation surfaced item %q with no data — likely a function/unit leak", it.Label)
+			continue
+		}
+		if d.Kind != "variable" {
+			t.Errorf("interpolation surfaced non-variable item: label=%q kind=%q", it.Label, d.Kind)
+		}
+	}
+
+	// And `price` specifically should be among the items.
+	var sawPrice bool
+	for _, it := range items {
+		if it.Label == "price" {
+			sawPrice = true
+			break
+		}
+	}
+	if !sawPrice {
+		t.Errorf("expected variable `price` in interpolation completions, got %v", itemLabels(items))
+	}
+}
+
+// TestBugB_AfterClosedInterpolationReturnsToProse — once the user has
+// typed the closing `}}`, subsequent typing is prose again and must
+// not surface completions.
+func TestBugB_AfterClosedInterpolationReturnsToProse(t *testing.T) {
+	source := "price = 100\n\nThe price is {{ price }} per unit te"
+	s, uri := prepareServerDoc(t, source)
+
+	// Line 2: cursor at end of `... per unit te` (col = 49 — past
+	// the closing `}}`, mid prose word). No completions should fire.
+	items := completionAt(t, s, uri, 2, 49)
+	if len(items) != 0 {
+		var labels []string
+		for _, it := range items {
+			labels = append(labels, it.Label)
+		}
+		t.Errorf("prose after closed interpolation surfaced completions: %v", labels)
+	}
+}

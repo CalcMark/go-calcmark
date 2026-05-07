@@ -254,27 +254,68 @@ func TestIsMarkdownLine(t *testing.T) {
 
 func TestClassifyCompletionContext(t *testing.T) {
 	tests := []struct {
-		name string
-		line string
-		col  int
-		want completionContext
+		name       string
+		line       string
+		col        int
+		knownNames map[string]bool
+		want       completionContext
 	}{
-		{"after in space", "100 meters in ", 14, completionContextAfterUnitKeyword},
-		{"after in typing", "100 meters in fe", 16, completionContextAfterUnitKeyword},
-		{"after as space", "price as ", 9, completionContextAfterUnitKeyword},
-		{"after as typing napkin", "price as nap", 12, completionContextAfterUnitKeyword},
-		{"general assignment", "a = 1 + 1", 9, completionContextGeneral},
-		{"general identifier", "acc", 3, completionContextGeneral},
-		{"markdown heading", "# Heading", 9, completionContextMarkdown},
-		{"markdown list", "- item", 6, completionContextMarkdown},
-		{"empty line", "", 0, completionContextMarkdown},
+		{name: "after in space", line: "100 meters in ", col: 14, want: completionContextAfterUnitKeyword},
+		{name: "after in typing", line: "100 meters in fe", col: 16, want: completionContextAfterUnitKeyword},
+		{name: "after as space", line: "price as ", col: 9, want: completionContextAfterUnitKeyword},
+		{name: "after as typing napkin", line: "price as nap", col: 12, want: completionContextAfterUnitKeyword},
+		{name: "general assignment", line: "a = 1 + 1", col: 9, want: completionContextGeneral},
+		// "acc" alone — leading IDENT is `acc`, not in knownNames, not a registered
+		// NL trigger or IDENT-callable function. Per Bug B (2026-05-06), bare prose
+		// like this is now classified as markdown so the LSP doesn't drown the
+		// dropdown with units / functions. (Earlier: was completionContextGeneral.)
+		{name: "bare identifier prose", line: "acc", col: 3, want: completionContextMarkdown},
+		{name: "markdown heading", line: "# Heading", col: 9, want: completionContextMarkdown},
+		{name: "markdown list", line: "- item", col: 6, want: completionContextMarkdown},
+		{name: "empty line", line: "", col: 0, want: completionContextMarkdown},
+
+		// Bug B (2026-05-06): the user's repro — typing prose in a text
+		// block triggered unit completions (`some te` → `teaspoon`,
+		// `terahertz`). The leading IDENT `some` is not in knownNames
+		// and not a registered NL trigger / function, so the line is
+		// prose and must classify as markdown.
+		{name: "prose with two IDENTs (some te)", line: "some te", col: 7, want: completionContextMarkdown},
+		{name: "prose mid-sentence", line: "this is a sentence wi", col: 21, want: completionContextMarkdown},
+
+		// Lines that ARE calculations under the registry — admit. The
+		// registry exposes `compound` as an NL trigger and `accumulate`
+		// as an IDENT-callable function; both should classify as
+		// general so the dropdown can surface argument completions.
+		{name: "NL trigger leading word", line: "compound 1000 USD", col: 17, want: completionContextGeneral},
+		{name: "registered ident function call", line: "accumulate(", col: 11, want: completionContextGeneral},
+
+		// knownNames bridge: a doc-defined variable in the leading
+		// position is admitted (e.g. `revenue * 0.1` after `revenue =
+		// 1000` earlier in the doc). Without doc context this would
+		// be prose; with it, calc.
+		{
+			name:       "known variable leading reference",
+			line:       "revenue * 0.1",
+			col:        13,
+			knownNames: map[string]bool{"revenue": true},
+			want:       completionContextGeneral,
+		},
+
+		// Interpolation: cursor inside `{{ ... }}` opens a narrow
+		// completion context that only surfaces variable references —
+		// the `{{ }}` syntax is reserved for variable interpolation
+		// in prose. Other tokens around the prose don't matter.
+		{name: "inside interpolation, prefix typed", line: "Hello {{ pri", col: 12, want: completionContextInterpolation},
+		{name: "inside interpolation, empty after open", line: "Order total: {{ ", col: 16, want: completionContextInterpolation},
+		// Closed interpolation: cursor is after `}}` — back to prose.
+		{name: "after closed interpolation, prose continues", line: "Hello {{ price }} now", col: 21, want: completionContextMarkdown},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := classifyCompletionContext(tt.line, tt.col)
+			got := classifyCompletionContext(tt.line, tt.col, tt.knownNames)
 			if got != tt.want {
-				t.Errorf("classifyCompletionContext(%q, %d) = %v, want %v", tt.line, tt.col, got, tt.want)
+				t.Errorf("classifyCompletionContext(%q, %d, %v) = %v, want %v", tt.line, tt.col, tt.knownNames, got, tt.want)
 			}
 		})
 	}

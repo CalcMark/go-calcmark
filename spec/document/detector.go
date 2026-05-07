@@ -256,6 +256,58 @@ func (d *Detector) IsCalculation(line string) (bool, error) {
 	return d.isCalculationWithKnownNames(line, nil)
 }
 
+// IsCalculationWithKnownNames classifies a single line like IsCalculation,
+// but admits lines whose leading identifier is in the doc-scoped
+// `knownNames` set (e.g. previously-assigned variables) as calculations.
+//
+// Use this from contexts that already know the document's defined
+// names — notably the LSP, where suppressing unit / function completions
+// on prose lines hinges on the same calc-vs-text decision the detector
+// makes when splitting blocks.
+//
+// A `nil` `knownNames` is equivalent to calling `IsCalculation`.
+func (d *Detector) IsCalculationWithKnownNames(line string, knownNames map[string]bool) (bool, error) {
+	return d.isCalculationWithKnownNames(line, knownNames)
+}
+
+// LooksLikeCalculation returns true when the token stream at the start of
+// a line has the syntactic shape of a CalcMark calculation. Like
+// IsCalculation it consults `knownNames` to admit references to
+// document-defined identifiers, but unlike IsCalculation it does NOT
+// require the line to parse end-to-end.
+//
+// Use this from in-flight-typing contexts (notably the LSP completion
+// provider) where the user's partial input — `accumulate(`, `compound 1000`,
+// `revenue * ` — fails the strict parser but is unambiguously calc-shape.
+// The token-shape check is what `DetectBlocks` uses internally as its
+// final step; this method exposes it directly for callers that already
+// have the line and want the detector's verdict without a full parse.
+//
+// `lineText` may be a single line (no terminating newline required).
+// Returns false for empty input. `knownNames` may be nil.
+func (d *Detector) LooksLikeCalculation(lineText string, knownNames map[string]bool) bool {
+	trimmed := strings.TrimSpace(lineText)
+	if trimmed == "" {
+		return false
+	}
+	if hasIndentedCodePrefix(lineText) {
+		return false
+	}
+	if isMarkdownPattern(trimmed) {
+		return false
+	}
+	lex := lexer.NewLexer(trimmed)
+	tokens, err := lex.Tokenize()
+	if err != nil {
+		return false
+	}
+	meaningful := filterNonNewlineTokens(tokens)
+	if len(meaningful) == 0 {
+		return false
+	}
+	return d.looksLikeCalculation(meaningful, knownNames)
+}
+
 func (d *Detector) isCalculationWithKnownNames(line string, knownNames map[string]bool) (bool, error) {
 	trimmed := strings.TrimSpace(line)
 
