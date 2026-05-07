@@ -296,9 +296,33 @@ func (d *Detector) LooksLikeCalculation(lineText string, knownNames map[string]b
 	if isMarkdownPattern(trimmed) {
 		return false
 	}
+	// Unambiguous calc-shape starters that the lexer rejects in their
+	// in-flight-typing form. Catch these BEFORE tokenising so callers
+	// (notably the LSP) get the right verdict for partial input the
+	// strict lexer chokes on.
+	//
+	// `@<word>.` (e.g. `@globals.`) is the documented incomplete shape
+	// for a directive field reference — the lexer raises
+	// `expected field name after '@globals.' (e.g., @globals.tax_rate)`
+	// and returns no tokens. There is no markdown construct that
+	// starts with `@` followed by a letter, so admit unconditionally.
+	// The follow-on completion path will surface the directive's
+	// fields, which is exactly the user's intent.
+	if isDirectiveLeadingShape(trimmed) {
+		return true
+	}
 	lex := lexer.NewLexer(trimmed)
 	tokens, err := lex.Tokenize()
 	if err != nil {
+		// In-flight `name = @globals.` on the RHS of an assignment
+		// also lex-errors on the trailing dot. The presence of an
+		// assignment `=` (not `==`/`!=`/`<=`/`>=`) is itself an
+		// unambiguous calc signal, so admit when we can find one.
+		// This covers the common "user typed `x = @globals.` and
+		// expected globals-field completions" path.
+		if hasAssignmentEquals(trimmed) {
+			return true
+		}
 		return false
 	}
 	meaningful := filterNonNewlineTokens(tokens)
@@ -306,6 +330,51 @@ func (d *Detector) LooksLikeCalculation(lineText string, knownNames map[string]b
 		return false
 	}
 	return d.looksLikeCalculation(meaningful, knownNames)
+}
+
+// hasAssignmentEquals returns true when `s` contains a `=` that isn't part of
+// a comparison operator (`==`, `!=`, `<=`, `>=`). Used as a fast calc-admit
+// for in-flight typing where the lexer chokes — the presence of a plain `=`
+// is enough signal that we're inside a calc assignment regardless of what
+// comes after.
+func hasAssignmentEquals(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] != '=' {
+			continue
+		}
+		// Skip `==`.
+		if i+1 < len(s) && s[i+1] == '=' {
+			i++ // step past the second `=`
+			continue
+		}
+		// Skip operators that precede `=`: `!`, `<`, `>`.
+		if i > 0 {
+			prev := s[i-1]
+			if prev == '!' || prev == '<' || prev == '>' {
+				continue
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// isDirectiveLeadingShape returns true when `trimmed` begins with `@<letter>`
+// — the shape of a directive reference (`@scale`, `@globals.tax_rate`,
+// `@convert_to`). Catches the in-flight `@globals.` case where the lexer's
+// strict directive validation rejects the dot without a following field.
+//
+// Pure: no side effects, no allocation. Used as a calc-admit fast path
+// from `LooksLikeCalculation`.
+func isDirectiveLeadingShape(trimmed string) bool {
+	if len(trimmed) < 2 {
+		return false
+	}
+	if trimmed[0] != '@' {
+		return false
+	}
+	c := trimmed[1]
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
 }
 
 func (d *Detector) isCalculationWithKnownNames(line string, knownNames map[string]bool) (bool, error) {

@@ -681,6 +681,57 @@ func TestDirectiveReferenceDetection(t *testing.T) {
 	}
 }
 
+// TestLooksLikeCalculation_InFlightDirectiveReference — the LSP completion
+// provider calls `LooksLikeCalculation` to decide whether a line in
+// in-flight typing is calc-shape. Directive references like
+// `@globals.tax_rate` complete cleanly through the lexer, but the
+// in-flight form `@globals.` (user has typed the dot, hasn't typed the
+// field name yet) raises a strict lexer error and returns no tokens.
+// Without a fast-path, the LSP would classify it as prose and suppress
+// the very completions the user is trying to invoke. This test pins the
+// "directive shape admits as calc even when the lexer rejects the
+// in-flight form" contract.
+func TestLooksLikeCalculation_InFlightDirectiveReference(t *testing.T) {
+	d := NewDetector()
+
+	calcShape := []string{
+		"@scale",
+		"@globals",
+		"@globals.",            // in-flight: dot typed, field pending
+		"@globals.t",           // in-flight: prefix typed
+		"@globals.tax_rate",    // complete
+		"@convert_to",
+		"x = @globals.",        // in-flight inside an assignment
+		"x = @globals.tax_rate",
+	}
+	for _, line := range calcShape {
+		t.Run("calc:"+line, func(t *testing.T) {
+			if !d.LooksLikeCalculation(line, nil) {
+				t.Errorf("LooksLikeCalculation(%q) = false, want true", line)
+			}
+		})
+	}
+
+	// Lines that LOOK like they might start with `@` but shouldn't admit:
+	// stray `@` followed by a digit / punctuation / whitespace is prose
+	// or a typo, not a directive reference. The narrow shape we admit
+	// is `@<letter>` only — see `isDirectiveLeadingShape`.
+	notCalcShape := []string{
+		"@",
+		"@ space",  // trailing space, no name
+		"@1",       // digit after @, not a directive
+		"@-",       // punctuation after @
+		"some prose with @ symbol",
+	}
+	for _, line := range notCalcShape {
+		t.Run("not-calc:"+line, func(t *testing.T) {
+			if d.LooksLikeCalculation(line, nil) {
+				t.Errorf("LooksLikeCalculation(%q) = true, want false", line)
+			}
+		})
+	}
+}
+
 // --- Phase 4e: Regression safety net ---
 // Parse all existing .cm files through DetectBlocks and record block type counts.
 // This prevents detector changes from silently reclassifying existing documents.
