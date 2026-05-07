@@ -309,6 +309,17 @@ func TestClassifyCompletionContext(t *testing.T) {
 		{name: "inside interpolation, empty after open", line: "Order total: {{ ", col: 16, want: completionContextInterpolation},
 		// Closed interpolation: cursor is after `}}` — back to prose.
 		{name: "after closed interpolation, prose continues", line: "Hello {{ price }} now", col: 21, want: completionContextMarkdown},
+
+		// In-flight `@globals.` — the lexer rejects the trailing dot
+		// without a following field name and returns no tokens. The
+		// classifier must defer to the detector (which has a fast path
+		// for `@<letter>`) instead of treating "no tokens" as markdown.
+		// Otherwise the LSP suppresses the very globals-fields
+		// completions the user is invoking. (Regression: cmw's
+		// TestLSPDispatcher_AtGlobalsDot_ReturnsGlobalsFields broke on
+		// the v2.2.2 bump.)
+		{name: "in-flight @globals. directive", line: "@globals.", col: 9, want: completionContextGeneral},
+		{name: "in-flight assignment with @globals.", line: "x = @globals.", col: 13, want: completionContextGeneral},
 	}
 
 	for _, tt := range tests {

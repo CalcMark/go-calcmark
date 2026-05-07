@@ -262,10 +262,16 @@ func classifyCompletionContext(lineText string, col int, knownNames map[string]b
 	}
 
 	if len(meaningful) == 0 {
-		// No tokens -> blank or pure prose. `isMarkdownLine` only
-		// catches explicit prefixes (#, >, -, *); falling through to
-		// general would surface unit / function completions on every
-		// blank line. Treat as markdown so the dropdown stays quiet.
+		// No tokens — could mean genuinely empty input, or that the
+		// lexer rejected the line entirely (notably `@globals.` and
+		// other in-flight directive forms it validates strictly).
+		// Defer to the detector's calc-vs-text check; it has its own
+		// fast paths for the cases the lexer rejects (`@<letter>`,
+		// lines containing a plain assignment `=`, …) and otherwise
+		// classifies as prose.
+		if detectorForCompletion.LooksLikeCalculation(lineText, knownNames) {
+			return completionContextGeneral
+		}
 		return completionContextMarkdown
 	}
 
