@@ -650,6 +650,98 @@ func TestStandaloneSumOfDetection(t *testing.T) {
 	}
 }
 
+// TestDetector_PercentOfPartialIsCalc — User-asked 2026-05-07: typing
+// `5% of` (with the RHS not yet entered) currently classified as text
+// because the strict parser rejected the partial input. The user
+// expected to stay in calc context the whole way through — `5% of` is
+// unambiguously calc-shape and the editor should not flip out of
+// calc mode just because the line isn't finished yet.
+//
+// The fix admits parser-rejected lines as calc when the leading token
+// is one English prose never starts with (numbers, `=`, `(`, `@`,
+// currency, unary minus). NL-trigger English prose like
+// `Read more...` (IDENT-leading) stays text per the parser's
+// rejection — that's the regression line tested in
+// `TestNLFunctionVariableDetection`.
+func TestDetector_PercentOfPartialIsCalc(t *testing.T) {
+	detector := NewDetector()
+
+	// Calc-shape: every form of percent-of, complete or in-flight.
+	calcCases := []string{
+		"5%",
+		"5% of",
+		"5% of 10",
+		"5% of revenue",
+		"x = 5% of 10",
+		"x = 10% of revenue",
+	}
+	for _, src := range calcCases {
+		t.Run("calc:"+src, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(src)
+			if err != nil {
+				t.Fatalf("DetectBlocks(%q) error: %v", src, err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block for %q, got %d", src, len(blocks))
+			}
+			if blocks[0].Type() != BlockCalculation {
+				t.Errorf("Expected calculation for %q, got %v", src, blocks[0].Type())
+			}
+		})
+	}
+
+	// Other unambiguous calc-shape leaders — pin the broader contract,
+	// not just `5% of`. Each line parser-rejects (incomplete) but
+	// MUST classify as calc because English prose never starts this
+	// way.
+	otherUnambiguous := []string{
+		"5K",       // NUMBER_K leading
+		"5 +",      // NUMBER + binary op (in-flight)
+		"(5",       // open paren
+		"= 5",      // anonymous calc
+		"$1k",      // currency leading
+		"-5 +",     // unary minus + in-flight
+	}
+	for _, src := range otherUnambiguous {
+		t.Run("calc:"+src, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(src)
+			if err != nil {
+				t.Fatalf("DetectBlocks(%q) error: %v", src, err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block for %q, got %d", src, len(blocks))
+			}
+			if blocks[0].Type() != BlockCalculation {
+				t.Errorf("Expected calculation for %q, got %v", src, blocks[0].Type())
+			}
+		})
+	}
+
+	// Regression-safety: NL-trigger English prose stays text. The
+	// IDENT-leading + parser-rejected combination is the prose
+	// signal; the fix narrows the parser-failure fallback to non-
+	// IDENT leaders so these stay classified correctly.
+	textCases := []string{
+		"Read more about this topic",
+		"Compress your files before uploading",
+		"Transfer money to your account",
+	}
+	for _, src := range textCases {
+		t.Run("text:"+src, func(t *testing.T) {
+			blocks, err := detector.DetectBlocks(src)
+			if err != nil {
+				t.Fatalf("DetectBlocks(%q) error: %v", src, err)
+			}
+			if len(blocks) != 1 {
+				t.Fatalf("Expected 1 block for %q, got %d", src, len(blocks))
+			}
+			if blocks[0].Type() != BlockText {
+				t.Errorf("Expected text for %q, got %v", src, blocks[0].Type())
+			}
+		})
+	}
+}
+
 // TestDirectiveReferenceDetection verifies that lines containing @directive
 // references are classified as calculations.
 func TestDirectiveReferenceDetection(t *testing.T) {

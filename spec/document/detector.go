@@ -394,36 +394,90 @@ func (d *Detector) isCalculationWithKnownNames(line string, knownNames map[strin
 		return false, nil
 	}
 
-	// Try to parse the line as a CalcMark expression/statement
-	// If parsing fails, it's text (markdown)
+	// Try to parse the line as a CalcMark expression/statement.
 	source := trimmed
 	if !strings.HasSuffix(source, "\n") {
 		source += "\n"
 	}
-	_, err := parser.Parse(source)
-	if err != nil {
-		// Parse error = not valid CalcMark syntax = treat as markdown
-		return false, nil
-	}
+	_, parseErr := parser.Parse(source)
 
-	// Successfully parsed - it's a valid calculation
-	// But we still need to check if it LOOKS like a calculation vs prose
-	// (e.g., "Hello" parses as an identifier but is likely prose)
-	// Use lexer-based heuristics for this final check
+	// Tokenize for the shape check below + the parser-failure fallback.
 	lex := lexer.NewLexer(trimmed)
-	tokens, err := lex.Tokenize()
-	if err != nil {
+	tokens, lexErr := lex.Tokenize()
+	if lexErr != nil {
+		// Lexer rejected the line — historically classified as text
+		// at the BLOCK level. Pre-existing tests (`octothorpe in
+		// calc expressions` etc.) depend on this behaviour: a calc
+		// line with a stray `#` lexes-error and stays as text. Don't
+		// add the LooksLikeCalculation fast paths here; they belong
+		// at the line-shape API for in-flight typing, not at block
+		// detection where the parser is the strict gate.
 		return false, nil
 	}
 
-	// Filter out NEWLINE tokens for analysis
 	meaningfulTokens := filterNonNewlineTokens(tokens)
 	if len(meaningfulTokens) == 0 {
 		return false, nil
 	}
 
-	// A valid calculation must have recognizable structure
+	if parseErr != nil {
+		// User-asked 2026-05-07: `5% of` mid-typing classified as
+		// text because the strict parser rejected the partial input.
+		// But `5% of <RHS>` is unambiguously calc-shape, so the user
+		// expects the editor to stay in calc context the whole way
+		// through.
+		//
+		// Trade-off: we can't fall through to `looksLikeCalculation`
+		// unconditionally — NL-trigger English prose like
+		// `Read more about this topic` lexes with `Read` as a
+		// recognised IDENT lead and would over-admit (regression
+		// against `TestNLFunctionVariableDetection`). The parser's
+		// rejection of those lines IS the right signal for prose
+		// disambiguation.
+		//
+		// Narrow the fall-through to leading shapes that English
+		// prose never starts with: number-shaped tokens (`5`, `5%`,
+		// `5K`), an opening paren, a leading `=` (anonymous calc),
+		// a unary minus, or a currency literal. IDENT-leading
+		// partial parses stay TEXT, preserving the prose
+		// classification path.
+		first := meaningfulTokens[0]
+		if isCalcUnambiguousLeader(first.Type) {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	// Parser succeeded — this is a well-formed calc statement. But
+	// `Hello` parses as a bare identifier; the token-shape check
+	// (`looksLikeCalculation`) is what filters those out as prose.
 	return d.looksLikeCalculation(meaningfulTokens, knownNames), nil
+}
+
+// isCalcUnambiguousLeader returns true when the given leading token
+// type is shape-only enough to admit a partial line as calc even when
+// the parser rejects it. Lines starting with these tokens are not
+// confusable with English prose.
+//
+// Used by `isCalculationWithKnownNames` to admit in-flight typing
+// like `5% of` (NUMBER_PERCENT lead) or `(1 + 2` (LPAREN lead) as
+// calc while keeping NL-trigger prose (`Read more...`) classified as
+// text per the parser's rejection.
+func isCalcUnambiguousLeader(t lexer.TokenType) bool {
+	if isNumberToken(t) {
+		return true
+	}
+	switch t {
+	case lexer.ASSIGN, // anonymous calc: `= expr`
+		lexer.LPAREN,       // parenthesised expression
+		lexer.AT_SIGN,      // directive reference
+		lexer.CURRENCY,     // ISO currency code: USD, EUR
+		lexer.CURRENCY_SYM, // currency symbol: $, €
+		lexer.QUANTITY,     // `5kg`, `100 USD` (lexer pre-folds)
+		lexer.MINUS:        // unary negation: `-5`
+		return true
+	}
+	return false
 }
 
 // filterNonNewlineTokens returns tokens excluding NEWLINE and EOF.
