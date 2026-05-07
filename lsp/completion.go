@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/CalcMark/go-calcmark/v2/spec/features"
 	"github.com/CalcMark/go-calcmark/v2/spec/lexer"
 	"github.com/CalcMark/go-calcmark/v2/spec/types"
@@ -47,9 +48,16 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	// Determine prefix (text before cursor on this line, back to last non-identifier char)
 	prefix := features.ExtractPrefix(lineText, col)
 
+	// Build the doc-scoped known-names set so the classifier can admit
+	// lines whose leading IDENT is a known variable (`revenue * 0.1`
+	// after `revenue = 1000` earlier). Built-in constants and frontmatter
+	// globals don't need to be in this set — they don't change the
+	// markdown-vs-calc classification, only what completions resolve to.
+	knownNames := snapshotKnownNames(snap)
+
 	// Tokenize the line up to the cursor to determine context.
 	// This replaces string heuristics with the real lexer.
-	ctx := classifyCompletionContext(lineText, col)
+	ctx := classifyCompletionContext(lineText, col, knownNames)
 
 	// Detect enclosing function call and active parameter position — used for
 	// enum completions and type-filtered variable completions below.
@@ -58,6 +66,15 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 	switch ctx {
 	case completionContextMarkdown:
 		return nil, nil
+
+	case completionContextInterpolation:
+		// Bug B (2026-05-06): cursor inside `{{ ... }}` in prose. Only
+		// variable references resolve here — surface those, nothing else.
+		// No required type filter (interpolation accepts any value).
+		if snap.Evaluator == nil {
+			return []protocol.CompletionItem{}, nil
+		}
+		return variableCompletionItems(snap, prefix, line, ""), nil
 
 	case completionContextAfterUnitKeyword:
 		// After "in" or "as" -> units + conversion keywords (napkin, precise)
@@ -188,18 +205,46 @@ const (
 	completionContextGeneral          completionContext = iota
 	completionContextAfterUnitKeyword                   // cursor is after "in" or "as"
 	completionContextMarkdown                           // line is markdown, suppress completions
+	// Cursor sits inside an open `{{ ... }}` interpolation in prose.
+	// The narrow contract: only variable references make sense here.
+	// No functions, no units, no dates. The result-pill / chip rendering
+	// machinery for embedded interpolation reads the same shape, so
+	// users can type `{{ pri` in prose and get `price`-style variable
+	// completions without surfacing the rest of the calc-language
+	// vocabulary alongside.
+	completionContextInterpolation
 )
+
+// detectorForCompletion is built once per process. The Detector is stateless
+// after construction (it just memoises lexer-trigger / IDENT-callable name
+// sets from the registry), so reusing one is safe across goroutines.
+var detectorForCompletion = document.NewDetector()
 
 // classifyCompletionContext tokenizes the line up to the cursor position and
 // determines the completion context from the token stream. This uses the real
 // lexer instead of string heuristics.
-func classifyCompletionContext(lineText string, col int) completionContext {
+//
+// `knownNames` is the doc-scoped set of identifiers assigned earlier in the
+// document. It lets us classify a leading-IDENT line like `revenue * 0.1`
+// as a calculation when `revenue` is a known variable, even though the
+// IDENT alone wouldn't admit it. Pass nil to apply the rule with no doc
+// context (treats every unknown leading IDENT as prose).
+func classifyCompletionContext(lineText string, col int, knownNames map[string]bool) completionContext {
 	// Truncate line to cursor position for tokenization
 	runes := []rune(lineText)
 	if col > len(runes) {
 		col = len(runes)
 	}
 	textBeforeCursor := string(runes[:col])
+
+	// Bug B (2026-05-06): cursor inside `{{ ... }}` opens a narrow
+	// completion context. The prose around the interpolation is markdown;
+	// only the slot between `{{` and `}}` accepts a variable reference.
+	// Detect first because the rest of the classifier walks lexer tokens
+	// that don't recognise `{{` / `}}` as anything special.
+	if insideInterpolation(textBeforeCursor) {
+		return completionContextInterpolation
+	}
 
 	// Try to tokenize. If the lexer produces no tokens, treat as markdown.
 	l := lexer.NewLexer(textBeforeCursor)
@@ -217,11 +262,11 @@ func classifyCompletionContext(lineText string, col int) completionContext {
 	}
 
 	if len(meaningful) == 0 {
-		// No tokens -> could be blank or pure prose
-		if isMarkdownLine(lineText) {
-			return completionContextMarkdown
-		}
-		return completionContextGeneral
+		// No tokens -> blank or pure prose. `isMarkdownLine` only
+		// catches explicit prefixes (#, >, -, *); falling through to
+		// general would surface unit / function completions on every
+		// blank line. Treat as markdown so the dropdown stays quiet.
+		return completionContextMarkdown
 	}
 
 	// Check if the line starts with a markdown prefix (headings, lists, blockquotes).
@@ -241,8 +286,6 @@ func classifyCompletionContext(lineText string, col int) completionContext {
 	if last.Type == lexer.IDENTIFIER && lastEndRune >= col {
 		if len(meaningful) >= 2 {
 			last = meaningful[len(meaningful)-2]
-		} else {
-			return completionContextGeneral
 		}
 	}
 
@@ -252,7 +295,79 @@ func classifyCompletionContext(lineText string, col int) completionContext {
 		return completionContextAfterUnitKeyword
 	}
 
+	// Bug B (2026-05-06): the line passed every "is this calc-shape?"
+	// heuristic above (no markdown prefix, has tokens, not after AS/IN),
+	// but it might still be plain prose like `some te` or `this is a
+	// sentence`. Run the detector's calc-vs-text token-shape classifier —
+	// same logic that decides whether a line lands in a calc block or a
+	// text block during normal block detection. If the detector says
+	// it's not calc, suppress completions.
+	//
+	// `knownNames` lets us admit lines whose leading IDENT is a known
+	// document variable (`revenue * 0.1` when `revenue` was assigned
+	// earlier). Without it, every IDENT-leading line that isn't a
+	// registered NL-trigger / function would classify as prose.
+	//
+	// We use `LooksLikeCalculation` (token-shape check) rather than
+	// `IsCalculationWithKnownNames` because the user is in-flight typing
+	// and the partial line — `accumulate(`, `compound 1000`,
+	// `revenue * ` — fails the strict parser even though it's
+	// unambiguously calc-shape. The token check is what `DetectBlocks`
+	// uses internally as its final classification step, so we get the
+	// same verdict without requiring full parser success.
+	if !detectorForCompletion.LooksLikeCalculation(lineText, knownNames) {
+		return completionContextMarkdown
+	}
+
 	return completionContextGeneral
+}
+
+// insideInterpolation returns true when `textBeforeCursor` ends inside an
+// open `{{ ... }}` group — i.e. there's a `{{` somewhere in the string and
+// no matching `}}` after it. Pure string scan, no tokenisation.
+//
+// Used to detect the variable-only completion context for prose like
+// `Hello {{ pri|`. Calc-block usage doesn't reach this helper (the
+// detector / parser handle calc lines first) so we don't worry about
+// `{{` appearing inside calc-source.
+func insideInterpolation(textBeforeCursor string) bool {
+	lastOpen := strings.LastIndex(textBeforeCursor, "{{")
+	if lastOpen == -1 {
+		return false
+	}
+	// If there's a `}}` between the last `{{` and the cursor, the
+	// interpolation already closed before we got here — back to prose.
+	if strings.Contains(textBeforeCursor[lastOpen+2:], "}}") {
+		return false
+	}
+	return true
+}
+
+// snapshotKnownNames returns the set of variable names defined anywhere in
+// the document, suitable for the calc-vs-text classifier in
+// `classifyCompletionContext`. Pure: builds a fresh map per call so the
+// caller can mutate it without affecting the snapshot.
+//
+// Built-in constants and frontmatter globals are intentionally included —
+// they're valid leading-IDENT references, so a line like `pi * radius`
+// should classify as calc even when the user hasn't assigned `pi` themselves.
+func snapshotKnownNames(snap *DocumentSnapshot) map[string]bool {
+	if snap == nil || snap.Evaluator == nil {
+		return nil
+	}
+	env := snap.Evaluator.GetEnvironment()
+	if env == nil {
+		return nil
+	}
+	all := env.GetAllVariables()
+	if len(all) == 0 {
+		return nil
+	}
+	out := make(map[string]bool, len(all))
+	for name := range all {
+		out[name] = true
+	}
+	return out
 }
 
 // runeCountStr returns the number of runes in s[:byteOffset].
