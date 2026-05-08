@@ -695,12 +695,12 @@ func TestDetector_PercentOfPartialIsCalc(t *testing.T) {
 	// MUST classify as calc because English prose never starts this
 	// way.
 	otherUnambiguous := []string{
-		"5K",       // NUMBER_K leading
-		"5 +",      // NUMBER + binary op (in-flight)
-		"(5",       // open paren
-		"= 5",      // anonymous calc
-		"$1k",      // currency leading
-		"-5 +",     // unary minus + in-flight
+		"5K",   // NUMBER_K leading
+		"5 +",  // NUMBER + binary op (in-flight)
+		"(5",   // open paren
+		"= 5",  // anonymous calc
+		"$1k",  // currency leading
+		"-5 +", // unary minus + in-flight
 	}
 	for _, src := range otherUnambiguous {
 		t.Run("calc:"+src, func(t *testing.T) {
@@ -789,11 +789,11 @@ func TestLooksLikeCalculation_InFlightDirectiveReference(t *testing.T) {
 	calcShape := []string{
 		"@scale",
 		"@globals",
-		"@globals.",            // in-flight: dot typed, field pending
-		"@globals.t",           // in-flight: prefix typed
-		"@globals.tax_rate",    // complete
+		"@globals.",         // in-flight: dot typed, field pending
+		"@globals.t",        // in-flight: prefix typed
+		"@globals.tax_rate", // complete
 		"@convert_to",
-		"x = @globals.",        // in-flight inside an assignment
+		"x = @globals.", // in-flight inside an assignment
 		"x = @globals.tax_rate",
 	}
 	for _, line := range calcShape {
@@ -810,15 +810,106 @@ func TestLooksLikeCalculation_InFlightDirectiveReference(t *testing.T) {
 	// is `@<letter>` only — see `isDirectiveLeadingShape`.
 	notCalcShape := []string{
 		"@",
-		"@ space",  // trailing space, no name
-		"@1",       // digit after @, not a directive
-		"@-",       // punctuation after @
+		"@ space", // trailing space, no name
+		"@1",      // digit after @, not a directive
+		"@-",      // punctuation after @
 		"some prose with @ symbol",
 	}
 	for _, line := range notCalcShape {
 		t.Run("not-calc:"+line, func(t *testing.T) {
 			if d.LooksLikeCalculation(line, nil) {
 				t.Errorf("LooksLikeCalculation(%q) = true, want false", line)
+			}
+		})
+	}
+}
+
+// TestLooksLikeCalculationForCompletion_BareFunctionPrefix — the LSP
+// completion provider needs to admit a single bare IDENTIFIER whose
+// value is the prefix of a registered IDENT-callable function name.
+// The strict classifier (`LooksLikeCalculation`) treats a single-IDENT
+// line as prose because that shape is also a common prose word — but
+// in the LSP context the user is typing the first character of a
+// function call and EXPECTS autocomplete on the very first keystroke
+// past the prefix length threshold.
+//
+// `LooksLikeCalculationForCompletion` returns true for everything
+// `LooksLikeCalculation` already does, PLUS the bare-function-prefix
+// case. Block-detection still uses the strict variant — this lenient
+// variant is for completion classification only.
+func TestLooksLikeCalculationForCompletion_BareFunctionPrefix(t *testing.T) {
+	d := NewDetector()
+
+	// Lines whose only token is an IDENT prefix of a registered
+	// function name. Every registered IDENT-callable function in the
+	// registry contributes — `compound`, `accumulate`, `compress`,
+	// etc. — so users get autocomplete from the first character.
+	functionPrefixes := []string{
+		"com",        // compound, compress, …
+		"comp",       // compound, compress
+		"compound",   // exact match
+		"acc",        // accumulate
+		"accumulate", // exact match
+	}
+	for _, line := range functionPrefixes {
+		t.Run("calc:"+line, func(t *testing.T) {
+			if !d.LooksLikeCalculationForCompletion(line, nil) {
+				t.Errorf("LooksLikeCalculationForCompletion(%q) = false, want true", line)
+			}
+		})
+	}
+
+	// Strict variant must still reject these — block detection cannot
+	// promote a single bare-IDENT line to a calc block. Only the
+	// completion classifier benefits from the lenient admit.
+	for _, line := range functionPrefixes {
+		t.Run("strict-still-rejects:"+line, func(t *testing.T) {
+			if d.LooksLikeCalculation(line, nil) {
+				t.Errorf("LooksLikeCalculation(%q) = true, want false (strict variant must stay conservative)", line)
+			}
+		})
+	}
+
+	// Lines that are NOT function-name prefixes — must still classify
+	// as not-calc even under the lenient variant. The lenient variant
+	// admits ONLY for shapes that match the registered function set;
+	// arbitrary words remain prose.
+	nonFunctionPrefixes := []string{
+		"alpha",   // not a function
+		"hello",   // not a function
+		"xyz",     // not a function
+		"some",    // not a function (multi-token "some te" was Bug B's case)
+		"qrandom", // not a function
+	}
+	for _, line := range nonFunctionPrefixes {
+		t.Run("not-calc:"+line, func(t *testing.T) {
+			if d.LooksLikeCalculationForCompletion(line, nil) {
+				t.Errorf("LooksLikeCalculationForCompletion(%q) = true, want false", line)
+			}
+		})
+	}
+
+	// Strict-variant admits flow through unchanged.
+	calcShape := []string{
+		"x = 5",
+		"5 + 3",
+		"@globals.tax",
+		"sum(1, 2, 3)",
+	}
+	for _, line := range calcShape {
+		t.Run("strict-calc-flows-through:"+line, func(t *testing.T) {
+			if !d.LooksLikeCalculationForCompletion(line, nil) {
+				t.Errorf("LooksLikeCalculationForCompletion(%q) = false, want true (strict variant admits)", line)
+			}
+		})
+	}
+
+	// Empty / whitespace-only lines remain non-calc.
+	empty := []string{"", "   ", "\t"}
+	for _, line := range empty {
+		t.Run("not-calc-empty:"+line, func(t *testing.T) {
+			if d.LooksLikeCalculationForCompletion(line, nil) {
+				t.Errorf("LooksLikeCalculationForCompletion(%q) = true, want false (empty)", line)
 			}
 		})
 	}

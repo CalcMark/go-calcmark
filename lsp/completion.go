@@ -269,7 +269,14 @@ func classifyCompletionContext(lineText string, col int, knownNames map[string]b
 		// fast paths for the cases the lexer rejects (`@<letter>`,
 		// lines containing a plain assignment `=`, …) and otherwise
 		// classifies as prose.
-		if detectorForCompletion.LooksLikeCalculation(lineText, knownNames) {
+		//
+		// Use the completion-lenient variant so a single bare IDENT
+		// that matches a registered function prefix (`com` for
+		// `compound`) admits as calc-shape. The strict variant
+		// classifies bare IDENTs as prose because that shape is
+		// also a common prose word — but in the LSP context the
+		// user is mid-typing a function call and expects autocomplete.
+		if detectorForCompletion.LooksLikeCalculationForCompletion(lineText, knownNames) {
 			return completionContextGeneral
 		}
 		return completionContextMarkdown
@@ -314,14 +321,18 @@ func classifyCompletionContext(lineText string, col int, knownNames map[string]b
 	// earlier). Without it, every IDENT-leading line that isn't a
 	// registered NL-trigger / function would classify as prose.
 	//
-	// We use `LooksLikeCalculation` (token-shape check) rather than
-	// `IsCalculationWithKnownNames` because the user is in-flight typing
+	// We use `LooksLikeCalculationForCompletion` (token-shape check
+	// with the function-prefix admit) rather than the strict
+	// `LooksLikeCalculation` because the user is in-flight typing
 	// and the partial line — `accumulate(`, `compound 1000`,
-	// `revenue * ` — fails the strict parser even though it's
-	// unambiguously calc-shape. The token check is what `DetectBlocks`
-	// uses internally as its final classification step, so we get the
-	// same verdict without requiring full parser success.
-	if !detectorForCompletion.LooksLikeCalculation(lineText, knownNames) {
+	// `revenue * `, or just bare `com` — fails the strict parser
+	// even though it's unambiguously calc-shape from the user's
+	// perspective. The strict variant rejects bare-IDENT lines as
+	// prose; the completion-lenient variant admits them when they
+	// match a registered function prefix, preserving block-detection
+	// safety while giving the user autocomplete on the first
+	// keystroke past the prefix length threshold.
+	if !detectorForCompletion.LooksLikeCalculationForCompletion(lineText, knownNames) {
 		return completionContextMarkdown
 	}
 

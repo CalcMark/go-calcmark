@@ -332,6 +332,81 @@ func (d *Detector) LooksLikeCalculation(lineText string, knownNames map[string]b
 	return d.looksLikeCalculation(meaningful, knownNames)
 }
 
+// LooksLikeCalculationForCompletion is the LSP-completion variant of
+// `LooksLikeCalculation`. It returns true for everything the strict
+// classifier already admits AND admits one extra shape: a single bare
+// IDENTIFIER whose value is a case-insensitive prefix of any
+// registered IDENT-callable function name (or NL trigger keyword).
+//
+// Why a separate method? `LooksLikeCalculation` is used by
+// `DetectBlocks` to decide whether a line in a document becomes a
+// calc block. A paragraph in prose containing the single word
+// `compound` on its own line should stay a text block — the strict
+// classifier's "single bare IDENT → prose" rule is correct there.
+//
+// But the LSP completion provider has the user typing in-flight: the
+// cursor sits at the end of `com` on a fresh line and the user
+// expects `compound` to autosuggest. The same conservative rule that
+// protects block detection silences autocomplete on the very first
+// character of a function name — the regression cmw flagged on
+// 2026-05-07. The lenient variant admits the bare-prefix case only
+// when the prefix matches the registered function-name set, so
+// arbitrary prose words like `alpha` or `hello` still classify as
+// markdown.
+//
+// Block-detection callers MUST keep using `LooksLikeCalculation`.
+// LSP completion classifiers SHOULD use this variant.
+func (d *Detector) LooksLikeCalculationForCompletion(lineText string, knownNames map[string]bool) bool {
+	if d.LooksLikeCalculation(lineText, knownNames) {
+		return true
+	}
+	trimmed := strings.TrimSpace(lineText)
+	if trimmed == "" {
+		return false
+	}
+	if hasIndentedCodePrefix(lineText) {
+		return false
+	}
+	if isMarkdownPattern(trimmed) {
+		return false
+	}
+	lex := lexer.NewLexer(trimmed)
+	tokens, err := lex.Tokenize()
+	if err != nil {
+		return false
+	}
+	meaningful := filterNonNewlineTokens(tokens)
+	if len(meaningful) != 1 {
+		return false
+	}
+	if meaningful[0].Type != lexer.IDENTIFIER {
+		return false
+	}
+	return d.matchesRecognisedIdentLeadPrefix(meaningful[0].Value)
+}
+
+// matchesRecognisedIdentLeadPrefix returns true when `prefix` is a
+// case-insensitive prefix of any registered IDENT-callable function
+// name or NL trigger keyword (the union held in
+// `recognisedIdentLeads`). Used by `LooksLikeCalculationForCompletion`
+// to admit the bare-IDENT-prefix completion case.
+//
+// Pure scan — no allocation in the hot path beyond what `strings.HasPrefix`
+// requires. The recognisedIdentLeads map is already lower-cased at
+// construction (`NewDetector`).
+func (d *Detector) matchesRecognisedIdentLeadPrefix(prefix string) bool {
+	if prefix == "" {
+		return false
+	}
+	lower := strings.ToLower(prefix)
+	for name := range d.recognisedIdentLeads {
+		if strings.HasPrefix(name, lower) {
+			return true
+		}
+	}
+	return false
+}
+
 // hasAssignmentEquals returns true when `s` contains a `=` that isn't part of
 // a comparison operator (`==`, `!=`, `<=`, `>=`). Used as a fast calc-admit
 // for in-flight typing where the lexer chokes — the presence of a plain `=`
