@@ -818,3 +818,50 @@ func TestBugB_AfterClosedInterpolationReturnsToProse(t *testing.T) {
 		t.Errorf("prose after closed interpolation surfaced completions: %v", labels)
 	}
 }
+
+// TestBareIdentPrefix_FreshCalcLine_SurfacesFunctionCompletions —
+// the user-flagged 2026-05-07 regression. v2.2.4 tightened the
+// completion classifier so a single-IDENT line like `com` on a
+// fresh line classified as prose and returned no completions. The
+// strict block-detector classifier intentionally rejects bare
+// IDENTs (so a paragraph with the word `compound` on a line stays
+// a text block), but the LSP completion path uses the lenient
+// `LooksLikeCalculationForCompletion` variant which admits a bare
+// IDENT when it matches a registered function-name prefix.
+//
+// Pins: source `x = 100\ncom`, cursor at end of `com` on line 1,
+// expect `compound` in the completion labels. If this test ever
+// fails, autocomplete on the first character of a function name
+// has regressed in the LSP.
+func TestBareIdentPrefix_FreshCalcLine_SurfacesFunctionCompletions(t *testing.T) {
+	source := "x = 100\ncom"
+	s, uri := prepareServerDoc(t, source)
+
+	// Line 1 (0-indexed): cursor at end of `com` — character 3.
+	items := completionAt(t, s, uri, 1, 3)
+
+	labels := itemLabels(items)
+	if !slices.Contains(labels, "compound") {
+		t.Fatalf("expected `compound` in completion labels for bare-IDENT prefix `com`; got %v", labels)
+	}
+}
+
+// TestBareIdentPrefix_NonFunctionWord_NoCompletions — the lenient
+// classifier admits ONLY bare IDENTs that match a registered
+// function-name prefix. Arbitrary prose words like `alpha` or
+// `xyz` do NOT trigger the admit, preserving the prose-protection
+// fix that v2.2.2 / v2.2.4 originally shipped.
+func TestBareIdentPrefix_NonFunctionWord_NoCompletions(t *testing.T) {
+	source := "x = 100\nalpha"
+	s, uri := prepareServerDoc(t, source)
+
+	// Line 1: cursor at end of `alpha` — character 5.
+	items := completionAt(t, s, uri, 1, 5)
+	if len(items) != 0 {
+		var labels []string
+		for _, it := range items {
+			labels = append(labels, it.Label)
+		}
+		t.Errorf("bare-IDENT non-function word surfaced completions; got labels=%v", labels)
+	}
+}

@@ -265,11 +265,22 @@ func TestClassifyCompletionContext(t *testing.T) {
 		{name: "after as space", line: "price as ", col: 9, want: completionContextAfterUnitKeyword},
 		{name: "after as typing napkin", line: "price as nap", col: 12, want: completionContextAfterUnitKeyword},
 		{name: "general assignment", line: "a = 1 + 1", col: 9, want: completionContextGeneral},
-		// "acc" alone — leading IDENT is `acc`, not in knownNames, not a registered
-		// NL trigger or IDENT-callable function. Per Bug B (2026-05-06), bare prose
-		// like this is now classified as markdown so the LSP doesn't drown the
-		// dropdown with units / functions. (Earlier: was completionContextGeneral.)
-		{name: "bare identifier prose", line: "acc", col: 3, want: completionContextMarkdown},
+		// "acc" alone — leading IDENT is `acc`, the prefix of registered
+		// IDENT-callable function `accumulate`. The completion-lenient
+		// classifier (`LooksLikeCalculationForCompletion`) admits this
+		// shape so the user gets autocomplete on the first character of
+		// a function name. The strict block-detector classifier still
+		// rejects bare IDENTs as prose — only the LSP completion path
+		// uses the lenient variant. (Earlier 2026-05-06: classified as
+		// markdown after Bug B; restored as general 2026-05-08 after
+		// the cmw user-flagged regression.)
+		{name: "bare identifier function prefix", line: "acc", col: 3, want: completionContextGeneral},
+		// "xyz" — single-IDENT line that does NOT match any registered
+		// function prefix. The lenient variant correctly rejects it
+		// because the admit gate is "matches a recognised IDENT lead",
+		// not "is any single IDENT". Arbitrary prose words stay
+		// markdown.
+		{name: "bare identifier non-function word", line: "xyz", col: 3, want: completionContextMarkdown},
 		{name: "markdown heading", line: "# Heading", col: 9, want: completionContextMarkdown},
 		{name: "markdown list", line: "- item", col: 6, want: completionContextMarkdown},
 		{name: "empty line", line: "", col: 0, want: completionContextMarkdown},
