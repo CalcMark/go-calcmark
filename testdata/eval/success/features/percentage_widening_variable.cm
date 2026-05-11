@@ -1,0 +1,43 @@
+# Percentage Widening on Variables
+# Regression lock for issue #83: a variable that holds a Number,
+# Currency, or unit-bearing Quantity must widen under `+ N%` / `- N%`
+# identically to the underlying literal.
+
+## Currency variable
+base = $100
+# Expected: $100.00
+base + 5%
+# Expected: $105.00
+base - 5%
+# Expected: $95.00
+
+## K-suffix variable
+test = 1K
+# Expected: 1000
+test + 5%
+# Expected: 1050
+test - 5%
+# Expected: 950
+
+## Unit-quantity variable
+mass = 500g
+# Expected: 500 g
+mass + 5%
+# Expected: 525 g
+mass - 5%
+# Expected: 475 g
+
+## EUR currency variable
+eur = 100 EUR
+# Expected: EUR100.00
+eur + 5%
+# Expected: EUR105.00
+eur - 5%
+# Expected: EUR95.00
+
+## Widened result stored in another variable
+price = $100
+marked_up = price + 5%
+# Expected: $105.00
+discounted = price - 5%
+# Expected: $95.00

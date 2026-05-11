@@ -66,3 +66,73 @@ func TestPercentageCalculations(t *testing.T) {
 		})
 	}
 }
+
+// TestPercentageWideningOnVariableRef covers issue #83: a variable that
+// holds a Number, Currency, or unit-bearing Quantity must widen under
+// `+ N%` / `- N%` identically to the underlying literal. Regression lock
+// for the user-asked patterns `base = $100; base + 5%` and `test = 1K;
+// test + 5%` so future refactors of the widening path cannot silently
+// regress identifier resolution before widening.
+func TestPercentageWideningOnVariableRef(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "currency variable + and - percent",
+			input:    "base = $100\nbase + 5%\nbase - 5%\n",
+			expected: []string{"$100.00", "$105.00", "$95.00"},
+		},
+		{
+			name:     "K-suffix variable + and - percent",
+			input:    "test = 1K\ntest + 5%\ntest - 5%\n",
+			expected: []string{"1000", "1050", "950"},
+		},
+		{
+			name:     "unit-quantity variable + and - percent",
+			input:    "x = 500g\nx + 5%\nx - 5%\n",
+			expected: []string{"500 g", "525 g", "475 g"},
+		},
+		{
+			name:     "EUR currency variable + and - percent",
+			input:    "y = 100 EUR\ny + 5%\ny - 5%\n",
+			expected: []string{"EUR100.00", "EUR105.00", "EUR95.00"},
+		},
+		{
+			name:     "bare number variable + and - percent",
+			input:    "n = 100\nn + 5%\nn - 5%\n",
+			expected: []string{"100", "105", "95"},
+		},
+		{
+			name:     "variable widened result assigned to another variable",
+			input:    "base = $100\nmarked_up = base + 5%\nmarked_up\n",
+			expected: []string{"$100.00", "$105.00", "$105.00"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+
+			interp := interpreter.NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+
+			if len(results) != len(tt.expected) {
+				t.Fatalf("expected %d results, got %d", len(tt.expected), len(results))
+			}
+
+			for i, want := range tt.expected {
+				if got := results[i].String(); got != want {
+					t.Errorf("results[%d] = %q, want %q", i, got, want)
+				}
+			}
+		})
+	}
+}
