@@ -243,6 +243,31 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		docLine += fm.LineCount()
 	}
 
+	// Cross-block markdown render (issue #129). Footnote references
+	// and their definitions can live in separate TextBlocks split by
+	// CalcBlocks. Per-block goldmark renders see only one side and
+	// leave the reference as literal `[^x]`. Render all text blocks
+	// as one markdown pass so footnote linkage survives, then map
+	// the per-block HTML back into the regular iteration below. The
+	// trailing footnotes section is appended to the last text block.
+	textBlocks := make([]*document.TextBlock, 0, len(blocks))
+	for _, n := range blocks {
+		if tb, ok := n.Block.(*document.TextBlock); ok {
+			textBlocks = append(textBlocks, tb)
+		}
+	}
+	joinedHTML, joinedTrailing, joinedOK := document.RenderTextBlocksJoined(textBlocks)
+	joinedHTMLByBlock := make(map[*document.TextBlock]string, len(textBlocks))
+	if joinedOK {
+		for i, tb := range textBlocks {
+			joinedHTMLByBlock[tb] = joinedHTML[i]
+		}
+		if joinedTrailing != "" && len(textBlocks) > 0 {
+			last := textBlocks[len(textBlocks)-1]
+			joinedHTMLByBlock[last] = strings.TrimSpace(joinedHTMLByBlock[last]) + "\n" + joinedTrailing
+		}
+	}
+
 	for _, node := range blocks {
 		tb := TemplateBlock{}
 		blockStartLine := docLine
@@ -289,9 +314,26 @@ func (f *HTMLFormatter) Format(w io.Writer, doc *document.Document, opts Options
 		case *document.TextBlock:
 			tb.Type = "text"
 			tb.DocLine = blockStartLine
-			// Call Render() to actively process markdown to HTML
-			renderedHTML := block.Render()
-			if renderedHTML == "" {
+			// Prefer the joined-render HTML when the joined pass
+			// succeeded (footnote references resolve to definitions
+			// in other text blocks). Empty HTML is a valid joined
+			// result — a block consisting only of `[^x]: definition`
+			// lines contributes nothing inline because goldmark
+			// extracts the definition into the trailing footnotes
+			// section. Fall back to per-block Render() only when
+			// the joined render couldn't split cleanly.
+			var renderedHTML string
+			joinedHTML, joined := joinedHTMLByBlock[block]
+			if joined {
+				renderedHTML = joinedHTML
+				// Post-process interpolation sentinels the joined
+				// renderer left in place (mirrors TextBlock.Render).
+				renderedHTML = strings.ReplaceAll(renderedHTML, "\x02", `<span class="cm-interpolated">`)
+				renderedHTML = strings.ReplaceAll(renderedHTML, "\x03", `</span>`)
+			} else {
+				renderedHTML = block.Render()
+			}
+			if renderedHTML == "" && !joined {
 				// Fallback: escape each source line to prevent XSS, then join with <br>
 				src := block.InterpolatedSource()
 				escaped := make([]string, len(src))

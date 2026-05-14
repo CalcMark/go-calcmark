@@ -366,3 +366,28 @@ func TestConvert_Embedded_Footnotes(t *testing.T) {
 		t.Error("expected footnote HTML elements in output")
 	}
 }
+
+// Cross-block footnote resolution (issue #129). Reference and
+// definition live in DIFFERENT text blocks split by a calc block in
+// the default (CM) flow; the reference must still resolve to a
+// clickable link rather than render as literal `[^note1]`.
+func TestConvert_CM_FootnotesAcrossCalcBlocks(t *testing.T) {
+	// CalcMark document shape: text block, then a calc block (a
+	// bare assignment line is one), then the footnote definition
+	// in a second text block.
+	input := "Reference here.[^note1]\n\nx = 42\n\n[^note1]: Cross-block footnote definition.\n"
+
+	result, err := Convert(input, Options{
+		Mode:   CM,
+		Format: "html",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(result, "[^note1]") {
+		t.Errorf("footnote ref unresolved — literal [^note1] in output:\n%s", result)
+	}
+	if !strings.Contains(result, "footnote") {
+		t.Errorf("expected a footnote section/backref in output:\n%s", result)
+	}
+}
