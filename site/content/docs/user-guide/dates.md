@@ -260,6 +260,42 @@ In editors that integrate the CalcMark LSP, typing `Q`, `FQ`, `FY`, `CY`, `end`,
 - `this fiscal quarter` — whichever fiscal quarter you are currently in
 - `next fiscal quarter` — the fiscal quarter after the current one
 
+### Period Conversion (`as`, `in`) {#period-conversion}
+
+Periods convert in two directions: to a duration in a time unit (`Q1 in days`), or to a period in a different basis (`Q1 as fiscal`).
+
+#### Period → Duration
+
+`<period> in <time-unit>` and `<period> as <time-unit>` both produce a Duration whose value is the period's day count, converted to the requested unit:
+
+```calcmark
+Q1 in days                    # → 90 days
+Q1 as weeks                   # → 12.86 weeks (90 / 7)
+this year in days             # → 365 days  (or 366 in a leap year)
+this fiscal year in days      # → 365 days  (requires fiscal_year_starts)
+```
+
+#### Period → Period (basis conversion)
+
+`<period> as fiscal` and `<period> as calendar` relabel a period in the other basis. Year-grain periods carry the numeric label across; quarter-grain periods preserve the date range and find the fiscal quarter (or calendar quarter) that contains the input's midpoint.
+
+```calcmark
+---
+fiscal_year_starts: July
+---
+CY2026 as fiscal              # → FY2026   (Jul 2025 – Jun 2026 under calendar_year_offset: before)
+FY2027 as calendar            # → CY2027   (Jan – Dec 2027)
+Q1 as fiscal                  # → FQ3 of FY2026 (Jan – Mar 2026 relabeled in fiscal terms)
+this year as fiscal           # → FY of the current year
+```
+
+- **Year-grain** (`CY ↔ FY`): label-match. The numeric label carries across so `CY2027` and `FY2027` share the user's "year 2027" mental model. The dates differ because fiscal and calendar years span different ranges, but the relabeling is intentional.
+- **Quarter-grain** (`Q ↔ FQ`): midpoint-contains. The input's date range is preserved; the conversion just expresses the same span in the other basis's labels.
+
+`as fiscal` requires `fiscal_year_starts` in frontmatter. Without it: *"fiscal basis requires a 'fiscal_year_starts' frontmatter key"*. `as calendar` always works — calendar boundaries don't depend on configuration.
+
+Other period kinds (months, weeks, named months, custom `between A and B`) don't have a canonical fiscal equivalent and error.
+
 ### Leap Year Handling {#leap-years}
 
 CalcMark delegates all calendar math to Go's `time` package for correct leap year handling:
