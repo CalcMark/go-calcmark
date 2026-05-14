@@ -1065,3 +1065,51 @@ func TestPeriodOperatorClassification(t *testing.T) {
 		})
 	}
 }
+
+// TestDetector_PerSyntaxRateConversion pins the classifier's verdict for
+// the NL form `<rate> per <period>` that desugars to `convert_rate`.
+// Every defined time-unit name (and its aliases) parses successfully
+// under the `name = <rate> per <period>` assignment shape. Variable /
+// duration-value RHS also parses (resolved at runtime), so even
+// unknown identifiers like `fortnight` classify as calc — the user
+// gets a clear runtime diagnostic instead of a silent fallback to
+// markdown.
+//
+// Lines are written in assignment form because the detector's
+// "single bare IDENT → prose" rule treats a bare leading identifier
+// like `a` as English prose unless an assignment `=` proves otherwise.
+func TestDetector_PerSyntaxRateConversion(t *testing.T) {
+	detector := NewDetector()
+
+	// Calc — every defined time unit (including quarter), aliases, and
+	// any bare-identifier RHS (deferred to runtime for variable / unit
+	// resolution).
+	calcCases := []string{
+		"b = a per second",
+		"b = a per minute",
+		"b = a per hour",
+		"b = a per day",
+		"b = a per week",
+		"b = a per month",
+		"b = a per quarter",
+		"b = a per year",
+		"b = a per daily",     // alias normalizes to day
+		"b = a per monthly",   // alias normalizes to month
+		"b = a per quarterly", // alias normalizes to quarter
+		"b = a per s",         // abbreviation
+		"b = a per fortnight", // unknown name → parses, runtime errors helpfully
+		"b = a per p",         // variable RHS resolved at runtime
+		"b = a per 1 day",     // duration literal RHS
+	}
+	for _, src := range calcCases {
+		t.Run("calc:"+src, func(t *testing.T) {
+			got, err := detector.IsCalculation(src)
+			if err != nil {
+				t.Fatalf("IsCalculation(%q): %v", src, err)
+			}
+			if !got {
+				t.Errorf("IsCalculation(%q) = false, want true (calc-shape `<rate> per <period>`)", src)
+			}
+		})
+	}
+}

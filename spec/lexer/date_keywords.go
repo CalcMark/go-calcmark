@@ -262,6 +262,10 @@ var TimeUnits = map[string]string{
 	"month":  "month",
 	"months": "month",
 
+	// Quarters
+	"quarter":  "quarter",
+	"quarters": "quarter",
+
 	// Years
 	"year":  "year",
 	"years": "year",

@@ -173,9 +173,8 @@ func evalAccumulateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 }
 
 func evalConvertRateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
-	// Second argument is an identifier (time unit), NOT evaluated
 	if len(f.Arguments) != 2 {
-		return nil, fmt.Errorf("convert_rate() requires exactly 2 arguments")
+		return nil, fmt.Errorf("convert_rate() requires exactly 2 arguments (rate, period); also accepts the NL form `<rate> per <period>`")
 	}
 
 	// Evaluate first argument (the rate)
@@ -189,13 +188,59 @@ func evalConvertRateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, 
 		return nil, fmt.Errorf("convert_rate() first argument must be a rate, got %T", rateVal)
 	}
 
-	// Extract second argument as identifier (time unit) WITHOUT evaluating
-	targetUnit, ok := f.Arguments[1].(*ast.Identifier)
-	if !ok {
-		return nil, fmt.Errorf("convert_rate() second argument must be a time unit identifier")
+	// Fast path: target is passed as a bare identifier whose name is
+	// already a recognized time unit (`convert_rate(r, day)` or the
+	// desugared `r per day`). Use the name directly so the runtime
+	// applies NormalizeTimeUnit on the canonical string. For an
+	// identifier whose name is NOT a time unit, try resolving it as
+	// a variable (supports `r per p` where `p = 1 day`) — if that
+	// lookup also fails, surface a single time-unit-context error so
+	// users see what's accepted instead of a bare "undefined variable".
+	if ident, ok := f.Arguments[1].(*ast.Identifier); ok {
+		if types.IsTimeUnit(ident.Name) {
+			return convertRateTimeUnit(rate, ident.Name)
+		}
+		target, evalErr := interp.evalNode(f.Arguments[1])
+		if evalErr != nil {
+			return nil, fmt.Errorf("%q is not a recognized time unit (valid: %s) or a defined variable; also accepted as `<rate> per <unit>`", ident.Name, validTimeUnitsList())
+		}
+		unit, err := extractTimeUnit(target)
+		if err != nil {
+			return nil, err
+		}
+		return convertRateTimeUnit(rate, unit)
 	}
 
-	return convertRateTimeUnit(rate, targetUnit.Name)
+	// Otherwise the NL form let the user write `r per <expr>` — evaluate
+	// and pull the time unit out of a Duration / Quantity value. The
+	// numerical magnitude is ignored: `r per 5 days` == `r per day`.
+	target, err := interp.evalNode(f.Arguments[1])
+	if err != nil {
+		return nil, err
+	}
+	unit, err := extractTimeUnit(target)
+	if err != nil {
+		return nil, err
+	}
+	return convertRateTimeUnit(rate, unit)
+}
+
+// extractTimeUnit pulls a canonical time-unit name from a runtime value
+// that stands in for the period in `<rate> per <period>`. Accepts a
+// Duration (canonical case) or a Quantity whose unit is a time unit.
+// Anything else returns a helpful error naming the NL syntax.
+func extractTimeUnit(v types.Type) (string, error) {
+	switch t := v.(type) {
+	case *types.Duration:
+		return t.Unit, nil
+	case *types.Quantity:
+		if types.IsTimeUnit(t.Unit) {
+			return t.Unit, nil
+		}
+		return "", fmt.Errorf("`per <period>` requires a duration (e.g. `1 day`) or a time-unit name; got a quantity in %q", t.Unit)
+	default:
+		return "", fmt.Errorf("`per <period>` requires a time-unit name (day, week, month, quarter, year, …) or a duration value; got %T", v)
+	}
 }
 
 func evalDowntimeFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {

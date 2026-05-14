@@ -326,7 +326,10 @@ func getFunctions() []Feature {
 				"Use the 'per' keyword as a natural-language synonym: " +
 				"d per year is equivalent to convert_rate(d, year). " +
 				"Works with literal rates (5 MB/s per minute) and variables holding rates (r per hour). " +
-				"Supports all time units including sub-second: nanosecond (ns), microsecond (μs/us), millisecond (ms).",
+				"The target period can also be a variable or duration literal: " +
+				"`p = 1 day; r per p` and `r per 1 day` both convert r to per-day. " +
+				"Supported units: second, minute, hour, day, week, month, quarter, year, " +
+				"and sub-second nanosecond (ns), microsecond (μs/us), millisecond (ms).",
 			Aliases: []Alias{
 				{Name: "per", Parseable: true, Example: "d per year"},
 			},

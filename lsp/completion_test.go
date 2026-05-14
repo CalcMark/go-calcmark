@@ -119,11 +119,13 @@ func TestEnumValueCompletions_CompressSecondArg(t *testing.T) {
 
 // TestEnumValueCompletions_ConvertRateTimeUnit asserts that convert_rate's
 // second arg now offers the canonical time unit names as enum completions.
+// Pinned against the full canonical list so adding a new unit (quarter,
+// fortnight, …) requires an explicit ack here.
 func TestEnumValueCompletions_ConvertRateTimeUnit(t *testing.T) {
 	ctx := argumentContext{funcName: "convert_rate", paramIdx: 1}
 	items := enumCompletionsForContext(ctx, "")
 	labels := itemLabels(items)
-	for _, want := range []string{"second", "minute", "hour", "day", "year"} {
+	for _, want := range []string{"second", "minute", "hour", "day", "week", "month", "quarter", "year"} {
 		if !slices.Contains(labels, want) {
 			t.Errorf("expected %q in convert_rate time_unit completions, got %v", want, labels)
 		}

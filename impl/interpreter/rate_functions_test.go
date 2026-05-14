@@ -1,8 +1,10 @@
 package interpreter
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/CalcMark/go-calcmark/v2/spec/parser"
 	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	"github.com/shopspring/decimal"
 )
@@ -577,4 +579,197 @@ func TestConvertRateTimeUnitExactPrecision(t *testing.T) {
 			})
 		}
 	})
+}
+
+// TestConvertRateTimeUnit_Quarter pins quarter rate-conversions.
+// Quarter is defined as 90 days (3 × month's 30-day approximation),
+// matching the existing month=30 / year=365 fudges so quarter-based
+// conversions stay consistent with month-based ones (4×90=360, like
+// 12×30=360 for months). Aliases (`quarters`, `quarterly`) normalize
+// to the same canonical form via timeUnitAliases.
+func TestConvertRateTimeUnit_Quarter(t *testing.T) {
+	tests := []struct {
+		name          string
+		rate          *types.Rate
+		targetUnit    string
+		expectedExact string
+	}{
+		{
+			// $100/month → per quarter: factor = 7,776,000 / 2,592,000 = 3
+			// 100 × 3 = 300/quarter
+			name: "$100/month to per quarter",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(100), Unit: "$"},
+				"month",
+			),
+			targetUnit:    "quarter",
+			expectedExact: "300",
+		},
+		{
+			// $100/quarter → per month: factor = 2,592,000 / 7,776,000 = 1/3
+			// 100 × (1/3) ≈ 33.333…
+			name: "$100/quarter to per month",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(100), Unit: "$"},
+				"quarter",
+			),
+			targetUnit:    "month",
+			expectedExact: "33.3333333333333333", // 16 fractional digits from decimal lib
+		},
+		{
+			// $90/day → per quarter: factor = 7,776,000 / 86,400 = 90
+			// 90 × 90 = 8100/quarter
+			name: "$90/day to per quarter",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(90), Unit: "$"},
+				"day",
+			),
+			targetUnit:    "quarter",
+			expectedExact: "8100",
+		},
+		{
+			// Alias: `quarterly` → quarter
+			name: "alias quarterly resolves to quarter",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(100), Unit: "$"},
+				"month",
+			),
+			targetUnit:    "quarterly",
+			expectedExact: "300",
+		},
+		{
+			// Alias: `quarters` → quarter
+			name: "alias quarters resolves to quarter",
+			rate: types.NewRate(
+				&types.Quantity{Value: decimal.NewFromInt(100), Unit: "$"},
+				"month",
+			),
+			targetUnit:    "quarters",
+			expectedExact: "300",
+		},
+	}
+
+	tolerance := decimal.NewFromFloat(1e-10)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := convertRateTimeUnit(tt.rate, tt.targetUnit)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			expected, _ := decimal.NewFromString(tt.expectedExact)
+			diff := result.Amount.Value.Sub(expected).Abs()
+			if diff.GreaterThan(tolerance) {
+				t.Errorf("Expected ~%s, got %s (diff %s)",
+					tt.expectedExact, result.Amount.Value.String(), diff.String())
+			}
+		})
+	}
+}
+
+// TestConvertRate_PerWithVariableOrDurationRHS exercises the NL form
+// `<rate> per <period>` where the period is either a variable (resolved
+// at runtime to a Duration) or a duration literal. The unit name is
+// extracted from the value; the numerical magnitude is ignored, so
+// `a per 5 days` and `a per 1 day` produce the same per-day target.
+func TestConvertRate_PerWithVariableOrDurationRHS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string // substring expected in last result's String()
+	}{
+		{
+			name:     "rate var per duration var (day)",
+			input:    "p = 1 day\na = $100/week\na per p\n",
+			expected: "/day",
+		},
+		{
+			name:     "rate var per duration literal (day)",
+			input:    "a = $100/week\na per 1 day\n",
+			expected: "/day",
+		},
+		{
+			name:     "magnitude ignored: per 5 days == per day",
+			input:    "a = $100/week\na per 5 days\n",
+			expected: "/day",
+		},
+		{
+			name:     "rate-literal LHS per duration var",
+			input:    "p = 1 hour\n($60/day) per p\n",
+			expected: "/h", // display abbreviates "hour" → "h"
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+			if len(results) == 0 {
+				t.Fatal("No results")
+			}
+			last := results[len(results)-1].String()
+			if !strings.Contains(last, tt.expected) {
+				t.Errorf("Last result %q does not contain %q", last, tt.expected)
+			}
+		})
+	}
+}
+
+// TestConvertRate_PerErrorMessages pins helpful diagnostics for the
+// failure modes of the NL `per` syntax. Both convert_rate() and the
+// `per` desugaring share the same error path, so the error message
+// must (a) name the bad input, (b) list valid time units, and
+// (c) mention the NL synonym so users know they can write either
+// form.
+func TestConvertRate_PerErrorMessages(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantPart []string
+	}{
+		{
+			name:     "unknown bare time unit via function call",
+			input:    "convert_rate(100/day, fortnight)\n",
+			wantPart: []string{"fortnight", "day", "quarter"},
+		},
+		{
+			name:     "non-duration variable as period",
+			input:    "p = 5\na = $100/week\na per p\n",
+			wantPart: []string{"per", "duration"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				// Some inputs are expected to be rejected at parse time.
+				// Check that the message is helpful.
+				msg := err.Error()
+				for _, want := range tt.wantPart {
+					if !strings.Contains(strings.ToLower(msg), strings.ToLower(want)) {
+						t.Errorf("Parse error %q missing %q", msg, want)
+					}
+				}
+				return
+			}
+			interp := NewInterpreter()
+			_, err = interp.Eval(nodes)
+			if err == nil {
+				t.Fatal("Expected error, got none")
+			}
+			msg := err.Error()
+			for _, want := range tt.wantPart {
+				if !strings.Contains(strings.ToLower(msg), strings.ToLower(want)) {
+					t.Errorf("Error %q missing expected substring %q", msg, want)
+				}
+			}
+		})
+	}
 }

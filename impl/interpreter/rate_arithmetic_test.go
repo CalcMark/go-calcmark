@@ -16,7 +16,7 @@ import (
 // only exact-string matches succeed.
 
 func TestCategoryOf_TimeUnits(t *testing.T) {
-	cases := []string{"second", "minute", "hour", "day", "week", "month", "year"}
+	cases := []string{"second", "minute", "hour", "day", "week", "month", "quarter", "year"}
 	for _, u := range cases {
 		t.Run(u, func(t *testing.T) {
 			if got := categoryOf(u); got != "time" {

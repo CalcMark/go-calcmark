@@ -208,7 +208,21 @@ func TestIdentifierPerDesugarsToConvertRate(t *testing.T) {
 			input:      "rate per month\n",
 			targetUnit: "month",
 		},
+		{
+			name:       "identifier per quarter",
+			input:      "rate per quarter\n",
+			targetUnit: "quarter",
+		},
+		{
+			name:       "identifier per quarterly (alias)",
+			input:      "rate per quarterly\n",
+			targetUnit: "quarterly",
+		},
 	}
+
+	// Sanity: when RHS is also a bare identifier (potentially a variable),
+	// the parser still emits convert_rate; runtime decides validity.
+	// Covered by TestIdentifierPerAcceptsVariableOrDurationRHS below.
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -255,6 +269,115 @@ func TestIdentifierPerDesugarsToConvertRate(t *testing.T) {
 
 // TestLiteralPerStillCreatesRate ensures that literal expressions with per
 // still create RateLiterals (not convert_rate calls).
+// TestIdentifierPerAcceptsVariableOrDurationRHS extends the NL form
+// `<rate> per <period>` so the period can be a variable name (resolved
+// at runtime to a Duration) or a duration literal. Both cases desugar
+// to convert_rate with the RHS expression passed as-is — the runtime
+// inspects the value to extract the time unit.
+//
+// Bare time-unit identifiers (covered by TestIdentifierPerDesugarsToConvertRate)
+// still take the fast path: RHS is an Identifier node with the unit name.
+func TestIdentifierPerAcceptsVariableOrDurationRHS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		checkRHS func(t *testing.T, rhs ast.Node)
+	}{
+		{
+			name:  "rate variable per variable (runtime resolves)",
+			input: "a per p\n",
+			checkRHS: func(t *testing.T, rhs ast.Node) {
+				ident, ok := rhs.(*ast.Identifier)
+				if !ok {
+					t.Fatalf("Expected Identifier, got %T", rhs)
+				}
+				if ident.Name != "p" {
+					t.Errorf("Expected ident 'p', got %q", ident.Name)
+				}
+			},
+		},
+		{
+			name:  "rate variable per duration literal",
+			input: "a per 1 day\n",
+			checkRHS: func(t *testing.T, rhs ast.Node) {
+				dur, ok := rhs.(*ast.DurationLiteral)
+				if !ok {
+					t.Fatalf("Expected DurationLiteral, got %T", rhs)
+				}
+				if dur.Unit != "day" && dur.Unit != "days" {
+					t.Errorf("Expected unit day/days, got %q", dur.Unit)
+				}
+			},
+		},
+		{
+			name:  "rate variable per multi-day duration literal",
+			input: "a per 5 days\n",
+			checkRHS: func(t *testing.T, rhs ast.Node) {
+				dur, ok := rhs.(*ast.DurationLiteral)
+				if !ok {
+					t.Fatalf("Expected DurationLiteral, got %T", rhs)
+				}
+				if dur.Unit != "days" && dur.Unit != "day" {
+					t.Errorf("Expected unit day/days, got %q", dur.Unit)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
+			}
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+			fc, ok := nodes[0].(*ast.FunctionCall)
+			if !ok {
+				t.Fatalf("Expected FunctionCall (convert_rate), got %T", nodes[0])
+			}
+			if fc.Name != "convert_rate" {
+				t.Errorf("Expected convert_rate, got %q", fc.Name)
+			}
+			if len(fc.Arguments) != 2 {
+				t.Fatalf("Expected 2 args, got %d", len(fc.Arguments))
+			}
+			tt.checkRHS(t, fc.Arguments[1])
+		})
+	}
+}
+
+// TestRateLiteralPerAcceptsVariableOrDurationRHS pins the same behavior
+// for the rate-literal LHS path: `(5/day) per p`, `(5/day) per 1 hour`.
+func TestRateLiteralPerAcceptsVariableOrDurationRHS(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"rate-literal per variable", "(5/day) per p\n"},
+		{"rate-literal per duration", "(5/day) per 1 hour\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Unexpected parse error: %v", err)
+			}
+			if len(nodes) != 1 {
+				t.Fatalf("Expected 1 node, got %d", len(nodes))
+			}
+			fc, ok := nodes[0].(*ast.FunctionCall)
+			if !ok {
+				t.Fatalf("Expected FunctionCall (convert_rate), got %T", nodes[0])
+			}
+			if fc.Name != "convert_rate" {
+				t.Errorf("Expected convert_rate, got %q", fc.Name)
+			}
+		})
+	}
+}
+
 func TestLiteralPerStillCreatesRate(t *testing.T) {
 	tests := []struct {
 		name  string

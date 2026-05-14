@@ -91,29 +91,31 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	// But skip if left is already a RateLiteral (from slash syntax)
 	if _, isRate := left.(*ast.RateLiteral); !isRate {
 		if p.match(lexer.PER) {
+			// When LHS is an Identifier (potentially a rate variable),
+			// `<rate> per <period>` desugars to convert_rate(rate, period).
+			// The period can be a bare time-unit identifier (fast path),
+			// a variable holding a Duration, or a duration literal — runtime
+			// extracts the unit. Anything else is rate creation, which still
+			// requires a bare time-unit identifier.
+			if _, isIdent := left.(*ast.Identifier); isIdent {
+				rhs, err := p.parsePerRHS(left.GetRange())
+				if err != nil {
+					return nil, err
+				}
+				return &ast.FunctionCall{
+					Name:      "convert_rate",
+					Arguments: []ast.Node{left, rhs},
+					Range:     left.GetRange(),
+				}, nil
+			}
+
+			// Rate creation: `5 GB per day`. RHS must be a bare time unit.
 			if !p.match(lexer.IDENTIFIER) {
 				return nil, p.error("expected time unit after 'per'")
 			}
 			timeUnit := string(p.previous().Value)
-
-			// Validate it's a time unit
 			if !isTimeUnit(timeUnit) {
-				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit", timeUnit))
-			}
-
-			// If left is an identifier, desugar to convert_rate(identifier, time_unit).
-			// Variables holding rates should be converted, not used as rate amounts.
-			// Example: d = 10 dogs/day; y = d per year → convert_rate(d, year)
-			if _, isIdent := left.(*ast.Identifier); isIdent {
-				targetNode := &ast.Identifier{
-					Name:  timeUnit,
-					Range: left.GetRange(),
-				}
-				return &ast.FunctionCall{
-					Name:      "convert_rate",
-					Arguments: []ast.Node{left, targetNode},
-					Range:     left.GetRange(),
-				}, nil
+				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit (try %s, or use `<rate> per <unit>` for conversion)", timeUnit, joinedTimeUnits()))
 			}
 
 			left = &ast.RateLiteral{
@@ -146,29 +148,19 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	}
 
 	// Check for "per" after a rate (conversion context)
-	// Example: "(100 MB/day) per second" - converts existing rate
+	// Example: "(100 MB/day) per second" — converts existing rate.
+	// Same NL contract as the Identifier-LHS branch above: the period
+	// can be a bare time-unit identifier, a Duration variable, or a
+	// duration literal.
 	if _, isRate := left.(*ast.RateLiteral); isRate {
 		if p.match(lexer.PER) {
-			if !p.match(lexer.IDENTIFIER) {
-				return nil, p.error("expected time unit after 'per' for rate conversion")
+			rhs, err := p.parsePerRHS(left.GetRange())
+			if err != nil {
+				return nil, err
 			}
-			targetUnit := string(p.previous().Value)
-
-			// Validate it's a time unit
-			if !isTimeUnit(targetUnit) {
-				return nil, p.error(fmt.Sprintf("'%s' is not a valid time unit for conversion", targetUnit))
-			}
-
-			// Create function call: convert_rate(rate, target_unit)
-			// Pass target unit as an identifier node
-			targetNode := &ast.Identifier{
-				Name:  targetUnit,
-				Range: left.GetRange(),
-			}
-
 			return &ast.FunctionCall{
 				Name:      "convert_rate",
-				Arguments: []ast.Node{left, targetNode},
+				Arguments: []ast.Node{left, rhs},
 				Range:     left.GetRange(),
 			}, nil
 		}
@@ -348,4 +340,42 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 	}
 
 	return left, nil
+}
+
+// parsePerRHS parses the right-hand side of the NL `<rate> per <period>`
+// conversion form. The fast path is a bare time-unit identifier
+// (`day`, `quarter`, `s`) — returned as an Identifier node so the
+// interpreter treats the name as the target unit.
+//
+// Otherwise the RHS is parsed as a full expression (parseExponent) so a
+// variable holding a Duration or a duration literal like `1 day` can
+// stand in for the period. The runtime extracts the unit from the
+// evaluated value; the numerical magnitude is ignored.
+//
+// fallbackRange is used as the Range for the synthesized Identifier
+// when we take the fast path.
+func (p *RecursiveDescentParser) parsePerRHS(fallbackRange *ast.Range) (ast.Node, error) {
+	// Fast path: bare IDENTIFIER that's a recognized time unit.
+	if p.check(lexer.IDENTIFIER) {
+		name := string(p.peek().Value)
+		if isTimeUnit(name) {
+			p.advance()
+			return &ast.Identifier{
+				Name:  name,
+				Range: fallbackRange,
+			}, nil
+		}
+	}
+	// Defer to runtime — RHS can be a Duration variable, a duration
+	// literal, or an unknown identifier that the interpreter will
+	// report cleanly.
+	return p.parseExponent()
+}
+
+// joinedTimeUnits returns the comma-separated canonical time-unit list
+// used in parse-time diagnostics so users see what's accepted after
+// `per`. Kept here (rather than in the identifiers package) so the
+// parser package stays free of an interpreter-layer dependency.
+func joinedTimeUnits() string {
+	return "second, minute, hour, day, week, month, quarter, year"
 }

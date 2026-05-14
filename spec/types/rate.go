@@ -200,6 +200,7 @@ var timeUnitAbbrevs = map[string]string{
 	"day":         "day",
 	"week":        "week",
 	"month":       "month",
+	"quarter":     "quarter",
 	"year":        "year",
 }
 

@@ -944,7 +944,7 @@ func isNaturalSyntaxKeyword(ident string) bool {
 }
 
 // isTimeUnit checks if a string is a valid time unit for rate expressions.
-// Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), year(s), and abbreviations.
+// Valid units: second(s), minute(s), hour(s), day(s), week(s), month(s), quarter(s), year(s), and abbreviations.
 // Uses types.NormalizeTimeUnit as the source of truth for time unit recognition.
 func isTimeUnit(unit string) bool {
 	normalized := types.NormalizeTimeUnit(unit)
@@ -952,7 +952,7 @@ func isTimeUnit(unit string) bool {
 	// but returns a canonical form (second, minute, etc.) if recognized.
 	// If the output matches one of the canonical forms, it's a time unit.
 	switch normalized {
-	case "nanosecond", "microsecond", "millisecond", "second", "minute", "hour", "day", "week", "month", "year":
+	case "nanosecond", "microsecond", "millisecond", "second", "minute", "hour", "day", "week", "month", "quarter", "year":
 		return true
 	default:
 		return false

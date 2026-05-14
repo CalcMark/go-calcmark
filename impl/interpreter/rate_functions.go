@@ -3,9 +3,22 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/CalcMark/go-calcmark/v2/spec/identifiers"
 	"github.com/CalcMark/go-calcmark/v2/spec/types"
 	"github.com/shopspring/decimal"
 )
+
+// validTimeUnitsList returns a comma-separated list of canonical time
+// units accepted by convert_rate / the NL `per` form, for use in
+// diagnostics. Skips sub-second units to keep the suggestion list
+// focused on the periods most users actually want.
+func validTimeUnitsList() string {
+	units := []string{"second", "minute", "hour", "day", "week", "month", "quarter", "year"}
+	// Sanity-check against the canonical TimeUnits list so divergence
+	// shows up in tests rather than slipping past.
+	_ = identifiers.TimeUnits
+	return identifiers.JoinNames(units)
+}
 
 // accumulateRate calculates the total from a rate over a time period.
 // When the rate's unit is a currency symbol or code, returns *types.Currency.
@@ -70,12 +83,12 @@ func convertRateTimeUnit(rate *types.Rate, targetUnit string) (*types.Rate, erro
 	// Get seconds for both units
 	sourceSeconds, err := types.TimeUnitToSeconds(rate.PerUnit)
 	if err != nil {
-		return nil, fmt.Errorf("invalid source time unit: %w", err)
+		return nil, fmt.Errorf("invalid source time unit %q: valid units are %s — also accepted as `<rate> per <unit>`", rate.PerUnit, validTimeUnitsList())
 	}
 
 	targetSeconds, err := types.TimeUnitToSeconds(targetUnit)
 	if err != nil {
-		return nil, fmt.Errorf("invalid target time unit: %w", err)
+		return nil, fmt.Errorf("invalid target time unit %q: valid units are %s — also accepted as `<rate> per <unit>`", targetUnit, validTimeUnitsList())
 	}
 
 	// Calculate conversion factor using multiplication to avoid precision loss.

@@ -13,23 +13,25 @@ type Duration struct {
 	Unit  string // "days", "hours", "minutes", "seconds", "weeks", "months", "years"
 }
 
-// DurationToSeconds provides conversion factors to seconds (approximate for months/years).
+// DurationToSeconds provides conversion factors to seconds (approximate for months/years/quarters).
 // Uses int64 for whole-second units. Milliseconds are handled separately in conversion functions.
 var DurationToSeconds = map[string]int64{
-	"second":  1,
-	"seconds": 1,
-	"minute":  60,
-	"minutes": 60,
-	"hour":    3600,
-	"hours":   3600,
-	"day":     86400,
-	"days":    86400,
-	"week":    604800,
-	"weeks":   604800,
-	"month":   2592000,  // 30 days
-	"months":  2592000,  // 30 days
-	"year":    31536000, // 365 days
-	"years":   31536000, // 365 days
+	"second":   1,
+	"seconds":  1,
+	"minute":   60,
+	"minutes":  60,
+	"hour":     3600,
+	"hours":    3600,
+	"day":      86400,
+	"days":     86400,
+	"week":     604800,
+	"weeks":    604800,
+	"month":    2592000, // 30 days
+	"months":   2592000, // 30 days
+	"quarter":  7776000, // 3 × month (90 days), keeping month-aligned approximation
+	"quarters": 7776000,
+	"year":     31536000, // 365 days
+	"years":    31536000, // 365 days
 }
 
 // durationToSecondsDecimal provides decimal conversion factors including sub-second units.
@@ -52,6 +54,8 @@ var durationToSecondsDecimal = map[string]decimal.Decimal{
 	"weeks":        decimal.NewFromInt(604800),
 	"month":        decimal.NewFromInt(2592000),
 	"months":       decimal.NewFromInt(2592000),
+	"quarter":      decimal.NewFromInt(7776000),
+	"quarters":     decimal.NewFromInt(7776000),
 	"year":         decimal.NewFromInt(31536000),
 	"years":        decimal.NewFromInt(31536000),
 }
