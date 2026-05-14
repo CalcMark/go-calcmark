@@ -316,18 +316,6 @@ func wrapEmbeddedHTML(htmlContent string, templateContent string) (string, error
 	return buf.String(), nil
 }
 
-// localeFormatter builds a display.Formatter from a BCP 47 locale string.
-func localeFormatter(locale string) display.Formatter {
-	if locale == "" {
-		return display.DefaultFormatter()
-	}
-	cfg, err := display.NewConfig(locale)
-	if err != nil {
-		return display.DefaultFormatter()
-	}
-	return display.NewFormatter(cfg)
-}
-
 // localeFormatterWithFormats is the localeFormatter overload that
 // also threads the user-configurable date format DSL strings into
 // the resulting Formatter. Used by Convert when the Options carry

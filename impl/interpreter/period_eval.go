@@ -98,25 +98,6 @@ func relativeYearPeriod(now time.Time, direction int) *types.Period {
 	return p
 }
 
-// namedMonthPeriod constructs the Period for a `this/next/last
-// <named-month>` form, resolved relative to `now`. Mirrors the
-// existing resolveMonthExpression Date-based logic. Direction
-// applies in years: `this April` = the April most natural relative
-// to now (the upcoming or past nearest one); `next April` = next
-// year's April; `last April` = previous year's April.
-//
-// The "this" rule matches resolveMonthExpression: when the named
-// month equals `now`'s month, return that month. Otherwise return
-// the month in `now`'s calendar year (e.g., `this April` from
-// July returns April of this year).
-func namedMonthPeriod(month time.Month, now time.Time, direction int) *types.Period {
-	year := now.Year() + direction
-	p := types.NewCalendarMonth(year, month)
-	p.Kind = types.PeriodNamedMonth
-	p.Direction = direction
-	return p
-}
-
 // evalBetweenExpr evaluates `between A and B` / `from A to B` to a
 // *types.Period (PeriodCustom kind). Both endpoints must evaluate
 // to a Date (or a Period that narrows to its Start). Errors when

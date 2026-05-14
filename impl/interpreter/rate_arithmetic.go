@@ -379,31 +379,6 @@ func isTimeUnit(s string) bool {
 	return categoryOf(s) == "time"
 }
 
-// convertTimeValue is a backwards-compatible alias for
-// `convertWithinCategory` retained while U2 is in flight. Once the
-// cancellation engine is fully generalised, callers will be moved
-// onto `convertWithinCategory` directly and this shim removed.
-func convertTimeValue(value decimal.Decimal, fromUnit, toUnit string) (decimal.Decimal, error) {
-	return convertWithinCategory(value, fromUnit, toUnit)
-}
-
-// isCurrencyCode reports whether s appears as an ISO currency code
-// in the SymbolToCode map (e.g. "USD"). Symbols like "$" are matched
-// directly by membership; codes are matched via the values side.
-//
-// Retained as a thin local helper. The result-construction path
-// in `rateNumeratorAsResult` uses `types.IsCurrencyCode` directly
-// for completeness; this local helper is preserved as a back-compat
-// shim for any historical callers.
-func isCurrencyCode(s string) bool {
-	for _, code := range types.SymbolToCode {
-		if code == s {
-			return true
-		}
-	}
-	return false
-}
-
 // coerceSpeedQuantityToRate widens a Speed-shaped Quantity into the
 // Rate it represents (e.g. `60 mph` → `Rate{60 mi, hour}`). Returns
 // (nil, false) when the quantity's unit isn't a recognised Speed
@@ -449,8 +424,8 @@ func rateMismatchError(left *types.Rate, right types.Type) error {
 	// the same dimension (currency).
 	if _, ok := right.(*types.Currency); ok {
 		return fmt.Errorf(
-			"cannot multiply rate (%s) by currency (%s): multiplying two currencies has no meaningful unit. "+
-				"To accumulate a rate over time, multiply by a duration that cancels the rate's denominator instead.",
+			"cannot multiply rate (%s) by currency (%s): multiplying two currencies has no meaningful unit; "+
+				"to accumulate a rate over time, multiply by a duration that cancels the rate's denominator instead",
 			left, formatTypeForError(right))
 	}
 
@@ -475,7 +450,7 @@ func rateMismatchError(left *types.Rate, right types.Type) error {
 	rightCatPhrase := categoryPhrase(rightUnit, rightCat)
 
 	return fmt.Errorf(
-		"cannot multiply rate (%s) by %s: %s, but %s. No shared dimension to cancel.",
+		"cannot multiply rate (%s) by %s: %s, but %s — no shared dimension to cancel",
 		left, formatTypeForError(right), leftCatPhrase, rightCatPhrase)
 }
 

@@ -38,26 +38,6 @@ func linearGrow(startingAmount, increment, periods decimal.Decimal) decimal.Deci
 	return startingAmount.Add(increment.Mul(periods))
 }
 
-// --- Value extraction helpers ---
-
-// extractDecimalValue extracts the decimal value from any CalcMark type.
-func extractDecimalValue(val types.Type) (decimal.Decimal, error) {
-	switch v := val.(type) {
-	case *types.Number:
-		return v.Value, nil
-	case *types.Currency:
-		return v.Value, nil
-	case *types.Quantity:
-		return v.Value, nil
-	case *types.Duration:
-		return v.Value, nil
-	case *types.Percentage:
-		return v.Value, nil
-	default:
-		return decZero, fmt.Errorf("cannot extract numeric value from %T", val)
-	}
-}
-
 // requireAdditiveValue rejects types that can't sit in an additive
 // expression like `amount + (increment × periods)`. Percentage, Rate,
 // and Duration are out — silently coercing them to decimals produces

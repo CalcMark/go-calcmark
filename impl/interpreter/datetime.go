@@ -233,14 +233,6 @@ func fiscalYearLabel(now time.Time, fyStartMonth time.Month, fyStartDay int, mod
 	return startYear
 }
 
-// fiscalYear returns the calendar year in which the fiscal year begins (month-only, day=1).
-func fiscalYear(calYear int, calMonth, fyStartMonth time.Month) int {
-	if calMonth >= fyStartMonth {
-		return calYear
-	}
-	return calYear - 1
-}
-
 // fiscalYearWithDay returns the calendar year in which the fiscal year begins,
 // accounting for a non-first-of-month start day.
 func fiscalYearWithDay(now time.Time, fyStartMonth time.Month, fyStartDay int) int {
@@ -249,26 +241,6 @@ func fiscalYearWithDay(now time.Time, fyStartMonth time.Month, fyStartDay int) i
 		return now.Year() - 1
 	}
 	return now.Year()
-}
-
-// fiscalQuarterStart returns the year and month of the first day of the
-// current fiscal quarter.
-func fiscalQuarterStart(calYear int, calMonth, fyStartMonth time.Month) (int, time.Month) {
-	// Calculate months since fiscal year start
-	fy := fiscalYear(calYear, calMonth, fyStartMonth)
-	monthsSinceFYStart := (calYear-fy)*12 + int(calMonth) - int(fyStartMonth)
-	if monthsSinceFYStart < 0 {
-		monthsSinceFYStart += 12
-	}
-	quarterIndex := monthsSinceFYStart / 3
-	quarterStartMonth := time.Month(int(fyStartMonth) + quarterIndex*3)
-	quarterStartYear := fy
-	// Normalize if month > 12
-	for quarterStartMonth > 12 {
-		quarterStartMonth -= 12
-		quarterStartYear++
-	}
-	return quarterStartYear, quarterStartMonth
 }
 
 // evalNotation handles Q:N, FQ:N, FY:YYYY, CY:YYYY notation.
@@ -391,12 +363,6 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 	}
 
 	return nil, nil
-}
-
-// calendarQuarterStart returns the first month of the calendar quarter containing m.
-// Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct.
-func calendarQuarterStart(m time.Month) time.Month {
-	return time.Month((int(m)-1)/3*3 + 1)
 }
 
 // canonicalMonths maps lowercase month names/abbreviations to time.Month.

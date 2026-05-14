@@ -153,18 +153,6 @@ func hasLeadingFrontmatter(text string) bool {
 	return strings.HasPrefix(text, "---\n") || strings.HasPrefix(text, "---\r\n")
 }
 
-// projectSegment turns one embedded.Segment into one specDoc.Block.
-// Fence segments project as CalcBlocks; passthrough segments project
-// as TextBlocks. The "exactly one block per segment" rule is what
-// keeps fence boundaries authoritative — see package doc.
-func projectSegment(seg Segment) specDoc.Block {
-	lines := splitSegmentText(seg.Text)
-	if seg.Kind == CalcMarkBlock {
-		return specDoc.NewCalcBlock(lines)
-	}
-	return specDoc.NewTextBlock(lines)
-}
-
 // splitSegmentText splits a segment's text into lines for the
 // CalcBlock/TextBlock []string source representation. Embedded
 // segment text typically ends with a trailing newline (the
@@ -181,8 +169,6 @@ func splitSegmentText(text string) []string {
 	// at most one trailing empty string, which matches today's
 	// flat-CM block source semantics for blank-line-terminated
 	// blocks.
-	if strings.HasSuffix(text, "\n") {
-		text = text[:len(text)-1]
-	}
+	text = strings.TrimSuffix(text, "\n")
 	return strings.Split(text, "\n")
 }

@@ -156,13 +156,13 @@ func applyCaseBetweenMarkers(s, open, close string, transform func(string) strin
 		}
 		b.WriteString(s[:i])
 		rest := s[i+len(open):]
-		j := strings.Index(rest, close)
-		if j < 0 {
+		before, after, found := strings.Cut(rest, close)
+		if !found {
 			b.WriteString(rest)
 			return b.String()
 		}
-		b.WriteString(transform(rest[:j]))
-		s = rest[j+len(close):]
+		b.WriteString(transform(before))
+		s = after
 	}
 }
 

@@ -45,8 +45,7 @@ func isPeriodKeyword(keyword string) bool {
 	// in the lexer; the parser wraps them with `this`. So we only
 	// need to recognize the modifier-prefixed forms here.
 	for _, prefix := range []string{"this ", "next ", "last "} {
-		if strings.HasPrefix(kw, prefix) {
-			rest := strings.TrimPrefix(kw, prefix)
+		if rest, ok := strings.CutPrefix(kw, prefix); ok {
 			if isMonthName(rest) {
 				return true
 			}

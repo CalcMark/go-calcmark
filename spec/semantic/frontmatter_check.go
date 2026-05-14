@@ -2,6 +2,7 @@ package semantic
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -122,10 +123,8 @@ func checkConvertTo(cfg *document.ConvertToConfig, r *ast.Range) (Diagnostic, bo
 		// we have nothing to validate against.
 		return Diagnostic{}, false
 	}
-	for _, v := range key.EnumValues {
-		if cfg.System == v {
-			return Diagnostic{}, false
-		}
+	if slices.Contains(key.EnumValues, cfg.System) {
+		return Diagnostic{}, false
 	}
 	return Diagnostic{
 		Severity: Error,

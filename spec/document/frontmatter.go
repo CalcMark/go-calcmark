@@ -952,10 +952,7 @@ func nodeEndPosition(n *yaml.Node, lineOffset int) ast.Position {
 		// (TestParseFrontmatter_YAMLShape_LiteralBlockScalar) — the test
 		// asserts the observed (imperfect) value, so a future fix is a clean
 		// test-flip.
-		col := n.Column + len(n.Value)
-		if col < n.Column {
-			col = n.Column
-		}
+		col := max(n.Column+len(n.Value), n.Column)
 		return ast.Position{Line: n.Line + lineOffset, Column: col}
 	}
 }
