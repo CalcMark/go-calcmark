@@ -396,6 +396,47 @@ func TestGrowthErrors(t *testing.T) {
 	}
 }
 
+// Bare integers passed where compound expects a rate trigger the
+// "between -100% and 100%" refusal — but without a hint, users who
+// typed `3` thinking "3 percent" don't see what they got wrong. Issue
+// #160: when the offending value is a bare Number (no `%`), append a
+// "Did you mean N%?" hint pointing at the most likely intent.
+func TestCompoundBareIntegerRate_HintsAtPercentTypo(t *testing.T) {
+	errStr := evalGrowthLineErr(t, "compound($1000, 3, 10)")
+	if !strings.Contains(errStr, "rate must be between -100% and 100%") {
+		t.Errorf("error %q should still carry the range refusal", errStr)
+	}
+	if !strings.Contains(errStr, "Did you mean 3%?") {
+		t.Errorf("error %q should hint 'Did you mean 3%%?' for bare integer rate", errStr)
+	}
+}
+
+// Bare integer < 1 (e.g. `compound($1000, 0.5, 10)`) is a valid fraction
+// (50%) and must NOT trigger the hint or the refusal.
+func TestCompoundBareFractionRate_NoHint(t *testing.T) {
+	// 0.5 = 50%, valid. evalGrowthLine fails on any error, so this
+	// double-checks no spurious refusal is emitted.
+	got := evalGrowthLine(t, "compound($1000, 0.5, 2)")
+	// (1 + 0.5)^2 = 2.25 → $2250.00. We're not asserting on the value,
+	// just that evaluation succeeds without error.
+	if got == "" {
+		t.Fatal("expected a result, got empty string")
+	}
+}
+
+// Explicit-percentage rate that exceeds the range (e.g. 150%) keeps
+// the old refusal without the bare-integer hint — the user clearly
+// typed `%` so suggesting they meant `%` is meaningless.
+func TestCompoundExplicitPercentageOutOfRange_NoHint(t *testing.T) {
+	errStr := evalGrowthLineErr(t, "compound($1000, 150%, 10)")
+	if !strings.Contains(errStr, "rate must be between -100% and 100%") {
+		t.Errorf("error %q missing the range refusal", errStr)
+	}
+	if strings.Contains(errStr, "Did you mean") {
+		t.Errorf("error %q should NOT add a typo hint when user typed %% explicitly", errStr)
+	}
+}
+
 // TestCompoundGrowthMath verifies the mathematical correctness of compound growth
 func TestCompoundGrowthMath(t *testing.T) {
 	one := decimal.NewFromInt(1)

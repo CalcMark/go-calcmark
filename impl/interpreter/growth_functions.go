@@ -163,10 +163,23 @@ func convertToMatchingUnit(target, val types.Type) (types.Type, error) {
 }
 
 // validateRate checks that rate is within (-1, 1] i.e. (-100%, 100%].
-func validateRate(rate decimal.Decimal) error {
+// `fromBareNumber` is true when the rate came from a bare Number
+// literal rather than a Percentage — in which case the failure is
+// almost always "I typed 3 thinking 3%" and the message appends a
+// "Did you mean N%?" nudge (issue #160). When the user already wrote
+// `%` explicitly, no hint is added because the suggestion would
+// duplicate what they typed.
+func validateRate(rate decimal.Decimal, fromBareNumber bool) error {
 	if rate.GreaterThan(decOne) || rate.LessThanOrEqual(decNegOne) {
-		return fmt.Errorf("compound: rate must be between -100%% and 100%% (exclusive), got %s%%",
+		msg := fmt.Sprintf("compound: rate must be between -100%% and 100%% (exclusive), got %s%%",
 			rate.Mul(decHundred).StringFixed(0))
+		if fromBareNumber {
+			// `3` → "Did you mean 3%?"; `-7` → "Did you mean -7%?"
+			// Keep the original number formatting: integer-valued
+			// decimals render without a fractional tail.
+			msg += fmt.Sprintf(". Did you mean %s%%?", rate.String())
+		}
+		return fmt.Errorf("%s", msg)
 	}
 	return nil
 }
@@ -224,7 +237,10 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	if err != nil {
 		return nil, err
 	}
-	if err := validateRate(rate); err != nil {
+	// Bare-Number rates trigger the "Did you mean N%?" hint in
+	// validateRate when out of range — Percentage values silence it.
+	_, fromBareNumber := rateVal.(*types.Number)
+	if err := validateRate(rate, fromBareNumber); err != nil {
 		return nil, err
 	}
 
