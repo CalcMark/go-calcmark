@@ -19,10 +19,11 @@ key down
 (empty)
 
 # Step 3: Navigate to "total = hundred_gig + speed" (line 2)
-# This line has a type error (rates can't be added), so footer shows the error
-# (errors have priority over variable references in the context footer)
+# Both references resolve and the rates are compatible (same time base,
+# DataSize numerators — GB cancels against MB via first-unit-wins), so
+# the footer shows the variable references rather than an error.
 run observe=footer
 key down
 ----
 -- footer:
-⚠ cannot add rate (12500 megabyte/s) and rate (125 megabyte/s)
+hundred_gig = 12.2 GB/s │ speed = 125 MB/s

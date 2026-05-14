@@ -25,7 +25,68 @@ func (interp *Interpreter) evalBinaryOp(b *ast.BinaryOp) (types.Type, error) {
 		return nil, err
 	}
 
+	// Cross-currency rate normalization. `evalBinaryOperation` is a
+	// pure function with no access to the interpreter env, but
+	// currency conversion needs the frontmatter exchange table — so
+	// we rewrite the right operand here (where env is reachable)
+	// before delegating. Only fires on `+`/`-` between two currency
+	// rates with different ISO codes; everything else passes through
+	// untouched. Failed conversions (no matching rate) fall through
+	// to the existing refusal path so the user gets a clear error.
+	if b.Operator == "+" || b.Operator == "-" {
+		if converted, ok := interp.maybeConvertRateCurrency(left, right); ok {
+			right = converted
+		}
+	}
+
 	return evalBinaryOperation(left, right, b.Operator)
+}
+
+// maybeConvertRateCurrency rewrites the right operand of a +/- when
+// both sides are currency rates with different currencies, converting
+// the right rate's amount into the left rate's currency using the
+// env's exchange table. Returns (newRate, true) on success and
+// (nil, false) when no conversion applies — either because the
+// operands aren't both currency rates, the currencies already match,
+// or no exchange rate is configured.
+//
+// The conversion preserves PerUnit (time-unit cancellation happens
+// later in tryRateRateAddition). It only swaps the numerator amount
+// and currency symbol so the subsequent dispatch sees same-currency
+// rates and the cancellation predicate accepts them.
+func (interp *Interpreter) maybeConvertRateCurrency(left, right types.Type) (types.Type, bool) {
+	leftRate, ok := left.(*types.Rate)
+	if !ok {
+		return nil, false
+	}
+	rightRate, ok := right.(*types.Rate)
+	if !ok {
+		return nil, false
+	}
+	// Both numerators must be currency (symbol or ISO code).
+	if !types.IsCurrencyCode(leftRate.Amount.Unit) || !types.IsCurrencyCode(rightRate.Amount.Unit) {
+		return nil, false
+	}
+	leftCode := types.NormalizeCurrencyCode(leftRate.Amount.Unit)
+	rightCode := types.NormalizeCurrencyCode(rightRate.Amount.Unit)
+	if leftCode == rightCode {
+		// Same currency — no conversion needed; the regular
+		// cancellation engine handles it.
+		return nil, false
+	}
+	rate, found := interp.env.GetExchangeRate(rightCode, leftCode)
+	if !found {
+		// No rate configured — let the addition refuse downstream.
+		return nil, false
+	}
+	convertedValue := rightRate.Amount.Value.Mul(rate)
+	return &types.Rate{
+		Amount: &types.Quantity{
+			Value: convertedValue,
+			Unit:  leftRate.Amount.Unit, // preserve user-typed symbol
+		},
+		PerUnit: rightRate.PerUnit,
+	}, true
 }
 
 func (interp *Interpreter) evalComparisonOp(c *ast.ComparisonOp) (types.Type, error) {
@@ -383,6 +444,18 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 			if operator == "/" && leftRate.PerUnit == rightRate.PerUnit {
 				result := leftRate.Amount.Value.Div(rightRate.Amount.Value)
 				return types.NewNumber(result), nil
+			}
+		}
+		// Rate +/- Rate → Rate (when both are time-based and the
+		// numerator units cancel). The right rate is converted to the
+		// left's PerUnit and numerator unit before the values combine
+		// (first-unit-wins). Unlocks the natural addition syntax for
+		// budgets and other mixed-period rates: `$1K/year + $70/week +
+		// $0.5/day`. Cross-category numerators (e.g. $/h + MB/h) or
+		// non-time PerUnits fall through to the generic refusal below.
+		if rightRate, ok := right.(*types.Rate); ok && (operator == "+" || operator == "-") {
+			if result, combined, _ := tryRateRateAddition(leftRate, rightRate, operator); combined {
+				return result, nil
 			}
 		}
 		// Rate * Duration → Currency / Quantity / Number, with the

@@ -92,13 +92,13 @@ func rateTimesQuantity(r *types.Rate, q *types.Quantity) (types.Type, bool, erro
 //
 // The two cancellable shapes:
 //
-//   left.PerUnit ↔ right.Amount.Unit
-//     (a / b) * (b / c) → (a / c)
-//     example: ($/hour) * (hours/week) → $/week
+//	left.PerUnit ↔ right.Amount.Unit
+//	  (a / b) * (b / c) → (a / c)
+//	  example: ($/hour) * (hours/week) → $/week
 //
-//   right.PerUnit ↔ left.Amount.Unit
-//     (b / c) * (a / b) → (a / c)  — commuted
-//     example: (hours/week) * ($/hour) → $/week
+//	right.PerUnit ↔ left.Amount.Unit
+//	  (b / c) * (a / b) → (a / c)  — commuted
+//	  example: (hours/week) * ($/hour) → $/week
 //
 // In each case the cancelled time unit is converted on the
 // quantity-side rate (rightSide for the first, leftSide for the
@@ -149,6 +149,94 @@ func tryRateRateCancellation(left, right *types.Rate) (types.Type, bool, error) 
 	}
 
 	return nil, false, nil
+}
+
+// tryRateRateAddition handles `Rate + Rate` and `Rate - Rate` when
+// both rates are time-based (PerUnit ∈ time) and their numerator
+// units share a category (currency-vs-currency, or any pair the
+// `cancellable` predicate accepts). First-unit-wins: the right rate
+// is converted to the left's PerUnit and the left's numerator unit
+// before the values combine, and the result inherits the left's
+// units.
+//
+// Returns:
+//   - (result, true, nil) on a successful addition/subtraction.
+//   - (nil, false, nil) when the predicate doesn't match — caller
+//     falls through to the generic unsupported-operation error so
+//     the user sees a familiar refusal message rather than an
+//     opaque conversion failure.
+//   - (nil, false, err) is intentionally unused today; reserved
+//     for future "matched but failed" signalling if the dispatch
+//     ever needs to surface a specific reason.
+//
+// The cancellation predicate is the same `cancellable` helper used
+// by the multiplicative path — so currency-vs-currency works only
+// when the two currency symbols match (predicate falls back to
+// exact-string on Custom-category units, and currency symbols
+// behave as Custom from the units registry's perspective). This
+// preserves the long-standing "cannot mix currencies" contract.
+func tryRateRateAddition(left, right *types.Rate, operator string) (types.Type, bool, error) {
+	if operator != "+" && operator != "-" {
+		return nil, false, nil
+	}
+	// Both PerUnits must be time units. Anything else (e.g. a Rate
+	// whose denominator is "request" — not a time at all) falls
+	// through to the existing refusal path.
+	if categoryOf(left.PerUnit) != "time" || categoryOf(right.PerUnit) != "time" {
+		return nil, false, nil
+	}
+	// Numerator units must be combinable. The `cancellable`
+	// predicate handles same-category-non-Custom (e.g. MB/KB share
+	// DataSize), same-string-Custom (e.g. $/$ — currency symbols
+	// behave as Custom), and rejects cross-category pairs.
+	if !cancellable(left.Amount.Unit, right.Amount.Unit) {
+		return nil, false, nil
+	}
+
+	// Step 1: scale the right rate's value into the left's PerUnit.
+	// `$70/week → $/year`: compute (70 × seconds-per-year) / seconds-per-week
+	// — multiply first, divide last — so integer-ratio cases like
+	// week↔day, year↔day, hour↔second land exactly rather than
+	// drifting by a ULP through an intermediate decimal-division
+	// rounding. Routing through `convertWithinCategory(1, left, right)`
+	// would do the division first and lose precision.
+	leftSec, err := types.TimeUnitToSeconds(left.PerUnit)
+	if err != nil {
+		return nil, false, nil
+	}
+	rightSec, err := types.TimeUnitToSeconds(right.PerUnit)
+	if err != nil {
+		return nil, false, nil
+	}
+	if rightSec.IsZero() {
+		return nil, false, nil
+	}
+	rightValue := right.Amount.Value.Mul(leftSec).Div(rightSec)
+
+	// Step 2: convert the right rate's numerator to the left's
+	// numerator unit (e.g. KB → MB). Same-unit short-circuits in
+	// convertWithinCategory.
+	rightValue, err = convertWithinCategory(rightValue, right.Amount.Unit, left.Amount.Unit)
+	if err != nil {
+		return nil, false, nil
+	}
+
+	// Step 3: combine.
+	var result decimal.Decimal
+	switch operator {
+	case "+":
+		result = left.Amount.Value.Add(rightValue)
+	case "-":
+		result = left.Amount.Value.Sub(rightValue)
+	}
+
+	return &types.Rate{
+		Amount: &types.Quantity{
+			Value: result,
+			Unit:  left.Amount.Unit,
+		},
+		PerUnit: left.PerUnit,
+	}, true, nil
 }
 
 // cancellable reports whether two units can cancel against each other:
