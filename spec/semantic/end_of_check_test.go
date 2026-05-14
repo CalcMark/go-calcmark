@@ -182,7 +182,7 @@ func TestSemantic_NoTypePeriodInTypeKindEnum(t *testing.T) {
 	// This is structural: if a future maintainer adds TypePeriod,
 	// the test below fails -- forcing them to revisit the design.
 	const wantKindCount = 8 // Number / Currency / Boolean / Date / Time / Duration / Quantity / Percentage
-	last := TypePercentage // last constant in the iota sequence
+	last := TypePercentage  // last constant in the iota sequence
 	if int(last) != wantKindCount-1 {
 		t.Errorf("TypeKind enum size changed: last value %d, want %d. "+
 			"If TypePeriod was added, revisit the API-break analysis in the PR-1b plan.",

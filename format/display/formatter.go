@@ -300,10 +300,10 @@ func (f Formatter) FormatDate(d *types.Date) string {
 // FormatPeriod renders a Period for human display as a compact
 // start–end range using the dd-MON-YYYY layout:
 //
-//   Q1                       → "01-Jan-2026 – 31-Mar-2026"
-//   this fiscal quarter      → "01-Apr-2026 – 30-Jun-2026"
-//   April                    → "01-Apr-2026 – 30-Apr-2026"
-//   between Apr 15 and Jul 4 → "15-Apr-2026 – 04-Jul-2026"
+//	Q1                       → "01-Jan-2026 – 31-Mar-2026"
+//	this fiscal quarter      → "01-Apr-2026 – 30-Jun-2026"
+//	April                    → "01-Apr-2026 – 30-Apr-2026"
+//	between Apr 15 and Jul 4 → "15-Apr-2026 – 04-Jul-2026"
 //
 // Why no kind label: the source already names the period
 // (`this fiscal quarter`, `Q1`, etc.). Echoing the label as part

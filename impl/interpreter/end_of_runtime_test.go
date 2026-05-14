@@ -62,7 +62,7 @@ func TestEndOfExpr_NumberInnerRuntimeError(t *testing.T) {
 // keyword-keyed evalEndOf path.
 func TestEndOfExpr_BareMonthName(t *testing.T) {
 	cases := []struct {
-		name, input    string
+		name, input        string
 		wantMonth, wantDay int
 	}{
 		{"end of April", "x = end of April", 4, 30},

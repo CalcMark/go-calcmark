@@ -106,7 +106,7 @@ func TestDisplayConfig_DateFormatOverrideAppliesToPeriod(t *testing.T) {
 func TestDisplayConfig_PeriodDateFormatOverride(t *testing.T) {
 	// PeriodDateFormat takes precedence over DateFormat for periods.
 	cfg := DefaultConfig()
-	cfg.DateFormat = "MMMM d, YYYY"   // verbose for single dates
+	cfg.DateFormat = "MMMM d, YYYY"     // verbose for single dates
 	cfg.PeriodDateFormat = "YYYY-MM-dd" // compact for periods
 	f := NewFormatter(cfg)
 

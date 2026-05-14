@@ -25,12 +25,12 @@ import (
 func TestPeriodEval_QuarterNotation(t *testing.T) {
 	clock := time.Date(2026, 4, 8, 0, 0, 0, 0, time.UTC)
 	cases := []struct {
-		input              string
-		wantStartMonth     time.Month
-		wantStartDay       int
-		wantEndMonth       time.Month
-		wantEndDay         int
-		wantQuarterIndex   int
+		input            string
+		wantStartMonth   time.Month
+		wantStartDay     int
+		wantEndMonth     time.Month
+		wantEndDay       int
+		wantQuarterIndex int
 	}{
 		{"x = Q1\n", time.January, 1, time.March, 31, 1},
 		{"x = Q2\n", time.April, 1, time.June, 30, 2},

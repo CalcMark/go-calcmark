@@ -64,7 +64,7 @@ const (
 	DiagInvalidEndOfPeriod = "invalid_end_of_period"
 
 	// Period operator diagnostics (v2.0)
-	DiagInvalidLengthOfPeriod  = "invalid_length_of_period"  // length of / days in inner not Period
+	DiagInvalidLengthOfPeriod  = "invalid_length_of_period" // length of / days in inner not Period
 	DiagInvalidBetweenEndpoint = "invalid_between_endpoint" // between A and B endpoint not Date
 	DiagInvalidPeriodRange     = "invalid_period_range"     // between A and B where end < start (statically detectable)
 

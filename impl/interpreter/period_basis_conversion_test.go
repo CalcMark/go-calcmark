@@ -226,4 +226,3 @@ func TestBasisConversion_CalendarSideAlwaysWorks(t *testing.T) {
 		t.Fatalf("Q1 as calendar should work without fiscal config; got: %v", err)
 	}
 }
-

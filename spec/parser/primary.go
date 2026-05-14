@@ -352,7 +352,7 @@ func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
 		notationTok := p.advance()
 		prefix := notationLiteralPrefix(notationTok.Type)
 		return &ast.RelativeDateLiteral{
-			Keyword: direction + " " + prefix + ":" + string(notationTok.Value),
+			Keyword:    direction + " " + prefix + ":" + string(notationTok.Value),
 			SourceText: string(dirTok.Value) + " " + string(notationTok.OriginalText),
 		}, nil
 	}
@@ -1051,12 +1051,12 @@ func notationLiteralPrefix(t lexer.TokenType) string {
 //
 // All four input orderings canonicalise to the quarter-first form:
 //
-//   `Q3 2026`      → Q:3@2026
-//   `Q3 CY2026`    → Q:3@2026
-//   `2026 Q3`      → handled in the QUANTITY branch (separate path).
-//   `CY2026 Q3`    → Q:3@2026  (we flip when we see year-then-quarter)
-//   `FQ1 FY2027`   → FQ:1@2027
-//   `FY2027 FQ1`   → FQ:1@2027
+//	`Q3 2026`      → Q:3@2026
+//	`Q3 CY2026`    → Q:3@2026
+//	`2026 Q3`      → handled in the QUANTITY branch (separate path).
+//	`CY2026 Q3`    → Q:3@2026  (we flip when we see year-then-quarter)
+//	`FQ1 FY2027`   → FQ:1@2027
+//	`FY2027 FQ1`   → FQ:1@2027
 //
 // Returns ("", "", false) when the next token isn't a complementary
 // literal — caller falls back to the existing single-token path. Pure:

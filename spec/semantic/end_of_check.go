@@ -165,4 +165,3 @@ func (c *Checker) checkEndOfStartOfInner(inner ast.Node, op string, r *ast.Range
 	// that).
 	c.checkNode(inner)
 }
-

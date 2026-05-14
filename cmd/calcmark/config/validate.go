@@ -31,7 +31,7 @@ func (r *ValidationResult) OK() bool {
 // knownKeys is the set of top-level and dotted config keys that the Config
 // struct understands (excluding tui.theme.* which has its own known set).
 var knownKeys = map[string]bool{
-	"locale":                   true,
+	"locale":                       true,
 	"tui.color_mode":               true,
 	"tui.dark_mode":                true,
 	"tui.unicode_fractions":        true,

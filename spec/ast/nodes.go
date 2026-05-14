@@ -181,8 +181,8 @@ func (r *RateLiteral) GetRange() *Range {
 
 // DateLiteral represents a date literal: "Dec 25" or "Dec 25 2024"
 type DateLiteral struct {
-	Month string  // "Dec", "December"
-	Day   string  // "25" — the literal day. When the user wrote no
+	Month string // "Dec", "December"
+	Day   string // "25" — the literal day. When the user wrote no
 	// day number in source, Day is "1" (lexer default) AND
 	// HasExplicitDay is false.
 	Year *string // nil if not provided, "2024" if provided

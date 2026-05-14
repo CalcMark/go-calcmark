@@ -455,7 +455,7 @@ func TestPeriod_NewRelativeQuarter_PopulatesEnd(t *testing.T) {
 		direction int
 		wantEnd   time.Time
 	}{
-		{0, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},      // this Q (Q2 2026)
+		{0, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},       // this Q (Q2 2026)
 		{+1, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)}, // next Q (Q3 2026)
 		{-1, time.Date(2026, time.March, 31, 0, 0, 0, 0, time.UTC)},     // last Q (Q1 2026)
 	}
@@ -477,9 +477,9 @@ func TestPeriod_NewRelativeFiscalQuarter_PopulatesEnd(t *testing.T) {
 		direction int
 		wantEnd   time.Time
 	}{
-		{0, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},        // this FQ (FQ1 = Apr-Jun)
-		{+1, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)},  // next FQ (FQ2 = Jul-Sep)
-		{-1, time.Date(2026, time.March, 31, 0, 0, 0, 0, time.UTC)},      // last FQ (FQ4 of prior FY = Jan-Mar)
+		{0, time.Date(2026, time.June, 30, 0, 0, 0, 0, time.UTC)},       // this FQ (FQ1 = Apr-Jun)
+		{+1, time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC)}, // next FQ (FQ2 = Jul-Sep)
+		{-1, time.Date(2026, time.March, 31, 0, 0, 0, 0, time.UTC)},     // last FQ (FQ4 of prior FY = Jan-Mar)
 	}
 	for _, tc := range cases {
 		p := NewRelativeFiscalQuarter(now, time.April, 1, tc.direction)

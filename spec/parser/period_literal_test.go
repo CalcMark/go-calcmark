@@ -374,15 +374,15 @@ func TestParser_DaysIn_AtEOF(t *testing.T) {
 // The fix combines an adjacent year + quarter literal into a single
 // RelativeDateLiteral with a year-bearing keyword. Encoding:
 //
-//   `Q:<n>@<year>`   — calendar quarter <n> of calendar year <year>.
-//   `FQ:<n>@<year>`  — fiscal quarter <n> of fiscal year <year>.
+//	`Q:<n>@<year>`   — calendar quarter <n> of calendar year <year>.
+//	`FQ:<n>@<year>`  — fiscal quarter <n> of fiscal year <year>.
 //
 // All four input forms canonicalise to the same keyword:
 //
-//   2026 Q3      → Q:3@2026
-//   CY2026 Q3    → Q:3@2026
-//   Q3 2026      → Q:3@2026
-//   Q3 CY2026    → Q:3@2026
+//	2026 Q3      → Q:3@2026
+//	CY2026 Q3    → Q:3@2026
+//	Q3 2026      → Q:3@2026
+//	Q3 CY2026    → Q:3@2026
 //
 // Two-digit years follow the existing CY/FY rule (CY26 → 2026), so
 // `CY26 Q3` keyword is `Q:3@26`; the interpreter expands at eval
