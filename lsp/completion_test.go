@@ -200,6 +200,30 @@ func TestVariableCompletions_TypeFiltering(t *testing.T) {
 	}
 }
 
+// TestVariableCompletions_PercentOfOperandFiltersToPercentage drives the real
+// completion handler end-to-end: the percentage operand of `X% of Y` must
+// surface only percentage-typed variables, not quantities — even though there
+// is no enclosing function call to read a ParamSpec from. This is the keyword-
+// operand counterpart to the function-argument filtering above.
+func TestVariableCompletions_PercentOfOperandFiltersToPercentage(t *testing.T) {
+	// Both variables share the `my` prefix, so prefix-matching alone cannot
+	// explain the exclusion — the type filter is what drops the quantity.
+	source := "myrate = 5%\nmyqty = 10 kg\nresult = my of 1000"
+	s, uri := prepareServerDoc(t, source)
+
+	// Line 2, cursor right after the `my` the user is typing into the
+	// percentage operand (col 11 = just past the 'y' of "my").
+	items := completionAt(t, s, uri, 2, 11)
+	labels := itemLabels(items)
+
+	if !slices.Contains(labels, "myrate") {
+		t.Errorf("expected percentage var 'myrate' at the '%% of' operand, got %v", labels)
+	}
+	if slices.Contains(labels, "myqty") {
+		t.Errorf("did not expect quantity var 'myqty' at the '%% of' operand, got %v", labels)
+	}
+}
+
 // TestVariableCompletions_PositionFiltering pins the bug repro:
 // `grow $100 by flour over 10` (line 0) followed by `flour = 10`
 // (line 1) used to offer `flour` as a completion on line 0 because
@@ -489,6 +513,40 @@ func TestFunctionCompletions_NLExampleCarriesSnippetFormat(t *testing.T) {
 	// inside the placeholder, not as `}%`.
 	if containsString(nlItem.insertText, "}%") {
 		t.Errorf("NL example InsertText leaves `%%` outside the placeholder: %q", nlItem.insertText)
+	}
+}
+
+// TestKeywordCompletions_SnippetAndData asserts the keyword-operator forms are
+// delivered as snippet items carrying data.kind == "keyword" and the keyword
+// identity, with the canonical templates (percent inside the first tab stop).
+func TestKeywordCompletions_SnippetAndData(t *testing.T) {
+	items := keywordCompletionItems("")
+	byKeyword := map[string]protocol.CompletionItem{}
+	for _, it := range items {
+		d, ok := it.Data.(completionItemData)
+		if !ok {
+			t.Fatalf("item %q missing completionItemData", it.Label)
+		}
+		if d.Kind != "keyword" {
+			t.Errorf("item %q data.kind = %q, want %q", it.Label, d.Kind, "keyword")
+		}
+		if it.InsertTextFormat == nil || *it.InsertTextFormat != protocol.InsertTextFormatSnippet {
+			t.Errorf("keyword item %q is not InsertTextFormat=Snippet", it.Label)
+		}
+		byKeyword[d.Keyword] = it
+	}
+
+	of, ok := byKeyword["of"]
+	if !ok {
+		t.Fatal("expected an 'of' keyword item")
+	}
+	if of.InsertText == nil || *of.InsertText != "${1:23%} of ${2:1000}" {
+		t.Errorf("of InsertText = %v, want the %% inside stop 1", of.InsertText)
+	}
+	for _, want := range []string{"of", "as % of", "in"} {
+		if _, ok := byKeyword[want]; !ok {
+			t.Errorf("expected keyword item %q", want)
+		}
 	}
 }
 

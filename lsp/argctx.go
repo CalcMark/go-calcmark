@@ -30,6 +30,14 @@ type argumentContext struct {
 	// the user sees `grow X by Y over Z months` while typing the NL
 	// form, instead of `grow(amount, increment, periods)`.
 	isNL bool
+	// requiredType, when non-empty, is the expected argument type at the
+	// cursor independent of any function spec. It is set for keyword-
+	// operator operands (e.g. the percentage operand of `X% of Y`) where
+	// there is no enclosing function call to look up a ParamSpec from. The
+	// completion handler prefers this over the funcName/paramIdx path so
+	// variable suggestions are type-filtered the same way they are inside
+	// a function call.
+	requiredType types.ArgType
 }
 
 // extractArgumentContext scans lineText from the start up to col and reports
@@ -92,9 +100,19 @@ func extractArgumentContext(lineText string, col int) argumentContext {
 	}
 
 	if len(stack) == 0 {
+		// Natural-language *function* forms win first (`grow 100 by 20`,
+		// `average of 1, 2, 3`), so a known function keyword like `of` in
+		// `average of …` resolves to its function rather than the bare
+		// percentage operator below.
 		nl := extractNLArgumentContext(lineText, col)
 		if nl.funcName != "" {
 			nl.isNL = true
+			return nl
+		}
+		// No enclosing function: try the keyword-operator forms, which type
+		// their operands (e.g. the percentage operand of `X% of Y`).
+		if kw, ok := extractKeywordArgumentContext(lineText, col); ok {
+			return kw
 		}
 		return nl
 	}
@@ -293,6 +311,88 @@ func resolveNLFunctionName(name string) string {
 	}
 
 	return ""
+}
+
+// extractKeywordArgumentContext recognizes keyword-operator expressions that
+// are NOT function calls and types the operand under the cursor, so variable
+// completions there are filtered the same way function arguments are.
+//
+// Recognized forms (detection is structural — keyed on the operator phrase,
+// not on a literal `%` — so it still fires while the user is mid-typing a
+// variable into a placeholder, e.g. `myrate of 1000`):
+//
+//   - `A as % of B` / `A as a % of B` — inverse percentage. Both operands are
+//     same-type amounts (currency, quantity, number), so we surface amounts
+//     and exclude percentage variables. Checked first because it also
+//     contains ` of `.
+//   - `A of B` — percentage of a value. Operand A is a percentage; operand B
+//     (the base) is left unfiltered.
+//   - `A in unit` / `A as unit` — unit conversion. Operand A is a quantity.
+//     The unit side is served separately by completionContextAfterUnitKeyword.
+//
+// Returns ok=false when the line is not one of these forms, or when the cursor
+// sits in a position with no meaningful type constraint (so the caller falls
+// through to unfiltered completion).
+func extractKeywordArgumentContext(lineText string, col int) (argumentContext, bool) {
+	runes := []rune(lineText)
+	if col > len(runes) {
+		col = len(runes)
+	}
+	lower := []rune(strings.ToLower(lineText))
+
+	// Inverse percentage — both operands are amounts. Check before plain
+	// ` of ` since this phrase also contains it.
+	for _, phrase := range []string{" as a % of ", " as % of "} {
+		if runeIndex(lower, phrase) >= 0 {
+			return argumentContext{paramIdx: -1, requiredType: types.ArgTypeAmount}, true
+		}
+	}
+
+	// Percentage of a value: the operand before ` of ` is a percentage.
+	if s := runeIndex(lower, " of "); s >= 0 {
+		if col <= s {
+			return argumentContext{paramIdx: -1, requiredType: types.ArgTypePercentage}, true
+		}
+		// Operand B (the base) accepts any value — nothing to filter.
+		return argumentContext{}, false
+	}
+
+	// Unit conversion: the operand before ` in `/` as ` is a quantity.
+	for _, phrase := range []string{" in ", " as "} {
+		if s := runeIndex(lower, phrase); s >= 0 {
+			if col <= s {
+				return argumentContext{paramIdx: -1, requiredType: types.ArgTypeQuantity}, true
+			}
+			// After the keyword the completion handler is already in the
+			// after-unit-keyword context; nothing to type here.
+			return argumentContext{}, false
+		}
+	}
+
+	return argumentContext{}, false
+}
+
+// runeIndex returns the rune index of the first occurrence of needle in
+// haystack, or -1. Rune-aware so multi-byte text before the match doesn't
+// skew the offset (callers compare against a rune-indexed cursor column).
+func runeIndex(haystack []rune, needle string) int {
+	nr := []rune(needle)
+	if len(nr) == 0 || len(nr) > len(haystack) {
+		return -1
+	}
+	for i := 0; i+len(nr) <= len(haystack); i++ {
+		match := true
+		for j := range nr {
+			if haystack[i+j] != nr[j] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return i
+		}
+	}
+	return -1
 }
 
 // extractLeadingIdentifier returns the first identifier at the start of s.

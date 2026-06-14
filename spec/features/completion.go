@@ -112,6 +112,40 @@ func FunctionSuggestions(prefix string, implementedNames map[string]bool) []Sugg
 	return suggestions
 }
 
+// KeywordSuggestions returns insertable suggestions for the calc keyword-
+// operator forms (`X% of Y`, `X as a % of Y`, `X in unit`). It mirrors
+// FunctionSuggestions but is far simpler: keywords have no synonyms and no
+// NL/paren split. Only keyword features that carry a snippet `InsertText`
+// surface — the rest (`per`, `over`, `at`, napkin/precise, bare `as`) are
+// language keywords without a slash-command form yet.
+//
+// The Name field carries the keyword identity (e.g. "of", "as % of", "in") so
+// clients can attach their own palette label/aliases; InsertText carries the
+// canonical `${N:default}` snippet so the `%`/unit placeholders live in one
+// authoritative place.
+func KeywordSuggestions(prefix string) []Suggestion {
+	registry := DefaultRegistry()
+	var suggestions []Suggestion
+
+	for _, f := range registry.ByCategory(CategoryKeyword) {
+		if f.InsertText == "" {
+			continue
+		}
+		if !MatchesPrefix(f.Name, prefix) {
+			continue
+		}
+		suggestions = append(suggestions, Suggestion{
+			Name:        f.Name,
+			Category:    string(CategoryKeyword),
+			Description: f.Description,
+			Syntax:      f.Syntax,
+			InsertText:  f.InsertText,
+		})
+	}
+
+	return suggestions
+}
+
 // UnitSuggestions returns unit suggestions matching prefix.
 // Deduplicates by canonical name.
 func UnitSuggestions(prefix string) []Suggestion {

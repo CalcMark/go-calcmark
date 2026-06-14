@@ -61,6 +61,10 @@ type completionItemData struct {
 	// ParamName is set on enum_value and example_value items to identify
 	// which parameter the value is for (useful for UI labeling).
 	ParamName string `json:"paramName,omitempty"`
+	// Keyword is set on "keyword" items to the canonical keyword-operator
+	// name (e.g. "of", "as % of", "in") so clients can join it to their own
+	// palette label/aliases without parsing the snippet.
+	Keyword string `json:"keyword,omitempty"`
 }
 
 // enumCompletionsForContext returns enum value completions for the active
