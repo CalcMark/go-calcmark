@@ -92,8 +92,14 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		}
 
 		// Determine active parameter type for variable filtering, if any.
+		// A keyword-operator operand (e.g. the percentage operand of
+		// `X% of Y`) carries its type directly and takes precedence; only
+		// when it is absent do we look up an enclosing function's ParamSpec.
 		var requiredType types.ArgType
-		if argCtx.funcName != "" && !argCtx.insideString {
+		switch {
+		case argCtx.requiredType != "":
+			requiredType = argCtx.requiredType
+		case argCtx.funcName != "" && !argCtx.insideString:
 			if spec := types.GetFunctionSpec(argCtx.funcName); spec != nil {
 				if p := spec.GetParamAtIndex(argCtx.paramIdx); p != nil {
 					requiredType = p.Type
@@ -101,9 +107,10 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 			}
 		}
 
-		// General context -> functions, units, variables, directives, dates
+		// General context -> functions, keywords, units, variables, directives, dates
 		var items []protocol.CompletionItem
 		items = append(items, functionCompletionItems(prefix)...)
+		items = append(items, keywordCompletionItems(prefix)...)
 		items = append(items, unitCompletionItems(prefix)...)
 		items = append(items, dateCompletionItems(prefix)...)
 		if snap.Evaluator != nil {
@@ -193,6 +200,45 @@ func functionCompletionItems(prefix string) []protocol.CompletionItem {
 				Data: data,
 			})
 		}
+	}
+
+	return items
+}
+
+// keywordCompletionItems returns snippet completion items for the calc
+// keyword-operator forms (`X% of Y`, `X as a % of Y`, `X in unit`). Delegates
+// to features.KeywordSuggestions for the canonical templates, then attaches
+// the LSP-specific snippet format and structured data so clients (slash
+// palette, inline completion) get the same delivery vehicle functions use.
+//
+// The snippet `InsertText` from the registry already carries `${N:default}`
+// placeholders with units/`%` correctly absorbed (see the registry keyword
+// block), so — unlike the NL-function path — it is shipped verbatim without
+// re-running buildNLExampleSnippet.
+func keywordCompletionItems(prefix string) []protocol.CompletionItem {
+	suggestions := features.KeywordSuggestions(prefix)
+	var items []protocol.CompletionItem
+
+	for _, s := range suggestions {
+		kind := protocol.CompletionItemKindKeyword
+		detail := s.Syntax
+		insertText := s.InsertText
+		snippetFormat := protocol.InsertTextFormatSnippet
+		items = append(items, protocol.CompletionItem{
+			Label:            s.Name,
+			Kind:             &kind,
+			Detail:           &detail,
+			InsertText:       &insertText,
+			InsertTextFormat: &snippetFormat,
+			Documentation: &protocol.MarkupContent{
+				Kind:  protocol.MarkupKindMarkdown,
+				Value: s.Description,
+			},
+			Data: completionItemData{
+				Kind:    "keyword",
+				Keyword: s.Name,
+			},
+		})
 	}
 
 	return items

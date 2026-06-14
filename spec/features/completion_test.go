@@ -5,6 +5,73 @@ import (
 	"testing"
 )
 
+func TestKeywordSuggestions(t *testing.T) {
+	byName := func(sugs []Suggestion) map[string]Suggestion {
+		m := make(map[string]Suggestion, len(sugs))
+		for _, s := range sugs {
+			m[s.Name] = s
+		}
+		return m
+	}
+
+	t.Run("empty prefix returns only the insertable keyword forms", func(t *testing.T) {
+		got := byName(KeywordSuggestions(""))
+		for _, want := range []string{"of", "in", "as % of"} {
+			if _, ok := got[want]; !ok {
+				t.Errorf("expected keyword %q in suggestions, got %v", want, keys(got))
+			}
+		}
+		// Keywords without a snippet InsertText must NOT surface as slash forms.
+		for _, absent := range []string{"per", "over", "at", "as", "as napkin", "as precise"} {
+			if _, ok := got[absent]; ok {
+				t.Errorf("keyword %q has no InsertText and must not surface", absent)
+			}
+		}
+	})
+
+	t.Run("percent-of snippet keeps the %% inside the first tab stop", func(t *testing.T) {
+		got := byName(KeywordSuggestions(""))
+		if it := got["of"].InsertText; it != "${1:23%} of ${2:1000}" {
+			t.Errorf("of InsertText = %q, want the %% inside stop 1", it)
+		}
+		if it := got["as % of"].InsertText; it != "${1:23} as a % of ${2:43}" {
+			t.Errorf("as %% of InsertText = %q", it)
+		}
+		if it := got["in"].InsertText; it != "${1:32 g} in ${2:oz}" {
+			t.Errorf("in InsertText = %q", it)
+		}
+	})
+
+	t.Run("prefix filters by keyword name", func(t *testing.T) {
+		got := byName(KeywordSuggestions("of"))
+		if _, ok := got["of"]; !ok {
+			t.Errorf("prefix 'of' should match 'of', got %v", keys(got))
+		}
+		if _, ok := got["in"]; ok {
+			t.Errorf("prefix 'of' should not match 'in'")
+		}
+	})
+
+	t.Run("every suggestion carries the keyword category and a description", func(t *testing.T) {
+		for _, s := range KeywordSuggestions("") {
+			if s.Category != string(CategoryKeyword) {
+				t.Errorf("%q Category = %q, want %q", s.Name, s.Category, CategoryKeyword)
+			}
+			if s.Description == "" {
+				t.Errorf("%q has empty Description", s.Name)
+			}
+		}
+	})
+}
+
+func keys(m map[string]Suggestion) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
 func TestFunctionSuggestions(t *testing.T) {
 	// Build implementedNames from known function names
 	implementedNames := map[string]bool{

@@ -1067,6 +1067,10 @@ func getKeywords() []Feature {
 			Description: "Convert to a different unit",
 			Aliases:     nil,
 			Example:     "100 cm in inches → 39.37 inches",
+			// Snippet template for slash-command insertion. The quantity
+			// (number + unit) is one tab stop so a quantity variable can
+			// replace the whole token; the target unit is the second stop.
+			InsertText: "${1:32 g} in ${2:oz}",
 		},
 		{
 			Name:        "as",
@@ -1083,6 +1087,11 @@ func getKeywords() []Feature {
 			Description: "Calculate percentage of a value",
 			Aliases:     nil,
 			Example:     "15% of 200 → 30",
+			// Snippet template for slash-command insertion. The `%` lives
+			// INSIDE the first tab stop so the operand is a whole percentage
+			// token (the user overtypes `23%` as a unit, not a bare integer
+			// with a stranded `%`).
+			InsertText: "${1:23%} of ${2:1000}",
 		},
 		{
 			Name:        "per",
@@ -1131,6 +1140,10 @@ func getKeywords() []Feature {
 			Description: "Compute the ratio of two same-type values as a percentage. Both operands must be the same type (e.g., both currency, both quantities). The inverse of '% of': 20% of $500 = $100, $100 as % of $500 = 20%.",
 			Aliases:     nil,
 			Example:     "$100 as % of $500 → 20%",
+			// Snippet template for slash-command insertion. Both operands are
+			// plain numerators (same-type amounts); the `%` belongs to the
+			// literal operator phrase, not to either tab stop.
+			InsertText: "${1:23} as a % of ${2:43}",
 		},
 		{
 			Name:        "at",

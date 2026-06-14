@@ -1,6 +1,10 @@
 package lsp
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/CalcMark/go-calcmark/v2/spec/types"
+)
 
 func TestExtractArgumentContext(t *testing.T) {
 	cases := []struct {
@@ -360,6 +364,81 @@ func TestFindNumericLiterals(t *testing.T) {
 			if len(lits) != tc.want {
 				t.Errorf("findNumericLiterals(%q, %d) found %d literals, want %d",
 					tc.input, tc.startIdx, len(lits), tc.want)
+			}
+		})
+	}
+}
+
+// TestExtractArgumentContext_KeywordOperands verifies that keyword-operator
+// expressions type their operands so variable completions get filtered the
+// same way function arguments are — even with no enclosing function call.
+func TestExtractArgumentContext_KeywordOperands(t *testing.T) {
+	cases := []struct {
+		name     string
+		line     string
+		col      int
+		wantType types.ArgType
+	}{
+		{
+			name:     "percent-of left operand is a percentage",
+			line:     "23% of 1000",
+			col:      1, // inside "23%"
+			wantType: types.ArgTypePercentage,
+		},
+		{
+			name:     "percent-of left operand while typing a variable",
+			line:     "myrate of 1000",
+			col:      3, // inside "myrate"
+			wantType: types.ArgTypePercentage,
+		},
+		{
+			name:     "percent-of with assignment prefix",
+			line:     "pct = 23% of 1000",
+			col:      8, // inside "23%"
+			wantType: types.ArgTypePercentage,
+		},
+		{
+			name:     "percent-of base operand is unfiltered",
+			line:     "23% of 1000",
+			col:      9, // inside "1000"
+			wantType: "",
+		},
+		{
+			name:     "as-%-of operands are amounts",
+			line:     "$100 as % of $500",
+			col:      2, // inside "$100"
+			wantType: types.ArgTypeAmount,
+		},
+		{
+			name:     "as-a-%-of operands are amounts",
+			line:     "100 as a % of 500",
+			col:      1,
+			wantType: types.ArgTypeAmount,
+		},
+		{
+			name:     "conversion left operand is a quantity",
+			line:     "5 kg in oz",
+			col:      0, // on the '5'
+			wantType: types.ArgTypeQuantity,
+		},
+		{
+			name:     "average of is the avg function, not a percentage operand",
+			line:     "average of 1, 2, 3",
+			col:      15, // on the '2'
+			wantType: "",
+		},
+		{
+			name:     "plain arithmetic has no keyword type",
+			line:     "x = 100 + 200",
+			col:      5,
+			wantType: "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := extractArgumentContext(tc.line, tc.col)
+			if ctx.requiredType != tc.wantType {
+				t.Errorf("requiredType = %q, want %q", ctx.requiredType, tc.wantType)
 			}
 		})
 	}
