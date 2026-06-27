@@ -1799,3 +1799,43 @@ func TestParseFrontmatter_RegistryDrivesKnownKeyRouting(t *testing.T) {
 		t.Errorf("expected 'title' in Extra, got %+v", fm2.Extra)
 	}
 }
+
+// RawValue preserves the verbatim YAML scalar text for Extra fields, so a
+// `version: 1.0` is available to consumers instead of only the coerced
+// float64(1) that renders as `1` (cmw fit-and-finish F2).
+func TestParseFrontmatter_ExtraRawValuePreservesScalarText(t *testing.T) {
+	source := `---
+version: 1.0
+ratio: 3.140
+title: Owning the P&L
+tags:
+  - finance
+  - planning
+---`
+	fm, _, err := ParseFrontmatter(source)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	byKey := map[string]ExtraField{}
+	for _, ef := range fm.Extra {
+		byKey[ef.Key] = ef
+	}
+	// Scalars keep their literal text even though Value coerces.
+	if got := byKey["version"].RawValue; got != "1.0" {
+		t.Errorf("version RawValue = %q, want \"1.0\"", got)
+	}
+	if got := byKey["ratio"].RawValue; got != "3.140" {
+		t.Errorf("ratio RawValue = %q, want \"3.140\"", got)
+	}
+	if got := byKey["title"].RawValue; got != "Owning the P&L" {
+		t.Errorf("title RawValue = %q, want \"Owning the P&L\"", got)
+	}
+	// The typed Value still coerces (this is what rendered as `1` before).
+	if f, ok := byKey["version"].Value.(float64); !ok || f != 1.0 {
+		t.Errorf("version Value = %v (%T), want float64(1)", byKey["version"].Value, byKey["version"].Value)
+	}
+	// Non-scalar values (a list) carry no RawValue.
+	if got := byKey["tags"].RawValue; got != "" {
+		t.Errorf("tags RawValue = %q, want empty (non-scalar)", got)
+	}
+}

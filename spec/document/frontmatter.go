@@ -150,6 +150,12 @@ type Frontmatter struct {
 type ExtraField struct {
 	Key   string
 	Value any // string, int, float64, []any, map[string]any
+	// RawValue is the verbatim YAML scalar text for scalar values, before
+	// type coercion — e.g. `version: 1.0` yields Value float64(1) but
+	// RawValue "1.0". Empty for non-scalar values (maps, lists). Lets
+	// consumers display exactly what the author typed instead of the
+	// coerced form (a `1.0` version string rendering as `1`).
+	RawValue string
 }
 
 // validUnitCategories maps lowercase category names to their canonical form.
@@ -769,12 +775,23 @@ func ParseFrontmatter(source string) (*Frontmatter, string, error) {
 	extraOrder := extractYAMLTopLevelKeyOrder(yamlContent)
 	var rawMap map[string]any
 	_ = yaml.Unmarshal([]byte(yamlContent), &rawMap)
+	// Verbatim scalar text per top-level key, from the node tree (the typed
+	// unmarshal above coerces `1.0` → float64(1) and loses the literal). Only
+	// scalar values get an entry; maps/lists keep RawValue empty.
+	rawScalars := map[string]string{}
+	if mapping := parseYAMLMapping(yamlContent); mapping != nil {
+		for i := 0; i+1 < len(mapping.Content); i += 2 {
+			if valNode := mapping.Content[i+1]; valNode.Kind == yaml.ScalarNode {
+				rawScalars[mapping.Content[i].Value] = valNode.Value
+			}
+		}
+	}
 	for _, key := range extraOrder {
 		if IsRegisteredKey(key) {
 			continue
 		}
 		if val, ok := rawMap[key]; ok {
-			fm.Extra = append(fm.Extra, ExtraField{Key: key, Value: val})
+			fm.Extra = append(fm.Extra, ExtraField{Key: key, Value: val, RawValue: rawScalars[key]})
 		}
 	}
 
