@@ -1,0 +1,83 @@
+# Named Tables: Edge Cases
+# Valid but unusual inputs that should work correctly.
+
+## Single row table
+
+<!-- table: solo (val) -->
+| Value |
+|-------|
+| 42    |
+
+---
+
+solo_sum = sum(solo.val)
+
+---
+
+## Single column table
+
+<!-- table: ids (id) -->
+| ID |
+|----|
+| 1  |
+| 2  |
+| 3  |
+
+---
+
+id_count = count(ids.id)
+
+---
+
+## Alignment colons in separator (standard GFM)
+
+<!-- table: aligned (name, amount) -->
+| Name   | Amount  |
+|:-------|--------:|
+| Alpha  | $100    |
+| Beta   | $200    |
+
+---
+
+aligned_total = sum(aligned.amount)
+
+---
+
+## Whitespace in cells (extra padding)
+
+<!-- table: padded (a, b) -->
+|   A   |   B   |
+|-------|-------|
+|  10   |  20   |
+|  30   |  40   |
+
+---
+
+padded_sum = sum(padded.a) + sum(padded.b)
+
+---
+
+## Directive name normalization
+
+<!-- table: my rates (hourly, daily) -->
+| Hourly | Daily |
+|--------|-------|
+| $50    | $400  |
+| $75    | $600  |
+
+---
+
+my_rates_total = sum(my_rates.hourly)
+
+---
+
+## Element-wise with single element arrays
+
+<!-- table: one (x, y) -->
+| X | Y |
+|---|---|
+| 5 | 3 |
+
+---
+
+product = one.x * one.y

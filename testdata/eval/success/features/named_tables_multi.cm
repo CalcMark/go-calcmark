@@ -1,0 +1,39 @@
+# Named Tables: Multiple Tables and Cross-References
+# Two tables in one document with calculations that reference both.
+
+<!-- table: hardware (item, unit_cost, qty) -->
+| Item     | Unit Cost | Qty |
+|----------|-----------|-----|
+| Server   | $4500     | 12  |
+| Switch   | $800      | 6   |
+| Storage  | $12000    | 4   |
+
+---
+
+hw_line = hardware.unit_cost * hardware.qty
+hw_total = sum(hw_line)
+
+---
+
+<!-- table: labor (role, monthly, months) -->
+| Role       | Monthly Rate | Duration |
+|------------|--------------|----------|
+| Architect  | $18000       | 6        |
+| Engineer   | $14000       | 12       |
+
+---
+
+labor_line = labor.monthly * labor.months
+labor_total = sum(labor_line)
+project_total = hw_total + labor_total
+
+---
+
+## Table without directive is inert
+
+Regular markdown tables are untouched — no directive means no extraction.
+
+| This | Table |
+|------|-------|
+| is   | inert |
+| just | prose |

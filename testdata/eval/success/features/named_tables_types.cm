@@ -1,0 +1,63 @@
+# Named Tables: Column Type Variety
+# Verifies that different CalcMark types parse correctly from table cells.
+
+## Numbers
+
+<!-- table: scores (student, grade) -->
+| Student | Grade |
+|---------|-------|
+| Alice   | 92    |
+| Bob     | 87    |
+| Carol   | 95    |
+
+---
+
+class_avg = avg(scores.grade)
+top_score = max(scores.grade)
+
+---
+
+## Currencies
+
+<!-- table: budget (dept, q1, q2) -->
+| Department | Q1 Spend | Q2 Spend |
+|------------|----------|----------|
+| Eng        | $450K    | $520K    |
+| Sales      | $200K    | $180K    |
+| Ops        | $150K    | $160K    |
+
+---
+
+q1_total = sum(budget.q1)
+q2_total = sum(budget.q2)
+total_spend = q1_total + q2_total
+
+---
+
+## Quantities
+
+<!-- table: inventory (item, weight, count) -->
+| Item    | Weight | Count |
+|---------|--------|-------|
+| Widget  | 2.5 kg | 100   |
+| Gizmo   | 1.2 kg | 250   |
+
+---
+
+total_weight = sum(inventory.weight * inventory.count)
+
+---
+
+## Scalar broadcasting
+
+<!-- table: prices (product, base_price) -->
+| Product | Base Price |
+|---------|------------|
+| Basic   | $50        |
+| Pro     | $120       |
+| Ent     | $350       |
+
+---
+
+with_tax = prices.base_price * 1.08
+discounted = prices.base_price * 0.85
