@@ -230,22 +230,14 @@ func TestParseSumOfFunction(t *testing.T) {
 }
 
 func TestParseSumMinArgs(t *testing.T) {
-	// sum() requires at least 2 arguments
-	tests := []struct {
-		name  string
-		input string
-	}{
-		{"sum with 0 args", "sum()"},
-		{"sum with 1 arg", "sum(1)"},
+	// sum() requires at least 1 argument at parse time. A single argument
+	// is legal because it may be an array (go-calcmark#118); the scalar
+	// form's 2-argument minimum is enforced by the interpreter.
+	if _, err := Parse("sum()"); err == nil {
+		t.Error("Parse(\"sum()\") expected error for no arguments, got nil")
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := Parse(tt.input)
-			if err == nil {
-				t.Errorf("Parse(%q) expected error for too few arguments, got nil", tt.input)
-			}
-		})
+	if _, err := Parse("sum(1)"); err != nil {
+		t.Errorf("Parse(\"sum(1)\") must parse (arity is checked at eval time): %v", err)
 	}
 }
 

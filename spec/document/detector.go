@@ -172,6 +172,12 @@ func (d *Detector) DetectBlocks(source string) ([]Block, error) {
 					knownNames[name] = true
 				}
 			}
+			// A table directive declares a name calc lines below may read
+			// (`rates.rate * 2`), so it counts as a known name from here on
+			// (go-calcmark#118). The directive line itself stays prose.
+			if name, ok := TableDirectiveName(line); ok && name != "" {
+				knownNames[name] = true
+			}
 
 			// If first line of new block, set type
 			if len(currentBlockLines) == 0 {
@@ -688,6 +694,11 @@ func (d *Detector) looksLikeCalculation(tokens []lexer.Token, knownNames map[str
 		// downstream layers (parser/LSP) own the "did you mean…?"
 		// diagnostic for those.
 		if second.Type == lexer.LPAREN {
+			return leadingRecognised
+		}
+		// `table.column …` (go-calcmark#118): calc only when the table is
+		// a known name — prose like `see config.yaml` must stay text.
+		if second.Type == lexer.DOT {
 			return leadingRecognised
 		}
 		// Identifier followed by an arithmetic / comparison operator

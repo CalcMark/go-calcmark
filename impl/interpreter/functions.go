@@ -32,6 +32,9 @@ type FunctionDef struct {
 var BuiltinFunctions = []FunctionDef{
 	{Name: "avg"},
 	{Name: "sum"},
+	{Name: "min"},
+	{Name: "max"},
+	{Name: "count"},
 	{Name: "sqrt"},
 	{Name: "number"},
 	{Name: "accumulate"},
@@ -53,6 +56,9 @@ var BuiltinFunctions = []FunctionDef{
 var functionEvalMap = map[string]func(interp *Interpreter, f *ast.FunctionCall) (types.Type, error){
 	"avg":           evalAvgFunc,
 	"sum":           evalSumFunc,
+	"min":           evalMinFunc,
+	"max":           evalMaxFunc,
+	"count":         evalCountFunc,
 	"sqrt":          evalSqrtFunc,
 	"number":        evalNumberFunc,
 	"accumulate":    evalAccumulateFunc,
@@ -105,12 +111,28 @@ func evalAvgFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
 	if err != nil {
 		return nil, err
 	}
+	// One array argument is the aggregate form (go-calcmark#118).
+	if arr, ok := singleArrayArg(args); ok {
+		return aggregateArray("avg", arr)
+	}
+	if err := rejectMixedArrayArgs("avg", args); err != nil {
+		return nil, err
+	}
 	return evalAverage(args)
 }
 
 func evalSumFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
 	args, err := interp.evalAllArgs(f)
 	if err != nil {
+		return nil, err
+	}
+	// One array argument is the aggregate form (go-calcmark#118). The
+	// parser admits a single argument for this reason; the scalar form
+	// keeps its 2-argument minimum below.
+	if arr, ok := singleArrayArg(args); ok {
+		return aggregateArray("sum", arr)
+	}
+	if err := rejectMixedArrayArgs("sum", args); err != nil {
 		return nil, err
 	}
 	return evalSum(args)

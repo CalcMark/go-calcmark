@@ -712,14 +712,33 @@ func (p *RecursiveDescentParser) parsePrimaryNode() (ast.Node, error) {
 			return p.parseFunctionCall()
 		}
 
-		// Otherwise it's just a variable reference
-		return &ast.Identifier{
+		ident := &ast.Identifier{
 			Name: string(name.Value),
 			Range: &ast.Range{
 				Start: ast.Position{Line: name.Line, Column: name.Column},
 				End:   ast.Position{Line: name.Line, Column: name.Column + len(name.Value)},
 			},
-		}, nil
+		}
+
+		// Member access on a named table: `rates.rate` (go-calcmark#118).
+		if p.check(lexer.DOT) && p.peekAhead(1).Type == lexer.IDENTIFIER {
+			p.advance() // DOT
+			field := p.advance()
+			if p.check(lexer.DOT) {
+				return nil, p.error("nested dot access is not supported (e.g., a.b.c); only <table>.<column> is valid")
+			}
+			return &ast.MemberAccess{
+				Object: ident,
+				Field:  string(field.Value),
+				Range: &ast.Range{
+					Start: ident.Range.Start,
+					End:   ast.Position{Line: field.Line, Column: field.Column + len(field.Value)},
+				},
+			}, nil
+		}
+
+		// Otherwise it's just a variable reference
+		return ident, nil
 	}
 
 	// If we get here, we don't know what this is
@@ -744,7 +763,7 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 		p.advance()
 		funcNameStr := string(funcName.Value)
 		if funcNameStr == "sum" {
-			return nil, p.error("sum() requires at least 2 arguments")
+			return nil, p.error("sum() requires at least 1 argument")
 		}
 		if funcNameStr == "number" {
 			return nil, p.error("number() requires exactly 1 argument")
@@ -786,8 +805,11 @@ func (p *RecursiveDescentParser) parseFunctionCall() (ast.Node, error) {
 	if funcNameStr == "avg" && len(args) == 0 {
 		return nil, p.error("avg() requires at least 1 argument")
 	}
-	if funcNameStr == "sum" && len(args) < 2 {
-		return nil, p.error("sum() requires at least 2 arguments")
+	// `sum(array)` is legal (go-calcmark#118); the scalar form's
+	// 2-argument minimum is enforced by the interpreter, where the
+	// argument's type is known.
+	if funcNameStr == "sum" && len(args) < 1 {
+		return nil, p.error("sum() requires at least 1 argument")
 	}
 	if funcNameStr == "sqrt" {
 		if len(args) == 0 {

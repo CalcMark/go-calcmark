@@ -49,6 +49,13 @@ func ToDecimal(t Type) (decimal.Decimal, error) {
 	}
 }
 
+// TypeNameOf returns the CalcMark type name of a value ("Number",
+// "Currency", "Array", …) — the same name typeName uses in error messages.
+// Array homogeneity and table extraction compare values by this name.
+func TypeNameOf(t Type) string {
+	return typeName(t)
+}
+
 // typeName returns the name of a Type for error messages.
 func typeName(t Type) string {
 	if t == nil {
@@ -75,6 +82,12 @@ func typeName(t Type) string {
 		return "Percentage"
 	case *Fraction:
 		return "Fraction"
+	case *Array:
+		return "Array"
+	case *Table:
+		return "Table"
+	case *Text:
+		return "Text"
 	default:
 		return "unknown"
 	}

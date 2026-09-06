@@ -137,6 +137,7 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 	// Evaluate blocks in document order (top-down).
 	// Continue past block errors to collect all diagnostics across the document.
 	var hasErrors bool
+	seenTables := make(map[string]bool)
 	for _, node := range doc.GetBlocks() {
 		switch block := node.Block.(type) {
 		case *document.CalcBlock:
@@ -147,6 +148,11 @@ func (e *Evaluator) Evaluate(doc *document.Document) error {
 		case *document.TextBlock:
 			// Check TextBlocks for lines that look like failed calculations
 			e.checkTextBlockForLikelyCalculations(node.ID, block)
+			// Register named tables so calc blocks below can read them (#118).
+			extractNamedTables(node.ID, block, e.env, seenTables, blockLineOffset(doc, node.ID))
+			if hasErrorDiagnostic(block.Diagnostics()) {
+				hasErrors = true
+			}
 		}
 	}
 
@@ -231,8 +237,18 @@ func (e *Evaluator) EvaluateBlock(doc *document.Document, blockID string) error 
 	allDefinedVars := make(map[string]bool)
 	nonRecoverableBlocks := make(map[string]bool) // blocks with parse/redefinition errors (skip in pass 2)
 	var hasErrors bool
+	seenTables := make(map[string]bool)
 
 	for _, node := range doc.GetBlocks() {
+		if tb, ok := node.Block.(*document.TextBlock); ok {
+			// Named tables register in pass 1 so both passes see them (#118).
+			e.checkTextBlockForLikelyCalculations(node.ID, tb)
+			extractNamedTables(node.ID, tb, e.env, seenTables, blockLineOffset(doc, node.ID))
+			if hasErrorDiagnostic(tb.Diagnostics()) {
+				hasErrors = true
+			}
+			continue
+		}
 		if cb, ok := node.Block.(*document.CalcBlock); ok {
 			// Before evaluation, check if this block would redefine any variables
 			// Parse to extract variable assignments
@@ -399,8 +415,19 @@ func (e *Evaluator) EvaluateAffectedBlocks(doc *document.Document, blockIDs []st
 			continue // Skip missing blocks
 		}
 
-		if cb, ok := node.Block.(*document.CalcBlock); ok {
-			if err := e.evaluateCalcBlock(blockID, cb); err != nil {
+		switch b := node.Block.(type) {
+		case *document.CalcBlock:
+			if err := e.evaluateCalcBlock(blockID, b); err != nil {
+				hasErrors = true
+			}
+		case *document.TextBlock:
+			// An edited text block may have changed a named table; re-register
+			// it so dependent calc blocks (evaluated after it in dependency
+			// order) read fresh data (#118). No duplicate check: this is the
+			// block's own table being refreshed.
+			e.checkTextBlockForLikelyCalculations(blockID, b)
+			extractNamedTables(blockID, b, e.env, nil, blockLineOffset(doc, blockID))
+			if hasErrorDiagnostic(b.Diagnostics()) {
 				hasErrors = true
 			}
 		}
@@ -691,6 +718,16 @@ func recordSemanticErrors(block *document.CalcBlock, diagnostics []semantic.Diag
 		}
 	}
 	return se
+}
+
+// hasErrorDiagnostic reports whether any diagnostic is error severity.
+func hasErrorDiagnostic(diags []document.Diagnostic) bool {
+	for _, d := range diags {
+		if d.Severity == "error" {
+			return true
+		}
+	}
+	return false
 }
 
 // applyEvalErrorRange positions a runtime diagnostic. When the

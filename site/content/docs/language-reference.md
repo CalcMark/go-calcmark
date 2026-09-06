@@ -363,6 +363,10 @@ Interpolation works naturally in Markdown tables. Use it for dashboard-style sum
 
 See the [Services P&L](/docs/examples/services-pl/) example for a production use of interpolated summary tables, and the [Household Budget](/docs/examples/household-budget/) for inline results in prose.
 
+### Named Tables and Arrays {#named-tables}
+
+A markdown table preceded by `<!-- table: name (col1, col2, …) -->` becomes a named data source. Each declared column is an **array** — an ordered, homogeneous list of values. Calc blocks read a column with dot access (`rates.rate`), combine arrays element-wise (`rates.rate * rates.hc`, with scalars broadcast to every row), and reduce them with `sum`, `avg`, `min`, `max`, and `count`. Inside a markdown table row, `{{array_var}}` substitutes that row's element. Tables register in document order: only calc blocks below a table can read it. Cells that are not CalcMark literals are display-only text. See the [Named Tables & Arrays](user-guide/tables/) guide.
+
 ## Line Classification
 
 ### Classification Rules

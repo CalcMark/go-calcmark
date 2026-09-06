@@ -1,0 +1,47 @@
+# Named Tables and Arrays
+
+A markdown table preceded by a `table:` directive becomes a data source.
+Columns are arrays; calc blocks combine them element-wise and aggregate them.
+
+<!-- table: rates (role, rate, hc) -->
+| Role   | Hourly rate | Headcount |
+|--------|-------------|-----------|
+| Senior | $250        | 2         |
+| Junior | $150        | 5         |
+
+## Element-wise arithmetic
+
+line_costs = rates.rate * rates.hc
+# Expected: [$500.00, $750.00]
+
+uplifted = rates.rate * 1.1
+# Expected: [$275.00, $165.00]
+
+## Aggregates
+
+total = sum(line_costs)
+# Expected: $1250.00
+
+average_rate = avg(rates.rate)
+# Expected: $200.00
+
+cheapest = min(rates.rate)
+# Expected: $150.00
+
+largest_team = max(rates.hc)
+# Expected: 5
+
+roles = count(rates.role)
+# Expected: 2
+
+people = sum(rates.hc)
+# Expected: 7
+
+## Per-row display
+
+| Role   | Line cost      |
+|--------|----------------|
+| Senior | {{line_costs}} |
+| Junior | {{line_costs}} |
+
+Grand total: {{total}} across {{people}} people.

@@ -209,6 +209,8 @@ func (interp *Interpreter) evalNodeUnpositioned(node ast.Node) (types.Type, erro
 		return interp.evalFunctionCall(n)
 	case *ast.DirectiveRef:
 		return interp.evalDirectiveRef(n)
+	case *ast.MemberAccess:
+		return interp.evalMemberAccess(n)
 	default:
 		return nil, fmt.Errorf("unknown node type: %T", node)
 	}

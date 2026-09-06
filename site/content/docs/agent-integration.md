@@ -161,6 +161,21 @@ data = 100 MB/s over 1 day
 servers = 50000 req/s at 2000 req/s per server with 25% buffer
 ```
 
+### Named Tables
+
+A markdown table preceded by `<!-- table: name (col1, col2) -->` is data. Columns are arrays; arithmetic is row-wise; `sum`/`avg`/`min`/`max`/`count` reduce them; `{{array_var}}` inside a table row shows that row's value.
+
+```
+<!-- table: rates (role, rate, hc) -->
+| Role   | Rate | HC |
+|--------|------|----|
+| Senior | $250 | 2  |
+| Junior | $150 | 5  |
+
+line_costs = rates.rate * rates.hc    # [$500.00, $750.00]
+total = sum(line_costs)               # $1,250.00
+```
+
 ### Napkin Math
 
 Round to 2 significant figures with magnitude suffix:
@@ -331,6 +346,8 @@ The response is an array of **blocks**. Each block is either `"calculation"` or 
 | `date_value` | for dates | ISO 8601 date string (`2025-01-08`) |
 
 Use `type` for dispatch, `numeric_value` + `unit` for computation, and `value` for display.
+
+Array results (a named-table column or row-wise arithmetic on one) have `"type": "array"`, a display `value` like `[$500.00, $750.00]`, and an `elements` list where each entry is shaped like a scalar result (`type`, `value`, `numeric_value`, `unit`). Text cells appear as `"type": "text"`.
 
 #### Fraction results
 

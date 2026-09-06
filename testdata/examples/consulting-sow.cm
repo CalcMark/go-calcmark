@@ -1,0 +1,40 @@
+# Statement of Work — Platform Migration
+
+A consulting proposal where the rates table is the single source of truth.
+Change a rate or a headcount in the table and every total below follows.
+
+<!-- table: team (role, rate, hc, weeks) -->
+| Role              | Hourly rate | Headcount | Weeks |
+|-------------------|-------------|-----------|-------|
+| Engagement lead   | $300        | 1         | 12    |
+| Senior engineer   | $250        | 2         | 12    |
+| Engineer          | $175        | 3         | 10    |
+| Analyst           | $125        | 2         | 8     |
+
+## Effort and cost
+
+hours_per_week = 40
+hours = team.hc * team.weeks * hours_per_week
+line_cost = team.rate * hours
+subtotal = sum(line_cost)
+contingency = 10% of subtotal
+total = subtotal + contingency
+
+## Team summary
+
+people = sum(team.hc)
+roles = count(team.role)
+top_rate = max(team.rate)
+blended_rate = subtotal / sum(hours)
+
+## Line items
+
+| Role              | Hours       | Cost            |
+|-------------------|-------------|-----------------|
+| Engagement lead   | {{hours}}   | {{line_cost}}   |
+| Senior engineer   | {{hours}}   | {{line_cost}}   |
+| Engineer          | {{hours}}   | {{line_cost}}   |
+| Analyst           | {{hours}}   | {{line_cost}}   |
+
+Subtotal {{subtotal}}, plus {{contingency}} contingency: **{{total}}** for
+{{people}} people across {{roles}} roles at a blended {{blended_rate}} per hour.

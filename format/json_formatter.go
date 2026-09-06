@@ -5,6 +5,7 @@ import (
 	"io"
 	"maps"
 
+	"github.com/CalcMark/go-calcmark/v2/format/display"
 	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
@@ -82,6 +83,9 @@ type JSONResult struct {
 	PeriodStart string `json:"period_start,omitempty"`
 	PeriodEnd   string `json:"period_end,omitempty"`
 	PeriodKind  string `json:"period_kind,omitempty"`
+	// Elements decomposes an array result (Type == "array") one entry
+	// per row, each shaped like a scalar result (go-calcmark#118).
+	Elements []JSONResult `json:"elements,omitempty"`
 }
 
 // JSONDiagnostic represents an error or warning with position info.
@@ -96,6 +100,10 @@ type JSONDiagnostic struct {
 // populateResult fills type-specific decomposition fields on a JSONResult.
 func populateResult(jr *JSONResult, result types.Type) {
 	switch v := result.(type) {
+	case *types.Array:
+		jr.Type = "array"
+	case *types.Text:
+		jr.Type = "text"
 	case *types.Number:
 		jr.Type = "number"
 		f := v.Value.InexactFloat64()
@@ -212,6 +220,16 @@ func periodKindName(k types.PeriodKind) string {
 	return "unknown"
 }
 
+// arrayElements decomposes each array element like a scalar result.
+func arrayElements(arr *types.Array, df display.Formatter) []JSONResult {
+	out := make([]JSONResult, len(arr.Elements))
+	for i, el := range arr.Elements {
+		populateResult(&out[i], el)
+		out[i].Value = df.Format(el)
+	}
+	return out
+}
+
 // statementError returns the message of the first error-severity
 // diagnostic on the given block-relative line. Falls back to the
 // block-level error only when no diagnostic is line-attributed (parse
@@ -298,6 +316,9 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				if stmt.Result != nil {
 					populateResult(&jr, stmt.Result)
 					jr.Value = df.Format(stmt.Result)
+					if arr, ok := stmt.Result.(*types.Array); ok {
+						jr.Elements = arrayElements(arr, df)
+					}
 				} else if msg := statementError(block, stmt.Line); msg != "" {
 					// Per-result error: the diagnostic reported against THIS
 					// line, never a neighbor's (go-calcmark#113).
