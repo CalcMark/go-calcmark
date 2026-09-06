@@ -223,6 +223,15 @@ The two values:
 
 The setting only affects labeling — the duration and quarter shape of the fiscal year are unchanged. It also has no effect when `fiscal_year_starts: january` (start year and end year are the same).
 
+**Which one do I want?** Look at where the fiscal year's *first day* falls relative to its label:
+
+| Your finance team says… | First day of that FY | Setting |
+|---|---|---|
+| "FY2026 runs Feb 2025 → Jan 2026" | in the calendar year **before** the label | `before` (default) |
+| "FY2026 runs Feb 2026 → Jan 2027" | in the **same** calendar year as the label, so the FY ends **after** it | `after` |
+
+The name describes where the calendar year sits relative to the FY label. It is easy to read backwards — if `FQ1` shows a year you did not expect, check this table before assuming a bug. The label applies to every fiscal expression: `FY2027`, `FY2027 FQ1`, bare `FQ1`, and `this fiscal year` all agree with each other under either setting.
+
 If your team's CFO or finance system uses a different label than CalcMark gives you by default, set `calendar_year_offset: after` once in frontmatter and `FY2026`, `FQ1`, `this fiscal year`, etc. will all line up with what they expect.
 
 ### Quarter and Year Shorthand {#notation}
