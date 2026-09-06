@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -137,9 +138,9 @@ func nextActionableIndex(indices []int, pos int) int {
 
 // prevActionableIndex finds the previous actionable index at or before pos.
 func prevActionableIndex(indices []int, pos int) int {
-	for i := len(indices) - 1; i >= 0; i-- {
-		if indices[i] <= pos {
-			return indices[i]
+	for _, indice := range slices.Backward(indices) {
+		if indice <= pos {
+			return indice
 		}
 	}
 	// Wrap to last

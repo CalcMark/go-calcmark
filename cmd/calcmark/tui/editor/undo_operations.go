@@ -4,6 +4,8 @@ package editor
 // The UndoManager type and EditOperation types are defined in undo.go.
 
 import (
+	"slices"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
@@ -37,8 +39,8 @@ func (m Model) handleUndo() (tea.Model, tea.Cmd) {
 	// apply to the wrong lines and producing duplicated content.
 	// After all operations are applied, redetectBlockTypes() rebuilds the document
 	// from scratch, producing a clean state.
-	for i := len(batch.Operations) - 1; i >= 0; i-- {
-		m.applyOperationReverse(batch.Operations[i])
+	for _, v := range slices.Backward(batch.Operations) {
+		m.applyOperationReverse(v)
 	}
 
 	// Restore cursor from first operation (chronologically first - has pre-batch state)
