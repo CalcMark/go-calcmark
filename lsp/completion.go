@@ -3,6 +3,7 @@ package lsp
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/CalcMark/go-calcmark/v2/spec/document"
 	"github.com/CalcMark/go-calcmark/v2/spec/features"
@@ -84,6 +85,14 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		return items, nil
 
 	default:
+		// `table.` — only that table's columns make sense here
+		// (go-calcmark#118, R16). Exclusive, like enum parameters.
+		if snap.Evaluator != nil {
+			if cols, ok := tableColumnCompletionItems(snap, lineText, col, prefix); ok {
+				return cols, nil
+			}
+		}
+
 		// Enum-backed string parameter: exclusive context — return only the
 		// valid enum values. Mixing in functions/variables here would clutter
 		// the dropdown with clearly invalid choices.
@@ -121,6 +130,75 @@ func (s *Server) textDocumentCompletion(_ *glsp.Context, params *protocol.Comple
 		}
 		return items, nil
 	}
+}
+
+// tableColumnCompletionItems returns the columns of the named table
+// whose name immediately precedes the `.` before the current prefix,
+// filtered by prefix. ok is false when the cursor is not in a
+// `<table>.<partial>` position, so the caller falls through to the
+// general completions.
+func tableColumnCompletionItems(snap *DocumentSnapshot, lineText string, col int, prefix string) ([]protocol.CompletionItem, bool) {
+	tableName, ok := tableNameBeforeDot(lineText, col, prefix)
+	if !ok {
+		return nil, false
+	}
+	env := snap.Evaluator.GetEnvironment()
+	if env == nil {
+		return nil, false
+	}
+	value, found := env.Get(tableName)
+	if !found {
+		return nil, false
+	}
+	table, isTable := value.(*types.Table)
+	if !isTable {
+		return nil, false
+	}
+	items := []protocol.CompletionItem{}
+	kind := protocol.CompletionItemKindField
+	lowerPrefix := strings.ToLower(prefix)
+	for _, name := range table.ColumnOrder {
+		if !strings.HasPrefix(strings.ToLower(name), lowerPrefix) {
+			continue
+		}
+		detail := "column of " + table.Name
+		if arr, ok := table.Column(name); ok && arr.ElementType != "" {
+			detail = fmt.Sprintf("%s column of %s (%d rows)", strings.ToLower(arr.ElementType), table.Name, arr.Len())
+		}
+		insert := name
+		items = append(items, protocol.CompletionItem{
+			Label:      name,
+			Kind:       &kind,
+			Detail:     &detail,
+			InsertText: &insert,
+			Data:       completionItemData{Kind: "table_column"},
+		})
+	}
+	return items, true
+}
+
+// tableNameBeforeDot returns the identifier that sits immediately before
+// the `.` that precedes `prefix` at the cursor: for `cost = rates.ra|`
+// it returns "rates". Decimal numbers never match because the run before
+// the dot must start with a letter or underscore.
+func tableNameBeforeDot(lineText string, col int, prefix string) (string, bool) {
+	runes := []rune(lineText)
+	if col > len(runes) {
+		col = len(runes)
+	}
+	dot := col - len([]rune(prefix)) - 1
+	if dot < 0 || runes[dot] != '.' {
+		return "", false
+	}
+	end := dot
+	start := end
+	for start > 0 && isIdentRune(runes[start-1]) {
+		start--
+	}
+	if start == end || unicode.IsDigit(runes[start]) {
+		return "", false
+	}
+	return string(runes[start:end]), true
 }
 
 // functionCompletionItems returns completion items for built-in functions.

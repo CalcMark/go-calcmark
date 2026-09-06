@@ -775,3 +775,22 @@ func TestJSONFormatterPerResultError_IsTheStatementsOwn(t *testing.T) {
 		t.Error("block-level error should still be reported")
 	}
 }
+
+// An array result serializes as type "array" with one decomposed element
+// per row, so consumers can read per-row values without re-parsing the
+// display string (go-calcmark#118, R14).
+func TestJSONFormatter_ArrayResult(t *testing.T) {
+	src := "<!-- table: rates (rate, hc) -->\n| Rate | HC |\n|------|----|\n| $250 | 2 |\n| $150 | 5 |\n\ncosts = rates.rate * rates.hc\n"
+	result := formatJSON(t, src, Options{})
+	block := findCalcBlock(result)
+	if block == nil || len(block.Results) != 1 {
+		t.Fatalf("want one calc result, got %+v", result.Blocks)
+	}
+	r := block.Results[0]
+	if r.Type != "array" || r.Value != "[$500.00, $750.00]" {
+		t.Errorf("result = %+v, want type array and value [$500.00, $750.00]", r)
+	}
+	if len(r.Elements) != 2 || r.Elements[0].Type != "currency" || r.Elements[1].Value != "$750.00" {
+		t.Errorf("elements = %+v", r.Elements)
+	}
+}

@@ -1,0 +1,31 @@
+# Named Tables — errors
+
+<!-- table: rates (role, rate) -->
+| Role   | Rate |
+|--------|------|
+| Senior | $250 |
+| Junior | $150 |
+
+<!-- table: sizes (n) -->
+| N |
+|---|
+| 1 |
+| 2 |
+| 3 |
+
+## Column that does not exist
+
+missing = rates.hourly
+
+## Arrays of different lengths
+
+mismatch = rates.rate + sizes.n
+
+## Text column in arithmetic
+
+bad = rates.role * 2
+
+## Dot access on a scalar
+
+x = 5
+nope = x.field

@@ -994,6 +994,22 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			}
 
 			tokens = append(tokens, token)
+
+			// Member access on a named table: `rates.rate` (go-calcmark#118).
+			// Emit DOT only after a plain identifier and only when an
+			// identifier-start character follows the dot, so a sentence's
+			// trailing period and `a.123` stay untouched. Chained dots are
+			// tokenized too; the parser rejects nesting with a clear message.
+			for token.Type == IDENTIFIER && l.currentChar() == '.' && l.isIdentifierChar(l.peek(1), true) {
+				tokens = append(tokens, l.makeToken(DOT, ".", 1))
+				l.advance()
+				field := l.readIdentifier()
+				if field.Type == ERROR {
+					return nil, &LexerError{Message: field.Value, Line: field.Line, Column: field.Column}
+				}
+				field.Type = IDENTIFIER
+				tokens = append(tokens, field)
+			}
 			continue
 		}
 

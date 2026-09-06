@@ -290,10 +290,11 @@ func TestEmbedded_WrongExtension(t *testing.T) {
 	}
 }
 
-func TestEmbedded_IndependentBlocks(t *testing.T) {
+func TestEmbedded_SharedScopeAcrossFences(t *testing.T) {
 	binary := buildCM(t)
-	// Second block should NOT see variables from first block.
-	input := "```cm\nx = 100\n```\n\n```cm\ny = x + 1\n```\n"
+	// Fences share one document scope (go-calcmark#118): the second
+	// block sees `x` from the first, and prose interpolates.
+	input := "```cm\nx = 100\n```\n\nx is {{x}}.\n\n```cm\ny = x + 1\n```\n"
 	path := writeTempMD(t, input)
 
 	cmd := exec.Command(binary, "convert", "--embedded", path)
@@ -301,20 +302,15 @@ func TestEmbedded_IndependentBlocks(t *testing.T) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
-	if err == nil {
-		t.Fatal("expected non-zero exit: second block references undefined 'x'")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("expected zero exit, got %v: %s", err, stderr.String())
 	}
 
 	out := stdout.String()
-	// First block should succeed.
-	if !strings.Contains(out, "x = 100") {
-		t.Errorf("expected first block to succeed, got %q", out)
-	}
-	// Second block should error because x is not defined (each embedded block is independent).
-	// With error recovery, the error is shown inline (not as a blockquote).
-	if !strings.Contains(out, "**Error:**") && !strings.Contains(out, "undefined") {
-		t.Errorf("expected error for second block, got %q", out)
+	for _, want := range []string{"x = 100 → 100", "y = x + 1 → 101", "x is 100."} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %q in output, got %q", want, out)
+		}
 	}
 }
 
@@ -400,8 +396,11 @@ func TestEmbedded_GoldenComplexMarkdown(t *testing.T) {
 		`→ $870.00`,
 		// Scaled block (scale factor 1000, unit_categories: [Currency])
 		`→ $1M`,
-		// Error block (with error recovery, errors are formatted inline)
-		`**Error:** line 1: undefined_variable: undefined variable "nonexistent_var"`,
+		// Error block (with error recovery, errors are formatted inline).
+		// The line is the host-document line since fences share one
+		// document (go-calcmark#118) — more useful than the fence-relative
+		// "line 1" the isolated pipeline used to print.
+		`**Error:** line 83: undefined_variable: undefined variable "nonexistent_var"`,
 	}
 	for _, check := range checks {
 		if !strings.Contains(got, check) {

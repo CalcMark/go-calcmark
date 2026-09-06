@@ -10,12 +10,12 @@
 //
 // All CalcBlocks land in the SAME *Document, so the existing
 // impldoc.Evaluator naturally resolves variables across fences
-// (whole-doc scoping). This intentionally diverges from the
-// rendering pipeline at convert.go:convertEmbedded, which evaluates
-// each fence in isolation. Consumers that want cross-fence variable
-// resolution and passthrough interpolation use BuildDocument (via
-// the top-level calcmark.NewDocumentEmbedded facade); consumers
-// that want per-fence-isolated rendering keep using Convert.
+// (whole-doc scoping), `{{var}}` tags in passthrough prose
+// interpolate, and named tables in the markdown feed the fences
+// below them (go-calcmark#118). convert.go:convertEmbedded renders
+// through this builder too since #118; the one exception is a fence
+// that opens with its own `---…---` frontmatter, which Convert still
+// evaluates as a self-contained island (see convertEmbedded).
 //
 // Per-segment projection rule (from the 2026-05-02-001 plan, U2):
 // EXACTLY ONE block per segment. Do NOT call Detector.DetectBlocks

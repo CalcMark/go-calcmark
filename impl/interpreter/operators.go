@@ -115,6 +115,15 @@ func (interp *Interpreter) evalUnaryOp(u *ast.UnaryOp) (types.Type, error) {
 // evalBinaryOperation performs binary arithmetic operations.
 // This is a pure function for easier testing.
 func evalBinaryOperation(left, right types.Type, operator string) (types.Type, error) {
+	// Array normalization (go-calcmark#118): element-wise with scalar
+	// broadcasting. Sits above every scalar rule so those stay untouched.
+	if _, ok := left.(*types.Array); ok {
+		return evalArrayBinaryOp(left, right, operator)
+	}
+	if _, ok := right.(*types.Array); ok {
+		return evalArrayBinaryOp(left, right, operator)
+	}
+
 	// Fraction normalization — handles Fraction×Fraction, Fraction×Number,
 	// and Fraction as scalar multiplier for other types.
 
@@ -784,6 +793,9 @@ func evalDurationNumberOperation(dur *types.Duration, num *types.Number, operato
 
 // evalUnaryOperation performs unary operations (-, +, not).
 func evalUnaryOperation(operand types.Type, operator string) (types.Type, error) {
+	if arr, ok := operand.(*types.Array); ok {
+		return evalArrayUnaryOp(arr, operator)
+	}
 	// Handle NOT operator on Boolean first
 	if operator == "not" {
 		if b, ok := operand.(*types.Boolean); ok {

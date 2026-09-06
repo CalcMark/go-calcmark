@@ -550,6 +550,36 @@ func (f *FunctionCall) GetRange() *Range {
 }
 
 // DirectiveRef represents a reference to a frontmatter directive (@scale, @globals.name).
+// MemberAccess is dot access on a named table: `rates.rate` reads the
+// `rate` column of the `rates` table as an Array (go-calcmark#118).
+// Distinct from DirectiveRef (`@globals.field`). Nested access (`a.b.c`)
+// is rejected by the parser.
+type MemberAccess struct {
+	Object Node   // the table reference, normally an *Identifier
+	Field  string // column name
+	Range  *Range
+}
+
+func (m *MemberAccess) String() string {
+	return fmt.Sprintf("%s.%s", memberObjectName(m.Object), m.Field)
+}
+
+func (m *MemberAccess) GetRange() *Range {
+	return m.Range
+}
+
+// memberObjectName renders the object side of a MemberAccess without the
+// `Identifier(...)` debug wrapper so `rates.rate` prints as written.
+func memberObjectName(n Node) string {
+	if id, ok := n.(*Identifier); ok {
+		return id.Name
+	}
+	if n == nil {
+		return "<nil>"
+	}
+	return n.String()
+}
+
 type DirectiveRef struct {
 	Directive string // "scale" or "globals" (or any identifier — semantic checker validates)
 	Field     string // "" for @scale, "tax_rate" for @globals.tax_rate
@@ -575,6 +605,8 @@ func ContainsScaleRef(node Node) bool {
 		return false
 	}
 	switch n := node.(type) {
+	case *MemberAccess:
+		return ContainsScaleRef(n.Object)
 	case *DirectiveRef:
 		return n.Directive == "scale"
 	case *Assignment:

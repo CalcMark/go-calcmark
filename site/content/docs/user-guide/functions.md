@@ -11,6 +11,8 @@ CalcMark provides built-in functions for common calculations, with natural langu
 
 See the [Function Reference](#function-reference) below for detailed examples of every function, including natural language forms.
 
+`sum`, `avg`, `min`, `max`, and `count` also accept a single array — a column of a [named table](../tables/): `sum(rates.rate * rates.hc)`.
+
 ### Function Reference {#function-reference}
 
 Detailed examples for every built-in function, showing both function-call and natural language syntax.

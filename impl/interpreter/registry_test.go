@@ -82,8 +82,8 @@ func TestGetFunctionsByCategory(t *testing.T) {
 func TestRegistryFunctionCount(t *testing.T) {
 	functions := GetAllFunctions()
 
-	// We expect 17 primary functions (12 original + 3 growth + 1 sum + 1 number)
-	expectedCount := 17
+	// We expect 17 primary functions (12 original + 3 growth + 1 sum + 1 number + min/max/count for arrays)
+	expectedCount := 20
 	if len(functions) != expectedCount {
 		t.Errorf("expected %d functions, got %d", expectedCount, len(functions))
 	}

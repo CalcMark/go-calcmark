@@ -62,7 +62,25 @@ var FunctionSpecs = map[string]FunctionSpec{
 	"sum": {
 		Name: "sum",
 		Params: []ParamSpec{
-			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"1, 2, 3", "$100, $200", "1 kg, 500 g"}},
+			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"1, 2, 3", "$100, $200", "1 kg, 500 g", "rates.rate"}},
+		},
+	},
+	"min": {
+		Name: "min",
+		Params: []ParamSpec{
+			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"4, 9, 1", "rates.rate"}},
+		},
+	},
+	"max": {
+		Name: "max",
+		Params: []ParamSpec{
+			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"4, 9, 1", "rates.rate"}},
+		},
+	},
+	"count": {
+		Name: "count",
+		Params: []ParamSpec{
+			{Name: "values", Type: ArgTypeAny, Variadic: true, Examples: []string{"rates.role", "a, b, c"}},
 		},
 	},
 	"sqrt": {

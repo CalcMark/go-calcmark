@@ -109,5 +109,7 @@ func SetRangeIfMissing(n Node, r *Range) {
 		v.Range = r
 	case *DirectiveRef:
 		v.Range = r
+	case *MemberAccess:
+		v.Range = r
 	}
 }

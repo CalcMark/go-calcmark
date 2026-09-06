@@ -216,6 +216,11 @@ func (c *Checker) checkNode(node ast.Node) {
 		c.checkAsPercentOf(n)
 	case *ast.DirectiveRef:
 		c.checkDirectiveRef(n)
+	case *ast.MemberAccess:
+		// `table.column`: the table must be a known name. Columns are
+		// only known once the table is registered at evaluation time, so
+		// column errors are runtime diagnostics (go-calcmark#118).
+		c.checkNode(n.Object)
 	}
 }
 

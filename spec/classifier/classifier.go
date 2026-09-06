@@ -200,6 +200,11 @@ func allIdentifiersDefined(node ast.Node, env IdentifierResolver) bool {
 	case *ast.Expression:
 		return allIdentifiersDefined(n.Expr, env)
 
+	case *ast.MemberAccess:
+		// `table.column` is defined when the table is (go-calcmark#118);
+		// column existence is the evaluator's job.
+		return allIdentifiersDefined(n.Object, env)
+
 	case *ast.DirectiveRef:
 		// Directives are always "defined" from the classifier's perspective.
 		// Semantic validation (e.g., missing frontmatter) is the interpreter's job.

@@ -83,7 +83,7 @@ an inline error and continue processing the rest of the document.
 broken_total = nonexistent_var + 100
 ```
 
-**Error:** line 1: undefined_variable: undefined variable "nonexistent_var"
+**Error:** line 83: undefined_variable: undefined variable "nonexistent_var"
 
 
 ## Markdown Feature Showcase

@@ -154,13 +154,19 @@ func convertCM(input string, opts Options) (string, error) {
 	return buf.String(), nil
 }
 
-// embeddedBlockResult holds the output of evaluating a single CalcMark block.
-type embeddedBlockResult struct {
-	text  string
-	isErr bool
-}
-
 // convertEmbedded handles the embedded Markdown conversion pipeline.
+//
+// The host document is evaluated once (via NewDocumentEmbedded), so
+// variables defined in one fence resolve in later fences, `{{var}}` tags
+// in the surrounding prose interpolate, and named tables declared in the
+// markdown (go-calcmark#118) are visible to the fences below them. Each
+// fence is then rendered in place as a ```calcmark block with results.
+//
+// Island fences: a fence that opens with its own `---…---` frontmatter
+// (a per-fence `scale:` or `convert_to:`) is evaluated on its own, as
+// every fence was before #118. Its directives apply to it alone and it
+// neither sees nor defines shared variables. In the shared document its
+// lines are blanked so host line numbers stay put.
 func convertEmbedded(input string, opts Options) (string, error) {
 	// Embedded mode only supports md and html.
 	if opts.Format != "md" && opts.Format != "html" {
@@ -170,22 +176,18 @@ func convertEmbedded(input string, opts Options) (string, error) {
 	segments := embedded.Scan(input)
 	df := localeFormatterWithFormats(opts.Locale, opts.DateFormat, opts.PeriodDateFormat)
 
-	var out strings.Builder
-	var errCount int
-	for _, seg := range segments {
-		switch seg.Kind {
-		case embedded.Passthrough:
-			out.WriteString(seg.Text)
-		case embedded.CalcMarkBlock:
-			br := evalEmbeddedBlock(seg.Text, seg.OpenLine, df)
-			out.WriteString(br.text)
-			if br.isErr {
-				errCount++
-			}
-		}
+	doc, err := embedded.BuildDocument(blankIslandFences(segments))
+	if err != nil {
+		return "", fmt.Errorf("parse error: %w", err)
+	}
+	eval := impldoc.NewEvaluator()
+	eval.SetDisplayFormatter(df)
+	evalErr := eval.Evaluate(doc)
+	if evalErr != nil && !errors.Is(evalErr, impldoc.ErrPartialEvaluation) {
+		return "", fmt.Errorf("evaluation error: %w", evalErr)
 	}
 
-	assembled := out.String()
+	assembled, errCount := assembleEmbedded(segments, doc, eval.GetDisplayFormatter())
 
 	if opts.Format == "md" {
 		if errCount > 0 {
@@ -220,8 +222,111 @@ func convertEmbedded(input string, opts Options) (string, error) {
 	return htmlFragment, nil
 }
 
-// evalEmbeddedBlock evaluates a single CalcMark block and returns its Markdown output.
-// On error, returns an inline error blockquote with the host-file line number.
+// assembleEmbedded re-emits the host document with every fence replaced
+// by its rendered block and every passthrough segment replaced by its
+// interpolated text. Segments and document blocks line up one-to-one,
+// except that a leading frontmatter segment yields the frontmatter (kept
+// verbatim so `md` output round-trips) plus at most one TextBlock.
+func assembleEmbedded(segments []embedded.Segment, doc *document.Document, df display.Formatter) (string, int) {
+	blocks := doc.GetBlocks()
+	next := 0
+	takeBlock := func() document.Block {
+		if next >= len(blocks) {
+			return nil
+		}
+		b := blocks[next].Block
+		next++
+		return b
+	}
+
+	var out strings.Builder
+	var errCount int
+	for i, seg := range segments {
+		switch seg.Kind {
+		case embedded.Passthrough:
+			text := seg.Text
+			if i == 0 && doc.GetFrontmatter() != nil {
+				// Frontmatter is not a block: emit it verbatim, then let the
+				// remainder (if any) fall through as an ordinary text block.
+				_, remaining, ferr := document.ParseFrontmatter(seg.Text)
+				if ferr == nil {
+					out.WriteString(seg.Text[:len(seg.Text)-len(remaining)])
+					if remaining == "" {
+						continue
+					}
+					text = remaining
+				}
+			}
+			tb, _ := takeBlock().(*document.TextBlock)
+			out.WriteString(interpolatedSegmentText(tb, text))
+		case embedded.CalcMarkBlock:
+			cb, _ := takeBlock().(*document.CalcBlock)
+			if isIslandFence(seg.Text) {
+				br := evalEmbeddedBlock(seg.Text, seg.OpenLine, df)
+				out.WriteString(br.text)
+				if br.isErr {
+					errCount++
+				}
+				continue
+			}
+			if cb == nil {
+				out.WriteString(formatEmbeddedBlockError("internal: fence has no block", seg.OpenLine+1))
+				errCount++
+				continue
+			}
+			var buf bytes.Buffer
+			format.FormatCalcBlockMarkdown(&buf, cb, df)
+			out.WriteString(buf.String())
+			if cb.Error() != nil {
+				// Same inline form the Markdown formatter uses; the message
+				// already carries the host-document line number.
+				fmt.Fprintf(&out, "**Error:** %v\n\n", cb.Error())
+				errCount++
+			}
+		}
+	}
+	return out.String(), errCount
+}
+
+// isIslandFence reports whether a fence carries its own frontmatter.
+func isIslandFence(inner string) bool {
+	return strings.HasPrefix(inner, "---\n") || strings.HasPrefix(inner, "---\r\n")
+}
+
+// blankIslandFences rebuilds the host source with every island fence's
+// inner lines replaced by blank lines, so the shared document neither
+// evaluates them nor shifts any later line number.
+func blankIslandFences(segments []embedded.Segment) string {
+	var b strings.Builder
+	for _, seg := range segments {
+		switch seg.Kind {
+		case embedded.Passthrough:
+			b.WriteString(seg.Text)
+		case embedded.CalcMarkBlock:
+			inner := seg.Text
+			if isIslandFence(inner) {
+				inner = strings.Repeat("\n", strings.Count(inner, "\n"))
+			}
+			b.WriteString("```cm\n")
+			b.WriteString(inner)
+			if !strings.HasSuffix(inner, "\n") && inner != "" {
+				b.WriteString("\n")
+			}
+			b.WriteString("```\n")
+		}
+	}
+	return b.String()
+}
+
+// embeddedBlockResult holds the output of evaluating a single CalcMark block.
+type embeddedBlockResult struct {
+	text  string
+	isErr bool
+}
+
+// evalEmbeddedBlock evaluates one island fence on its own and returns its
+// Markdown output. On error, returns an inline error blockquote with the
+// host-file line number.
 func evalEmbeddedBlock(source string, openLine int, df display.Formatter) embeddedBlockResult {
 	contentLine := openLine + 1
 
@@ -249,6 +354,27 @@ func evalEmbeddedBlock(source string, openLine int, df display.Formatter) embedd
 	}
 
 	return embeddedBlockResult{text: buf.String(), isErr: errors.Is(evalErr, impldoc.ErrPartialEvaluation)}
+}
+
+// interpolatedSegmentText returns the passthrough text with `{{var}}`
+// tags resolved, preserving the segment's exact bytes when nothing was
+// interpolated.
+func interpolatedSegmentText(tb *document.TextBlock, raw string) string {
+	if tb == nil {
+		return raw
+	}
+	interpolated := tb.InterpolatedSource()
+	if len(interpolated) == 0 {
+		return raw
+	}
+	// Block sources drop the segment's line terminators; put back exactly
+	// the leading and trailing newline runs the raw segment had so blank
+	// lines around fences survive byte-for-byte.
+	joined := strings.Join(interpolated, "\n")
+	trimmed := strings.Trim(raw, "\n")
+	leading := raw[:len(raw)-len(strings.TrimLeft(raw, "\n"))]
+	trailing := raw[len(trimmed)+len(leading):]
+	return leading + strings.Trim(joined, "\n") + trailing
 }
 
 // formatEmbeddedBlockError returns an inline error blockquote for a failed CalcMark block.

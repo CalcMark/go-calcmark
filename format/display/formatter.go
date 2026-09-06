@@ -108,6 +108,16 @@ func (f Formatter) Format(t types.Type) string {
 		return v.String()
 	case *types.Period:
 		return f.FormatPeriod(v)
+	case *types.Array:
+		// `[a, b, c]` with every element formatted as it would be alone
+		// (go-calcmark#118, R14).
+		parts := make([]string, len(v.Elements))
+		for i, el := range v.Elements {
+			parts[i] = f.Format(el)
+		}
+		return "[" + strings.Join(parts, ", ") + "]"
+	case *types.Text:
+		return v.Value
 	default:
 		return fmt.Sprintf("%v", t)
 	}

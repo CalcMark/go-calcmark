@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/CalcMark/go-calcmark/v2/format/display"
 	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
@@ -52,31 +53,7 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 			if isOnlyFrontmatterBlockMd(block) {
 				continue
 			}
-
-			fmt.Fprintf(w, "```calcmark\n")
-			stmts := AlignResults(block)
-
-			// Trim trailing blank statements
-			for len(stmts) > 0 && stmts[len(stmts)-1].IsBlank {
-				stmts = stmts[:len(stmts)-1]
-			}
-
-			for _, stmt := range stmts {
-				if stmt.IsResultLine {
-					continue
-				}
-				if stmt.IsBlank {
-					fmt.Fprintln(w)
-					continue
-				}
-				fmt.Fprint(w, stmt.Source)
-				if stmt.Result != nil {
-					fmt.Fprintf(w, " → %s", df.Format(stmt.Result))
-				}
-				fmt.Fprintln(w)
-			}
-			fmt.Fprintf(w, "```\n\n")
-
+			FormatCalcBlockMarkdown(w, block, df)
 			if block.Error() != nil {
 				fmt.Fprintf(w, "**Error:** %v\n\n", block.Error())
 			}
@@ -94,6 +71,36 @@ func (f *MarkdownFormatter) Format(w io.Writer, doc *document.Document, opts Opt
 	}
 
 	return nil
+}
+
+// FormatCalcBlockMarkdown writes one evaluated calc block as a
+// ```calcmark fence with `→ result` annotations. Shared by the Markdown
+// formatter and by Convert's Embedded-mode pipeline, which renders each
+// fence in place inside the host markdown.
+func FormatCalcBlockMarkdown(w io.Writer, block *document.CalcBlock, df display.Formatter) {
+	fmt.Fprintf(w, "```calcmark\n")
+	stmts := AlignResults(block)
+
+	// Trim trailing blank statements
+	for len(stmts) > 0 && stmts[len(stmts)-1].IsBlank {
+		stmts = stmts[:len(stmts)-1]
+	}
+
+	for _, stmt := range stmts {
+		if stmt.IsResultLine {
+			continue
+		}
+		if stmt.IsBlank {
+			fmt.Fprintln(w)
+			continue
+		}
+		fmt.Fprint(w, stmt.Source)
+		if stmt.Result != nil {
+			fmt.Fprintf(w, " → %s", df.Format(stmt.Result))
+		}
+		fmt.Fprintln(w)
+	}
+	fmt.Fprintf(w, "```\n\n")
 }
 
 // isOnlyFrontmatterBlockMd returns true if the block only contains @ assignments.

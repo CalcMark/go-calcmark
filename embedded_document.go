@@ -16,13 +16,11 @@ import (
 //
 // The returned document supports the same evaluator semantics as
 // NewDocument: variables defined in any CalcBlock resolve in
-// subsequent CalcBlocks (whole-doc scoping). This intentionally
-// diverges from Convert(Mode: Embedded)'s rendering pipeline,
-// which evaluates each fence in isolation. Consumers that want
-// cross-fence variable resolution and passthrough interpolation
-// (e.g., {{ varName }} in prose) should use this API; consumers
-// that just want a rendered HTML/Markdown string per-fence-isolated
-// can keep using Convert.
+// subsequent CalcBlocks (whole-doc scoping), `{{ varName }}` tags in
+// prose interpolate, and named tables in the markdown are visible to
+// the fences below them. Convert(Mode: Embedded) renders through this
+// same document since go-calcmark#118 — it used to evaluate each fence
+// in isolation.
 //
 // Static-rendering escape hatch: any fenced code block whose
 // info-string is NOT exactly `cm` or `calcmark` (for example

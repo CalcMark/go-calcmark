@@ -10,6 +10,35 @@ track every release going forward.
 
 ## [Unreleased]
 
+### Added
+
+- **Named tables and arrays** (#118). A markdown table preceded by
+  `<!-- table: name (col1, col2, …) -->` registers a table whose columns
+  are arrays. Calc blocks read columns with dot access (`rates.rate`),
+  combine them element-wise with scalar broadcasting
+  (`rates.rate * rates.hc`, `rates.rate * 1.1`), and reduce them with
+  `sum`, `avg`, and the new `min`, `max`, and `count` builtins.
+  `{{array_var}}` inside a markdown table row substitutes that row's
+  element; `{{table.column}}` and arrays in prose render as `[a, b, c]`.
+  JSON output decomposes array results as `type: "array"` with an
+  `elements` list. Text cells (`Senior`) are display-only `text` values:
+  they can be counted and interpolated but not used in arithmetic. The
+  LSP completes column names after `table.`. Diagnostics for a malformed
+  directive, a column-count mismatch, a mixed-type column (positioned at
+  the cell), a missing table, a duplicate or colliding name, and an
+  array whose length does not match the rows it is interpolated into.
+- `sum(x)` with a single argument now parses (it may be an array); the
+  scalar form's 2-argument minimum is enforced at evaluation time.
+
+### Changed
+
+- **`Convert(Mode: Embedded)` evaluates the host document as one unit.**
+  Each ```` ```cm ```` fence used to be evaluated in isolation, so a
+  variable from one fence was undefined in the next and `{{var}}` in
+  prose never resolved. Rendering now goes through `NewDocumentEmbedded`
+  (the API cmw already uses), which is also what lets a named table in
+  the markdown feed the fences below it.
+
 ### Fixed
 
 - **Blocks with semantic errors still evaluate their clean statements**
