@@ -90,6 +90,30 @@ func tokenRange(tok lexer.Token) *ast.Range {
 	}
 }
 
+// spanFrom returns the range from the start of `start` to the end of the
+// most recently consumed token — the source span of whatever was just
+// parsed. Token end columns come from byte length so `1,000` spans its
+// separators, not just the normalized value.
+func (p *RecursiveDescentParser) spanFrom(start lexer.Token) *ast.Range {
+	end := p.previous()
+	return &ast.Range{
+		Start: ast.Position{Line: start.Line, Column: start.Column},
+		End:   ast.Position{Line: end.Line, Column: end.Column + (end.EndPos - end.StartPos)},
+	}
+}
+
+// spanFromNode returns the range from the start of node (when it has one)
+// to the end of the most recently consumed token. Used for postfix forms
+// that extend an already-parsed operand, such as `100 MB/s`.
+func (p *RecursiveDescentParser) spanFromNode(node ast.Node) *ast.Range {
+	end := p.previous()
+	endPos := ast.Position{Line: end.Line, Column: end.Column + (end.EndPos - end.StartPos)}
+	if r := node.GetRange(); r != nil && r.Start.Line > 0 {
+		return &ast.Range{Start: r.Start, End: endPos}
+	}
+	return &ast.Range{Start: ast.Position{Line: end.Line, Column: end.Column}, End: endPos}
+}
+
 // rangeOrFallback returns the node's range if it has a valid line number,
 // otherwise a range from the fallback token. Use this when creating
 // implicit/postfix FunctionCall nodes where the left operand may lack a range.

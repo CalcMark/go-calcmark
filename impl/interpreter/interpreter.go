@@ -141,12 +141,18 @@ func (interp *Interpreter) Eval(nodes []ast.Node) ([]types.Type, error) {
 	return results, nil
 }
 
-// evalNode evaluates a single AST node.
+// evalNode evaluates a single AST node. Any error is tagged with the
+// range of the innermost node that produced it (see withPosition), so
+// diagnostics can point at the failing sub-expression.
 func (interp *Interpreter) evalNode(node ast.Node) (types.Type, error) {
 	if node == nil {
 		return nil, nil
 	}
+	result, err := interp.evalNodeUnpositioned(node)
+	return result, withPosition(node, err)
+}
 
+func (interp *Interpreter) evalNodeUnpositioned(node ast.Node) (types.Type, error) {
 	switch n := node.(type) {
 	case *ast.Assignment:
 		return interp.evalAssignment(n)

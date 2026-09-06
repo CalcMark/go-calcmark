@@ -143,7 +143,21 @@ func (p *RecursiveDescentParser) parseUnary() (ast.Node, error) {
 
 // parsePrimary parses primary expressions (atomic values and higher precedence constructs).
 // Primary → NUMBER | BOOLEAN | IDENTIFIER | FUNCTION | CURRENCY | '(' Expression ')' | ...
+// parsePrimary parses a primary expression and guarantees the returned
+// node carries a source range: literal constructors that don't set one
+// get the span of the tokens they consumed. Runtime diagnostics rely on
+// this to underline the failing sub-expression (go-calcmark#164).
 func (p *RecursiveDescentParser) parsePrimary() (ast.Node, error) {
+	start := p.peek()
+	node, err := p.parsePrimaryNode()
+	if err != nil || node == nil {
+		return node, err
+	}
+	ast.SetRangeIfMissing(node, p.spanFrom(start))
+	return node, nil
+}
+
+func (p *RecursiveDescentParser) parsePrimaryNode() (ast.Node, error) {
 	// Number literals (with optional unit)
 	// Examples: "42", "3.14", "50%", "10 meters", "1k kg"
 	//

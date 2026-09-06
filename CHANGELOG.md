@@ -12,6 +12,17 @@ track every release going forward.
 
 ### Fixed
 
+- **Runtime diagnostics now carry a column span** (#164). Argument-type
+  rejections from `grow`, `compound`, `depreciate`, and `capacity` point
+  at the offending argument; operator errors (currency ÷ currency,
+  division by zero) point at the failing sub-expression; cascading
+  errors point at the errored reference. `Diagnostic.Column` /
+  `EndColumn` are populated for `eval_error` diagnostics, so LSP and
+  editor consumers can underline the exact token the way they already
+  do for semantic-checker diagnostics.
+- **Lexer token columns no longer drift after numbers.** Lookaheads that
+  rewound `pos` but not `column` shifted every later token on the line
+  by the number's width; line/column are now derived from position.
 - **`FY<year> FQ<n>` now honors `calendar_year_offset`** (#162). The
   explicit-year quarter form built its fiscal year from the typed label
   directly, so under the default end-year labeling `FY2027 FQ1` started a

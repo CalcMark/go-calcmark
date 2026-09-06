@@ -581,11 +581,7 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 				diag.Code = "eval_error"
 				diag.Severity = "error"
 			}
-			if r := node.GetRange(); r != nil && r.Start.Line > 0 {
-				diag.Line = r.Start.Line
-				diag.Column = r.Start.Column
-				diag.DocLine = r.Start.Line + lineOff
-			}
+			applyEvalErrorRange(&diag, node, evalErr, lineOff)
 			block.AddDiagnostic(diag)
 
 			// Mark assigned variable as errored in the cloned env
@@ -605,9 +601,9 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	block.SetResults(results)
 
 	// SetLastValue with the last non-nil result
-	for i := len(results) - 1; i >= 0; i-- {
-		if results[i] != nil {
-			block.SetLastValue(results[i])
+	for _, result := range slices.Backward(results) {
+		if result != nil {
+			block.SetLastValue(result)
 			break
 		}
 	}
@@ -636,6 +632,31 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 
 	block.SetDirty(false)
 	return nil
+}
+
+// applyEvalErrorRange positions a runtime diagnostic. When the
+// interpreter tagged the error with the failing expression's range
+// (interpreter.PositionedError, go-calcmark#164) the diagnostic gets a
+// full column span so editors can underline the exact token. Otherwise
+// it falls back to the statement's start, as before.
+//
+// Line is block-relative; DocLine and EndLine are document-absolute,
+// mirroring the semantic-checker diagnostics built above.
+func applyEvalErrorRange(diag *document.Diagnostic, stmt ast.Node, err error, lineOff int) {
+	if r := interpreter.PositionOf(err); r != nil && r.Start.Line > 0 {
+		diag.Line = r.Start.Line
+		diag.Column = r.Start.Column
+		diag.DocLine = r.Start.Line + lineOff
+		diag.EndLine = r.End.Line + lineOff
+		diag.EndColumn = r.End.Column
+		return
+	}
+	// Guard against zero-valued ranges (some nodes use &ast.Range{}).
+	if r := stmt.GetRange(); r != nil && r.Start.Line > 0 {
+		diag.Line = r.Start.Line
+		diag.Column = r.Start.Column
+		diag.DocLine = r.Start.Line + lineOff
+	}
 }
 
 // evaluateCalcBlock evaluates a single CalcBlock.
@@ -813,14 +834,7 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 				diag.Severity = "error"
 			}
 
-			// Use node's Range if available to get line number.
-			// All AST nodes implement GetRange() via the Node interface.
-			// Guard against zero-valued ranges (some nodes use &ast.Range{}).
-			if r := node.GetRange(); r != nil && r.Start.Line > 0 {
-				diag.Line = r.Start.Line
-				diag.Column = r.Start.Column
-				diag.DocLine = r.Start.Line + lineOff
-			}
+			applyEvalErrorRange(&diag, node, err, lineOff)
 			block.AddDiagnostic(diag)
 
 			// If the statement is an assignment, mark the variable as errored
@@ -841,9 +855,9 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	block.SetResults(results)
 
 	// SetLastValue with the last non-nil result
-	for i := len(results) - 1; i >= 0; i-- {
-		if results[i] != nil {
-			block.SetLastValue(results[i])
+	for _, result := range slices.Backward(results) {
+		if result != nil {
+			block.SetLastValue(result)
 			break
 		}
 	}

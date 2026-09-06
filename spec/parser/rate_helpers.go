@@ -38,7 +38,7 @@ func (p *RecursiveDescentParser) parseCapacityValue() (ast.Node, error) {
 						Amount:     left,
 						PerUnit:    nextIdent,
 						SourceText: "",
-						Range:      &ast.Range{},
+						Range:      p.spanFromNode(left),
 					}
 					continue
 				} else {
@@ -112,6 +112,6 @@ func (p *RecursiveDescentParser) tryParseRateFromDivision(left ast.Node, divideO
 		Amount:     left,
 		PerUnit:    timeUnit,
 		SourceText: "",
-		Range:      &ast.Range{},
+		Range:      p.spanFromNode(left),
 	}, true
 }
