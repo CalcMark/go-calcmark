@@ -10,6 +10,15 @@ track every release going forward.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`FY<year> FQ<n>` now honors `calendar_year_offset`** (#162). The
+  explicit-year quarter form built its fiscal year from the typed label
+  directly, so under the default end-year labeling `FY2027 FQ1` started a
+  year after `FY2027` did. Both forms now resolve the label through the
+  same convention, so `start of FY2027` and `FY2027 FQ1` agree.
+
+
 ### Added
 
 - **`Rate × Duration`, `Rate × Quantity`, and `Rate × Rate` arithmetic
