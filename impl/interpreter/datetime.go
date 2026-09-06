@@ -324,15 +324,19 @@ func (interp *Interpreter) evalNotation(keyword string, now time.Time) (types.Ty
 		fyStartDay := fc.day
 		// FQ1 starts at the fiscal year start; yearOffset selects
 		// next/last/this FY relative to `now`. Explicit `@YYYY`
-		// (`FY2027 FQ1`) overrides — that's the FY label the user
-		// typed.
-		var fy int
+		// (`FY2027 FQ1`) overrides — that's the FY *label* the user
+		// typed, so it maps to a start year through the document's
+		// labeling convention exactly as `FY2027` does. Building the
+		// quarter from the FY period keeps the two in agreement
+		// (go-calcmark#162: they used to differ by a year under the
+		// default end-year labeling).
+		var fyStart time.Time
 		if explicitYear != 0 {
-			fy = explicitYear
+			fyStart = types.NewFiscalYearWithMode(explicitYear, fyStartMonth, fyStartDay, fc.labelMode).Start.Time
 		} else {
-			fy = fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
+			fy := fiscalYearWithDay(now, fyStartMonth, fyStartDay) + yearOffset
+			fyStart = time.Date(fy, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		}
-		fyStart := time.Date(fy, fyStartMonth, fyStartDay, 0, 0, 0, 0, time.UTC)
 		return types.NewFiscalQuarterWithMode(fyStart, q, fc.labelMode)
 
 	case "FY":

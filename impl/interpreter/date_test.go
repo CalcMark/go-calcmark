@@ -1928,33 +1928,43 @@ func TestCalendarQuarterNotation_ExplicitYear(t *testing.T) {
 
 // TestFiscalQuarterNotation_ExplicitYear — companion to the calendar
 // case. `FY2027 FQ1` and `FQ1 FY2027` both produce `FQ:1@2027`; the
-// interpreter routes against the explicit fiscal year label.
+// interpreter routes against the explicit fiscal year label, honoring
+// the same `calendar_year_offset` convention `FY2027` itself uses
+// (go-calcmark#162). Under the default end-year labeling and a July
+// start, FY2027 runs Jul 2026 → Jun 2027, so FQ1 of FY2027 is July 2026.
 func TestFiscalQuarterNotation_ExplicitYear(t *testing.T) {
-	// Clock at 2030 (fiscal config: July → FY2031 in early 2030 with
-	// june-end label-mode). The explicit year overrides regardless.
+	// Clock far from the years under test so nothing resolves relative
+	// to `now` by accident. The explicit year overrides regardless.
 	clock := time.Date(2030, 8, 15, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
 		name      string
 		input     string
+		mode      types.FYLabelMode
 		wantYear  int
 		wantMonth int
 		wantDay   int
+		wantLabel int
 	}{
-		// fiscal_year_starts: July 1, so FY2027 starts 2027-07-01.
-		// FQ1 of FY2027 = July 2027.
-		{"FY2027 FQ1", "d = FY2027 FQ1\n", 2027, 7, 1},
-		{"FQ1 FY2027", "d = FQ1 FY2027\n", 2027, 7, 1},
+		// Default (`calendar_year_offset: before`): label = year FY ENDS in.
+		// FY2027 with July start = Jul 1, 2026 → Jun 30, 2027.
+		{"FY2027 FQ1 (by end year)", "d = FY2027 FQ1\n", types.FYLabelByEndYear, 2026, 7, 1, 2027},
+		{"FQ1 FY2027 (by end year)", "d = FQ1 FY2027\n", types.FYLabelByEndYear, 2026, 7, 1, 2027},
 		// 2-digit year expansion mirrors CY behaviour.
-		{"FY27 FQ1 expands to 2027", "d = FY27 FQ1\n", 2027, 7, 1},
-		{"FQ1 FY27 expands to 2027", "d = FQ1 FY27\n", 2027, 7, 1},
-		// Different fiscal quarters within the same FY.
-		{"FY2027 FQ3", "d = FY2027 FQ3\n", 2028, 1, 1}, // FQ3 = Jan of fiscal year+1
+		{"FY27 FQ1 expands to 2027", "d = FY27 FQ1\n", types.FYLabelByEndYear, 2026, 7, 1, 2027},
+		{"FQ1 FY27 expands to 2027", "d = FQ1 FY27\n", types.FYLabelByEndYear, 2026, 7, 1, 2027},
+		// Later quarters within the same FY cross the calendar boundary.
+		{"FY2027 FQ3 (by end year)", "d = FY2027 FQ3\n", types.FYLabelByEndYear, 2027, 1, 1, 2027},
+		{"FY2027 FQ4 (by end year)", "d = FY2027 FQ4\n", types.FYLabelByEndYear, 2027, 4, 1, 2027},
+		// `calendar_year_offset: after`: label = year FY STARTS in.
+		// FY2027 with July start = Jul 1, 2027 → Jun 30, 2028.
+		{"FY2027 FQ1 (by start year)", "d = FY2027 FQ1\n", types.FYLabelByStartYear, 2027, 7, 1, 2027},
+		{"FY2027 FQ3 (by start year)", "d = FY2027 FQ3\n", types.FYLabelByStartYear, 2028, 1, 1, 2027},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			interp := newTestInterpreterWithClock(clock)
-			interp.SetFiscalYearStarts(7, 1)
+			interp.SetFiscalCalendar(7, 1, tt.mode)
 			nodes, err := parser.Parse(tt.input)
 			if err != nil {
 				t.Fatalf("Parse(%q) error = %v", tt.input, err)
@@ -1969,7 +1979,42 @@ func TestFiscalQuarterNotation_ExplicitYear(t *testing.T) {
 					date.Time.Year(), int(date.Time.Month()), date.Time.Day(),
 					tt.wantYear, tt.wantMonth, tt.wantDay)
 			}
+			period, ok := results[0].(*types.Period)
+			if !ok {
+				t.Fatalf("result type = %T, want *types.Period", results[0])
+			}
+			if period.Year != tt.wantLabel {
+				t.Errorf("FY label = %d, want %d", period.Year, tt.wantLabel)
+			}
 		})
+	}
+}
+
+// TestFiscalQuarterNotation_ExplicitYearAgreesWithFiscalYear pins the
+// invariant behind go-calcmark#162: `FY<n> FQ1` starts on the same day
+// as `FY<n>` under every labeling convention. Before the fix the two
+// disagreed by a year under the default convention.
+func TestFiscalQuarterNotation_ExplicitYearAgreesWithFiscalYear(t *testing.T) {
+	clock := time.Date(2030, 8, 15, 0, 0, 0, 0, time.UTC)
+	for _, mode := range []types.FYLabelMode{types.FYLabelByEndYear, types.FYLabelByStartYear} {
+		for _, start := range []struct{ month, day int }{{2, 15}, {7, 1}, {1, 1}} {
+			interp := newTestInterpreterWithClock(clock)
+			interp.SetFiscalCalendar(start.month, start.day, mode)
+			nodes, err := parser.Parse("a = FY2027\nb = FY2027 FQ1\n")
+			if err != nil {
+				t.Fatalf("Parse error = %v", err)
+			}
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error = %v", err)
+			}
+			fy := resultStartDate(t, results[0])
+			fq := resultStartDate(t, results[1])
+			if !fy.Time.Equal(fq.Time) {
+				t.Errorf("mode=%d start=%d/%d: FY2027 starts %s but FY2027 FQ1 starts %s",
+					mode, start.month, start.day, fy.Time.Format("2006-01-02"), fq.Time.Format("2006-01-02"))
+			}
+		}
 	}
 }
 
