@@ -122,7 +122,7 @@ func (p *RecursiveDescentParser) parseMultiplicative() (ast.Node, error) {
 				Amount:     left,
 				PerUnit:    timeUnit,
 				SourceText: "",
-				Range:      left.GetRange(),
+				Range:      p.spanFromNode(left),
 			}
 		}
 	}

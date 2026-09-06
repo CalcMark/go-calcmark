@@ -28,6 +28,11 @@ type AlignedStatement struct {
 	// IsResultLine is true for previous result comments (e.g., "# = 42", "→ 42").
 	// Formatters should typically skip these.
 	IsResultLine bool
+
+	// Line is the 1-based line of this statement within the block —
+	// the same coordinate `Diagnostic.Line` uses, so a formatter can pair
+	// a statement with the diagnostics reported against it.
+	Line int
 }
 
 // AlignResults maps source lines of a calc block to their corresponding
@@ -44,8 +49,8 @@ func AlignResults(block *document.CalcBlock) []AlignedStatement {
 	aligned := make([]AlignedStatement, 0, len(sourceLines))
 	resultIdx := 0
 
-	for _, line := range sourceLines {
-		stmt := AlignedStatement{Source: line}
+	for i, line := range sourceLines {
+		stmt := AlignedStatement{Source: line, Line: i + 1}
 
 		trimmed := strings.TrimSpace(line)
 

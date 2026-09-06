@@ -2,6 +2,7 @@ package repl
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -182,8 +183,8 @@ func (m Model) calculateVisibleEntries(maxLines int) []shared.HistoryEntry {
 	linesUsed := 0
 
 	// Work backwards from most recent
-	for i := len(m.outputHistory) - 1; i >= 0; i-- {
-		entry := m.outputHistory[i]
+	for _, entry := range slices.Backward(m.outputHistory) {
+
 		linesNeeded := 1 // Input line
 		if entry.Output != "" {
 			linesNeeded++ // Output line
@@ -314,9 +315,9 @@ func RenderHistoryItems(items []shared.HistoryEntry, maxLines int, styles config
 	// Calculate which items fit
 	historyLines := 0
 	startIdx := 0
-	for i := len(items) - 1; i >= 0; i-- {
+	for i, item := range slices.Backward(items) {
 		linesForItem := 1
-		if items[i].Output != "" {
+		if item.Output != "" {
 			linesForItem++
 		}
 		if historyLines+linesForItem > maxLines {

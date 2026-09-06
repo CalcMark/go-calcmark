@@ -223,8 +223,8 @@ func (l *Lexer) tryReadMonthName() (string, bool) {
 // Format: MONTH [DAY] [YEAR]
 // Performance: O(1) for month lookup, O(k) where k <= 3 components
 func (l *Lexer) readDateLiteral() Token {
-	startLine := l.line
-	startColumn := l.column
+	startLine := l.line()
+	startColumn := l.column()
 	startPos := l.pos
 
 	// Read month name
@@ -328,8 +328,8 @@ func (l *Lexer) tryReadTimeUnit() (string, bool) {
 // Format: NUMBER UNIT ["and" NUMBER UNIT]*
 // Performance: O(k) where k = number of terms (typically 1-3)
 func (l *Lexer) readDurationLiteral() Token {
-	startLine := l.line
-	startColumn := l.column
+	startLine := l.line()
+	startColumn := l.column()
 	startPos := l.pos
 
 	type term struct {
@@ -404,8 +404,8 @@ func (l *Lexer) errorToken(message string) Token {
 	return Token{
 		Type:     EOF, // Use EOF to signal error
 		Value:    message,
-		Line:     l.line,
-		Column:   l.column,
+		Line:     l.line(),
+		Column:   l.column(),
 		StartPos: l.pos,
 		EndPos:   l.pos,
 	}

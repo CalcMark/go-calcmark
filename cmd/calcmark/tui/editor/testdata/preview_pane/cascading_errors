@@ -10,5 +10,5 @@ run observe=results
 ----
 -- results:
 Line 0 (a = undefined_var): value=, error="undefined_variable: undefined variable \"undefined_var\""
-Line 1 (b = a + 1): value=, error=""
-Line 2 (c = b * 2): value=, error=""
+Line 1 (b = a + 1): value=, error="cascading_error: depends on errored variable \"a\": line 1: undefined_variable: undefined variable \"undefined_var\""
+Line 2 (c = b * 2): value=, error="cascading_error: depends on errored variable \"b\": depends on errored variable \"a\": line 1: undefined_variable: undefined variable \"undefined_var\""

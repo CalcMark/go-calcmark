@@ -224,7 +224,7 @@ func TestMultibyteTokenPositions(t *testing.T) {
 			name:       "Number after CJK assignment at correct column",
 			input:      "手 = 5",
 			tokenIdx:   2,
-			wantColumn: 6, // column 6 due to number lookahead advancing column
+			wantColumn: 5, // 手, space, =, space, then 5
 			wantType:   NUMBER,
 		},
 		{

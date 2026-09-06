@@ -213,8 +213,8 @@ calendar_year_offset: before       # optional — `before` (default) or `after`
 
 `calendar_year_offset` controls how an FY label maps to a calendar year when the fiscal year does not start in January:
 
-- `before` (default) — FY label = year FY ends in. Matches the Australian government year, the US tax year for non-calendar fiscal periods, and most publicly traded companies. With `fiscal_year_starts: february 2`, `FY2026` = Feb 2 2025 → Feb 1 2026.
-- `after` — FY label = year FY starts in. With the same start, `FY2026` = Feb 2 2026 → Feb 1 2027.
+- `before` (default) — FY label = year FY ends in, so the FY *starts* in the calendar year **before** its label. Matches the Australian government year, the US tax year for non-calendar fiscal periods, and most publicly traded companies. With `fiscal_year_starts: february 2`, `FY2026` = Feb 2 2025 → Feb 1 2026.
+- `after` — FY label = year FY starts in, so the FY *ends* in the calendar year **after** its label. With the same start, `FY2026` = Feb 2 2026 → Feb 1 2027.
 
 The setting only affects labeling; the duration and quarter shape of the fiscal year are unchanged. It has no effect when `fiscal_year_starts: january`.
 

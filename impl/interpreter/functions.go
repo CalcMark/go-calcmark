@@ -398,7 +398,7 @@ func evalCapacityFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	// Third argument is the unit identifier (NOT evaluated)
 	unitIdent, ok := f.Arguments[2].(*ast.Identifier)
 	if !ok {
-		return nil, fmt.Errorf("capacity() unit must be an identifier (e.g., disk, server, crate)")
+		return nil, withPosition(f.Arguments[2], fmt.Errorf("capacity() unit must be an identifier (e.g., disk, server, crate)"))
 	}
 	unitName := unitIdent.Name
 
@@ -416,7 +416,7 @@ func evalCapacityFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 		case *types.Number:
 			bufferPercent = buf.Value
 		default:
-			return nil, fmt.Errorf("capacity() buffer must be a percentage number, got %T", bufferVal)
+			return nil, withPosition(f.Arguments[3], fmt.Errorf("capacity() buffer must be a percentage number, got %T", bufferVal))
 		}
 		return capacityAtWithBuffer(demand, capacityVal, unitName, bufferPercent)
 	}

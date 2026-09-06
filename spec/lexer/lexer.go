@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -80,21 +81,44 @@ func (e *LexerError) Error() string {
 
 // Lexer tokenizes CalcMark expressions
 type Lexer struct {
-	text   []rune
-	pos    int
-	line   int
-	column int
+	text []rune
+	pos  int
+	// lineStarts[i] is the rune index where 1-based line i+1 begins.
+	// Line and column are derived from pos on demand (see lineAt/colAt)
+	// rather than tracked as mutable counters, so every lookahead that
+	// rewinds pos is position-correct by construction. Tracked counters
+	// drifted whenever a backtrack restored pos but not column, which
+	// shifted every token after a number (go-calcmark#164).
+	lineStarts []int
 }
 
 // NewLexer creates a new lexer for the given text
 func NewLexer(text string) *Lexer {
-	return &Lexer{
-		text:   []rune(text),
-		pos:    0,
-		line:   1,
-		column: 1,
+	runes := []rune(text)
+	starts := []int{0}
+	for i, r := range runes {
+		if r == '\n' {
+			starts = append(starts, i+1)
+		}
 	}
+	return &Lexer{text: runes, lineStarts: starts}
 }
+
+// lineAt returns the 1-based line containing rune index pos.
+func (l *Lexer) lineAt(pos int) int {
+	return sort.Search(len(l.lineStarts), func(i int) bool { return l.lineStarts[i] > pos })
+}
+
+// colAt returns the 1-based rune column of rune index pos within its line.
+func (l *Lexer) colAt(pos int) int {
+	return pos - l.lineStarts[l.lineAt(pos)-1] + 1
+}
+
+// line returns the 1-based line of the current position.
+func (l *Lexer) line() int { return l.lineAt(l.pos) }
+
+// column returns the 1-based column of the current position.
+func (l *Lexer) column() int { return l.colAt(l.pos) }
 
 // currentChar returns the current character or 0 if at end
 func (l *Lexer) currentChar() rune {
@@ -116,12 +140,6 @@ func (l *Lexer) peek(offset int) rune {
 // advance moves to the next character
 func (l *Lexer) advance() {
 	if l.pos < len(l.text) {
-		if l.text[l.pos] == '\n' {
-			l.line++
-			l.column = 1
-		} else {
-			l.column++
-		}
 		l.pos++
 	}
 }
@@ -155,8 +173,8 @@ func (l *Lexer) isValidThousandsSeparator(separatorChar rune) bool {
 // readNumber reads a number token (supports commas and underscores as thousands separators)
 // Handles multipliers (k, M, B, T) and percentages (%) and scientific notation (e, E)
 func (l *Lexer) readNumber() Token {
-	startLine := l.line
-	startColumn := l.column
+	startLine := l.line()
+	startColumn := l.column()
 	startPos := l.pos
 	var numStr strings.Builder
 
@@ -337,23 +355,15 @@ func (l *Lexer) readNumber() Token {
 	// Check for unit directly adjacent to number (no space), e.g., 2kg, 5km, 10kW
 	if l.isIdentifierChar(l.currentChar(), true) {
 		savedUnitPos := l.pos
-		savedUnitLine := l.line
-		savedUnitCol := l.column
 		unit := l.readIdentifier()
 		unitStr := unit.Value
 
 		if _, isReserved := ReservedKeywords[strings.ToLower(unitStr)]; isReserved {
 			l.pos = savedUnitPos
-			l.line = savedUnitLine
-			l.column = savedUnitCol
 		} else if BooleanKeywords[strings.ToLower(unitStr)] {
 			l.pos = savedUnitPos
-			l.line = savedUnitLine
-			l.column = savedUnitCol
 		} else if ContextualKeywords[strings.ToLower(unitStr)] {
 			l.pos = savedUnitPos
-			l.line = savedUnitLine
-			l.column = savedUnitCol
 		} else {
 			quantityValue := fmt.Sprintf("%s:%s", value, unitStr)
 			return Token{
@@ -529,8 +539,8 @@ func (l *Lexer) readNumber() Token {
 // readCurrency reads a currency symbol token (e.g., $)
 // The number part will be read by the next call to Scan()
 func (l *Lexer) readCurrency() (Token, error) {
-	startLine := l.line
-	startColumn := l.column
+	startLine := l.line()
+	startColumn := l.column()
 	startPos := l.pos
 
 	// Read the symbol
@@ -553,8 +563,8 @@ func (l *Lexer) readCurrency() (Token, error) {
 // Format: GBP100, USD1000, EUR50.25
 // Currency code MUST be uppercase, followed immediately by digits (no space).
 func (l *Lexer) readCurrencyCodeQuantity() Token {
-	startLine := l.line
-	startColumn := l.column
+	startLine := l.line()
+	startColumn := l.column()
 	startPos := l.pos
 
 	// We already know the first 3 chars are uppercase letters from scanIdentifier check
@@ -722,8 +732,8 @@ func isValidCurrencyCode(s string) bool {
 // NOTE: Spaces are NOT allowed in identifiers (this allows multi-token function names)
 // SPECIAL: Checks for currency code prefix (3 uppercase letters) before reading full identifier
 func (l *Lexer) readIdentifier() Token {
-	startLine := l.line
-	startColumn := l.column
+	startLine := l.line()
+	startColumn := l.column()
 	startPos := l.pos
 
 	// SPECIAL CASE: Check if this might be a prefix currency code (3 uppercase letters + digit)
@@ -837,8 +847,8 @@ func (l *Lexer) makeToken(tokenType TokenType, value string, length int) Token {
 	return Token{
 		Type:     tokenType,
 		Value:    value,
-		Line:     l.line,
-		Column:   l.column,
+		Line:     l.line(),
+		Column:   l.column(),
 		StartPos: l.pos,
 		EndPos:   l.pos + length,
 	}
@@ -916,8 +926,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 					Type:         tokenType,
 					Value:        keywordText, // Store actual keyword text, not token type
 					OriginalText: keywordText,
-					Line:         l.line,
-					Column:       l.column,
+					Line:         l.lineAt(startPos),
+					Column:       l.colAt(startPos),
 					StartPos:     startPos,
 					EndPos:       endPos,
 				})
@@ -932,8 +942,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 					Type:         tokenType,
 					Value:        value,
 					OriginalText: originalText,
-					Line:         l.line,
-					Column:       l.column,
+					Line:         l.lineAt(startPos),
+					Column:       l.colAt(startPos),
 					StartPos:     startPos,
 					EndPos:       endPos,
 				})
@@ -978,8 +988,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			if token.Type == IDENTIFIER && l.currentChar() == '%' {
 				return nil, &LexerError{
 					Message: fmt.Sprintf("Invalid syntax: '%%' cannot follow identifier '%s'", token.Value),
-					Line:    l.line,
-					Column:  l.column,
+					Line:    l.line(),
+					Column:  l.column(),
 				}
 			}
 
@@ -1111,8 +1121,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			if !l.isIdentifierChar(l.currentChar(), true) {
 				return nil, &LexerError{
 					Message: "expected identifier after '@' (e.g., @scale, @globals.name)",
-					Line:    l.line,
-					Column:  l.column,
+					Line:    l.line(),
+					Column:  l.column(),
 				}
 			}
 
@@ -1138,8 +1148,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 				if !l.isIdentifierChar(l.currentChar(), true) {
 					return nil, &LexerError{
 						Message: "expected field name after '@globals.' (e.g., @globals.tax_rate)",
-						Line:    l.line,
-						Column:  l.column,
+						Line:    l.line(),
+						Column:  l.column(),
 					}
 				}
 				fieldToken := l.readIdentifier()
@@ -1179,16 +1189,16 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 		if char == '#' {
 			return nil, &LexerError{
 				Message: "Inline octothorpe (#) is not supported in a calculation but is supported at the start of a line as a Markdown heading",
-				Line:    l.line,
-				Column:  l.column,
+				Line:    l.line(),
+				Column:  l.column(),
 			}
 		}
 
 		// Unknown character
 		return nil, &LexerError{
 			Message: fmt.Sprintf("Unexpected character '%c'", char),
-			Line:    l.line,
-			Column:  l.column,
+			Line:    l.line(),
+			Column:  l.column(),
 		}
 	}
 
@@ -1196,8 +1206,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 	tokens = append(tokens, Token{
 		Type:   EOF,
 		Value:  "",
-		Line:   l.line,
-		Column: l.column,
+		Line:   l.line(),
+		Column: l.column(),
 	})
 
 	// Post-process tokens to combine multi-token function names

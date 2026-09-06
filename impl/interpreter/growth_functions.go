@@ -225,7 +225,7 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	}
 	principal, err := requireAdditiveValue("compound", "principal", principalVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[0], err)
 	}
 
 	// rate: Percentage (Number accepted for legacy)
@@ -235,13 +235,13 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	}
 	rate, err := requirePercentageRate("compound", rateVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[1], err)
 	}
 	// Bare-Number rates trigger the "Did you mean N%?" hint in
 	// validateRate when out of range — Percentage values silence it.
 	_, fromBareNumber := rateVal.(*types.Number)
 	if err := validateRate(rate, fromBareNumber); err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[1], err)
 	}
 
 	// 3rd arg semantics depend on arg count:
@@ -260,10 +260,10 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	if len(f.Arguments) == 3 {
 		periodsNum, err := requirePeriodsCount("compound", periodsVal)
 		if err != nil {
-			return nil, err
+			return nil, withPosition(f.Arguments[2], err)
 		}
 		if err := validatePeriods(periodsNum); err != nil {
-			return nil, err
+			return nil, withPosition(f.Arguments[2], err)
 		}
 		result := compoundGrowth(principal, rate, periodsNum)
 		return wrapResult(result, principalVal), nil
@@ -272,13 +272,13 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	// 4-arg form: 3rd arg can be Duration (years) or Number-of-years.
 	periodsNum, periodUnit, err := extractPeriodsFromDuration(periodsVal)
 	if err != nil {
-		return nil, fmt.Errorf("compound: invalid periods: %w", err)
+		return nil, withPosition(f.Arguments[2], fmt.Errorf("compound: invalid periods: %w", err))
 	}
 
 	// 4-arg form: check if 4th arg is a modifier (identifier) or a value
 	modifierIdent, isIdent := f.Arguments[3].(*ast.Identifier)
 	if !isIdent {
-		return nil, fmt.Errorf("compound: 4th argument must be a period identifier (e.g., month) or compounded modifier")
+		return nil, withPosition(f.Arguments[3], fmt.Errorf("compound: 4th argument must be a period identifier (e.g., month) or compounded modifier"))
 	}
 
 	modName := modifierIdent.Name
@@ -296,7 +296,7 @@ func evalCompoundFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, err
 	if freq != "" {
 		periodsPerYear, ok := types.PeriodToPeriodsPerYear(freq)
 		if !ok {
-			return nil, fmt.Errorf("compound: unknown compounding frequency %q", freq)
+			return nil, withPosition(f.Arguments[3], fmt.Errorf("compound: unknown compounding frequency %q", freq))
 		}
 
 		// 3rd arg is years by default; convert non-year durations
@@ -347,7 +347,7 @@ func evalGrowFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) 
 	}
 	amount, err := requireAdditiveValue("grow", "amount", amountVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[0], err)
 	}
 
 	// increment: Additive matching amount's unit family
@@ -357,11 +357,11 @@ func evalGrowFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) 
 	}
 	incrementVal, err = convertToMatchingUnit(amountVal, incrementVal)
 	if err != nil {
-		return nil, fmt.Errorf("grow: %w", err)
+		return nil, withPosition(f.Arguments[1], fmt.Errorf("grow: %w", err))
 	}
 	increment, err := requireAdditiveValue("grow", "increment", incrementVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[1], err)
 	}
 
 	// periods: Number ONLY (iteration count, not a duration)
@@ -371,7 +371,7 @@ func evalGrowFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) 
 	}
 	periodsNum, err := requirePeriodsCount("grow", periodsVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[2], err)
 	}
 
 	result := linearGrow(amount, increment, periodsNum)
@@ -390,7 +390,7 @@ func evalDepreciateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 	}
 	principal, err := requireAdditiveValue("depreciate", "value", valueVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[0], err)
 	}
 
 	// rate: Percentage
@@ -400,10 +400,10 @@ func evalDepreciateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 	}
 	rate, err := requirePercentageRate("depreciate", rateVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[1], err)
 	}
 	if rate.LessThanOrEqual(decZero) {
-		return nil, fmt.Errorf("depreciate: rate must be positive, got %s%%", rate.Mul(decHundred).StringFixed(0))
+		return nil, withPosition(f.Arguments[1], fmt.Errorf("depreciate: rate must be positive, got %s%%", rate.Mul(decHundred).StringFixed(0)))
 	}
 
 	// periods: Number
@@ -413,10 +413,10 @@ func evalDepreciateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 	}
 	periodsNum, err := requirePeriodsCount("depreciate", periodsVal)
 	if err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[2], err)
 	}
 	if err := validatePeriods(periodsNum); err != nil {
-		return nil, err
+		return nil, withPosition(f.Arguments[2], err)
 	}
 
 	// Depreciation = compound growth with negative rate
