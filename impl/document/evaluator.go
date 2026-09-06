@@ -492,42 +492,9 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 
 	// Collect ALL semantic errors (not just the first) so every
 	// redefinition or type error in the block gets a diagnostic.
-	var firstSemanticErr error
-	for _, diag := range diagnostics {
-		if diag.Severity == semantic.Error {
-			blockDiag := document.Diagnostic{
-				Severity: "error",
-				Code:     diag.Code,
-				Message:  diag.Message,
-				Detailed: diag.Detailed,
-			}
-			if diag.Range != nil {
-				blockDiag.Line = diag.Range.Start.Line
-				blockDiag.Column = diag.Range.Start.Column
-				blockDiag.DocLine = diag.Range.Start.Line + lineOff
-				blockDiag.EndLine = diag.Range.End.Line + lineOff
-				blockDiag.EndColumn = diag.Range.End.Column
-			}
-			block.AddDiagnostic(blockDiag)
-
-			if firstSemanticErr == nil {
-				if blockDiag.DocLine > 0 {
-					firstSemanticErr = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
-				} else {
-					firstSemanticErr = fmt.Errorf("%s: %s", diag.Code, diag.Message)
-				}
-			}
-		}
-	}
-	if firstSemanticErr != nil {
-		block.SetError(firstSemanticErr)
-		// Mark all variables defined in this block as errored (O(n) once)
-		for _, astNode := range nodes {
-			if assign, ok := astNode.(*ast.Assignment); ok {
-				env.SetError(assign.Name, firstSemanticErr)
-			}
-		}
-		return firstSemanticErr
+	semErrs := recordSemanticErrors(block, diagnostics, lineOff)
+	if semErrs.first != nil {
+		block.SetError(semErrs.first)
 	}
 
 	// 3. Interpret with a COPY of the environment, statement by statement.
@@ -560,6 +527,18 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	hadErrors := false
 
 	for _, node := range nodes {
+		// Statements the checker rejected are skipped, not run
+		// (go-calcmark#113): their variable is marked errored so later
+		// references cascade, and the clean statements around them still
+		// evaluate so their values and runtime errors are visible.
+		if semErrs.skips(node) {
+			results = append(results, nil)
+			hadErrors = true
+			if assign, ok := node.(*ast.Assignment); ok {
+				evalEnv.SetError(assign.Name, semErrs.first)
+			}
+			continue
+		}
 		nodeResults, evalErr := interp.Eval([]ast.Node{node})
 		if evalErr != nil {
 			results = append(results, nil)
@@ -624,14 +603,94 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 	}
 
 	if hadErrors {
-		if firstErr != nil {
-			block.SetError(firstErr)
+		// The semantic error, when there is one, names the block: it is
+		// what the user must fix first and what the block reported before
+		// clean statements were allowed to run alongside it.
+		blockErr := semErrs.first
+		if blockErr == nil {
+			blockErr = firstErr
 		}
-		return firstErr
+		if blockErr != nil {
+			block.SetError(blockErr)
+		}
+		return blockErr
 	}
 
 	block.SetDirty(false)
 	return nil
+}
+
+// semanticErrors is what the checker rejected in one block: the first
+// error (which names the block) and the statement lines it applies to.
+type semanticErrors struct {
+	first error
+	lines map[int]bool // block-relative 1-based lines with an error diagnostic
+	// unattributable is set when some error carried no range, so no
+	// statement can be proven clean; every statement is then skipped,
+	// which is the pre-#113 behavior.
+	unattributable bool
+}
+
+// skips reports whether node must not be interpreted because the
+// checker rejected it (go-calcmark#113). Statements without a range
+// cannot be proven clean and are skipped too.
+func (se semanticErrors) skips(node ast.Node) bool {
+	if se.first == nil {
+		return false
+	}
+	if se.unattributable {
+		return true
+	}
+	r := node.GetRange()
+	if r == nil || r.Start.Line == 0 {
+		return true
+	}
+	for line := r.Start.Line; line <= r.End.Line; line++ {
+		if se.lines[line] {
+			return true
+		}
+	}
+	return false
+}
+
+// recordSemanticErrors attaches every error-severity checker diagnostic
+// to the block and returns the set of statements they invalidate.
+// Shared by both evaluation paths so they cannot drift.
+func recordSemanticErrors(block *document.CalcBlock, diagnostics []semantic.Diagnostic, lineOff int) semanticErrors {
+	se := semanticErrors{lines: make(map[int]bool)}
+	for _, diag := range diagnostics {
+		if diag.Severity != semantic.Error {
+			continue
+		}
+		blockDiag := document.Diagnostic{
+			Severity: "error",
+			Code:     diag.Code,
+			Message:  diag.Message,
+			Detailed: diag.Detailed,
+		}
+		if diag.Range != nil {
+			blockDiag.Line = diag.Range.Start.Line
+			blockDiag.Column = diag.Range.Start.Column
+			blockDiag.DocLine = diag.Range.Start.Line + lineOff
+			blockDiag.EndLine = diag.Range.End.Line + lineOff
+			blockDiag.EndColumn = diag.Range.End.Column
+			for line := diag.Range.Start.Line; line <= diag.Range.End.Line; line++ {
+				se.lines[line] = true
+			}
+		} else {
+			se.unattributable = true
+		}
+		block.AddDiagnostic(blockDiag)
+
+		if se.first == nil {
+			if blockDiag.DocLine > 0 {
+				se.first = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
+			} else {
+				se.first = fmt.Errorf("%s: %s", diag.Code, diag.Message)
+			}
+		}
+	}
+	return se
 }
 
 // applyEvalErrorRange positions a runtime diagnostic. When the
@@ -742,41 +801,9 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	diagnostics := checker.Check(nodes)
 
 	// Collect ALL semantic errors (not just the first).
-	var firstSemanticErr error
-	for _, diag := range diagnostics {
-		if diag.Severity == semantic.Error {
-			blockDiag := document.Diagnostic{
-				Severity: "error",
-				Code:     diag.Code,
-				Message:  diag.Message,
-				Detailed: diag.Detailed,
-			}
-			if diag.Range != nil {
-				blockDiag.Line = diag.Range.Start.Line
-				blockDiag.Column = diag.Range.Start.Column
-				blockDiag.DocLine = diag.Range.Start.Line + lineOff
-				blockDiag.EndLine = diag.Range.End.Line + lineOff
-				blockDiag.EndColumn = diag.Range.End.Column
-			}
-			block.AddDiagnostic(blockDiag)
-
-			if firstSemanticErr == nil {
-				if blockDiag.DocLine > 0 {
-					firstSemanticErr = fmt.Errorf("line %d: %s: %s", blockDiag.DocLine, diag.Code, diag.Message)
-				} else {
-					firstSemanticErr = fmt.Errorf("%s: %s", diag.Code, diag.Message)
-				}
-			}
-		}
-	}
-	if firstSemanticErr != nil {
-		block.SetError(firstSemanticErr)
-		for _, astNode := range nodes {
-			if assign, ok := astNode.(*ast.Assignment); ok {
-				e.env.SetError(assign.Name, firstSemanticErr)
-			}
-		}
-		return firstSemanticErr
+	semErrs := recordSemanticErrors(block, diagnostics, lineOff)
+	if semErrs.first != nil {
+		block.SetError(semErrs.first)
 	}
 
 	// 3. Interpret statements with shared environment
@@ -809,6 +836,16 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 	hadErrors := false
 
 	for _, node := range nodes {
+		// See the block-with-env path: checker-rejected statements are
+		// skipped and their variable marked errored (go-calcmark#113).
+		if semErrs.skips(node) {
+			results = append(results, nil)
+			hadErrors = true
+			if assign, ok := node.(*ast.Assignment); ok {
+				e.env.SetError(assign.Name, semErrs.first)
+			}
+			continue
+		}
 		nodeResults, err := interp.Eval([]ast.Node{node})
 		if err != nil {
 			// Append nil placeholder to maintain 1:1 alignment with nodes
@@ -864,11 +901,16 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 
 	// If there were errors, set legacy error and return first error
 	if hadErrors {
-		// Include document-absolute line number in returned error
-		if firstErr != nil {
-			block.SetError(firstErr)
+		// The semantic error, when there is one, names the block (see
+		// the block-with-env path).
+		blockErr := semErrs.first
+		if blockErr == nil {
+			blockErr = firstErr
 		}
-		return firstErr
+		if blockErr != nil {
+			block.SetError(blockErr)
+		}
+		return blockErr
 	}
 
 	// Mark as clean (evaluated successfully — all statements passed)

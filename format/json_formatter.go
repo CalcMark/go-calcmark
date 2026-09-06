@@ -212,6 +212,29 @@ func periodKindName(k types.PeriodKind) string {
 	return "unknown"
 }
 
+// statementError returns the message of the first error-severity
+// diagnostic on the given block-relative line. Falls back to the
+// block-level error only when no diagnostic is line-attributed (parse
+// failures and other block-wide errors), so a statement never inherits
+// an error that belongs to another line.
+func statementError(block *document.CalcBlock, line int) string {
+	attributed := false
+	for _, d := range block.Diagnostics() {
+		if d.Line > 0 {
+			attributed = true
+		}
+		// Warnings never cost a line its value, so they are not "the
+		// reason this result is missing". Errors and cascading hints are.
+		if d.Line == line && d.Severity != "warning" {
+			return d.Message
+		}
+	}
+	if !attributed && block.Error() != nil {
+		return block.Error().Error()
+	}
+	return ""
+}
+
 // Format writes the document as JSON to the writer.
 func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options) error {
 	result := JSONDocument{
@@ -275,9 +298,10 @@ func (f *JSONFormatter) Format(w io.Writer, doc *document.Document, opts Options
 				if stmt.Result != nil {
 					populateResult(&jr, stmt.Result)
 					jr.Value = df.Format(stmt.Result)
-				} else if block.Error() != nil {
-					// Per-result error: statement was reached but evaluation failed
-					jr.Error = block.Error().Error()
+				} else if msg := statementError(block, stmt.Line); msg != "" {
+					// Per-result error: the diagnostic reported against THIS
+					// line, never a neighbor's (go-calcmark#113).
+					jr.Error = msg
 				}
 				jr.Variable = stmt.Variable
 				jb.Results = append(jb.Results, jr)

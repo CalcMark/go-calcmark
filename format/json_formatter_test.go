@@ -745,3 +745,33 @@ func TestJSONFormatterFractionASCII(t *testing.T) {
 		}
 	}
 }
+
+// Each result carries its OWN error, never a neighbor's (go-calcmark#113).
+// Before, every result in a block that had a semantic error was stamped
+// with the block-level error, so `c = 3` reported "cannot reassign 'a'".
+func TestJSONFormatterPerResultError_IsTheStatementsOwn(t *testing.T) {
+	result := formatJSON(t, "a = 1 / 0\na = 2\nc = 3\nc = 5\n", Options{})
+
+	block := findCalcBlock(result)
+	if block == nil {
+		t.Fatal("Expected a calculation block")
+	}
+	if len(block.Results) != 4 {
+		t.Fatalf("Expected 4 results, got %d", len(block.Results))
+	}
+	if !strings.Contains(block.Results[0].Error, "division by zero") {
+		t.Errorf("results[0] (`a = 1 / 0`) error = %q, want division by zero", block.Results[0].Error)
+	}
+	if !strings.Contains(block.Results[1].Error, "cannot reassign 'a'") {
+		t.Errorf("results[1] (`a = 2`) error = %q, want cannot reassign 'a'", block.Results[1].Error)
+	}
+	if block.Results[2].Error != "" || block.Results[2].Value != "3" {
+		t.Errorf("results[2] (`c = 3`) = %+v, want value 3 and no error", block.Results[2])
+	}
+	if !strings.Contains(block.Results[3].Error, "cannot reassign 'c'") {
+		t.Errorf("results[3] (`c = 5`) error = %q, want cannot reassign 'c'", block.Results[3].Error)
+	}
+	if block.Error == "" {
+		t.Error("block-level error should still be reported")
+	}
+}

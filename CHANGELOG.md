@@ -12,6 +12,14 @@ track every release going forward.
 
 ### Fixed
 
+- **Blocks with semantic errors still evaluate their clean statements**
+  (#113). The evaluator used to stop at the first checker error, so a
+  block containing one redefinition showed no values at all and never
+  discovered runtime errors on the other lines. Checker-rejected
+  statements are now skipped (their variable is marked errored so later
+  references cascade) while every other statement runs. JSON per-result
+  `error` is now the diagnostic reported against that statement — a
+  clean line no longer inherits a neighbor's redefinition message.
 - **Runtime diagnostics now carry a column span** (#164). Argument-type
   rejections from `grow`, `compound`, `depreciate`, and `capacity` point
   at the offending argument; operator errors (currency ÷ currency,
