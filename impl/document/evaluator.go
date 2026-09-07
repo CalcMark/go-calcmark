@@ -596,6 +596,7 @@ func (e *Evaluator) evaluateCalcBlockSelective(blockID string, block *document.C
 			}
 			continue
 		}
+		attachNotes(block, interp.TakeNotes(), node, lineOff)
 		if len(nodeResults) > 0 {
 			results = append(results, nodeResults[0])
 		} else {
@@ -747,11 +748,36 @@ func applyEvalErrorRange(diag *document.Diagnostic, stmt ast.Node, err error, li
 		diag.EndColumn = r.End.Column
 		return
 	}
-	// Guard against zero-valued ranges (some nodes use &ast.Range{}).
-	if r := stmt.GetRange(); r != nil && r.Start.Line > 0 {
-		diag.Line = r.Start.Line
-		diag.Column = r.Start.Column
-		diag.DocLine = r.Start.Line + lineOff
+	applyStatementRange(diag, stmt, lineOff)
+}
+
+// applyStatementRange anchors a diagnostic to the start of a whole
+// statement. Guards against zero-valued ranges (some nodes use
+// &ast.Range{}).
+func applyStatementRange(diag *document.Diagnostic, stmt ast.Node, lineOff int) {
+	r := stmt.GetRange()
+	if r == nil || r.Start.Line == 0 {
+		return
+	}
+	diag.Line = r.Start.Line
+	diag.Column = r.Start.Column
+	diag.DocLine = r.Start.Line + lineOff
+}
+
+// attachNotes records the interpreter's informational notes for one
+// successfully evaluated statement as "info" diagnostics on the block,
+// anchored to that statement. Shared by both evaluation paths so they
+// cannot drift. Info diagnostics never count as errors anywhere
+// (hasErrorDiagnostic keys on "error").
+func attachNotes(block *document.CalcBlock, notes []interpreter.Note, stmt ast.Node, lineOff int) {
+	for _, n := range notes {
+		diag := document.Diagnostic{
+			Severity: "info",
+			Code:     n.Code,
+			Message:  n.Message,
+		}
+		applyStatementRange(&diag, stmt, lineOff)
+		block.AddDiagnostic(diag)
 	}
 }
 
@@ -918,6 +944,7 @@ func (e *Evaluator) evaluateCalcBlockWithDoc(blockID string, block *document.Cal
 
 			continue
 		}
+		attachNotes(block, interp.TakeNotes(), node, lineOff)
 		if len(nodeResults) > 0 {
 			results = append(results, nodeResults[0])
 		} else {

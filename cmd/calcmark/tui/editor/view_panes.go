@@ -665,23 +665,47 @@ func (m Model) renderCalcLine(r LineResult, width int) string {
 		transformSuffix += convertStyle.Render("\u2022") // •
 	}
 
+	var line string
 	switch m.previewMode {
 	case PreviewFull, PreviewRendered, PreviewReading:
 		// Full/Rendered mode: "varName → value" for assignments, "→ value" for anonymous calcs
 		if r.VarName != "" {
-			return changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + transformSuffix
+			line = changedMarker + m.styles.CalcVarName.Render(r.VarName) + sp + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + transformSuffix
+		} else {
+			// Anonymous calculation (no variable assignment) - show arrow without placeholder
+			line = changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + transformSuffix
 		}
-		// Anonymous calculation (no variable assignment) - show arrow without placeholder
-		return changedMarker + m.styles.CalcArrow.Render("→") + sp + valueStyle.Render(r.Value) + transformSuffix
 
 	case PreviewMinimal:
 		// Minimal mode: left-aligned "→ value" (with * if changed)
 		arrow := "→ "
-		return changedMarker + valueStyle.Render(arrow+r.Value) + transformSuffix
+		line = changedMarker + valueStyle.Render(arrow+r.Value) + transformSuffix
+
+	default:
+		return ""
 	}
 
-	return ""
+	return line + m.renderNoteSuffix(r.Note, width-lipgloss.Width(line), pvBg)
 }
+
+// renderNoteSuffix renders an informational note after a value:
+// "  ⓘ 3 days = 72 hours (rate is per hour)", dimmed, truncated to the
+// room left on the line. The full text lives in the context footer.
+func (m Model) renderNoteSuffix(note string, room int, bg color.Color) string {
+	if note == "" {
+		return ""
+	}
+	const lead = "  " + noteGlyph + " "
+	room -= lipgloss.Width(lead)
+	if room < 4 {
+		return ""
+	}
+	text := components.TruncateWithEllipsis(note, room)
+	return lipgloss.NewStyle().Foreground(theme.ResultMuted).Background(bg).Render(lead + text)
+}
+
+// noteGlyph marks an informational note in the preview pane.
+const noteGlyph = "ⓘ"
 
 // blockTintColors returns the foreground and background colors for a source line
 // based on the block type: frontmatter, calc, or markdown.

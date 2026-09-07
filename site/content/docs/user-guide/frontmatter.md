@@ -72,7 +72,7 @@ total_cost = headcount * rate
 per_person = total_cost / headcount
 ```
 
-The summary renders with **$1.8M** and **$150K** substituted in. If a variable is not defined, the `{{tag}}` is left as-is in the output.
+The summary renders with **$1,800,000.00** and **$150,000.00** substituted in. If a variable is not defined, the `{{tag}}` is left as-is in the output.
 
 #### Inline Patterns
 
@@ -91,7 +91,7 @@ _Headcount: {{team_size}}_
 | Margin | {{margin}} |
 ```
 
-Backticks around `{{var}}` are automatically stripped -- `` `{{cost}}` `` renders as **$1.8M**, not `$1.8M`. This prevents interpolated values from appearing as inline code in HTML.
+Backticks around `{{var}}` are automatically stripped -- `` `{{cost}}` `` renders as **$1,800,000.00**, not `$1,800,000.00`. This prevents interpolated values from appearing as inline code in HTML.
 
 #### Tips
 

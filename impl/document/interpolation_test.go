@@ -74,7 +74,7 @@ func TestInterpolateLineDisplayFormatted(t *testing.T) {
 		input string
 		want  string
 	}{
-		{"Total: {{cost}}", "Total: $1.2M"},
+		{"Total: {{cost}}", "Total: $1,200,000.00"},
 		{"Margin: {{pct}}", "Margin: 28%"},
 		{"Team: {{widgets}}", "Team: 14 people"},
 	}
@@ -107,7 +107,7 @@ func TestInterpolateLineInTable(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("| Revenue | {{rev}} |", env, df, nil, nil, false)
-	want := "| Revenue | $4.2M |"
+	want := "| Revenue | $4,200,000.00 |"
 	if got != want {
 		t.Errorf("interpolateLine() = %q, want %q", got, want)
 	}
@@ -211,7 +211,7 @@ func TestInterpolateLineWithTransform(t *testing.T) {
 
 	got := interpolateLine("Total: {{cost}}", env, df, fm, nil, false)
 	// 500 * 1000 = 500,000 → formatted as $500K
-	want := "Total: $500K"
+	want := "Total: $500,000.00"
 	if got != want {
 		t.Errorf("interpolateLine() with scale = %q, want %q", got, want)
 	}
@@ -259,7 +259,7 @@ func TestInterpolateLineHTML(t *testing.T) {
 	df := display.DefaultFormatter()
 
 	got := interpolateLine("Revenue: {{rev}}", env, df, nil, nil, true)
-	want := "Revenue: \x02$4.2M\x03"
+	want := "Revenue: \x02$4,200,000.00\x03"
 	if got != want {
 		t.Errorf("interpolateLine(wrapHTML=true) = %q, want %q", got, want)
 	}

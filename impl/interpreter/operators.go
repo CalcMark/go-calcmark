@@ -39,7 +39,14 @@ func (interp *Interpreter) evalBinaryOp(b *ast.BinaryOp) (types.Type, error) {
 		}
 	}
 
-	return evalBinaryOperation(left, right, b.Operator)
+	result, err := evalBinaryOperation(left, right, b.Operator)
+	if err != nil {
+		return nil, err
+	}
+	if note, ok := conversionNote(left, right, b.Operator); ok {
+		interp.addNote(note)
+	}
+	return result, nil
 }
 
 // maybeConvertRateCurrency rewrites the right operand of a +/- when

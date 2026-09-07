@@ -35,6 +35,9 @@ type Interpreter struct {
 	// whole-doc parses); the document evaluator wires it per-block via
 	// `SetLineOffset(blockLineOffset(...))`.
 	lineOffset int
+	// notes collects informational notes for the statements evaluated
+	// by the current Eval call; see notes.go.
+	notes []Note
 }
 
 // NewInterpreter creates a new interpreter with an empty environment.
@@ -126,6 +129,7 @@ func (interp *Interpreter) resolveUnit(unitName string) string {
 // Eval executes a list of AST nodes and returns the results.
 // Each node produces a typed value.
 func (interp *Interpreter) Eval(nodes []ast.Node) ([]types.Type, error) {
+	interp.notes = nil
 	results := make([]types.Type, 0, len(nodes))
 
 	for _, node := range nodes {

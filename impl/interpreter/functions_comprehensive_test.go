@@ -180,6 +180,12 @@ func TestAllFunctionErrors(t *testing.T) {
 
 		// accumulate errors
 		{"accumulate no args", "accumulate()\n", "2 arguments"},
+		// `over` on an amount: say what it is and how to make it a rate,
+		// never leak a Go type name.
+		{"over amount says not a rate", "weekly = $480\ntotal = weekly over 1 year\n", "not a rate"},
+		{"over amount suggests per", "weekly = $480\ntotal = weekly over 1 year\n", "per week"},
+		{"over amount names the value", "weekly = $480\ntotal = weekly over 1 year\n", "$480.00"},
+		{"over number says not a rate", "n = 12\ntotal = n over 1 year\n", "not a rate"},
 
 		// rtt errors
 		{"rtt unknown scope", "rtt(unknown)\n", "unknown network scope"},

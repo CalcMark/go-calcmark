@@ -309,7 +309,7 @@ gross_margin = 28%
 team_hc = 14 people
 ```
 
-The summary table renders with **$4.2M**, **28%**, and **14 people** — even though the calculations appear below the text.
+The summary table renders with **$4,200,000.00**, **28%**, and **14 people** — even though the calculations appear below the text.
 
 #### Inline Formatting
 

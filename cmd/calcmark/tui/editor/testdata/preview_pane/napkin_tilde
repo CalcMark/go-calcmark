@@ -9,4 +9,4 @@ run observe=results
 Line 0 (# Data Transfer): value=, error=""
 Line 1 (rate = 5 MB/s): value=5 MB/s, error=""
 Line 2 (time = 1 day): value=1 day, error=""
-Line 3 (total = accumulate(rate, time) as napkin): value=~420 GB, error=""
+Line 3 (total = accumulate(rate, time) as napkin): value=~420 GB, error="", note="1 day = 86400 seconds (rate is per second)"

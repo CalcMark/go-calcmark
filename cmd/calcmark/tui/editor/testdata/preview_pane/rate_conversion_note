@@ -1,0 +1,15 @@
+# Test: informational note on a converted rate × duration, and a clear
+# "not a rate" error for `over` on an amount.
+# Given: rate = $20/hour, dpw = 3 days, weekly = 8 * rate * dpw,
+#        total_amount = weekly over 1 year
+# Expected: weekly keeps its value ($11,520.00 — 8 × $20/h × 72 h) and
+#           carries the note "3 days = 72 hours (rate is per hour) ..."
+#           total_amount errors: weekly is an amount, not a rate.
+run observe=results
+----
+-- results:
+Line 0 (# Wages): value=, error=""
+Line 1 (rate = $20/hour): value=$20.00/h, error=""
+Line 2 (dpw = 3 days): value=3 day, error=""
+Line 3 (weekly = 8 * rate * dpw): value=$11,520.00, error="", note="3 days = 72 hours (rate is per hour). For a working day, write the hours explicitly, e.g. 8 hours/day"
+Line 4 (total_amount = weekly over 1 year): value=, error="eval_error: cannot accumulate currency ($11520.00) over 1 year: it is not a rate. Make it a rate first, e.g. \"... per week\""

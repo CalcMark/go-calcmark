@@ -118,7 +118,7 @@ func TestFormatRate(t *testing.T) {
 		// ISO code rates: postfix code with space
 		{"EUR code rate", "100", "EUR", "day", "100 EUR/day"},
 		// Large currency rate with suffix
-		{"large dollar rate", "50000", "$", "month", "$50K/month"},
+		{"large dollar rate", "50000", "$", "month", "$50,000.00/month"},
 		// Negative currency rate
 		{"negative dollar rate", "-363.46", "$", "day", "-$363.46/day"},
 	}
@@ -169,8 +169,8 @@ func TestFormatCurrency(t *testing.T) {
 		expected string
 	}{
 		{"small amount", "42.50", "$", "$42.50"},
-		{"large amount", "1500000", "$", "$1.5M"},
-		{"millions", "10000000", "€", "€10M"},
+		{"large amount", "1500000", "$", "$1,500,000.00"},
+		{"millions", "10000000", "€", "€10,000,000.00"},
 	}
 
 	for _, tt := range tests {
@@ -288,9 +288,9 @@ func TestUnifiedCurrencyFormat(t *testing.T) {
 		{"upper mid-range", "9999", "$", "$9,999.00"},
 
 		// Large values - K/M/B suffixes (10000+)
-		{"large dollar K", "15000", "$", "$15K"},
-		{"large dollar M", "1500000", "$", "$1.5M"},
-		{"large dollar B", "1500000000", "$", "$1.5B"},
+		{"large dollar full", "15000", "$", "$15,000.00"},
+		{"large dollar millions full", "1500000", "$", "$1,500,000.00"},
+		{"large dollar billions full", "1500000000", "$", "$1,500,000,000.00"},
 
 		// Code to symbol conversion (all known codes map to symbols)
 		{"USD to dollar", "100", "USD", "$100.00"},
@@ -302,16 +302,16 @@ func TestUnifiedCurrencyFormat(t *testing.T) {
 		{"zero", "0", "$", "$0.00"},
 		{"negative small", "-50.00", "$", "-$50.00"},
 		{"negative mid", "-1500", "$", "-$1,500.00"},
-		{"negative large", "-15000", "$", "-$15K"},
+		{"negative large", "-15000", "$", "-$15,000.00"},
 
 		// ISO code currencies — space between code and amount
 		{"ISO code small", "42.50", "CNY", "CNY 42.50"},
 		{"ISO code mid-range", "1500", "CNY", "CNY 1,500.00"},
-		{"ISO code large K", "15000", "CNY", "CNY 15K"},
-		{"ISO code large M", "1500000", "CNY", "CNY 1.5M"},
+		{"ISO code large", "15000", "CNY", "CNY 15,000.00"},
+		{"ISO code millions", "1500000", "CNY", "CNY 1,500,000.00"},
 		{"ISO code zero", "0", "CNY", "CNY 0.00"},
 		{"ISO code negative small", "-50.00", "CNY", "-CNY 50.00"},
-		{"ISO code negative large", "-15000", "CNY", "-CNY 15K"},
+		{"ISO code negative large", "-15000", "CNY", "-CNY 15,000.00"},
 		{"VND zero-decimal", "5000", "VND", "VND 5,000"},
 		{"KRW zero-decimal", "5000", "KRW", "KRW 5,000"},
 

@@ -57,8 +57,8 @@ a fleet at scale). The outer Hugo frontmatter is **not** affected.
 
 ```calcmark
 units = 5 → 5
-unit_cost = 200 USD → $200K
-fleet_cost = units * unit_cost → $1M
+unit_cost = 200 USD → $200,000.00
+fleet_cost = units * unit_cost → $1,000,000.00
 ```
 
 

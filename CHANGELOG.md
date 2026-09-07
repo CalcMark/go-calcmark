@@ -12,6 +12,17 @@ track every release going forward.
 
 ### Added
 
+- **Informational notes on results.** When rate arithmetic converts a
+  duration into the rate's time unit, the statement now carries an
+  `info` diagnostic saying so: `$20/hour * 3 days` reports
+  `3 days = 72 hours (rate is per hour)`, and `$480/week over 1 year`
+  reports `1 year = 52.14 weeks (rate is per week)`. An hourly rate times
+  whole days adds a pointer to the `8 hours/day` form. Notes never
+  block evaluation. The TUI shows them dimmed after the value and in
+  full in the context footer; JSON output lists them under
+  `diagnostics` with `"severity": "info"`. `document.Diagnostic.Severity`
+  gains the value `"info"`.
+
 - **Named tables and arrays** (#118). A markdown table preceded by
   `<!-- table: name (col1, col2, …) -->` registers a table whose columns
   are arrays. Calc blocks read columns with dot access (`rates.rate`),
@@ -32,6 +43,19 @@ track every release going forward.
 
 ### Changed
 
+- **Multiplication with a rate is commutative (breaking).** `8 * rate`
+  now scales the rate (`$160.00/h`) exactly like `rate * 8`, and
+  `3 days * rate` cancels like `rate * 3 days`. Previously a rate on the
+  right of `*` was silently "widened" to its bare amount, so
+  `8 * $20/hour * 3 days` failed with "cannot multiply quantity by
+  duration". Widening now applies only to a rate on the right of `/`
+  (`100 / (10/second)` → `10`). Documents that relied on
+  `3 * (2 posts/week)` evaluating to `6 posts` now get `6 posts/week`;
+  use `over` to accumulate a rate into an amount.
+- **`over` on an amount explains itself.** `weekly over 1 year` with a
+  currency `weekly` now says `cannot accumulate currency ($480.00) over
+  1 year: it is not a rate. Make it a rate first, e.g. "... per week"`
+  instead of leaking a Go type name.
 - **`Convert(Mode: Embedded)` evaluates the host document as one unit.**
   Each ```` ```cm ```` fence used to be evaluated in isolation, so a
   variable from one fence was undefined in the next and `{{var}}` in
