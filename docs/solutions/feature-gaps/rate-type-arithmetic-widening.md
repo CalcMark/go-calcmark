@@ -24,6 +24,8 @@ date: 2026-03-07
 
 # Rate Arithmetic Widening
 
+> **Superseded (2026-09-07).** The asymmetric rule below no longer applies to `*`. Multiplication with a rate is now commutative — `3 * rate` and `rate * 3` are both rates, and `3 days * rate` cancels exactly like `rate * 3 days`. Widening survives only for a rate on the right of `/` (`100 / rate`). The trigger was `weekly = 8 * rate * dpw` with `rate = $20/hour`: widening turned `8 * rate` into a malformed `160 $` quantity that could not cancel against `3 days`. See `impl/interpreter/operators.go` (rate-on-right block) and `TestRateDuration_CommutativeMultiply`.
+
 ## Problem Statement
 
 CalcMark rates (e.g., `2 posts/week`, `100 MB/s`) had limited arithmetic interoperability. When a user wrote `3 * (2 posts/week)`, the result was `6 posts/week` (a Rate) instead of the expected `6 posts` (a Quantity). Additionally, `Number / Rate` was an unsupported operation that produced an error. Users had to use workarounds like `over 1 day` to extract a rate's amount before doing downstream math.

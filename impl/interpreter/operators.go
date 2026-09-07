@@ -182,7 +182,7 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 	// `60 mph × 2 hours` → coerce → `60 mi/hour × 2 hours` → cancel
 	// hour → `120 mi` (Quantity).
 	//
-	// Mirrors the rate-on-RIGHT widening below in shape but fires
+	// Mirrors the rate-on-RIGHT commute below in shape but fires
 	// only for `Quantity × Duration` where the Quantity is a known
 	// Speed unit. Anything else falls through to standard dispatch.
 	if operator == "*" {
@@ -195,18 +195,24 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		}
 	}
 
-	// Rate arithmetic widening: when a Rate appears on the RIGHT side of
-	// * or /, extract the rate's Amount (a Quantity) and drop the time
-	// denominator. This makes "2 * (2 posts/week)" yield "4 posts".
+	// Rate on the RIGHT of `*`: multiplication commutes, so swap and let
+	// the rate-on-the-LEFT rules below decide. "8 * $20/hour" scales to
+	// "$160/hour" exactly like "$20/hour * 8", and "3 days * $20/hour"
+	// cancels through the same engine as "$20/hour * 3 days". (Before
+	// this, a rate on the right was silently stripped to its amount,
+	// which turned "8 * rate * 3 days" into an un-cancellable
+	// "160 $ × 3 days" error.)
 	//
-	// Rate on the LEFT is NOT widened — it preserves rate semantics:
-	//   Rate * Number → Rate  (scaling: "read_rate * 3" stays a rate)
-	//   Rate / Number → Rate  (scaling)
-	//   Rate * Quantity → Quantity (cross-type, already handled below)
-	//   Rate / Rate → Number  (ratio, already handled below)
-	if operator == "*" || operator == "/" {
-		if rightRate, ok := right.(*types.Rate); ok {
-			if _, leftIsRate := left.(*types.Rate); !leftIsRate {
+	// Rate on the RIGHT of `/` still widens: extract the rate's Amount
+	// and drop the time denominator, so "100 / (10/second)" reads as
+	// "100 divided by 10". Inverse division (amount / rate → duration)
+	// is a separate feature; see the rate-arithmetic plan.
+	if rightRate, ok := right.(*types.Rate); ok {
+		if _, leftIsRate := left.(*types.Rate); !leftIsRate {
+			switch operator {
+			case "*":
+				return evalBinaryOperation(rightRate, left, operator)
+			case "/":
 				return evalBinaryOperation(left, rightRate.Amount, operator)
 			}
 		}
@@ -291,7 +297,7 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 			result := leftNum.Value.Mul(rightDur.Value)
 			return &types.Duration{Value: result, Unit: rightDur.Unit}, nil
 		}
-		// Note: Number * Rate is widened above (rate on right → extract amount).
+		// Note: Number * Rate is commuted above to Rate * Number (scaling).
 	}
 
 	// Number * Quantity → Quantity (e.g., "2 * 10 dogs" already handled above)
@@ -533,7 +539,7 @@ func evalBinaryOperation(left, right types.Type, operator string) (types.Type, e
 		if rightQty, ok := right.(*types.Quantity); ok {
 			return evalQuantityOperation(leftQty, rightQty, operator)
 		}
-		// Note: Quantity * Rate is handled by rate widening normalization above.
+		// Note: Quantity * Rate is commuted to Rate * Quantity above.
 		// Quantity op Number (e.g., "10 dogs * 2" = "20 dogs", "5 dogs + 3" = "8 dogs")
 		if rightNum, ok := right.(*types.Number); ok {
 			switch operator {

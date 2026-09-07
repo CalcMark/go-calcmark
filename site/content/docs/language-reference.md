@@ -490,12 +490,13 @@ Quantity + Quantity (same unit) -> Quantity
 Date + Duration -> Date
 Date - Date -> Duration
 Currency / Duration -> Rate  ($1000 / 4 days = $250/day)
-Rate * Duration -> Quantity  (via "over" keyword)
+Rate * Duration -> Quantity  (cancels the time unit: $20/hour * 3 days = $1,440.00)
 Speed * Duration -> Quantity  (bridge: 60 mph * 2 hours = 120 mi)
 Number * Rate -> Rate        (scaling: 3 * 10 MB/s = 30 MB/s)
 Rate * Number -> Rate        (commutative)
-Rate * Quantity -> Quantity   (e.g., 10 MB/s * 500 MB = 5000 MB)
+Rate * Quantity -> Quantity   (only when the units cancel: 100 cakes/box * 5 boxes = 500 cakes)
 Quantity * Rate -> Quantity   (commutative)
+Number / Rate -> Number       (widening: 100 / (10/second) = 10)
 ```
 
 **Percentage widening:**
@@ -965,37 +966,31 @@ Can be chained after a unit conversion: `10 meters as feet as precise`
 
 Rates are defined using slash syntax (e.g., `100 MB/s`, `$50/hour`). See the [User Guide: Rates](/docs/user-guide/formatting/#rates) for rate accumulation with `over` and rate conversion.
 
-### Rate Arithmetic Widening
+### Rate Arithmetic
 
-When a rate appears on the **right side** of `*` or `/`, its time denominator is dropped and the rate's amount is used instead. This is called **widening** — the rate widens into its underlying quantity.
-
-When a rate appears on the **left side**, it stays a rate. This lets you scale rates naturally.
-
-**Operand order determines the result type:**
+Multiplication with a rate is **commutative**: the rate stays a rate whichever side it is on, and a duration or quantity cancels against the rate's denominator whichever side it is on.
 
 | Expression | Left | Right | Result | Why |
 |---|---|---|---|---|
-| `rate * 3` | Rate | Number | **Rate** | Rate on left → stays rate (scaling) |
-| `3 * rate` | Number | Rate | **Quantity** | Rate on right → widened |
-| `rate / 2` | Rate | Number | **Rate** | Rate on left → stays rate |
-| `100 / rate` | Number | Rate | **Number** | Rate on right → widened |
-| `rate * qty` | Rate | Quantity | **Quantity** | Cross-type, extracts amount |
-| `qty * rate` | Quantity | Rate | **Quantity** | Rate on right → widened |
-| `rate / rate` | Rate | Rate | **Number** | Same-unit ratio (no widening) |
+| `rate * 3` | Rate | Number | **Rate** | Scaling |
+| `3 * rate` | Number | Rate | **Rate** | Scaling (same as above) |
+| `rate * 3 days` | Rate | Duration | **Currency / Quantity** | Time unit cancels (days convert to the rate's unit) |
+| `3 days * rate` | Duration | Rate | **Currency / Quantity** | Same as above |
+| `rate / 2` | Rate | Number | **Rate** | Scaling |
+| `rate / rate` | Rate | Rate | **Number** | Same-unit ratio |
+| `100 / rate` | Number | Rate | **Number** | Widened: the rate's amount is used, its time unit dropped |
 
 ```text
-posts_rate = 2 posts/week
-scaled = posts_rate * 3           -> 6 posts/week  (Rate — rate on left)
-total  = 3 * posts_rate           -> 6 posts       (Quantity — rate on right)
-half   = posts_rate / 2           -> 1 posts/week  (Rate — rate on left)
+rate = $20/hour
+scaled  = 8 * rate                -> $160.00/h   (Rate — same as rate * 8)
+earned  = 3 days * rate           -> $1,440.00   (3 days = 72 hours, times $20/hour)
+per_day = rate * 8 hours/day      -> $160.00/day
 ```
 
-This rule is **asymmetric by design**. The operand on the left is the "subject" of the expression:
+When a duration is converted to the rate's time unit during cancellation (days into hours, a year into weeks), the result carries an informational note stating the conversion, e.g. `3 days = 72 hours (rate is per hour)`. If you meant a working day rather than a 24-hour day, write the hours explicitly: `rate * 8 hours/day * 3 days`.
 
-- `read_rate * peak_multiplier` — you are scaling a rate, so the result is a rate.
-- `daily_users * posts_per_user_per_week` — you are scaling a count by a rate, so the result is a quantity.
+**Widening** — dropping the rate's time denominator and using only its amount — now applies only when a rate is the **right** operand of `/`: `100 / (10/second)` reads as "100 divided by 10". Widening does not affect `accumulate()`, `over`, or `per`.
 
-Rate widening only applies to binary `*` and `/`. It does not affect functions like `accumulate()`, `over`, or `per`.
 
 ---
 

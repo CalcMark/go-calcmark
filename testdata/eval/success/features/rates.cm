@@ -66,7 +66,7 @@ daily_data = 5 GB per day
 qps = 1000 req/s
 processing_rate = 20 apples/sec
 
-# Number * Rate = widened (rate on the right, time denominator dropped)
+# Number * Rate = Rate (scaling; `*` commutes, so 3 * bandwidth == bandwidth * 3)
 scale = 3
 scaled_bw = scale * bandwidth
 scaled_qps_val = 10 * qps

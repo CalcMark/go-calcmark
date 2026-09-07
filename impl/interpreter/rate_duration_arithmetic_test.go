@@ -462,3 +462,69 @@ func TestRateDuration_RefusalForCurrencyTimesCurrency(t *testing.T) {
 //   - `$100 / hour * 5 kg` should error with a dimensional-mismatch
 //     diagnostic — locked by the U4 refusal-contract tests in this
 //     same PR (see TestRateDuration_RefusalForCrossCategory_*).
+
+// TestRateDuration_CommutativeMultiply locks the rule that `*` with a
+// Rate is commutative: a Rate on the RIGHT behaves exactly like the same
+// Rate on the LEFT. Before this, `8 * rate` silently dropped the rate's
+// time denominator ("widening") and produced a malformed `160 $`
+// quantity, so the very next `* 3 days` had nothing to cancel against.
+func TestRateDuration_CommutativeMultiply(t *testing.T) {
+	t.Run("number * currency rate stays a rate", func(t *testing.T) {
+		res := evalSingleResult(t, "rate = $20/hour\nx = 8 * rate\n")
+		rate, ok := res.(*types.Rate)
+		if !ok {
+			t.Fatalf("want *types.Rate, got %T (%v)", res, res)
+		}
+		if rate.Amount.Value.String() != "160" || rate.PerUnit != "hour" {
+			t.Errorf("want 160/hour, got %s/%s", rate.Amount.Value, rate.PerUnit)
+		}
+	})
+
+	t.Run("duration * rate cancels like rate * duration", func(t *testing.T) {
+		res := evalSingleResult(t, "rate = $20/hour\nx = 3 days * rate\n")
+		cur, ok := res.(*types.Currency)
+		if !ok {
+			t.Fatalf("want *types.Currency, got %T (%v)", res, res)
+		}
+		if cur.Value.String() != "1440" {
+			t.Errorf("want 1440, got %s", cur.Value)
+		}
+	})
+
+	t.Run("duration-numerator rate * rate cancels either way", func(t *testing.T) {
+		res := evalSingleResult(t, "rate = $20/hour\nx = 8 hours/day * rate\n")
+		rate, ok := res.(*types.Rate)
+		if !ok {
+			t.Fatalf("want *types.Rate, got %T (%v)", res, res)
+		}
+		if rate.Amount.Value.String() != "160" || rate.PerUnit != "day" {
+			t.Errorf("want 160/day, got %s/%s", rate.Amount.Value, rate.PerUnit)
+		}
+	})
+
+	t.Run("hourly rate times days as reported", func(t *testing.T) {
+		// The exact source from the bug report. Dimensionally this is
+		// $160/hour × 72 hours; the day→hour conversion is surfaced to
+		// the user as a note (see notes_test.go), not hidden.
+		res := evalSingleResult(t, "rate = $20/hour\ndpw = 3 days\nweekly = 8 * rate * dpw\n")
+		cur, ok := res.(*types.Currency)
+		if !ok {
+			t.Fatalf("want *types.Currency, got %T (%v)", res, res)
+		}
+		if cur.Value.String() != "11520" {
+			t.Errorf("want 11520, got %s", cur.Value)
+		}
+	})
+
+	t.Run("full working-week source", func(t *testing.T) {
+		res := evalSingleResult(t, "rate = $20/hour\ndpw = 3 days\nweekly = rate * 8 hours/day * dpw per week\ntotal = weekly over 1 year\n")
+		cur, ok := res.(*types.Currency)
+		if !ok {
+			t.Fatalf("want *types.Currency, got %T (%v)", res, res)
+		}
+		// 480/week × (365 days / 7) = 25028.571…
+		if !cur.Value.Round(2).Equal(decimal.RequireFromString("25028.57")) {
+			t.Errorf("want 25028.57, got %s", cur.Value)
+		}
+	})
+}

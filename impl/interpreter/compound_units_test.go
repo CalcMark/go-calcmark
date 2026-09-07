@@ -560,74 +560,43 @@ result = posts_per_day * 100
 	}
 }
 
-// TestNumberTimesRate verifies Number * Rate → Rate (commutative).
-// TestNumberTimesRate verifies Number * Rate → widened result.
-// Rate arithmetic widening: when a rate is on the RIGHT side of *, the time
-// denominator is dropped. Unitless rates widen to Number, rated quantities
-// widen to Quantity. Rate on the LEFT (Rate * Number) preserves the rate type.
+// TestNumberTimesRate verifies Number * Rate → Rate. Multiplication
+// with a rate is commutative: `3 * r` and `r * 3` both scale the rate.
 func TestNumberTimesRate(t *testing.T) {
-	t.Run("integer * unitless rate → number", func(t *testing.T) {
-		nodes, err := parser.Parse("r = 100/second\nresult = 3 * r\n")
-		if err != nil {
-			t.Fatalf("Parse error: %v", err)
-		}
-		interp := NewInterpreter()
-		results, err := interp.Eval(nodes)
-		if err != nil {
-			t.Fatalf("Eval error: %v", err)
-		}
-		result := results[len(results)-1]
-		num, ok := result.(*types.Number)
-		if !ok {
-			t.Fatalf("Expected *types.Number, got %T (%v)", result, result)
-		}
-		if num.Value.String() != "300" {
-			t.Errorf("Expected 300, got %s", num.Value.String())
-		}
-	})
-
-	t.Run("fractional * rate with unit → quantity", func(t *testing.T) {
-		nodes, err := parser.Parse("r = 100 MB/s\nresult = 0.5 * r\n")
-		if err != nil {
-			t.Fatalf("Parse error: %v", err)
-		}
-		interp := NewInterpreter()
-		results, err := interp.Eval(nodes)
-		if err != nil {
-			t.Fatalf("Eval error: %v", err)
-		}
-		result := results[len(results)-1]
-		qty, ok := result.(*types.Quantity)
-		if !ok {
-			t.Fatalf("Expected *types.Quantity, got %T (%v)", result, result)
-		}
-		if qty.Value.String() != "50" {
-			t.Errorf("Expected 50, got %s", qty.Value.String())
-		}
-		if qty.Unit != "MB" {
-			t.Errorf("Expected unit MB, got %s", qty.Unit)
-		}
-	})
-
-	t.Run("zero * unitless rate → number", func(t *testing.T) {
-		nodes, err := parser.Parse("r = 100/second\nresult = 0 * r\n")
-		if err != nil {
-			t.Fatalf("Parse error: %v", err)
-		}
-		interp := NewInterpreter()
-		results, err := interp.Eval(nodes)
-		if err != nil {
-			t.Fatalf("Eval error: %v", err)
-		}
-		result := results[len(results)-1]
-		num, ok := result.(*types.Number)
-		if !ok {
-			t.Fatalf("Expected *types.Number, got %T (%v)", result, result)
-		}
-		if num.Value.String() != "0" {
-			t.Errorf("Expected 0, got %s", num.Value.String())
-		}
-	})
+	tests := []struct {
+		name         string
+		input        string
+		wantValue    string
+		wantCompound string
+	}{
+		{"integer * unitless rate", "r = 100/second\nresult = 3 * r\n", "300", "/s"},
+		{"fractional * rate with unit", "r = 100 MB/s\nresult = 0.5 * r\n", "50", "MB/s"},
+		{"zero * unitless rate", "r = 100/second\nresult = 0 * r\n", "0", "/s"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nodes, err := parser.Parse(tt.input)
+			if err != nil {
+				t.Fatalf("Parse error: %v", err)
+			}
+			interp := NewInterpreter()
+			results, err := interp.Eval(nodes)
+			if err != nil {
+				t.Fatalf("Eval error: %v", err)
+			}
+			result := results[len(results)-1]
+			rate, ok := result.(*types.Rate)
+			if !ok {
+				t.Fatalf("Expected *types.Rate, got %T (%v)", result, result)
+			}
+			if rate.Amount.Value.String() != tt.wantValue {
+				t.Errorf("Expected %s, got %s", tt.wantValue, rate.Amount.Value.String())
+			}
+			if rate.CompoundUnit() != tt.wantCompound {
+				t.Errorf("Expected unit %s, got %s", tt.wantCompound, rate.CompoundUnit())
+			}
+		})
+	}
 }
 
 // TestRateTimesQuantity verifies Rate × Quantity dispatch under the
@@ -641,10 +610,8 @@ func TestNumberTimesRate(t *testing.T) {
 //   - Same-category Rate × Quantity → cancels, produces the rate's
 //     numerator type (`100 MB/s × 10 s → 1000 MB`).
 //   - Cross-category Rate × Quantity → errors (no cancellation).
-//   - Quantity × Rate (commuted) — still goes through the existing
-//     rate-on-right widening at operators.go:107-122; U4 will gate
-//     this on the same cancellation predicate, but until then the
-//     widening continues to silently strip the rate's denominator.
+//   - Quantity × Rate (commuted) — `*` commutes, so it refuses or
+//     cancels exactly like Rate × Quantity.
 func TestRateTimesQuantity(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -676,14 +643,10 @@ func TestRateTimesQuantity(t *testing.T) {
 			expectError: true,
 		},
 		{
-			// Commuted form still works via the existing rate-on-right
-			// widening (operators.go:107-122). U4 will gate this; for
-			// now it continues to silently strip the rate.
-			name:          "quantity × rate (commuted, widening still applies)",
-			input:         "r = 100/second\nresult = 10 KB * r\n",
-			expectError:   false,
-			expectedUnit:  "KB",
-			expectNonZero: true,
+			// Commuted form: same cross-category refusal as above.
+			name:        "quantity × rate (commuted, refuses)",
+			input:       "r = 100/second\nresult = 10 KB * r\n",
+			expectError: true,
 		},
 	}
 
