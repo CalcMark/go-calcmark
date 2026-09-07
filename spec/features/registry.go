@@ -1136,10 +1136,10 @@ func getKeywords() []Feature {
 		{
 			Name:        "rate widening",
 			Category:    CategoryKeyword,
-			Syntax:      "number * rate, quantity * rate",
-			Description: "When a rate appears on the right of * or /, its time denominator is dropped and the amount is used. Rate on the left stays a rate (scaling). This is asymmetric: operand order determines the result type.",
+			Syntax:      "number / rate",
+			Description: "When a rate is the right operand of /, its time denominator is dropped and only the amount is used. Multiplication is commutative and keeps the rate: 3 * rate scales it exactly like rate * 3.",
 			Aliases:     nil,
-			Example:     "3 * (2 posts/week) → 6 posts",
+			Example:     "100 / (10/second) → 10",
 		},
 		{
 			Name:        "as napkin",

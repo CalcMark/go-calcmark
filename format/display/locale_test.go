@@ -163,19 +163,19 @@ func TestFormatterLocaleCurrency(t *testing.T) {
 		// en-US
 		{"en-US small", "en-US", "42.50", "$", "$42.50"},
 		{"en-US mid", "en-US", "1500", "$", "$1,500.00"},
-		{"en-US large", "en-US", "15000", "$", "$15K"},
+		{"en-US large", "en-US", "15000", "$", "$15,000.00"},
 		{"en-US JPY", "en-US", "100", "JPY", "¥100"},
 
 		// de-DE: comma decimal, dot thousand
 		{"de-DE small", "de-DE", "42.50", "$", "$42,50"},
 		{"de-DE mid", "de-DE", "1500", "$", "$1.500,00"},
-		{"de-DE large", "de-DE", "15000", "$", "$15K"},
+		{"de-DE large", "de-DE", "15000", "$", "$15.000,00"},
 		{"de-DE JPY", "de-DE", "100", "JPY", "¥100"},
 
 		// fr-FR: comma decimal, NBSP thousand
 		{"fr-FR small", "fr-FR", "42.50", "$", "$42,50"},
 		{"fr-FR mid", "fr-FR", "1500", "$", "$1" + NoBreakSpace + "500,00"},
-		{"fr-FR large", "fr-FR", "15000", "$", "$15K"},
+		{"fr-FR large", "fr-FR", "15000", "$", "$15" + NoBreakSpace + "000,00"},
 
 		// Negative values (prefix-symbol currencies)
 		{"en-US negative small", "en-US", "-50.00", "$", "-$50.00"},
@@ -191,8 +191,8 @@ func TestFormatterLocaleCurrency(t *testing.T) {
 		{"en-US CNY mid", "en-US", "1500", "CNY", "CNY 1,500.00"},
 		{"de-DE CNY mid", "de-DE", "1500", "CNY", "CNY 1.500,00"},
 		{"fr-FR CNY mid", "fr-FR", "1500", "CNY", "CNY 1" + NoBreakSpace + "500,00"},
-		{"en-US CNY large", "en-US", "15000", "CNY", "CNY 15K"},
-		{"de-DE CNY large", "de-DE", "15000", "CNY", "CNY 15K"},
+		{"en-US CNY large", "en-US", "15000", "CNY", "CNY 15,000.00"},
+		{"de-DE CNY large", "de-DE", "15000", "CNY", "CNY 15.000,00"},
 
 		// VND (zero-decimal currency)
 		{"en-US VND mid", "en-US", "5000", "VND", "VND 5,000"},

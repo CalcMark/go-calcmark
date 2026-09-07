@@ -395,7 +395,7 @@ func TestEmbedded_GoldenComplexMarkdown(t *testing.T) {
 		`→ $1,150.00`,
 		`→ $870.00`,
 		// Scaled block (scale factor 1000, unit_categories: [Currency])
-		`→ $1M`,
+		`→ $1,000,000.00`,
 		// Error block (with error recovery, errors are formatted inline).
 		// The line is the host-document line since fences share one
 		// document (go-calcmark#118) — more useful than the fence-relative

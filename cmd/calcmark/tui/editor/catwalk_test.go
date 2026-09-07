@@ -1150,6 +1150,11 @@ large = 1500 USD`,
 total_gross = salary_1 + salary_2
 
 net = total_gross * 0.7`,
+		"rate_conversion_note": `# Wages
+rate = $20/hour
+dpw = 3 days
+weekly = 8 * rate * dpw
+total_amount = weekly over 1 year`,
 	}
 
 	datadriven.Walk(t, "testdata/preview_pane", func(t *testing.T, path string) {
@@ -1184,8 +1189,12 @@ net = total_gross * 0.7`,
 				results := model.GetLineResults()
 				var buf strings.Builder
 				for _, r := range results {
-					buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q\n",
+					buf.WriteString(fmt.Sprintf("Line %d (%s): value=%s, error=%q",
 						r.LineNum, r.Source, r.Value, r.Error))
+					if r.Note != "" {
+						buf.WriteString(fmt.Sprintf(", note=%q", r.Note))
+					}
+					buf.WriteString("\n")
 				}
 				_, err := out.Write([]byte(buf.String()))
 				return err

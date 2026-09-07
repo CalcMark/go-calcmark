@@ -191,7 +191,14 @@ func evalAccumulateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, e
 	if err != nil {
 		return nil, err
 	}
-	return evalAccumulate(args)
+	result, err := evalAccumulate(args)
+	if err != nil {
+		return nil, err
+	}
+	if note, ok := accumulateNoteFromArgs(args); ok {
+		interp.addNote(note)
+	}
+	return result, nil
 }
 
 func evalConvertRateFunc(interp *Interpreter, f *ast.FunctionCall) (types.Type, error) {
@@ -479,7 +486,7 @@ func evalAccumulate(args []types.Type) (types.Type, error) {
 			}
 		}
 		if !ok {
-			return nil, fmt.Errorf("accumulate() first argument must be a rate, got %T", args[0])
+			return nil, notARateError(args)
 		}
 	}
 
@@ -738,4 +745,19 @@ func extractNumbers(args []types.Type) ([]decimal.Decimal, error) {
 	}
 
 	return numbers, nil
+}
+
+// notARateError explains why `X over period` refused: X is an amount,
+// not a rate, and shows the `per` form that turns it into one. Kept to
+// a single line — the TUI truncates errors to the pane width.
+func notARateError(args []types.Type) error {
+	what := formatTypeForError(args[0])
+	period := "the period"
+	if len(args) > 1 {
+		if d, ok := args[1].(*types.Duration); ok {
+			period = d.String()
+		}
+	}
+	return fmt.Errorf("cannot accumulate %s over %s: it is not a rate. Make it a rate first, e.g. \"... per week\"",
+		what, period)
 }

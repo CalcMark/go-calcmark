@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/lipgloss/v2"
+
 	"github.com/CalcMark/go-calcmark/v2/spec/document"
 )
 
@@ -425,5 +427,32 @@ func TestGetHintForDiagnostic_PrefersDetailed(t *testing.T) {
 	}
 	if got2 == diag.Detailed {
 		t.Error("Should not produce the same output as Detailed when Detailed is empty")
+	}
+}
+
+// TestRenderContextFooter_ShowsNoteUnderReferences verifies that a
+// result's informational note is shown in full in the footer, below the
+// variable references, and never treated as an error.
+func TestRenderContextFooter_ShowsNoteUnderReferences(t *testing.T) {
+	state := ContextFooterState{
+		IsCalcLine: true,
+		References: []VarReference{{Name: "rate", Value: "$20.00/h"}},
+		Note:       "3 days = 72 hours (rate is per hour)",
+	}
+	out := RenderContextFooter(state, 80, lipgloss.Color("#000000"), 2)
+	lines := strings.Split(out, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("want the default 2 footer lines, got %d: %q", len(lines), out)
+	}
+	if !strings.Contains(lines[0], "rate = $20.00/h") {
+		t.Errorf("line 1 should hold references, got %q", lines[0])
+	}
+	if !strings.Contains(lines[1], "ⓘ 3 days = 72 hours (rate is per hour)") {
+		t.Errorf("line 2 should hold the note, got %q", lines[1])
+	}
+
+	alone := RenderContextFooter(ContextFooterState{IsCalcLine: true, Note: "1 year = 52.14 weeks (rate is per week)"}, 80, lipgloss.Color("#000000"), 2)
+	if !strings.Contains(alone, "52.14 weeks") {
+		t.Errorf("note without references should still render, got %q", alone)
 	}
 }

@@ -34,6 +34,11 @@ type ContextFooterState struct {
 	// Variable references (when no error)
 	References []VarReference
 
+	// Note is an informational note on the current line's result (when
+	// no error), e.g. "3 days = 72 hours (rate is per hour)". Shown in
+	// full here because the preview pane truncates it.
+	Note string
+
 	// Whether this is a calc line (footer only shows for calc lines)
 	IsCalcLine bool
 
@@ -212,28 +217,35 @@ func RenderContextFooter(state ContextFooterState, width int, bg color.Color, ma
 		return padToHeight(strings.Join(lines, "\n"))
 	}
 
-	// Priority 2: Show variable references
-	if len(state.References) == 0 {
+	// Priority 2: variable references on the first line, then the
+	// result's informational note (if any) on the next. Both fit in the
+	// default footer height, so no height change is needed.
+	var lines []string
+	if len(state.References) > 0 {
+		// Format as: "var1 = value │ var2 = value │ ..."
+		var parts []string
+		for _, ref := range state.References {
+			parts = append(parts, fmt.Sprintf("%s = %s", ref.Name, ref.Value))
+		}
+		lines = append(lines, lipgloss.NewStyle().
+			Foreground(theme.FooterVarRef).
+			Background(bg).
+			Width(width).
+			MaxWidth(width).
+			Render(strings.Join(parts, " │ ")))
+	}
+	if state.Note != "" {
+		lines = append(lines, lipgloss.NewStyle().
+			Foreground(theme.ResultMuted).
+			Background(bg).
+			Width(width).
+			MaxWidth(width).
+			Render(TruncateWithEllipsis("ⓘ "+state.Note, width)))
+	}
+	if len(lines) == 0 {
 		return padToHeight("")
 	}
-
-	// Format as: "var1 = value │ var2 = value │ ..."
-	var parts []string
-	for _, ref := range state.References {
-		parts = append(parts, fmt.Sprintf("%s = %s", ref.Name, ref.Value))
-	}
-
-	content := strings.Join(parts, " │ ")
-
-	// Render variable references on first line with themed background
-	line1 := lipgloss.NewStyle().
-		Foreground(theme.FooterVarRef).
-		Background(bg).
-		Width(width).
-		MaxWidth(width).
-		Render(content)
-
-	return padToHeight(line1)
+	return padToHeight(strings.Join(lines, "\n"))
 }
 
 // wordWrapText breaks text into lines at word boundaries to fit within maxWidth.

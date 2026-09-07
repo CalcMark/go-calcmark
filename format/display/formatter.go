@@ -251,9 +251,13 @@ func (f Formatter) FormatCurrency(c *types.Currency) string {
 
 	decimals := getCurrencyDecimals(c.Code)
 
+	// Money is shown in full with group separators ($25,028.57): a
+	// compact $25.03K hides the very digits a budget is about. Only a
+	// napkin estimate keeps the K/M/B suffix, since it is asking for a
+	// rough figure.
 	var numStr string
 	switch {
-	case absValue >= 10000:
+	case c.IsNapkin && absValue >= 10000:
 		numStr = f.formatNumberWithSuffix(c.Value.Abs())
 	case absValue >= 1000:
 		numStr = f.formatCurrencyWithSeparators(c.Value.Abs(), decimals)

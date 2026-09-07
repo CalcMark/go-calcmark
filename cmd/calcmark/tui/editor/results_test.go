@@ -265,3 +265,47 @@ func TestMultipleCascadingErrorsAcrossBlocks(t *testing.T) {
 		}
 	}
 }
+
+// TestInfoNoteIsNotAnError verifies that an informational note
+// ("3 days = 72 hours ...") rides alongside the line's value: the value
+// still shows, the line is neither errored nor blocked, and the note
+// text is available for the preview pane to render.
+func TestInfoNoteIsNotAnError(t *testing.T) {
+	source := "rate = $20/hour\ndpw = 3 days\nweekly = 8 * rate * dpw\ntotal = weekly * 2\n"
+	doc, err := document.NewDocument(source)
+	if err != nil {
+		t.Fatalf("NewDocument: %v", err)
+	}
+	m := New(doc)
+	results := m.GetLineResults()
+
+	find := func(prefix string) *LineResult {
+		t.Helper()
+		for i := range results {
+			if strings.HasPrefix(results[i].Source, prefix) {
+				return &results[i]
+			}
+		}
+		t.Fatalf("no result for %q", prefix)
+		return nil
+	}
+
+	weekly := find("weekly")
+	if weekly.Value == "" {
+		t.Errorf("weekly should keep its value, got none (error=%q)", weekly.Error)
+	}
+	if weekly.Error != "" || weekly.IsBlocked || weekly.Diagnostic != nil {
+		t.Errorf("a note must not error or block the line: error=%q blocked=%v diag=%+v", weekly.Error, weekly.IsBlocked, weekly.Diagnostic)
+	}
+	if !strings.HasPrefix(weekly.Note, "3 days = 72 hours") {
+		t.Errorf("Note = %q, want the conversion note", weekly.Note)
+	}
+
+	total := find("total")
+	if total.Value == "" || total.IsBlocked {
+		t.Errorf("a line depending on a noted line must evaluate: value=%q blocked=%v", total.Value, total.IsBlocked)
+	}
+	if rate := find("rate"); rate.Note != "" {
+		t.Errorf("unrelated line carries a note: %q", rate.Note)
+	}
+}

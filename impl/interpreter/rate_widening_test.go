@@ -1,9 +1,10 @@
 package interpreter
 
 // rate_widening_test.go — Tests for rate arithmetic widening.
-// When a Rate participates in * or / with a non-Rate operand,
-// the rate's Amount is extracted and the time denominator is dropped.
-// This makes rates interoperable with plain numbers and quantities.
+// Multiplication with a Rate is commutative: the rate stays a rate on
+// either side of `*`. Widening (extracting the rate's Amount and
+// dropping the time denominator) applies only when a Rate is the RIGHT
+// operand of `/`, so `100 / rate` reads as "100 divided by the amount".
 
 import (
 	"testing"
@@ -12,7 +13,8 @@ import (
 	"github.com/CalcMark/go-calcmark/v2/spec/types"
 )
 
-func TestRateWidening_NumberTimesRate(t *testing.T) {
+func TestRateWidening_NumberTimesRate_StaysRate(t *testing.T) {
+	// Number * Rate → Rate. Same result as Rate * Number: `*` commutes.
 	tests := []struct {
 		name          string
 		input         string
@@ -23,19 +25,19 @@ func TestRateWidening_NumberTimesRate(t *testing.T) {
 			name:          "number * rate with unit",
 			input:         "a = 2 posts/week\nb = 2 * a\n",
 			expectedValue: "4",
-			expectedUnit:  "posts",
+			expectedUnit:  "posts/week",
 		},
 		{
 			name:          "number * unitless rate",
 			input:         "a = 100/second\nb = 3 * a\n",
 			expectedValue: "300",
-			expectedUnit:  "", // unitless rate → number
+			expectedUnit:  "/s",
 		},
 		{
 			name:          "number * data rate",
 			input:         "r = 100 MB/s\nresult = 0.5 * r\n",
 			expectedValue: "50",
-			expectedUnit:  "MB",
+			expectedUnit:  "MB/s",
 		},
 	}
 
@@ -51,28 +53,15 @@ func TestRateWidening_NumberTimesRate(t *testing.T) {
 				t.Fatalf("Eval error: %v", err)
 			}
 			result := results[len(results)-1]
-
-			if tt.expectedUnit == "" {
-				// Expect a Number (unitless rate widens to number)
-				num, ok := result.(*types.Number)
-				if !ok {
-					t.Fatalf("Expected *types.Number, got %T (%v)", result, result)
-				}
-				if num.Value.String() != tt.expectedValue {
-					t.Errorf("Expected %s, got %s", tt.expectedValue, num.Value.String())
-				}
-			} else {
-				// Expect a Quantity
-				qty, ok := result.(*types.Quantity)
-				if !ok {
-					t.Fatalf("Expected *types.Quantity, got %T (%v)", result, result)
-				}
-				if qty.Value.String() != tt.expectedValue {
-					t.Errorf("Expected value %s, got %s", tt.expectedValue, qty.Value.String())
-				}
-				if qty.Unit != tt.expectedUnit {
-					t.Errorf("Expected unit %q, got %q", tt.expectedUnit, qty.Unit)
-				}
+			rate, ok := result.(*types.Rate)
+			if !ok {
+				t.Fatalf("Expected *types.Rate, got %T (%v)", result, result)
+			}
+			if rate.Amount.Value.String() != tt.expectedValue {
+				t.Errorf("Expected amount %s, got %s", tt.expectedValue, rate.Amount.Value.String())
+			}
+			if rate.CompoundUnit() != tt.expectedUnit {
+				t.Errorf("Expected unit %s, got %s", tt.expectedUnit, rate.CompoundUnit())
 			}
 		})
 	}
@@ -226,17 +215,18 @@ weekly_posts = daily_users * posts_per_week
 		t.Fatalf("Eval error: %v", err)
 	}
 
-	// weekly_posts = 4000000 * (2 posts/week) → 8000000 posts
+	// weekly_posts = 4000000 * (2 posts/week) → 8000000 posts/week.
+	// Scaling a per-user rate by a user count is still a rate.
 	result := results[len(results)-1]
-	qty, ok := result.(*types.Quantity)
+	rate, ok := result.(*types.Rate)
 	if !ok {
-		t.Fatalf("Expected *types.Quantity, got %T (%v)", result, result)
+		t.Fatalf("Expected *types.Rate, got %T (%v)", result, result)
 	}
-	if qty.Value.String() != "8000000" {
-		t.Errorf("Expected 8000000, got %s", qty.Value.String())
+	if rate.Amount.Value.String() != "8000000" {
+		t.Errorf("Expected 8000000, got %s", rate.Amount.Value.String())
 	}
-	if qty.Unit != "posts" {
-		t.Errorf("Expected unit 'posts', got %q", qty.Unit)
+	if rate.CompoundUnit() != "posts/week" {
+		t.Errorf("Expected unit 'posts/week', got %q", rate.CompoundUnit())
 	}
 }
 

@@ -25,6 +25,7 @@ type LineResult struct {
 	IsBlocked      bool     // True if this error is caused by an undefined variable from a prior error
 	IsScaled       bool     // True if this result was multiplied by the document's scale factor
 	IsConverted    bool     // True if convert_to changed this result's unit
+	Note           string   // Informational note on a successful result (e.g. "3 days = 72 hours (rate is per hour)")
 	ReferencedVars []string // Variable names referenced by this statement (AST-derived, sorted)
 }
 
@@ -86,13 +87,21 @@ func (m *Model) GetLineResults() []LineResult {
 
 			// Build error line map from diagnostics (which have proper position info)
 			// Map from 1-indexed block line to structured diagnostic
+			// Informational notes ("info") are not errors: they ride
+			// beside the line's value, so they get their own map.
 			diagnostics := b.Diagnostics()
 			diagByLine := make(map[int]*document.Diagnostic)
+			noteByLine := make(map[int]string)
 			for i := range diagnostics {
 				diag := &diagnostics[i]
-				if diag.Line > 0 {
-					diagByLine[diag.Line] = diag
+				if diag.Line <= 0 {
+					continue
 				}
+				if diag.Severity == "info" {
+					noteByLine[diag.Line] = diag.Message
+					continue
+				}
+				diagByLine[diag.Line] = diag
 			}
 
 			// If we have a block error but no diagnostics with position, fall back to heuristics
@@ -194,6 +203,7 @@ func (m *Model) GetLineResults() []LineResult {
 				// Get result for this statement if available
 				if stmtIdx < len(stmtResults) && stmtResults[stmtIdx] != nil {
 					lr.Value = m.displayFormat(stmtResults[stmtIdx])
+					lr.Note = noteByLine[blockLineNum]
 
 					// Check if this result was affected by the scale transform.
 					// Uses cached ScaleExempt flags from the evaluator to avoid

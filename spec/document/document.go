@@ -120,7 +120,7 @@ type UpdateResult struct {
 // Diagnostic represents a validation issue with source position info.
 type Diagnostic struct {
 	BlockID   string
-	Severity  string // "error", "warning", "hint"
+	Severity  string // "error", "warning", "hint" (cascading/blocked), "info" (note on a successful result)
 	Code      string
 	Message   string
 	Detailed  string // Detailed explanation with context and guidance (from semantic checker)

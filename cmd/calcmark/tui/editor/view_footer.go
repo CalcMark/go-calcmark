@@ -46,9 +46,10 @@ func (m Model) renderContextFooter(width int, results []LineResult, maxHeight in
 			}
 		}
 
-		// Get variable references if no error
+		// Get variable references and the result's note if no error
 		if !state.HasError && currentResult.IsCalc {
 			state.References = m.getLineReferences(m.cursorLine, results)
+			state.Note = currentResult.Note
 
 			// When the current line is scaled, append @scale = N as a synthetic reference
 			if currentResult.IsScaled {

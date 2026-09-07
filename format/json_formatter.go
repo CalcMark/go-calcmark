@@ -241,9 +241,10 @@ func statementError(block *document.CalcBlock, line int) string {
 		if d.Line > 0 {
 			attributed = true
 		}
-		// Warnings never cost a line its value, so they are not "the
-		// reason this result is missing". Errors and cascading hints are.
-		if d.Line == line && d.Severity != "warning" {
+		// Warnings and informational notes never cost a line its value,
+		// so they are not "the reason this result is missing". Errors
+		// and cascading hints are.
+		if d.Line == line && d.Severity != "warning" && d.Severity != "info" {
 			return d.Message
 		}
 	}

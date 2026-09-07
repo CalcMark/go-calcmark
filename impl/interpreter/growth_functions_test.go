@@ -466,7 +466,7 @@ func TestGrowthResultsPreserveDisplayFormat(t *testing.T) {
 		{
 			name:  "compound currency preserves symbol in formatter",
 			input: "compound($475000, 3.2%, 30)",
-			want:  "$1.22M",
+			want:  "$1,222,037.49",
 		},
 		{
 			name:  "compound quantity preserves unit in formatter",
@@ -476,7 +476,7 @@ func TestGrowthResultsPreserveDisplayFormat(t *testing.T) {
 		{
 			name:  "depreciate currency preserves symbol in formatter",
 			input: "depreciate($50000, 15%, 5)",
-			want:  "$22.19K",
+			want:  "$22,185.27",
 		},
 		{
 			name:  "grow currency preserves symbol in formatter",
