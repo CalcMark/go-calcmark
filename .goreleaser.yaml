@@ -79,15 +79,17 @@ homebrew_casks:
     directory: Casks
     homepage: "https://calcmark.org"
     description: "CalcMark - calculations embedded in markdown"
-    url:
-      verified: github.com/CalcMark/go-calcmark
     binaries:
       - cm
     hooks:
       post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/cm"]
+        # Declarative install-steps DSL (GoReleaser v2.19+), emitted as the
+        # `postflight_steps` stanza; the old `install:` raw-Ruby hook emitted
+        # the now-deprecated `postflight` stanza. `{{ .StagedPath }}` renders
+        # to Homebrew's `{{staged_path}}` template token.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/cm"]
           end
     commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
 
